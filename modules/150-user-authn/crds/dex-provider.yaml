@@ -34,6 +34,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -510,6 +514,12 @@ spec:
           name: Display Name
           description: 'Name that will be displayed on the providers selection screen.'
           type: string
+        - jsonPath: .spec.enabled
+          name: Enabled
+          type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
     - name: v1
       served: true
       storage: true
@@ -530,6 +540,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -560,7 +574,7 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-
+      
                         'name' will be used by default.
                     useLoginAsID:
                       type: boolean

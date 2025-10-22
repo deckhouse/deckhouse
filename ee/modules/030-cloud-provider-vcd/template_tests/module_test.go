@@ -111,6 +111,90 @@ const moduleValuesA = `
         required: true
 `
 
+const moduleValuesB = `
+    internal:
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
+      providerDiscoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        zones:
+        - default
+      discoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.2"
+        loadBalancer:
+          enabled: false
+      providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: VCDClusterConfiguration
+        provider:
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          server: "http://server/api/"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: v1rtual-app
+        mainNetwork: internal
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            template: Templates/ubuntu-focal-20.04
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
+`
+
+const moduleValuesC = `
+    internal:
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
+      providerDiscoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        zones:
+        - default
+      discoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.2"
+        loadBalancer:
+          enabled: true
+      providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: VCDClusterConfiguration
+        provider:
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          server: "http://server/api/"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: v1rtual-app
+        mainNetwork: internal
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            template: Templates/ubuntu-focal-20.04
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
+`
+
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 	BeforeSuite(func() {
@@ -127,7 +211,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("VCD", func() {
+	Context("VCD Suite A", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -196,6 +280,72 @@ spec:
   required: true
 `))
 
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect=true
+- --cloud-config=/etc/cloud/cloud-config
+- --cloud-provider=vmware-cloud-director
+- --allow-untagged-cloud=true
+- --configure-cloud-routes=false
+- --controllers=cloud-node,cloud-node-lifecycle
+- --bind-address=127.0.0.1
+- --secure-port=10471
+- --v=4`))
+		})
+	})
+
+	Context("VCD Suite B", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesB)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect=true
+- --cloud-config=/etc/cloud/cloud-config
+- --cloud-provider=vmware-cloud-director
+- --allow-untagged-cloud=true
+- --configure-cloud-routes=false
+- --controllers=cloud-node,cloud-node-lifecycle
+- --bind-address=127.0.0.1
+- --secure-port=10471
+- --v=4
+`))
+		})
+	})
+
+	Context("VCD Suite C", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesC)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect=true
+- --cloud-config=/etc/cloud/cloud-config
+- --cloud-provider=vmware-cloud-director
+- --allow-untagged-cloud=true
+- --configure-cloud-routes=false
+- --controllers=cloud-node,cloud-node-lifecycle,service
+- --bind-address=127.0.0.1
+- --secure-port=10471
+- --v=4
+`))
 		})
 	})
 })

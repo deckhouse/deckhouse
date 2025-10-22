@@ -1,29 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-4a1e88df7c6c8f81542a2b158759e29d57a19a408fb82c88470f633bb7d5d65c",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
-  "statements": [
-    {
-      "vulnerability": {
-        "name": "CVE-2025-53547"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm Chart Code Execution - Функционал, связанный с обновлением зависимостей helm chart, в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые зависимости включаются непосредственно в состав чарта, что исключает возможность эксплуатации уязвимости.",
-      "timestamp": "2025-10-10T15:29:44.644944464Z"
-    }
-  ],
-  "timestamp": "2025-10-10T15:29:44Z"
-}
-{
-  "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-1027bb9708316a925f7c01d588ba61989c7402802702e4795f09249e6dbd6728",
+  "@id": "merged-vex-18535f5e647828b3f78dcc88421cf908ef23554ac1c0c524726e13abc99b3c35",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
@@ -40,16 +17,7 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Helm specially crafted chart archive causing out of memory - Функционал скачивания и распаковки helm chart архивов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые чарты предоставляются в готовом виде, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-10T15:32:08.129204108Z"
-    }
-  ],
-  "timestamp": "2025-10-10T15:32:08Z"
-}
-{
-  "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-a31baefa686daf2254a1a46a9cfd3ad0b93d7a522460309421737ff9b1b4c859",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
-  "statements": [
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-32387"
@@ -63,16 +31,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Helm specially crafted JSON schema causing stack overflow - Функционал обработки JSON схем с произвольной глубиной вложенности в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Величина вложенности схем контролируется на этапе проверки линтером, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-10T15:33:13.264855875Z"
-    }
-  ],
-  "timestamp": "2025-10-10T15:33:13Z"
-}
-{
-  "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-8099493f35d0f646e271364c458516100e4a951182c5d08558bd18852e39c8e8",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
-  "statements": [
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-53547"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm Chart Code Execution - Функционал, связанный с обновлением зависимостей helm chart, в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые зависимости включаются непосредственно в состав чарта, что исключает возможность эксплуатации уязвимости.",
+      "timestamp": "2025-10-10T15:29:44.644944464Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-55198"
@@ -86,16 +59,7 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Helm YAML parsing panic vulnerability - Функционал разбора YAML-файлов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-10T15:34:40.216094508Z"
-    }
-  ],
-  "timestamp": "2025-10-10T15:34:40Z"
-}
-{
-  "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-2cb510013d32cb4eda9bf24d33a36bd4787bb1eebfb8a4e0463d5bc8d4c88153",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
-  "statements": [
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-55199"
@@ -111,5 +75,5 @@
       "timestamp": "2025-10-10T15:35:45.218482198Z"
     }
   ],
-  "timestamp": "2025-10-10T15:35:45Z"
+  "timestamp": "2025-10-22T11:59:26Z"
 }

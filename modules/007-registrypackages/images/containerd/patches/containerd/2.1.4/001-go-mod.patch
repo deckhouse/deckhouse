@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 9010fd18a..7802fc105 100644
+index 9010fd18a..74b8661b8 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,8 @@
  module github.com/containerd/containerd/v2
  
 -go 1.23.0
-+go 1.24
++go 1.24.0
 +
 +toolchain go1.24.2
  
@@ -45,16 +45,17 @@ index 9010fd18a..7802fc105 100644
  	google.golang.org/protobuf v1.36.6
  	gopkg.in/inf.v0 v0.9.1
  	k8s.io/apimachinery v0.32.3
-@@ -84,7 +89,7 @@ require (
+@@ -84,7 +89,8 @@ require (
  	k8s.io/cri-api v0.32.3
  	k8s.io/klog/v2 v2.130.1
  	k8s.io/kubelet v0.32.3
 -	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
-+	k8s.io/utils v0.0.0-20241210054802-24370beab758
++	k8s.io/mount-utils v0.34.1
++	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
  	tags.cncf.io/container-device-interface v1.0.1
  )
  
-@@ -93,26 +98,48 @@ require (
+@@ -93,26 +99,48 @@ require (
  	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
  	github.com/cilium/ebpf v0.16.0 // indirect
@@ -106,7 +107,7 @@ index 9010fd18a..7802fc105 100644
  	github.com/moby/spdystream v0.5.0 // indirect
  	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
  	github.com/modern-go/reflect2 v1.0.2 // indirect
-@@ -124,25 +151,34 @@ require (
+@@ -124,25 +152,34 @@ require (
  	github.com/prometheus/client_model v0.6.1 // indirect
  	github.com/prometheus/common v0.62.0 // indirect
  	github.com/prometheus/procfs v0.15.1 // indirect
@@ -149,7 +150,7 @@ index 9010fd18a..7802fc105 100644
  	k8s.io/api v0.32.3 // indirect
  	k8s.io/apiserver v0.32.3 // indirect
 diff --git a/go.sum b/go.sum
-index 9691c6113..4a8004096 100644
+index 9691c6113..f5c4752f9 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -10,12 +10,14 @@ github.com/Microsoft/hcsshim v0.13.0 h1:/BcXOiS6Qi7N9XqUcv27vkIuVOkBEcWstd2pMlWS
@@ -527,14 +528,16 @@ index 9691c6113..4a8004096 100644
  honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
  honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
  k8s.io/api v0.32.3 h1:Hw7KqxRusq+6QSplE3NYG4MBxZw1BZnq4aP4cJVINls=
-@@ -568,8 +652,8 @@ k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f h1:GA7//TjRY9yWGy1poLzYYJ
+@@ -568,8 +652,10 @@ k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f h1:GA7//TjRY9yWGy1poLzYYJ
  k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f/go.mod h1:R/HEjbvWI0qdfb8viZUeVZm0X6IZnxAydC7YU42CMw4=
  k8s.io/kubelet v0.32.3 h1:B9HzW4yB67flx8tN2FYuDwZvxnmK3v5EjxxFvOYjmc8=
  k8s.io/kubelet v0.32.3/go.mod h1:yyAQSCKC+tjSlaFw4HQG7Jein+vo+GeKBGdXdQGvL1U=
 -k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6JSWYFzOFnYeS6Ro=
 -k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-+k8s.io/utils v0.0.0-20241210054802-24370beab758 h1:sdbE21q2nlQtFh65saZY+rRM6x6aJJI8IUa1AmH/qa0=
-+k8s.io/utils v0.0.0-20241210054802-24370beab758/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
++k8s.io/mount-utils v0.34.1 h1:zMBEFav8Rxwm54S8srzy5FxAc4KQ3X4ZcjnqTCzHmZk=
++k8s.io/mount-utils v0.34.1/go.mod h1:MIjjYlqJ0ziYQg0MO09kc9S96GIcMkhF/ay9MncF0GA=
++k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 h1:hwvWFiBzdWw1FhfY1FooPn3kzWuJ8tmbZBHi4zVsl1Y=
++k8s.io/utils v0.0.0-20250604170112-4c0f3b243397/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 h1:/Rv+M11QRah1itp8VhT6HoVx1Ray9eB4DBr+K+/sCJ8=
  sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3/go.mod h1:18nIHnGi6636UCz6m8i4DhaJ65T6EruyzmoQqI2BVDo=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.2 h1:MdmvkGuXi/8io6ixD5wud3vOLwc1rj0aNqRlpuvjmwA=

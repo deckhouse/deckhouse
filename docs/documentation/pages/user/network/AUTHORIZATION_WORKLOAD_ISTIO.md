@@ -3,7 +3,7 @@ title: "Managing authorization and access to workload with Istio"
 permalink: en/user/network/authorization-workload-istio.html
 ---
 
-You can use the [`istio`](/modules/istio/) module to manage authorization and control access to workloads.
+You can use the [istio](/modules/istio/) module to manage authorization and control access to workloads.
 Before configuring authorization, make sure the module is enabled in the cluster.
 
 ## Authorization

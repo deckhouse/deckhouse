@@ -1,4 +1,4 @@
-{{- $mig_manager_version := "0.12.1" }}
+{{- $mig_manager_version := "0.12.3" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- $version := $key | toString }}
@@ -63,7 +63,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $mig_manager_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
   - cd /src/mig-parted
-  - rm -rf .git hack test
+  - rm -rf .git hack deployments vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
 final: false
@@ -80,7 +80,7 @@ secrets:
 shell:
   beforeInstall:
   - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.25.3.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH

@@ -17,7 +17,7 @@ spec:
   endpoints:
   - port: http-metrics
     relabelings:
-    - regex: namespace|pod|service|endpoint
+    - regex: pod|service|endpoint
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_service_label_app]
       targetLabel: pushgateway

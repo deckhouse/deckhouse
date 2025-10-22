@@ -161,7 +161,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - discover
       - pull_request_info
@@ -213,6 +213,22 @@ jobs:
               `);
               throw(error);
             }
+
+  gitleaks_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        continue-on-error: true
+        with:
+          scan_mode: "diff"
+          checkout_repo: ${{ github.event.pull_request.head.repo.full_name }}
+          checkout_ref: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
 
 
 {!{/* Template for validation jobs. */}!}

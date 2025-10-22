@@ -35,11 +35,17 @@ systemctl disable sysctl-tuner.service sysctl-tuner.timer
 systemctl disable old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl disable d8-containerd-cgroup-migration.service
 systemctl disable containerd-deckhouse.service
+systemctl disable containerd-deckhouse-logger-logrotate.timer
+systemctl disable containerd-deckhouse-logger-logrotate.service
+systemctl disable containerd-deckhouse-logger.service
 systemctl disable kubelet.service
 
 systemctl stop sysctl-tuner.service sysctl-tuner.timer
 systemctl stop old-csi-mount-cleaner.service old-csi-mount-cleaner.timer
 systemctl stop d8-containerd-cgroup-migration.service
+systemctl stop containerd-deckhouse-logger-logrotate.timer
+systemctl stop containerd-deckhouse-logger-logrotate.service
+systemctl stop containerd-deckhouse-logger.service
 systemctl stop containerd-deckhouse.service
 systemctl stop kubelet.service
 
@@ -61,6 +67,7 @@ rm -rf /etc/systemd/system/sysctl-tuner.*
 rm -rf /etc/systemd/system/old-csi-mount-cleaner.*
 rm -rf /etc/systemd/system/d8-containerd-cgroup-migration.*
 rm -rf /etc/systemd/system/containerd-deckhouse.service /etc/systemd/system/containerd-deckhouse.service.d /lib/systemd/system/containerd-deckhouse.service
+rm -rf /etc/systemd/system/containerd-deckhouse-logger.service /etc/systemd/system/containerd-deckhouse-logger-logrotate.service /etc/systemd/system/containerd-deckhouse-logrotate.timer
 rm -rf /etc/systemd/system/d8-shutdown-inhibitor.* /etc/systemd/system/d8-shutdown-inhibitor.service.d /lib/systemd/system/d8-shutdown-inhibitor.service
 rm -rf /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
 rm -rf /etc/systemd/system/kubelet.service /etc/systemd/system/kubelet.service.d /lib/systemd/system/kubelet.service
@@ -84,6 +91,8 @@ rm -rf /etc/containerd
 rm -rf /var/log/kube-audit
 rm -rf /var/log/pods
 rm -rf /var/log/containers
+rm -rf /var/log/containerd
+rm -rf /etc/logrotate.d/containerd-integrity.conf
 rm -rf /var/lib/deckhouse
 rm -rf /var/lib/upmeter
 rm -rf /etc/sudoers.d/sudoers_flant_kubectl

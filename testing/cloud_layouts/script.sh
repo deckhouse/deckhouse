@@ -265,6 +265,16 @@ function prepare_environment() {
   fi
   DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  else
+    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  fi
+
+  decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
+  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
@@ -368,6 +378,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
+        IMAGES_REPO="$IMAGES_REPO" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \

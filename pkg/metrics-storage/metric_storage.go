@@ -18,7 +18,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -36,7 +35,6 @@ import (
 var _ Storage = (*MetricStorage)(nil)
 
 const (
-	PrefixTemplate   = "{PREFIX}"
 	emptyUniqueGroup = `@_/_default_group_\_@`
 )
 
@@ -48,8 +46,6 @@ const (
 
 // MetricStorage is used to register metric values.
 type MetricStorage struct {
-	Prefix string
-
 	groupedVault *storage.GroupedVault
 
 	registry   *prometheus.Registry
@@ -61,13 +57,6 @@ type MetricStorage struct {
 
 // Option represents a MetricStorage option
 type Option func(*MetricStorage)
-
-// WithNewRegistry is an option to create a new prometheus registry
-func WithPrefix(prefix string) Option {
-	return func(m *MetricStorage) {
-		m.Prefix = prefix
-	}
-}
 
 // WithNewRegistry is an option to create a new prometheus registry
 func WithNewRegistry() Option {
@@ -124,7 +113,6 @@ func NewMetricStorage(opts ...Option) *MetricStorage {
 	}
 
 	m.groupedVault = storage.NewGroupedVault(
-		m.resolveMetricName,
 		options.WithRegistry(m.registry),
 		options.WithLogger(m.logger.Named("grouped-vault")),
 	)
@@ -134,14 +122,6 @@ func NewMetricStorage(opts ...Option) *MetricStorage {
 
 func (m *MetricStorage) Grouped() GroupedStorage {
 	return m.groupedVault
-}
-
-func (m *MetricStorage) resolveMetricName(name string) string {
-	if strings.Contains(name, PrefixTemplate) {
-		return strings.Replace(name, PrefixTemplate, m.Prefix, 1)
-	}
-
-	return name
 }
 
 func (m *MetricStorage) RegisterCounter(metric string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error) {

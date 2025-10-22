@@ -590,19 +590,19 @@ properties:
             items:
               type: string
               minLength: 1
-            description: List of flavors.
+            description: The list of flavors.
             uniqueItems: true
-          zones:
-            type: array
-            items:
-              type: string
           internalNetworks:
             type: array
             items:
               type: string
               minLength: 1
-            description: List of internal networks.
+            description: The list of internal networks.
             uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
           storageProfiles:
             type: array
             items:
@@ -616,13 +616,21 @@ properties:
                   type: boolean
                 isDefaultStorageProfile:
                   type: boolean
-            description: List of storage classes.
+            description: The list of storage classes.
           vcdInstallationVersion:
             type: string
             description: VCD installation version.
           vcdAPIVersion:
             type: string
             description: VCD API version.
+          loadBalancer:
+            type: object
+            additionalProperties: false
+            description: Parameters for the NSX-T ALB.
+            properties:
+              enabled:
+                type: boolean
+                description: Whether the NSX-T ALB feature is enabled.
       providerDiscoveryData:
         type: object
         additionalProperties: false
@@ -643,19 +651,19 @@ properties:
             items:
               type: string
               minLength: 1
-            description: List of flavors.
+            description: The list of flavors.
             uniqueItems: true
-          zones:
-            type: array
-            items:
-              type: string
           internalNetworks:
             type: array
             items:
               type: string
               minLength: 1
-            description: List of internal networks.
+            description: The list of internal networks.
             uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
           storageProfiles:
             type: array
             items:
@@ -669,13 +677,21 @@ properties:
                   type: boolean
                 isDefaultStorageProfile:
                   type: boolean
-            description: List of storage classes.
+            description: The list of storage classes.
           vcdInstallationVersion:
             type: string
             description: VCD installation version.
           vcdAPIVersion:
             type: string
             description: VCD API version.
+          loadBalancer:
+            type: object
+            additionalProperties: false
+            description: Parameters for the NSX-T ALB.
+            properties:
+              enabled:
+                type: boolean
+                description: Whether the NSX-T ALB feature is enabled.
       storageClasses:
         type: array
         items:

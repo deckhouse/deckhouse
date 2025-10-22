@@ -95,16 +95,16 @@ by switching to the **Stats** tab in the data panel.
 
 ### Dashboard descriptions
 
-"Applications – Log Shipper" dashboard shows the status of the `log-shipper` module,
+"Applications – Log Shipper" dashboard shows the status of the [log-shipper](/modules/log-shipper/) module,
 including the number of agents running on nodes and their load.
 
 ![Log Shipper](../../images/grafana/log_shipper.png)
 
-"Applications – Loki" dashboard shows the status of the `loki` module.
+"Applications – Loki" dashboard shows the status of the [loki](/modules/loki/) module.
 
 ![Loki](../../images/grafana/loki.png)
 
-"Applications – Loki Logs" dashboard displays logs from the `loki` module.
+"Applications – Loki Logs" dashboard displays logs from the [loki](/modules/loki/) module.
 
 ![Loki Logs](../../images/grafana/loki_logs.png)
 
@@ -135,7 +135,7 @@ The Kubernetes Cluster group contains dashboards related to the Kubernetes clust
 
   ![Aggregating Proxy Cache](../../images/grafana/aggregating-proxy-cache.png)
 
-- "Cilium Metrics" displays metrics from the `cni-cilium` module.
+- "Cilium Metrics" displays metrics from the [cni-cilium](/modules/cni-cilium/) module.
 
   ![Cilium Metrics](../../images/grafana/cilium-metrics.png)
 
@@ -184,11 +184,11 @@ The Kubernetes Cluster group contains dashboards related to the Kubernetes clust
 
   ![NTP](../../images/grafana/ntp.png)
 
-- "Prometheus Benchmark" dashboard shows a status of the `prometheus` module.
+- "Prometheus Benchmark" dashboard shows a status of the [prometheus](/modules/prometheus/) module.
 
   ![Prometheus Benchmark](../../images/grafana/prometheus-benchmark.png)
 
-- "Prometheus-(self)" dashboard — summary information about the state of the `prometheus` module.
+- "Prometheus-(self)" dashboard — summary information about the state of the [prometheus](/modules/prometheus/) module.
 
   ![Prometheus-(self)](../../images/grafana/prometheus-self.png)
 
@@ -198,7 +198,7 @@ The Kubernetes Cluster group contains dashboards related to the Kubernetes clust
 
   ![Capacity Planning](../../images/grafana/capacity-planning.png)
 
-- "Deckhouse" shows summary information about the main `deckhouse` component.
+- "Deckhouse" shows summary information about the main [deckhouse](/modules/deckhouse/) component.
 
   ![Deckhouse](../../images/grafana/deckhouse.png)
 
@@ -233,7 +233,7 @@ The relevant dashboards are grouped under the "Security" folder:
 
 - CIS Kubernetes Benchmark. A dashboard with the results of a configuration audit for compliance with established best practices.
   It provides summary information with no detailed view.
-  This dashboard is available when the `operator-trivy` module is enabled.
+  This dashboard is available when the [operator-trivy](/modules/operator-trivy/) module is enabled.
 
   ![CIS Kubernetes Benchmark](../../images/grafana/cis-kubernetes-benchmark.png)
 

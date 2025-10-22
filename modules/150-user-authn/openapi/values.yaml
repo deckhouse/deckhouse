@@ -330,7 +330,9 @@ properties:
               type: string
             id:
               type: string
-            # providers spec is copied from custom resources as is and validated by its spec
+            enabled:
+              type: boolean
+              default: true
             crowd:
               type: object
               additionalProperties: true

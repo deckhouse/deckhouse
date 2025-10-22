@@ -35,7 +35,7 @@ For the proper operation of the Deckhouse Kubernetes Platform with VMware vSpher
      * Assigned the role from item 6.
 * The created Datacenter **must** be assigned a tag from the tag category specified in [regionTagCategory](#parameters-regiontagcategory) (default: `k8s-region`). This tag will designate a **region**.
 
-### Preparing the virtual machine image
+### VM image requirements
 
 To create a VM template (`Template`), it is recommended to use a ready-made cloud image/OVA file provided by the OS vendor:
 
@@ -44,32 +44,74 @@ To create a VM template (`Template`), it is recommended to use a ready-made clou
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (section *Generic Cloud / OpenStack*)
 
-{% alert %}
-If you plan to use a domestic OS distribution, contact the OS vendor to obtain the image/OVA file.
-{% endalert %}
-
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-### VM image requirements
+### Preparing the virtual machine image
 
-DKP uses `cloud-init` to configure the VM after it starts. The following packages must be installed in the image:
+1. Install the required packages:
 
-* `open-vm-tools`
-* `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if using `cloud-init` version lower than 21.3)
+   If you use `cloud-init` version lower than 21.3 (VMware GuestInfo support is required):
 
-Also, after the VM is started, the following services related to these packages must be running:
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init cloud-init-vmware-guestinfo
+   ```
 
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
+   If you use `cloud-init` version 21.3 or higher:
 
-To add an SSH key, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init
+   ```
+
+1. Verify that the `disable_vmware_customization: false` parameter is set in `/etc/cloud/cloud.cfg`.
+
+1. Make sure the `default_user` parameter is specified in `/etc/cloud/cloud.cfg`. It is required to add an SSH key when the VM starts.
+
+1. Add the VMware GuestInfo datasource — create `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
+
+   ```yaml
+   datasource:
+     VMware:
+       vmware_cust_file_max_wait: 10
+   ```
+
+1. Before creating the VM template, reset identifiers and the `cloud-init` state:
+
+   ```shell
+   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Clear `cloud-init` event logs:
+
+   ```shell
+   cloud-init clean --logs --seed
+   ```
 
 {% alert level="warning" %}
-The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+
+After the virtual machine starts, the following services related to the packages installed during `cloud-init` preparation must be running:
+
+- `cloud-config.service`,
+- `cloud-final.service`,
+- `cloud-init.service`.
+
+To ensure that the services are enabled, use the command:
+
+```shell
+systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
+```
+
+Example output for enabled services:
+
+```console
+enabled
+enabled
+enabled
+```
+
 {% endalert %}
 
 {% alert %}

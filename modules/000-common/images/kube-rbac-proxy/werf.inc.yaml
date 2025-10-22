@@ -56,3 +56,5 @@ shell:
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
   - chown 64535:64535 /kube-rbac-proxy
   - chmod 0755 /kube-rbac-proxy
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

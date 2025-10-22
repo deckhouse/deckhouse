@@ -36,7 +36,7 @@ shell:
   - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -56,3 +56,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go`) | indent 6 }}
   - chown 64535:64535 /trivy
   - chmod 0700 /trivy
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

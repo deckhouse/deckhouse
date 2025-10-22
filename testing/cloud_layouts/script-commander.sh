@@ -82,6 +82,52 @@ EOF
 set -Eeo pipefail
 shopt -s failglob
 
+function create_registry() {
+  decode_dockercfg=$(base64 -d <<< "${1}")
+  registry_address=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
+  registry_auth=$(jq -r ".auths.\"${registry_address}\".auth" <<< "$decode_dockercfg")
+  sleep_second=0
+  payload="{
+      \"name\": \"${PREFIX}\",
+      \"images_repo\": \"${registry_address}/sys/deckhouse-oss\",
+      \"scheme\": \"https\",
+      \"dev_branch\": \"${DEV_BRANCH}\",
+      \"auth\": \"${registry_auth}\"
+  }"
+  for (( j=1; j<=5; j++ )); do
+    sleep "$sleep_second"
+    sleep_second=5
+
+    response=$(curl -s -X POST  \
+      "https://${COMMANDER_HOST}/api/v1/registries" \
+      -H 'accept: application/json' \
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      -w "\n%{http_code}")
+
+    http_code=$(echo "$response" | tail -n 1)
+    response_body=$(echo "$response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response_body" >&2
+      continue
+    else
+      registry_id=$(jq -r '.id' <<< "$response_body")
+      break
+    fi
+  done
+
+  if [[ -n "$registry_id" ]]; then
+      echo "$registry_id"
+  else
+      echo "Failed to create registry." >&2
+      return 1
+  fi
+}
+
 function prepare_environment() {
     if [[ -z "$KUBERNETES_VERSION" ]]; then
       # shellcheck disable=SC2016
@@ -136,13 +182,19 @@ function prepare_environment() {
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+      registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+    else
+      registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
+    fi
+
   case "$PROVIDER" in
   "Yandex.Cloud")
     CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
     FOLDER_ID=$LAYOUT_YANDEX_FOLDER_ID
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
-    cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -161,7 +213,6 @@ function prepare_environment() {
 
   "GCP")
     ssh_user="user"
-    cluster_template_id="565ed77c-0ae0-4baa-9ece-6603bcf3139a"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -178,7 +229,6 @@ function prepare_environment() {
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -196,7 +246,6 @@ function prepare_environment() {
 
   "Azure")
     ssh_user="azureuser"
-    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -216,7 +265,6 @@ function prepare_environment() {
 
   "OpenStack")
     ssh_user="redos"
-    cluster_template_id="cb79a126-4234-4dac-a01e-2d3804266e3e"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -238,7 +286,6 @@ function prepare_environment() {
     bastion_port="53359"
     # ssh_bastion="ProxyJump=${bastion_user}@${bastion_host}:${bastion_port}"
     ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
-    cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"${PREFIX}\",
@@ -291,8 +338,6 @@ function prepare_environment() {
     ssh_redos_user_worker="redos"
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
-
-    cluster_template_id="dbe33391-02c1-4f23-a77b-0edb8b079ff6"
 
     ;;
   esac
@@ -1083,13 +1128,14 @@ function run-test() {
   fi
 
   cluster_template_version_id=$(curl -s -X 'GET' \
-    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${TEMPLATE_ID}?without_archived=true" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
   payload="{
     \"name\": \"${PREFIX}\",
+    \"registry_id\": \"${registry_id}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": ${values}
   }"
@@ -1112,7 +1158,7 @@ function run-test() {
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
     echo http_code: $http_code
-    
+
     # Check for HTTP errors
     if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
       break

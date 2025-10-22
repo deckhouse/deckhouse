@@ -19,3 +19,7 @@ Adds support for clusters where containerd forces `readOnlyRootFilesystem` for e
 * therefore the helper-pod can still create or remove directories even though the container root filesystem is read-only.
 
 The patch touches `provisioner.go`.
+
+### 004-fix-go-mod.patch
+
+Update dependencies

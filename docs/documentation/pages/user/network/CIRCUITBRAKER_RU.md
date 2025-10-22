@@ -4,7 +4,7 @@ permalink: ru/user/network/circuit-breaker.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform механизм Circuit Breaker реализуется средствами Istio (модуль [`istio`](/modules/istio/)) и обеспечивает следующие возможности:
+В Deckhouse Kubernetes Platform механизм Circuit Breaker реализуется средствами Istio (модуль [istio](/modules/istio/)) и обеспечивает следующие возможности:
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B8-%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D0%B5-%D1%80%D0%B5%D1%88%D0%B0%D0%B5%D1%82-istio -->
 

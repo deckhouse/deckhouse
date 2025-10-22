@@ -49,3 +49,5 @@ shell:
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

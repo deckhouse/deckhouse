@@ -100,7 +100,7 @@ d8 k get nodes
 
 ### Process of control plane component updates
 
-1. The `control-plane-manager` module modifies the manifests of core components
+1. The [control-plane-manager](/modules/control-plane-manager/) module modifies the manifests of core components
    (`apiserver`, `controller-manager`, `scheduler`, etc.).
 1. The updated components are deployed on all master nodes.
 

@@ -1,7 +1,16 @@
 diff --git a/go.mod b/go.mod
-index 2128f6d73..cebe9c9b3 100644
+index 2128f6d73..0d0559ecd 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -33,7 +33,7 @@ require (
+ 	github.com/google/go-cmp v0.6.0
+ 	github.com/onsi/ginkgo/v2 v2.22.2
+ 	github.com/onsi/gomega v1.36.2
+-	k8s.io/kubernetes v1.32.0
++	k8s.io/kubernetes v1.32.8
+ 	sigs.k8s.io/sig-storage-lib-external-provisioner/v11 v11.0.1
+ )
+ 
 @@ -125,15 +125,15 @@ require (
  	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
@@ -26,7 +35,7 @@ index 2128f6d73..cebe9c9b3 100644
  	golang.org/x/tools v0.29.0 // indirect
  	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
 diff --git a/go.sum b/go.sum
-index 9464d3945..4cd2c7794 100644
+index 9464d3945..3323adb60 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -276,8 +276,8 @@ go.uber.org/zap v1.27.0/go.mod h1:GB2qFLM7cTU87MWRP2mPIjqfIDnGu+VIO4V/SdhGo2E=
@@ -85,6 +94,17 @@ index 9464d3945..4cd2c7794 100644
  golang.org/x/time v0.9.0 h1:EsRrnYcQiGH+5FfbgvV4AP7qEZstoyrHB0DzarOQ4ZY=
  golang.org/x/time v0.9.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+@@ -389,8 +389,8 @@ k8s.io/kubectl v0.32.0 h1:rpxl+ng9qeG79YA4Em9tLSfX0G8W0vfaiPVrc/WR7Xw=
+ k8s.io/kubectl v0.32.0/go.mod h1:qIjSX+QgPQUgdy8ps6eKsYNF+YmFOAO3WygfucIqFiE=
+ k8s.io/kubelet v0.32.0 h1:uLyiKlz195Wo4an/K2tyge8o3QHx0ZkhVN3pevvp59A=
+ k8s.io/kubelet v0.32.0/go.mod h1:lAwuVZT/Hm7EdLn0jW2D+WdrJoorjJL2rVSdhOFnegw=
+-k8s.io/kubernetes v1.32.0 h1:4BDBWSolqPrv8GC3YfZw0CJvh5kA1TPnoX0FxDVd+qc=
+-k8s.io/kubernetes v1.32.0/go.mod h1:tiIKO63GcdPRBHW2WiUFm3C0eoLczl3f7qi56Dm1W8I=
++k8s.io/kubernetes v1.32.8 h1:NePHsWPIT9NQZ9w5QT/chJMuwjFFGGZxalvD6FlOjlw=
++k8s.io/kubernetes v1.32.8/go.mod h1:REY0Gok66BTTrbGyZaFMNKO9JhxvgBDW9B7aksWRFoY=
+ k8s.io/mount-utils v0.32.0 h1:KOQAhPzJICATXnc6XCkWoexKbkOexRnMCUW8APFfwg4=
+ k8s.io/mount-utils v0.32.0/go.mod h1:Kun5c2svjAPx0nnvJKYQWhfeNW+O0EpzHgRhDcYoSY0=
+ k8s.io/pod-security-admission v0.32.0 h1:I+Og0uZIiMpIgTgPrTbW4jlwRI5RWazi8y+jrx1v10w=
 diff --git a/vendor/modules.txt b/vendor/modules.txt
 index de1f7152c..8ef7a82a5 100644
 --- a/vendor/modules.txt

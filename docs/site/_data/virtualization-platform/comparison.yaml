@@ -1,55 +1,100 @@
 editions:
-  - ce
-  - ee
+  - dkp-ce
+  - dvp-ee
+  - dkp-se-plus
+  - dkp-ee
 featureSections:
   - features:
       - title:
           ru: Декларативное создание любых ресурсов (GitOps ready)
           en: Declarative resources creation (GitOps ready)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Высокая доступность ВМ при отказе узла гипервизора
           en: High availability of VMs in case of hypervisor failure
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Распределение ВМ для сбалансированного использования ресурсов гипервизора
           en: Virtual machine allocation for balanced hypervisor resource usage
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+      - title:
+          ru: Динамическая балансировка ресурсов гипервизора при размещении ВМ на локальном хранилище
+          en: Dynamic hypervisor resource balancing for VM placement on local storage
+        editions:
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Режим обслуживания гипервизоров
           en: Hypervisor maintenance mode
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Поддержка российских ОС на гипервизоре
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Масштабирование до 1000 узлов и 50 000 ВМ
           en: Scaling up to 1000 nodes and 50000 VMs
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Провайдер для развертывания DKP на DVP в режиме полной интеграции
           en: Provider for deploying DKP on DVP in full integration mode
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+      - title:
+          ru: Централизованное управление кластерами DVP c помощью <a target='_blank' href='/products/commander/'>Commander</a>
+          en: Centralized management of DVP clusters using <a target='_blank' href='/products/commander/'>Commander</a>
+        editions:
+          dkp-ce: partly
+          dvp-ee: partly
+          dkp-se-plus: supported
+          dkp-ee: supported
+        restriction_message:
+          dkp-ce:
+            en: |
+              A separate license is required
+            ru: |
+              Требуется отдельная <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>лицензия</a>
+          dvp-ee:
+            en: |
+              A separate license is required
+            ru: |
+              Требуется отдельная <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>лицензия</a>
       - title:
           ru: Поддержка вложенной виртуализации
           en: Nested virtualization support
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Планирование ресурсов
       en: Resource planning
@@ -58,20 +103,26 @@ featureSections:
           ru: Квотирование ресурсов на уровне проектов
           en: Resource quotas at the project level
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Политики сайзинга виртуальных машин (VirtualMachineClass)
           en: Policies for sizing virtual machines (VirtualMachineClass)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Унификация процессорных инструкций на гипервизорах (VirtualMachineClass)
           en: Unification of CPU instructions on hypervisors (VirtualMachineClass)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Возможности управления
       en: Management capabilities
@@ -80,101 +131,177 @@ featureSections:
           ru: Веб-интерфейс администратора
           en: Administrator web interface
         editions:
-          ce: partly
-          ee: supported
+          dkp-ce: partly
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
         restriction_message:
-          ce:
+          dkp-ce:
             en: "In read only mode"
             ru: "В режиме только для чтения"
+      - title:
+          ru: Веб-интерфейс пользователя
+          en: User web interface
+        editions:
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Управление через CLI и доступ через API
           en: Management through CLI and access via API
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+  - title:
+      ru: Запуск пользовательских нагрузок
+      en: Running user payloads
+    features:
+      - title:
+          ru: Возможность запуска ВМ
+          en: Ability to run VM
+        editions:
+          dkp-ce: partly
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+        restriction_message:
+          dkp-ce:
+            en: Some features are available only in commercial editions
+            ru: Некоторые функции доступны только в коммерческих редакциях
+      - title:
+          ru: Возможность запуска контейнеров (<a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>полный список</a> возможностей DKP)
+          en: Ability to run containers
+        editions:
+          dkp-ce: partly
+          dvp-ee: partly
+          dkp-se-plus: supported
+          dkp-ee: supported
+        restriction_message:
+          dkp-ce:
+            en: Some features are available only in commercial editions
+            ru: Некоторые функции доступны только в коммерческих редакциях
+          dvp-ee:
+            en: Up to 50 containers
+            ru: До 50 контейнеров
+  - title:
+      ru: Управление виртуальными машинами
+      en: Virtual machine management
+    features:
       - title:
           ru: Импорт образов и дисков ВМ (qcow, vmdk, raw, vdi)
           en: Importing VM images and disks (qcow, vmdk, raw, vdi)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Общие и проектные образы для создания виртуальных машин
           en: Public and project images for creating virtual machines
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Кастомизация ОС ВМ при первом запуске
           en: Customization of the VM OS at first launch
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Добавление и изменение размеров дисков ВМ без перезагрузки
           en: Add and resize VM disks without reboot
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
-          ru: Консистентные снимки дисков и конфигурации ВМ
-          en: Consistent snapshots of VM disks and configuration
+          ru: Консистентные снимки дисков и конфигурации ВМ (<a target='_blank' href='/wp-content/uploads/2025/05/storage-table.png'>хранилище</a> должно поддерживать снимки)
+          en: Consistent snapshots of VM disks and configuration (storage must support snapshots)
         editions:
-          ce: partly
-          ee: partly
-        restriction_message:
-          ce:
-            en: |
-              Available with <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/pricing/'>restrictions</a>
-            ru: |
-              Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
-          ee:
-            en: |
-              The storage must <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
-            ru: |
-              Хранилище должно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Восстановление дисков и конфигурации ВМ из снимка
           en: Restore VM disks and configuration from snapshot
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+      - title:
+          ru: Клонирование ВМ
+          en: VM cloning
+        editions:
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Экспорт дисков и снимков
           en: Disk and snapshot export
         editions:
-          ce: not_supported
-          ee: supported
-      - title:
-          ru: Экспорт ВМ
-          en: VM export
-        editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Живая миграция виртуальных машин без простоя
           en: Live VM migration without downtime
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Политики для оптимизации живой миграции ВМ
           en: Live migration optimization policies
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+      - title:
+          ru: Живая миграция между хранилищами разных типов
+          en: Live migration between storage types
+        editions:
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
+      - title:
+          ru: Живая миграция между узлами при использовании локального хранилища
+          en: Live migration between nodes when using local storage
+        editions:
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Политики запуска ВМ (Always On/Always Off/Manual)
           en: VM launch policies (Always On/Always Off/Manual)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Правила размещения ВМ (Affinity/Antiaffinity)
           en: VM placement management (Affinity/Antiaffinity)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Хранение данных
       en: Data storage
@@ -183,32 +310,42 @@ featureSections:
           ru: Встроенный SDS
           en: Built-in SDS
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Поддержка сторонних SDS (Ceph)
           en: Support for third-party SDS (Ceph)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Поддержка NFS
           en: Support for NFS
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Универсальная поддержка аппаратных СХД (SCSI-generic)
           en: Universal support for hardware storage systems (SCSI-generic)
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: not_supported
+          dkp-ee: supported
       - title:
-          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE)
-          en: Support for hardware storage systems using API (Yadro, Huawei, HPE)
+          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE, NetApp)
+          en: Support for hardware storage systems using API (Yadro, Huawei, HPE, NetApp)
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: not_supported
+          dkp-ee: supported
   - title:
       ru: Сетевые возможности (SDN)
       en: Network capabilities (SDN)
@@ -217,74 +354,104 @@ featureSections:
           ru: Подключение ВМ к физическим VLAN
           en: VM connectivity to physical VLANs
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Несколько сетевых интерфейсов для ВМ
           en: Multiple network interfaces for VMs
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Общие VLAN-сети для ВМ в кластере
           en: Shared VLAN networks for VMs in a cluster
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Изолированные VLAN-сети для ВМ в рамках проекта
           en: Isolated VLAN networks for VMs within a project
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Агрегирование сетевых интерфейсов узлов гипервизора (Bonding)
           en: Hypervisor node network interface aggregation (Bonding)
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Автоматическое назначение IP-адресов для ВМ
           en: Automatic IP address assignment for VMs
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Микросегментация на основе сетевых политик
           en: Network policies (micro-segmentation)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Встроенный балансировщик нагрузки
           en: Built-in load balancer
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Внешний балансировщик нагрузки на базе MetalLB
           en: External load balancer based on MetalLB
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: partly
+          dkp-ee: supported
+        restriction_message:
+          dkp-se-plus:
+            en: |
+              Except BGP mode
+            ru: |
+              Кроме режима BGP
       - title:
           ru: Балансировщик нагрузки с активными health check
           en: Active health check load balancer
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Управление статическими маршрутами
           en: Static routing management
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: not_supported
+          dkp-ee: supported
       - title:
           ru: Egress Gateway
           en: Egress Gateway
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Мониторинг
       en: Monitoring
@@ -293,14 +460,18 @@ featureSections:
           ru: Встроенный мониторинг и логирование инфраструктуры и ВМ
           en: Built-in monitoring and logging of infrastructure and VMs
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Отправка метрик и логов во внешние источники
           en: Sending metrics and logs to external collectors
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Безопасность
       en: Security
@@ -309,44 +480,58 @@ featureSections:
           ru: Мультитенантность на базе проектов
           en: Multitenancy (projects)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Гибкая ролевая модель доступа (RBAC)
           en: Flexible role-based access model (RBAC)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Развёртывание в изолированном контуре
           en: Deployment in an isolated environment
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Интеграция с внешними провайдерами аутентификации (LDAP, OIDC)
           en: Integration with external authentication providers (LDAP, OIDC)
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Управление сертификатами Ingress
           en: Ingress certificate management
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Миграция ВМ с шифрованием (Data in Transit encryption)
           en: Data in Transit encryption
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: Аудит событий безопасности для виртуализации
           en: Security event auditing for virtualization
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
   - title:
       ru: Поддержка
       en: Support
@@ -355,21 +540,27 @@ featureSections:
           ru: Поддержка сообщества
           en: Community support
         editions:
-          ce: supported
-          ee: supported
+          dkp-ce: supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: |
             <a href='/tech-support/' target='_blank'>Техподдержка «Стандарт» (8/5)</a>
           en: |
             <a href='/tech-support/' target='_blank'>Extended technical support (8/5)</a>
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported
       - title:
           ru: |
             <a href='/tech-support/' target='_blank'>Техподдержка «Стандарт+» (24/7)</a>
           en: |
             <a href='/tech-support/' target='_blank'>Extended technical support (24/7)</a>
         editions:
-          ce: not_supported
-          ee: supported
+          dkp-ce: not_supported
+          dvp-ee: supported
+          dkp-se-plus: supported
+          dkp-ee: supported

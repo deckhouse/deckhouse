@@ -87,7 +87,6 @@ d8 k get vmclass
 Пример вывода (с классом по умолчанию):
 
 ```console
-$ d8 k get vmclass 
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d

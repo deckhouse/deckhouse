@@ -310,6 +310,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company GitHub
+  # Опционально: временно отключить провайдер, не удаляя CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring

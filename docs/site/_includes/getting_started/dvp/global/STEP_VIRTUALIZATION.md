@@ -22,3 +22,7 @@ spec:
   version: 1
 EOF
 ```
+
+{% alert level="warning" %}
+The subnets of the `.spec.settings.virtualMachineCIDRs` block must not overlap with the subnets of the cluster nodes, the services subnet, or the pods subnet (`podCIDR`).
+{% endalert %}

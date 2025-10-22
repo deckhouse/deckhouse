@@ -34,14 +34,17 @@ properties:
 
       Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
+      allowedSeverityLevels:
+        description: |-
+          Образы контейнеров, содержащие только уязвимости указанных уровней критичности, не будут запрещены.
       storageClass:
         description: |-
           Имя StorageClass для использования `trivy_provider`.
-          
+
           Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
-         
+
           Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
-          
+
           **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
 
           Если указать `false`, будет принудительно использоваться `emptyDir`.

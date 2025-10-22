@@ -1,6 +1,6 @@
 ---
 title: "Getting started — Selecting infrastructure"
-permalink: en/gs/index.html
+permalink: en/gs/
 description: Step-by-step walkthroughs for installing Deckhouse Kubernetes Platform on top of any infrastructure.
 layout: page-nosidebar
 toc: false
@@ -24,33 +24,7 @@ toc: false
     <div>
       <h3>Cloud platform</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
-        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
-        {%- if provider[1].languages %}
-          {%- unless provider[1].languages contains "en" %}{% continue %}{% endunless %}
-        {%- endif %}
-        {%- if provider[1].wip == true %}
-        <a
-          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
-        {%- else %}
-        <a class="button button_default button_card"
-          href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
-            {% if provider[1].iconPath %}
-              <div class="icon">
-                <img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/>
-              </div>
-            {% endif %}
-            <span class="name">{{ provider[1].name[page.lang] }}</span>
-            {% if provider[1].extraIcons %}
-            <div class="footer">
-              {%- for extraIcon in provider[1].extraIcons %}
-              <img src="/{{extraIcon[1]}}" alt=""/>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </a>
-        {%- endif %}
-        {% endfor %}
+        {% include getting_started/buttons-cloud-sorted.liquid %}
       </div>
       <p>
         <small>

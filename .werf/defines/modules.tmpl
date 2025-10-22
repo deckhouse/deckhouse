@@ -47,7 +47,7 @@ dependencies:
 {{- $context := . -}}
 
 image: images-digests
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 dependencies:
 
 {{- range $imageDigest := $context.ModulesImagesDigestList }}
@@ -70,7 +70,7 @@ shell:
   - |
     touch digests_full.lst
     # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
-    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | cut -d "=" -f 1`
+    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | grep -vi "artifact" | cut -d "=" -f 1`
     do
       digestKey=`echo $line | cut -f 4- -d '_'`
       imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`

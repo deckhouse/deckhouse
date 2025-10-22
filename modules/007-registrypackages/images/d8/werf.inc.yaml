@@ -82,3 +82,5 @@ shell:
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

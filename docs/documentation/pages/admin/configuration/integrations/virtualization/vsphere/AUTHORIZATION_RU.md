@@ -36,7 +36,7 @@ lang: ru
      * Привязывается роль из п. 6.
 * На созданный Datacenter **необходимо** назначить тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию `k8s-region`). Этот тег будет обозначать **регион**.
 
-### Подготовка образа виртуальной машины
+### Требования к образу виртуальной машины
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
 
@@ -53,24 +53,72 @@ lang: ru
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
-### Требования к образу виртуальной машины
+### Подготовка образа виртуальной машины
 
-DKP использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
+DKP использует `cloud-init` для настройки виртуальной машины после запуска. Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
 
-* `open-vm-tools`
-* `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
+1. Установите необходимые пакеты:
 
-Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
+   Если используется версия `cloud-init` ниже 21.3 (требуется поддержка VMware GuestInfo):
 
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init cloud-init-vmware-guestinfo
+   ```
 
-Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
+   Если используется версия `cloud-init` 21.3 и выше:
+
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init
+   ```
+
+1. Проверьте, что в файле `/etc/cloud/cloud.cfg` установлен параметр `disable_vmware_customization: false`.
+
+1. Убедитесь, что в файле `/etc/cloud/cloud.cfg` указан параметр `default_user`. Он необходим для добавления SSH-ключа при запуске ВМ.
+
+1. Добавьте datasource VMware GuestInfo — создайте файл `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
+
+   ```yaml
+   datasource:
+     VMware:
+       vmware_cust_file_max_wait: 10
+   ```
+
+1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`:
+
+   ```shell
+   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Очистите логи событий `cloud-init`:
+
+   ```shell
+   cloud-init clean --logs --seed
+   ```
 
 {% alert level="warning" %}
-Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+
+После запуска виртуальной машины в ней должны быть запущены следующие службы, связанные с пакетами, установленными при подготовке `cloud-init`:
+
+- `cloud-config.service`,
+- `cloud-final.service`,
+- `cloud-init.service`.
+
+Чтобы убедиться в том, что службы включены, используйте команду:
+
+```shell
+systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
+```
+
+Пример ответа для включенных служб:
+
+```console
+enabled
+enabled
+enabled
+```
+
 {% endalert %}
 
 {% alert %}

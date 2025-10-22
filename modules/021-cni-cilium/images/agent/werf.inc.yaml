@@ -570,3 +570,5 @@ imageSpec:
       PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     workingDir: "/home/cilium"
     cmd: ["/usr/bin/cilium-dbg"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName "agent-distroless" )) }}

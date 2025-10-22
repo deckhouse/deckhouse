@@ -112,3 +112,5 @@ shell:
   - npm install
   - npm run build
   - chown 64535:64535 /app
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

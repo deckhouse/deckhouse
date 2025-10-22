@@ -61,6 +61,7 @@
  - **[cloud-provider-huaweicloud]** add rule to d8:cloud-provider-huaweicloud:cloud-controller-manager account for list pods as needed [#15678](https://github.com/deckhouse/deckhouse/pull/15678)
  - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
+ - **[cloud-provider-vsphere]** fix hook logick [#16028](https://github.com/deckhouse/deckhouse/pull/16028)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15775](https://github.com/deckhouse/deckhouse/pull/15775)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15507](https://github.com/deckhouse/deckhouse/pull/15507)
  - **[cloud-provider-vsphere]** Moved datastore discovery (via vSphere SDK calls) from hook to cloud-data-discovery. [#14519](https://github.com/deckhouse/deckhouse/pull/14519)
@@ -94,6 +95,7 @@
  - **[ingress-nginx]** Fixed the missing opentelemetry libraries issue. [#14965](https://github.com/deckhouse/deckhouse/pull/14965)
     The pods of Ingress Nginx controllers of 1.10 and 1.12 versions will be restated.
  - **[ingress-nginx]** Re-enabled validation and updated documentation. [#14368](https://github.com/deckhouse/deckhouse/pull/14368)
+ - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15328](https://github.com/deckhouse/deckhouse/pull/15328)
  - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15236](https://github.com/deckhouse/deckhouse/pull/15236)
  - **[istio]** Added api-proxy support for short-lived ServiceAccount tokens. [#14137](https://github.com/deckhouse/deckhouse/pull/14137)
  - **[loki]** Change stage to Preview [#15553](https://github.com/deckhouse/deckhouse/pull/15553)
