@@ -92,6 +92,7 @@ rm -rf /var/log/kube-audit
 rm -rf /var/log/pods
 rm -rf /var/log/containers
 rm -rf /var/log/containerd
+rm -rf /etc/logrotate.d/containerd-integrity.conf
 rm -rf /var/lib/deckhouse
 rm -rf /var/lib/upmeter
 rm -rf /etc/sudoers.d/sudoers_flant_kubectl
