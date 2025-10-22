@@ -52,7 +52,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
-	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"

@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -48,7 +47,7 @@ func TestState_Process(t *testing.T) {
 			Token: tokenModel,
 		}
 
-		result, err := state.Process(log, bootstrap.Inputs{})
+		result, err := state.Process(log)
 		require.NoError(t, err)
 
 		assert.True(t, ca.Cert.Equal(result.CA.Cert), "CA certificate should match")
@@ -61,7 +60,7 @@ func TestState_Process(t *testing.T) {
 	t.Run("Generate new CA and Token when state is empty", func(t *testing.T) {
 		state := &State{} // Empty state
 
-		result, err := state.Process(log, bootstrap.Inputs{})
+		result, err := state.Process(log)
 		require.NoError(t, err)
 
 		assert.NotNil(t, result.CA.Cert, "Should generate a CA certificate")
@@ -99,7 +98,7 @@ func TestState_Process(t *testing.T) {
 			Token: invalidTokenModel,
 		}
 
-		result, err := state.Process(log, bootstrap.Inputs{})
+		result, err := state.Process(log)
 		require.NoError(t, err)
 
 		// CA should remain the same

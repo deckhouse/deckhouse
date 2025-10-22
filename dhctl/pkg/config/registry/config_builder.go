@@ -24,7 +24,7 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bootstrap"
+	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 )
 
 type ConfigBuilder struct {
@@ -164,13 +164,13 @@ func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, 
 
 func (builder *ConfigBuilder) RegistryBootstrapSecretData() (map[string][]byte, error) {
 	config, err := yaml.Marshal(
-		bootstrap.Config{
-			CA: bootstrap.CertKey{
+		registry_init.Config{
+			CA: &registry_init.CertKey{
 				Cert: builder.registry.pki.CA.Cert,
 				Key:  builder.registry.pki.CA.Key,
 			},
-			UserRW: builder.registry.pki.UserRW,
-			UserRO: builder.registry.pki.UserRO,
+			UserRW: &builder.registry.pki.UserRW,
+			UserRO: &builder.registry.pki.UserRO,
 		})
 	if err != nil {
 		return nil, err

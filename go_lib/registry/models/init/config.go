@@ -14,16 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package bootstrap
+package init
 
 import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
 type Config struct {
-	CA     CertKey    `json:"ca" yaml:"ca"`
-	UserRW users.User `json:"userRW" yaml:"userRW"`
-	UserRO users.User `json:"userRO" yaml:"userRO"`
+	CA     *CertKey    `json:"ca,omitempty" yaml:"ca,omitempty"`
+	UserRW *users.User `json:"userRW,omitempty" yaml:"userRW,omitempty"`
+	UserRO *users.User `json:"userRO,omitempty" yaml:"userRO,omitempty"`
 }
 
 type CertKey struct {

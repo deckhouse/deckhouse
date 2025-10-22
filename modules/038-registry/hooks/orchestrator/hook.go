@@ -30,11 +30,11 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
@@ -48,7 +48,7 @@ const (
 
 	configSnapName           = "config"
 	stateSnapName            = "state"
-	bootstrapSnapName        = "bootstrap"
+	initSnapName             = "init"
 	registrySecretSnapName   = "registry-secret"
 	pkiSnapName              = "pki"
 	secretsSnapName          = "secrets"
@@ -112,6 +112,34 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 			},
 		},
 		{
+			Name:       initSnapName,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-bootstrap"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert secret to struct: %v", err)
+				}
+
+				config, ok := secret.Data["config"]
+				if !ok {
+					return nil, nil
+				}
+
+				return config, nil
+			},
+		},
+		{
 			Name:              registrySecretSnapName,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
@@ -134,7 +162,6 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		registryservice.KubernetsConfig(registryServiceSnapName),
 		inclusterproxy.KubernetesConfig(inClusterProxySnapName),
 		registryswitcher.KubernetesConfig(registrySwitcherSnapName),
-		bootstrap.KubernetesConfig(bootstrapSnapName),
 	}
 
 	ret = append(ret, bashible.KubernetesConfig(bashibleSnapName)...)
@@ -155,9 +182,17 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values := moduleValues.Get()
 
 	var (
-		inputs Inputs
-		err    error
+		inputs        Inputs
+		err           error
+		hasInitSecret bool
 	)
+
+	inputs.InitConfig, err = helpers.SnapshotToSingle[registry_init.Config](input, initSnapName)
+	if err == nil {
+		hasInitSecret = true
+	} else if !errors.Is(err, helpers.ErrNoSnapshot) {
+		return fmt.Errorf("get Init snapshot error: %w", err)
+	}
 
 	if values.State.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
@@ -167,14 +202,11 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			if err = yaml.Unmarshal(stateData, &values.State); err != nil {
 				err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
 			}
-		} else if errors.Is(err, helpers.ErrNoSnapshot) {
-			input.Logger.Info("State secret not exist, try to get bootstrap secret")
-			inputs.Bootstrap, err = bootstrap.InputsFromSnapshot(input, bootstrapSnapName)
 		}
 
 		if err != nil {
 			input.Logger.Warn(
-				"Cannot restore state from secret or get bootstrap secret, will initialize new state",
+				"Cannot restore state from secret, will initialize new",
 				"error", err,
 			)
 		} else {
@@ -272,9 +304,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Remove bootstrap secret if exist
-	if bootstrap.SecretIsExist(input, bootstrapSnapName) {
+	if hasInitSecret {
 		input.PatchCollector.Delete(
-			"v1", "Secret", bootstrap.SecretNamespace, bootstrap.SecretName)
+			"v1", "Secret", "d8-system", "registry-bootstrap")
 	}
 	return nil
 }

@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 )
 
 type User = users.User
@@ -48,11 +47,7 @@ func (state *State) GetParams() Params {
 	}
 }
 
-func (state *State) Process(params Params, inputs Inputs, bootstrap bootstrap.Inputs) error {
-	if bootstrap.IsActive {
-		state.RO = &bootstrap.Config.UserRO
-	}
-
+func (state *State) Process(params Params, inputs Inputs) error {
 	if params.RO {
 		if user, err := processUser("ro", state.RO, inputs); err == nil {
 			state.RO = &user

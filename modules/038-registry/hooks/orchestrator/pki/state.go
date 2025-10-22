@@ -22,7 +22,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 )
 
 type State struct {
@@ -35,18 +34,11 @@ type Result struct {
 	Token pki.CertKey
 }
 
-func (state *State) Process(log go_hook.Logger, bootstrap bootstrap.Inputs) (Result, error) {
+func (state *State) Process(log go_hook.Logger) (Result, error) {
 	var (
 		ret Result
 		err error
 	)
-
-	if bootstrap.IsActive {
-		state.CA = &CertModel{
-			Cert: bootstrap.Config.CA.Cert,
-			Key:  bootstrap.Config.CA.Key,
-		}
-	}
 
 	// CA
 	ret.CA, err = state.CA.toPKI()

@@ -159,7 +159,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// PKI
-	pkiResult, err := state.PKI.Process(log, inputs.Bootstrap)
+	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
