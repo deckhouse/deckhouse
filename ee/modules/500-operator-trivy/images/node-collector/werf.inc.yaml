@@ -26,6 +26,7 @@ import:
 - image: tools/gawk
   add: /
   to: /
+  before: setup
   includePaths:
   - usr/bin/awk
   - usr/bin/gawk
