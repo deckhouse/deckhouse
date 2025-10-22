@@ -341,6 +341,7 @@ connection:
   username: jamie
   password: nein
   region: HetznerFinland
+hybridMode: true
 externalNetworkNames: [additional-ext-net, public1, public2]
 externalNetworkDHCP: true
 internalNetworkNames: [int1, int2]

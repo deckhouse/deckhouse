@@ -133,7 +133,6 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	hybridMode, ok := input.Values.GetOk("cloudProviderOpenstack.internal.hybridMode")
 	if ok && hybridMode.Bool() {
-
 		zones, ok := input.Values.GetOk("cloudProviderOpenstack.zones")
 		if ok {
 			zonesArray := zones.Array()
