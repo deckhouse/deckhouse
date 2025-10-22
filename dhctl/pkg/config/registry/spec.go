@@ -22,8 +22,6 @@ import (
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"sigs.k8s.io/yaml"
-
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 )
@@ -102,7 +100,7 @@ func (s *Spec) fromDeckhouseSettings(rawJson string) error {
 		return fmt.Errorf("failed to get registry config: %w", err)
 	}
 
-	err = yaml.Unmarshal(jsonSpec, &spec)
+	err = json.Unmarshal(jsonSpec, &spec)
 	if err != nil {
 		return fmt.Errorf("failed to get registry config: %w", err)
 	}
