@@ -182,7 +182,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	return nil
 }
 
-func (r *reconciler) delete(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
