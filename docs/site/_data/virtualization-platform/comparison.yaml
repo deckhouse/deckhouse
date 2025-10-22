@@ -226,16 +226,10 @@ featureSections:
           ru: Консистентные снимки дисков и конфигурации ВМ (<a target='_blank' href='/wp-content/uploads/2025/05/storage-table.png'>хранилище</a> должно поддерживать снимки)
           en: Consistent snapshots of VM disks and configuration (storage must support snapshots)
         editions:
-          dkp-ce: partly
+          dkp-ce: supported
           dvp-ee: supported
           dkp-se-plus: supported
           dkp-ee: supported
-        restriction_message:
-          dkp-ce:
-            en: |
-              Available with restrictions
-            ru: |
-              Доступно <a target='_blank' href='/products/kubernetes-platform/features/'>с ограничениями</a>
       - title:
           ru: Восстановление дисков и конфигурации ВМ из снимка
           en: Restore VM disks and configuration from snapshot
