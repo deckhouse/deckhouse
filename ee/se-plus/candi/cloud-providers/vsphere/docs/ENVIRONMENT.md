@@ -13,15 +13,15 @@ description: "Configuring VMware vSphere for Deckhouse cloud provider operation.
   1. VirtualMachine template.
      * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).
      * The following packages must be installed in the VM image: `open-vm-tools`, `cloud-init` and [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used).
-  2. The network must be available on all ESXi where VirtualMachines will be created.
-  3. One or more Datastores connected to all ESXi where VirtualMachines will be created.
+  1. The network must be available on all ESXi where VirtualMachines will be created.
+  1. One or more Datastores connected to all ESXi where VirtualMachines will be created.
      * A tag from the tag category in [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone.
-  4. The cluster with the required ESXis.
+  1. The cluster with the required ESXis.
      * A tag from the tag category in [`zoneTagCategory`](./configuration.html#parameters-zonetagcategory) (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
-  5. Folder for VirtualMachines to be created.
+  1. Folder for VirtualMachines to be created.
      * An optional parameter. By default, the root vm folder is used.
-  6. Create a role with the appropriate [set](#list-of-required-privileges) of privileges.
-  7. Create a user and assign the above role to it.
+  1. Create a role with the appropriate [set](#list-of-required-privileges) of privileges.
+  1. Create a user and assign the above role to it.
 * A tag from the tag category in [`regionTagCategory`](./configuration.html#parameters-regiontagcategory) (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
 
 ## List of required vSphere resources
