@@ -1,18 +1,18 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-08ec8011dfae9c7d90d925ec6b3610655293db97daac068bfa12f55f5028073b",
+  "@id": "https://openvex.dev/docs/public/vex-5d195d15939683637393fa45a68bff40324ab22e443c55904b61b51596efa3f5",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-10T19:39:30.40829+03:00",
+  "timestamp": "2025-10-23T15:35:52.818817+03:00",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
         "name": "CVE-2023-45142"
       },
-      "timestamp": "2025-10-10T19:39:30.408291+03:00",
+      "timestamp": "2025-10-23T15:35:52.818818+03:00",
       "products": [
         {
-          "@id": "pkg:go.opentelemetry.io/contrib/instrumentation/net/http/httptr-ace/otelhttptrace"
+          "@id": "pkg:go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
         }
       ],
       "status": "not_affected",
