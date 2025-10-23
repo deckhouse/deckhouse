@@ -664,6 +664,40 @@ properties:
     type: object
     default: {}
     properties:
+      accessLogging:
+        type: object
+        properties:
+          extensionProviders:
+            type: array
+            items:
+              type: object
+              required:
+                - name
+                - envoyFileAccessLog
+              properties:
+                name:
+                  type: string
+                  description: Name of the extension provider
+                  example: "default"
+                envoyFileAccessLog:
+                  type: object
+                  required:
+                    - path
+                    - logFormat
+                  properties:
+                    path:
+                      type: string
+                      description: Path for the access log file
+                      default: "/dev/stdout"
+                    logFormat:
+                      type: object
+                      required:
+                        - text
+                      properties:
+                        text:
+                          type: string
+                          description: Log format template text
+                          example: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% \"DOWNSTREAM_PEER_SUBJECT: %DOWNSTREAM_PEER_SUBJECT%\" \"UPSTREAM_PEER_SUBJECT: %UPSTREAM_PEER_SUBJECT%\" \"DOWNSTREAM_REMOTE_ADDRESS: %DOWNSTREAM_REMOTE_ADDRESS%\" %RESPONSE_CODE_DETAILS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %ROUTE_NAME%\n"
       trafficRedirectionSetupMode:
         type: string
         description: |
