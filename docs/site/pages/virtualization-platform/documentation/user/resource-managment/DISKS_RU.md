@@ -44,7 +44,7 @@ sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-С полным описанием параметров конфигурации дисков можно ознакомиться [в документации ресурса VirtualDisk](/products/virtualization-platform/reference/cr/virtualdisk.html).
+С полным описанием параметров конфигурации дисков можно ознакомиться [в документации ресурса VirtualDisk](/modules/virtualization/cr.html#virtualdisk).
 
 Как узнать доступные варианты хранилищ веб-интерфейсе DVP:
 

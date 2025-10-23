@@ -6,7 +6,7 @@ lang: ru
 
 DVP может собирать статистику о доступности компонентов кластера и компонентов самого Deckhouse. Эти данные позволяют оценить степень выполнения SLA, а также получить информацию о доступности в веб-интерфейсе.
 
-Кроме того, с помощью кастомного ресурса [UpmeterRemoteWrite](/products/kubernetes-platform/documentation/v1/modules/upmeter/cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу Prometheus Remote Write.
+Кроме того, с помощью кастомного ресурса [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу Prometheus Remote Write.
 
 Чтобы начать собирать метрики доступности и активировать [интерфейс](#интерфейс), включите модуль `upmeter` [в веб-интерфейсе Deckhouse](/modules/console/stable/) или с помощью следующей команды:
 
@@ -29,7 +29,7 @@ spec:
   settings:
 ```
 
-Перечень всех настроек доступен [в документации модуля](/products/kubernetes-platform/documentation/v1/modules/upmeter/configuration.html).
+Перечень всех настроек доступен [в документации модуля](/modules/upmeter/configuration.html).
 
 ## Интерфейс
 
@@ -84,7 +84,7 @@ spec:
 
 ## Аутентификация
 
-По умолчанию для аутентификации используется модуль [`user-authn`](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+По умолчанию для аутентификации используется модуль [`user-authn`](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
 Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:

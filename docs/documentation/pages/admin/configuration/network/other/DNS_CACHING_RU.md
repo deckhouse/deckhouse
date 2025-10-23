@@ -10,7 +10,7 @@ lang: ru
 
 Подробная информация о проблемах, которые позволяет решить кэширующий DNS-сервер и о принципе его работы — в разделе [Кэширующий DNS-сервер в кластере](../../../../architecture/network/dns-caching.html).
 
-<!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-local-dns/configuration.html -->
+<!-- Перенесено из https://deckhouse.ru/modules/node-local-dns/configuration.html -->
 
 ## Пример настройки кастомного DNS в поде
 

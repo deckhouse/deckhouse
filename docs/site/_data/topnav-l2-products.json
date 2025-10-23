@@ -179,6 +179,26 @@
           "rel": ""
         },
         {
+          "title": "Возможности",
+          "url": "/products/kubernetes-platform/features/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "title": "Обзор",
+              "url": "/products/kubernetes-platform/features/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "title": "Наблюдаемость",
+              "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            }
+          ]
+        },
+        {
           "title": "ФСТЭК-редакция",
           "url": "/products/kubernetes-platform/certified-security-edition/",
           "target": "",

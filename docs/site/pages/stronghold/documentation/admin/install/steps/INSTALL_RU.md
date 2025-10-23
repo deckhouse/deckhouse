@@ -12,21 +12,21 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-- [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) — начальные параметры конфигурации платформы. С этой конфигурацией платформа запустится после установки.
+- [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — начальные параметры конфигурации платформы. С этой конфигурацией платформа запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.
+  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), используемый [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass), параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и другие.
 
-- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
 
   > Использовать ресурс ClusterConfiguration в конфигурации необходимо, только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
 - ModuleConfig — набор ресурсов, содержащих параметры конфигурации встроенных модулей платформы.
 
-  Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей, использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [`nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-nodeselector).
+  Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей, использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector).
 
 {% offtopic title="Пример файла конфигурации установки (config.yaml)..." %}
 
@@ -291,18 +291,9 @@ moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
 
-## Установка систем хранения
-
-Для корректного функционирования платформы необходимо установить одну или несколько систем хранения. Они предоставляют возможности:
-
-- постоянного хранения системных данных платформы (метрики, логи, образы);
-- хранения дисков и образов виртуальных машин.
-
-Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [Настройка хранилищ](../../platform-management/storage/supported-storage.html).
-
 ## Установка модуля cilium
 
-Для получения информации по установке и настройке модуля обратитесь к документации [модуля `cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/).
+Для получения информации по установке и настройке модуля обратитесь к документации [модуля `cni-cilium`](/modules/cni-cilium/).
 
 ## Установка модуля Strognhold
 

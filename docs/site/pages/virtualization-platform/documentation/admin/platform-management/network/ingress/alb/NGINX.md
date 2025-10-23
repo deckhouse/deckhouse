@@ -3,7 +3,7 @@ title: "ALB with NGINX Ingress controller"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/ingress/alb/nginx.html
 ---
 
-The [`ingress-nginx`](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
+The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
 
 The `ingress-nginx` module installs the NGINX Ingress controller and manages it with custom resources.
 If there is more than one node available for hosting the Ingress controller,
@@ -35,7 +35,7 @@ The module allows you to manage HTTPS security policies for each of the NGINX In
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
-The module is integrated with the [`cert-manager`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/) module.
+The module is integrated with the [`cert-manager`](/modules/cert-manager/) module.
 Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
 
 ## Monitoring and statistics
@@ -107,7 +107,7 @@ All collected metrics include service labels identifying the controller instance
 
 ## Load balancing configuration examples
 
-Use the [IngressNginxController](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource to configure load balancing.
+Use the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource to configure load balancing.
 
 ### Example for AWS (Network Load Balancer)
 
@@ -229,7 +229,7 @@ To preserve the real client IP addresses,
 the Ingress controller Service should be created with `externalTrafficPolicy: Local` to avoid inter-node SNAT.
 In this configuration, MetalLB speaker will only announce the Service from nodes running target pods.
 
-Example [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html) configuration:
+Example [`metallb`](/modules/metallb/configuration.html) configuration:
 
 ```yaml
 metallb:

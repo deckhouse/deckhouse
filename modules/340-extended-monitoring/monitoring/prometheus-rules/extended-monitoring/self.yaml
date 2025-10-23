@@ -20,7 +20,7 @@
         * CPU overloads and container throttling.
         * `500` errors on Ingress.
         * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
-        * [Other alerts](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/) associated with this exporter.
+        * [Other alerts](https://deckhouse.io/modules/extended-monitoring/) associated with this exporter.
 
         To resolve this issue, investigate its possible causes:
 

@@ -3,7 +3,7 @@ title: "Balancing with MetalLB"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/ingress/nlb/metallb.html
 ---
 
-The [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/) module implements support for
+The [`metallb`](/modules/metallb/) module implements support for
 LoadBalancer-type services in Deckhouse Virtualization Platform (DVP) clusters.
 It is suitable for both bare-metal clusters and cloud environments
 where built-in load balancers by providers are unavailable.

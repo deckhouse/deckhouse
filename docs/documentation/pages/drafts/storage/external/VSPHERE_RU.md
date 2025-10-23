@@ -135,7 +135,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к `csi-vsphere` SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов DKP.
-Для получения детального списка привилегий, обратитесь [к документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
+Для получения детального списка привилегий, обратитесь [к документации](/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
 {% endalert %}
 
 Создайте роль с необходимыми правами:
@@ -157,4 +157,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Модуль автоматически создает StorageClass для каждого Datastore и DatastoreCluster из зон.
 
-Также он позволяет настроить имя StorageClass’а, который будет использоваться в кластере по умолчанию (параметр [default](../../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) и отфильтровать ненужные StorageClass’ы (параметр [exclude](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).
+Также он позволяет настроить имя StorageClass’а, который будет использоваться в кластере по умолчанию (параметр [default](../../../reference/api/global.html#parameters-defaultclusterstorageclass)) и отфильтровать ненужные StorageClass’ы (параметр [exclude](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).

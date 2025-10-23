@@ -7,7 +7,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 -b v1.12.4 $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
+    - git clone --depth 1 -b v1.13.1 $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
     - git clone --depth 1 -b v0.1.0 -v "$(cat /run/secrets/SOURCE_REPO)/deckhouse/coredns-kubeforward" /src/coredns-kubeforward
     - cd /src
     - touch /src/coredns-kubeforward/go.mod # need for go build

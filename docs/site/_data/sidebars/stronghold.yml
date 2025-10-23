@@ -396,4 +396,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/cli/d8/
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/

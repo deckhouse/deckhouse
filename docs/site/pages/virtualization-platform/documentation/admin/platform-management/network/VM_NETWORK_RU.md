@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Каждой виртуальной машине выделяется адрес из диапазонов, заданных в настройках `ModuleConfig` [virtualization](../../../../reference/mc.html#virtualization) в блоке `.spec.settings.virtualMachineCIDRs`.
+Каждой виртуальной машине выделяется адрес из диапазонов, заданных в настройках `ModuleConfig` [virtualization](/modules/virtualization/configuration.html) в блоке `.spec.settings.virtualMachineCIDRs`.
 
 Для просмотра текущей конфигурации выполните команду:
 

@@ -7,7 +7,7 @@ lang: ru
 
 Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
-<!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
+<!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
 Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
@@ -97,7 +97,7 @@ lang: ru
 
 ## Примеры настройки балансировки
 
-<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html -->
+<!-- перенесено из https://deckhouse.ru/modules/ingress-nginx/examples.html -->
 
 Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 

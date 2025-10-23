@@ -3,13 +3,13 @@
 
 To access the web interfaces of Deckhouse services, you need to:
 - configure DNS
-- specify [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- specify [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 The *DNS names template* is used to configure Ingress resources of system applications. For example, the name `deckhouse` is assigned to the in-cluster documentation module interface. Then, for the template `%s.kube.company.my` Grafana will be available at `deckhouse.kube.company.my`, etc.
 
 The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 
-Run the following command to configure [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io* (specify the public IP address of the node where the Ingress controller is running):
+Run the following command to configure [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io* (specify the public IP address of the node where the Ingress controller is running):
 {% raw %}
 ```shell
 BALANCER_IP=<INGRESS_CONTROLLER_IP> 

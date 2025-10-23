@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of the AWS instance used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) modile).
+            Parameters of the AWS instance used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) modile).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:

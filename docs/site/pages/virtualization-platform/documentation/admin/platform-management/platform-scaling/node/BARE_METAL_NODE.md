@@ -7,9 +7,9 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/pl
 
 ### Manual method
 
-1. Enable the [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html) module.
+1. Enable the [`node-manager`](/modules/node-manager/cr.html) module.
 
-1. Create a [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) object with the type `Static`:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the type `Static`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -42,7 +42,7 @@ DVP supports automatic addition of physical (bare-metal) servers to the cluster 
    - Create a system user (e.g., `ubuntu`) for SSH access.
    - Ensure the user can execute commands using `sudo`.
 
-1. Create an [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DVP uses this object to connect to the server over SSH. It specifies:
+1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DVP uses this object to connect to the server over SSH. It specifies:
    - A private SSH key.
    - The OS user.
    - The SSH port.
@@ -67,7 +67,7 @@ DVP supports automatic addition of physical (bare-metal) servers to the cluster 
 
      > **Important**. The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
 
-1. Create a [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance)` object for each server:
+1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -84,7 +84,7 @@ DVP supports automatic addition of physical (bare-metal) servers to the cluster 
        name: static-nodes
    ```
 
-   A separate [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) resource must be created for each server, but the same SSHCredentials can be reused to access multiple servers.
+   A separate [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource must be created for each server, but the same SSHCredentials can be reused to access multiple servers.
 
    Possible StaticInstance states:
 
@@ -95,7 +95,7 @@ DVP supports automatic addition of physical (bare-metal) servers to the cluster 
 
    These states reflect the current stage of node management. CAPS automatically transitions a StaticInstance between these states depending on whether a node needs to be added or removed from a group.
 
-1. Create a [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) resource describing how DVP should use these servers:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DVP should use these servers:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -141,7 +141,7 @@ d8 platform edit static-cluster-configuration
 ## Moving a static node between NodeGroups
 
 {% alert level="warning" %}
-During the migration of static nodes between [NodeGroups](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
+During the migration of static nodes between [NodeGroups](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
 {% endalert %}
 
 1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
@@ -161,7 +161,7 @@ During the migration of static nodes between [NodeGroups](/products/kubernetes-p
            role: front
    ```
 
-1. Change the `role` label of the existing [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) from `worker` to `front`.  
+1. Change the `role` label of the existing [StaticInstance](/modules/node-manager/cr.html#staticinstance) from `worker` to `front`.  
    This will allow the new NodeGroup named `front` to manage this node:
 
    ```shell
@@ -192,7 +192,7 @@ This instruction applies both to nodes manually configured using the bootstrap s
 
 ### Example NodeGroup definition for static nodes
 
-For virtual machines on hypervisors or physical servers, use static nodes by setting `nodeType: Static` in the [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup).
+For virtual machines on hypervisors or physical servers, use static nodes by setting `nodeType: Static` in the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Example:
 
@@ -215,7 +215,7 @@ CRI (Container Runtime Interface) is a standard interface between the kubelet an
 CRI can only be switched between `Containerd` and `NotManaged` via the `cri.type` parameter.
 {% endalert %}
 
-To change the CRI for a [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), set the `cri.type` parameter to either `Containerd` or `NotManaged`.
+To change the CRI for a [NodeGroup](/modules/node-manager/cr.html#nodegroup), set the `cri.type` parameter to either `Containerd` or `NotManaged`.
 
 Example YAML manifest:
 
@@ -256,7 +256,7 @@ Node updates involve disruption. Depending on the `disruption` settings for the 
 If a node is managed by [CAPS](#automatic-method), you can't change its associated NodeGroup.  
 The only option is to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
-To move an existing manually added static node from one NodeGroup to another, you need to update the group label on the node:
+To move an existing [manually](#manual-method) added static node from one NodeGroup to another, you need to update the group label on the node:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -267,12 +267,12 @@ It will take some time for the changes to take effect.
 
 ## Changing the IP address in a StaticInstance
 
-You cannot change the IP address of a [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) resource.  
+You cannot change the IP address of a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource.  
 If an incorrect address is specified in a StaticInstance, you need to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
 ## Deleting a StaticInstance
 
-A [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) in the `Pending` state can be safely deleted without any issues.
+A [StaticInstance](/modules/node-manager/cr.html#staticinstance) in the `Pending` state can be safely deleted without any issues.
 
 To delete a StaticInstance that is in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), follow these steps:
 

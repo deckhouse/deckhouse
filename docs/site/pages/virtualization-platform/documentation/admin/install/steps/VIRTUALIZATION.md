@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/virtuali
 ---
 
 {% alert level=“info” %}
-To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
 {% endalert %}
 
 After configuring the storage, you need to enable the `virtualization` module. Enabling and configuring the module can be done via the web interface or using the following command:
@@ -17,10 +17,10 @@ Edit the module configuration using one of the [methods](#virtualization-module-
 
 Specify the following parameters:
 
-- [settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#parameters-virtualmachinecidrs): Subnets, IP addresses from which virtual machines will be assigned IPs.
-- [settings.dvcr.storage.persistentVolumeClaim.size](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-size): Size of the disk space for storing virtual machine images.
-- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname): The name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used).
-- [settings.dvcr.storage.type](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-type): Specify `PersistentVolumeClaim`.
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs): Subnets, IP addresses from which virtual machines will be assigned IPs.
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size): Size of the disk space for storing virtual machine images.
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname): The name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used).
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type): Specify `PersistentVolumeClaim`.
 
 Example of virtualization module configuration:
 

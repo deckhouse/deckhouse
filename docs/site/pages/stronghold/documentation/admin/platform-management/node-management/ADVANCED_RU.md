@@ -34,9 +34,9 @@ done
 
 ## Изменение CRI для NodeGroup
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
+> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
 
-Установить параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
+Установить параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -73,7 +73,7 @@ spec:
 
 ## Изменение CRI для всего кластера
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
+> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type)).
 
 Необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
@@ -342,7 +342,7 @@ Done
 
 ## Как добавить несколько статических узлов в кластер вручную?
 
-Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](examples.html#пример-описания-статической-nodegroup) NodeGroup с именем `worker`).
+Используйте существующий или создайте новый custom resource [NodeGroup](/modules/node-manager/cr.html#nodegroup) ([пример](examples.html#пример-описания-статической-nodegroup) NodeGroup с именем `worker`).
 
 Автоматизировать процесс добавления узлов можно с помощью любой платформы автоматизации. Далее приведен пример для Ansible.
 

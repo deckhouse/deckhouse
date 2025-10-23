@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Модуль [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Virtualization Platform (DVP).
+Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Virtualization Platform (DVP).
 Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->

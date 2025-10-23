@@ -567,7 +567,7 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /virtualization-platform/reference/console-utilities/d8.html
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/
         - title:
             en: FAQ
             ru: FAQ

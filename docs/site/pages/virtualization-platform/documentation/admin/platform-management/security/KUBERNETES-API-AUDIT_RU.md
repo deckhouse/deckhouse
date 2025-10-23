@@ -21,7 +21,7 @@ Kubernetes поддерживает настройку аудита через �
 - обращения к ресурсам в системных пространствах имен `kube-system` и `d8-*`.
 
 Эти политики активны по умолчанию.
-Чтобы отключить их, установите [параметр `basicAuditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) в значение `false`.
+Чтобы отключить их, установите [параметр `basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) в значение `false`.
 
 Пример:
 
@@ -42,7 +42,7 @@ spec:
 
 Чтобы создать расширенную политику аудита API Kubernetes, выполните следующие шаги:
 
-1. Включите [параметр `auditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля `control-plane-manager`:
+1. Включите [параметр `auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля `control-plane-manager`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -124,7 +124,7 @@ spec:
 
 По умолчанию лог аудита сохраняется в файл `/var/log/kube-audit/audit.log` на master-узлах.
 При необходимости вы можете перенаправить его вывод в stdout процесса `kube-apiserver` вместо файла,
-установив [параметр `apiserver.auditLog.output`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) модуля `control-plane-manager` в значение `Stdout`:
+установив [параметр `apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) модуля `control-plane-manager` в значение `Stdout`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

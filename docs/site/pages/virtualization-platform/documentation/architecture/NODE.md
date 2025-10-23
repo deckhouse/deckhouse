@@ -148,7 +148,7 @@ For example, a node reboot is needed after modifying `sysctl` parameters like `k
 | static                              | -                          | -                   | +                |
 | update.maxConcurrent                | -                          | -                   | -                |
 
-For full details, see the [NodeGroup custom resource](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) documentation.
+For full details, see the [NodeGroup custom resource](/modules/node-manager/cr.html#nodegroup) documentation.
 
 If InstanceClass or `instancePrefix` values change in the Deckhouse configuration, no `RollingUpdate` will occur. Instead, new MachineDeployment objects will be created and old ones removed. The number of simultaneously provisioned MachineDeployments is defined by the `cloudInstances.maxSurgePerZone` parameter.
 
