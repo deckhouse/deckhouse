@@ -136,6 +136,8 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		zones, ok := input.Values.GetOk("cloudProviderOpenstack.zones")
 		if ok {
 			zonesArray := zones.Array()
+			discoveryData.Zones = []string{}
+
 			for _, zone := range zonesArray {
 				discoveryData.Zones = append(discoveryData.Zones, zone.String())
 			}
