@@ -296,9 +296,6 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	if initConfig.UserRO != nil {
 		values.State.Users.RO = initConfig.UserRO
 	}
-	if initConfig.UserRW != nil {
-		values.State.Users.RW = initConfig.UserRW
-	}
 
 	// Initialize RegistrySecret before processing
 	values.State.RegistrySecret.Config = inputs.RegistrySecret
