@@ -252,7 +252,7 @@ In the dialog box that appears, leave the checkmark only on `OVF: Reads data fro
 
 ![Setting up the template, OVF](images/template/OVF.png)
 
-Additionally, make sure that the `datasource_list` parameter is specified in the cloud-init configuration. You can verify this using the following command:
+Make sure that the `datasource_list` parameter is specified in the `cloud-init` configuration. You can verify this using the following command:
 
 ```shell
 cat /etc/cloud/cloud.cfg.d/90_dpkg.cfg

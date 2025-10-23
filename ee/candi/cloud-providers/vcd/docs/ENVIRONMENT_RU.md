@@ -252,13 +252,13 @@ dpkg-reconfigure cloud-init
 
 ![Настройка шаблона, OVF](images/template/OVF.png)
 
-Также нужно убедиться, что в конфигурации cloud-init задан параметр `datasource_list`, это можно определить с помощью команды:
+Убедитесь, что в конфигурации `cloud-init` задан параметр `datasource_list`, с помощью следующей команды:
 
 ```shell
 cat /etc/cloud/cloud.cfg.d/90_dpkg.cfg
 ```
 
-Если вывод окажется пустым, выполните команду:
+Если вывод окажется пустым, выполните следующую команду:
 
 ```shell
 echo "datasource_list: [ OVF, VMware, None ]" > /etc/cloud/cloud.cfg.d/90_dpkg.cfg
