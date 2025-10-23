@@ -668,6 +668,10 @@ properties:
         type: object
         default: {}
         properties:
+          encoding:
+            type: string
+            enum: ["Text", "JSON"]
+            default: "Text"
           format:
             type: string
             description: Sidecar's access log format template. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
