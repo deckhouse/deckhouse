@@ -91,7 +91,6 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 
 	// TODO:
 	// - Init from initConfig
-	// - Fallback to defaults if mc/deckhouse and initConfig do not exist
 	// - Call InitWithGlobalCache after global cache init
 	if len(m.InitClusterConfig) > 0 {
 		var err error
@@ -102,13 +101,11 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
 	}
 	{
+		// Find the "deckhouse" module config
 		var (
-			err              error
-			deckhouseConfig  *ModuleConfig
-			registrySettings []byte
+			err             error
+			deckhouseConfig *ModuleConfig
 		)
-
-		// Find the deckhouse module config
 		for _, cfg := range m.ModuleConfigs {
 			if cfg.GetName() == "deckhouse" {
 				deckhouseConfig = cfg
@@ -116,31 +113,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			}
 		}
 
-		// Extract the "registry" section from deckhouse settings, if present
-		if deckhouseConfig != nil {
-			if rawRegistry, exists := deckhouseConfig.Spec.Settings["registry"]; exists {
-				registrySettings, err = json.Marshal(rawRegistry)
-				if err != nil {
-					return nil, fmt.Errorf("failed to marshal registry settings from deckhouse ModuleConfig: %w", err)
-				}
-			}
+		if m.Registry, err = registry.New(deckhouseConfig.Spec.Settings, nil); err != nil {
+			return nil, fmt.Errorf("failed to initialize registry from settings: %w", err)
 		}
-
-		// Use deckhouse-provided settings or fall back to default
-		if len(registrySettings) > 0 {
-			m.Registry, err = registry.FromDeckhouseSettings(string(registrySettings))
-			if err != nil {
-				return nil, fmt.Errorf("failed to create registry from deckhouse settings: %w", err)
-			}
-		} else {
-			m.Registry, err = registry.FromDefault()
-			if err != nil {
-				return nil, fmt.Errorf("failed to create default registry settings: %w", err)
-			}
-		}
-
-		// Initialize registry with global cache
-		if err := m.Registry.InitWithGlobalCache(); err != nil {
+		if err = m.Registry.InitWithGlobalCache(); err != nil {
 			return nil, fmt.Errorf("failed to initialize registry with global cache: %w", err)
 		}
 	}

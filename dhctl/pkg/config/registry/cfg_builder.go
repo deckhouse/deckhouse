@@ -33,13 +33,13 @@ type ConfigBuilder struct {
 	registry *Registry
 }
 
-func (b *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
+func (b *ConfigBuilder) DeckhouseSettings() (interface{}, error) {
 	data, err := json.Marshal(b.registry.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode registry spec: %w", err)
 	}
 
-	var result map[string]any
+	var result map[string]interface{}
 	if err := json.Unmarshal(data, &result); err != nil {
 		return nil, fmt.Errorf("unable to decode registry spec into map: %w", err)
 	}

@@ -16,7 +16,9 @@ package registry
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
@@ -59,22 +61,33 @@ type CertKey struct {
 	Key  string `json:"key" yaml:"key"`
 }
 
-func FromDeckhouseSettings(rawJson string) (Registry, error) {
-	spec := DeckhousModuleSpec{}
-	err := spec.fromDeckhouseSettings(rawJson)
-	return Registry{Spec: spec}, err
-}
+func New(deckhouseSettings map[string]interface{}, initConfig *InitConfigSpec) (Registry, error) {
+	var (
+		spec            DeckhousModuleSpec
+		err             error
+		rawJSONSettings []byte
+	)
 
-func FromDefault() (Registry, error) {
-	spec := DeckhousModuleSpec{}
-	err := spec.fromDefault()
-	return Registry{Spec: spec}, err
-}
+	if registrySettings, ok := deckhouseSettings["registry"]; ok {
+		rawJSONSettings, err = json.Marshal(registrySettings)
+		if err != nil {
+			return Registry{}, fmt.Errorf("failed to marshal registry settings from deckhouse ModuleConfig: %w", err)
+		}
+	}
 
-func FromInitConfig(initConfig InitConfigSpec) (Registry, error) {
-	spec := DeckhousModuleSpec{}
-	err := spec.fromInitConfig(initConfig)
-	return Registry{Spec: spec}, err
+	switch {
+	case len(rawJSONSettings) > 0:
+		err = spec.fromDeckhouseSettings(string(rawJSONSettings))
+	case initConfig != nil:
+		err = spec.fromInitConfig(*initConfig)
+	default:
+		err = spec.fromDefault()
+	}
+
+	if err != nil {
+		return Registry{}, err
+	}
+	return Registry{Spec: spec}, nil
 }
 
 func (r *Registry) InitWithGlobalCache() error {

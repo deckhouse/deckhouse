@@ -143,6 +143,10 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
+	registry, err := metaConfig.Registry.ConfigBuilder().DeckhouseSettings()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot prepare registry settings for ModuleConfig deckhouse: %w", err)
+	}
 
 	schemasStore := NewSchemaStore()
 
@@ -163,11 +167,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-	}
-
-	registry, err := metaConfig.Registry.ConfigBuilder().DeckhouseSettings()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get registry settings: %s", err)
+		mc.Spec.Settings["registry"] = registry
 	}
 
 	if deckhouseCm == nil {
