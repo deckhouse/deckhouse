@@ -73,6 +73,7 @@ type ApplicationPackageVersionSpec struct {
 }
 
 type ApplicationPackageVersionStatus struct {
+	Conditions  []metav1.Condition                       `json:"conditions,omitempty"`
 	PackageName string                                   `json:"packageName,omitempty"`
 	Version     string                                   `json:"version,omitempty"`
 	Metadata    *ApplicationPackageVersionStatusMetadata `json:"metadata,omitempty"`
