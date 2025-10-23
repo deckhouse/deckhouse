@@ -27,8 +27,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   labels:
     module: upmeter
@@ -62,8 +60,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -99,8 +95,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   labels:
     module: upmeter

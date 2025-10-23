@@ -2,7 +2,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    dryrun: 'true'
     modules.deckhouse.io/reinstall: "true"
   name: parca-1.26.2
   ownerReferences:

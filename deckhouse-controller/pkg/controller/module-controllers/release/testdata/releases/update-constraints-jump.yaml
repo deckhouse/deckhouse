@@ -1,8 +1,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: demo-1.67.5
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
@@ -22,8 +20,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: demo-1.68.4
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
@@ -42,8 +38,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: demo-1.69.10
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
@@ -62,8 +56,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: demo-1.70.11
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
@@ -82,8 +74,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: demo-1.75.2
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1

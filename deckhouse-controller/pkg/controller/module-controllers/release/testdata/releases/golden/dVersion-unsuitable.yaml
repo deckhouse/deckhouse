@@ -29,8 +29,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   labels:
     module: parca-unsuitable

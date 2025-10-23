@@ -1,8 +1,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: parca-1.26.2
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
@@ -22,8 +20,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: 'true'
   name: parca-1.26.3
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1

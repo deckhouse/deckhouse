@@ -24,8 +24,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -52,7 +50,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    dryrun: "true"
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
   creationTimestamp: null
@@ -77,8 +74,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    dryrun: "true"
   creationTimestamp: null
   labels:
     module: demo
@@ -102,7 +97,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    dryrun: "true"
     modules.deckhouse.io/approved: "true"
   creationTimestamp: null
   labels:
