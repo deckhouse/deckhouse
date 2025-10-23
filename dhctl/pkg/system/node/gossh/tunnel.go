@@ -22,8 +22,8 @@ import (
 	"strings"
 	"sync"
 
+	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )

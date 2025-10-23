@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
+	ssh "github.com/deckhouse/lib-gossh"
+	"github.com/deckhouse/lib-gossh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
