@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -43,6 +44,10 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
+	if metaConfig.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable && len(app.SystemRegistryDataDevicePath) == 0 {
+		return fmt.Errorf("the '--system-registry-device-path' flag must be specified at RegistryMode!=Direct")
+	}
+
 	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
@@ -60,7 +65,16 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+	if err := RunBashiblePipeline(
+		ctx,
+		b.NodeInterface,
+		metaConfig,
+		app.InternalNodeIP,
+		infrastructure.DataDevices{
+			KubeDataDevicePath:           app.KubeDataDevicePath,
+			SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
+		},
+	); err != nil {
 		return err
 	}
 

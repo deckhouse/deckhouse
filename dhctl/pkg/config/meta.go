@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 type MetaConfig struct {
@@ -39,6 +40,7 @@ type MetaConfig struct {
 	ClusterPrefix        string                 `json:"-"`
 	ClusterDNSAddress    string                 `json:"-"`
 	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	RegistryConfig       RegistryClusterConfig  `json:"-"`
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
 	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
@@ -46,12 +48,14 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ProviderSecondaryDevicesConfig ProviderSecondaryDevicesConfig `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  Registry               `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -89,14 +93,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
-		}
-
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-		err := m.Registry.Process(m.DeckhouseConfig)
-		if err != nil {
+		if err := m.prepareDataFromInitClusterConfig(); err != nil {
 			return nil, err
 		}
 	}
@@ -139,6 +136,72 @@ func (m *MetaConfig) GetFullUUID() (string, error) {
 		return "", fmt.Errorf("Unable to get full UUID for provider '%s/%s'. It is empty", m.ClusterPrefix, m.ProviderName)
 	}
 	return m.UUID, nil
+}
+
+func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
+	// Migrate from old to new init config apiVersion
+	var initCfgApiVersion string
+	if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
+		return fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
+	}
+	if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+		var deckhouseCfgOld DeckhouseClusterConfigOld
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		} else {
+			m.RegistryConfig = RegistryClusterConfig{
+				Mode: registry_const.ModeDirect,
+				DirectModeProperties: &RegistryDirectModeProperties{
+					ImagesRepo: deckhouseCfgOld.ImagesRepo,
+					DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
+					CA:         deckhouseCfgOld.RegistryCA,
+					Scheme:     deckhouseCfgOld.RegistryScheme,
+				},
+			}
+			m.DeckhouseConfig = DeckhouseClusterConfig{
+				ReleaseChannel:  deckhouseCfgOld.ReleaseChannel,
+				DevBranch:       deckhouseCfgOld.DevBranch,
+				Bundle:          deckhouseCfgOld.Bundle,
+				LogLevel:        deckhouseCfgOld.LogLevel,
+				ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
+			}
+		}
+	} else {
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		}
+		if err := json.Unmarshal(m.InitClusterConfig["registry"], &m.RegistryConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal registry configuration: %v", err)
+		}
+	}
+	if m.RegistryConfig.DirectModeProperties != nil {
+		m.RegistryConfig.DirectModeProperties.ImagesRepo = strings.TrimRight(
+			strings.TrimSpace(m.RegistryConfig.DirectModeProperties.ImagesRepo), "/")
+	}
+	if m.RegistryConfig.ProxyModeProperties != nil {
+		m.RegistryConfig.ProxyModeProperties.ImagesRepo = strings.TrimRight(
+			m.RegistryConfig.ProxyModeProperties.ImagesRepo, "/")
+	}
+	var err error
+	m.Registry, m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable, err = NewRegistryCfg(m.RegistryConfig)
+	return err
+}
+
+// PrepareAfterGlobalCacheInit Some of the information from the metaconfig is used to create a global cache.
+// This function is necessary to initialize the data after creating the global cache
+func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
+	if len(m.InitClusterConfig) > 0 {
+		return m.Registry.PrepareAfterGlobalCacheInit()
+	}
+	return nil
+}
+
+func (m *MetaConfig) GetClusterDomain() (string, error) {
+	var clusterDomain string
+	if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
+		return clusterDomain, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+	}
+	return clusterDomain, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -352,6 +415,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
+
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
@@ -372,6 +436,8 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
+	} else {
+		result[RegistryDataDeviceEnableTerraformVar] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
 	}
 
 	if len(m.UUID) > 0 {
@@ -425,7 +491,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = m.Registry.DeepCopy()
+	out.ProviderSecondaryDevicesConfig = m.ProviderSecondaryDevicesConfig
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

@@ -85,6 +85,7 @@ type Runner struct {
 	statePath     string
 	planPath      string
 	variablesPath string
+	variablesData []byte
 
 	changeSettings ChangeActionSettings
 
@@ -197,6 +198,9 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 }
 
 func (r *Runner) WithVariables(variablesData []byte) *Runner {
+	r.variablesData = make([]byte, len(variablesData))
+	copy(r.variablesData, variablesData)
+
 	step := r.infraExecutor.Step()
 
 	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), varFileName)
@@ -677,6 +681,12 @@ func (r *Runner) GetPlanDestructiveChanges() *plan.DestructiveChanges {
 
 func (r *Runner) GetPlanPath() string {
 	return r.planPath
+}
+
+func (r *Runner) GetInputVariables() []byte {
+	result := make([]byte, len(r.variablesData))
+	copy(result, r.variablesData)
+	return result
 }
 
 // Stop interrupts the current runner command and sets

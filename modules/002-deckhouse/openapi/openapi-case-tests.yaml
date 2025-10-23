@@ -42,6 +42,12 @@ positive:
       direct:
         imagesRepo: registry.deckhouse.io/test
   - registry:
+      mode: Proxy
+      proxy:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Local
+  - registry:
       mode: Unmanaged
   - registry:
       mode: Unmanaged

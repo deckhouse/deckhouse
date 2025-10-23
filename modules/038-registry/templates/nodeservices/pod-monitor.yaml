@@ -1,0 +1,42 @@
+{{- $orchestrator := .Values.registry.internal.orchestrator -}}
+{{- if ((($orchestrator).state).node_services).run -}}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: registry-nodeservices-manager-metrics
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "registry-nodeservices-manager")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https-metrics
+      path: /metrics
+      scheme: https
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      tlsConfig:
+        insecureSkipVerify: true
+      # honorLabels: true
+      # scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
+      relabelings:
+      - regex: endpoint|namespace|container
+        action: labeldrop
+      - targetLabel: job
+        replacement: registry-nodeservices-manager
+      - sourceLabels: [__meta_kubernetes_pod_node_name]
+        targetLabel: node
+      - targetLabel: tier
+        replacement: cluster
+      - sourceLabels: [__meta_kubernetes_pod_ready]
+        regex: "true"
+        action: keep
+  selector:
+    matchLabels:
+      app: registry-nodeservices-manager
+  namespaceSelector:
+    matchNames:
+      - d8-system
+  {{- end }}
+{{- end }}
