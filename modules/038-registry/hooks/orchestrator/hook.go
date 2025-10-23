@@ -289,6 +289,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	// Initialize state with init config
 	if initConfig.CA != nil {
+		values.State.PKI.CA = &pki.CertModel{}
 		values.State.PKI.CA.Cert = initConfig.CA.Cert
 		values.State.PKI.CA.Key = initConfig.CA.Key
 	}
