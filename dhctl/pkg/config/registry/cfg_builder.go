@@ -30,27 +30,26 @@ import (
 )
 
 type ConfigBuilder struct {
-	registry Registry
+	registry *Registry
 }
 
-func (builder *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
-	rawSettings, err := json.Marshal(builder.registry.Spec)
+func (b *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
+	data, err := json.Marshal(b.registry.Spec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal registry settings: %w", err)
+		return nil, fmt.Errorf("unable to encode registry spec: %w", err)
 	}
 
-	var ret map[string]any
-	err = json.Unmarshal(rawSettings, &ret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal registry settings: %w", err)
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("unable to decode registry spec into map: %w", err)
 	}
-	return ret, nil
+	return result, nil
 }
 
-func (builder *ConfigBuilder) InclusterData() (Data, error) {
+func (b *ConfigBuilder) InclusterData() (Data, error) {
 	switch {
-	case builder.registry.Spec.Unmanaged != nil:
-		unmanaged := builder.registry.Spec.Unmanaged
+	case b.registry.Spec.Unmanaged != nil:
+		unmanaged := b.registry.Spec.Unmanaged
 		username, password := unmanaged.UsernamePassword()
 		return Data{
 			ImagesRepo: unmanaged.ImagesRepo,
@@ -59,14 +58,13 @@ func (builder *ConfigBuilder) InclusterData() (Data, error) {
 			Username:   username,
 			Password:   password,
 		}, nil
-	case builder.registry.Spec.Direct != nil:
-		direct := builder.registry.Spec.Direct
+	case b.registry.Spec.Direct != nil:
+		direct := b.registry.Spec.Direct
 		username, password := direct.UsernamePassword()
-		pki := builder.registry.PKI
 		return Data{
 			ImagesRepo: registry_const.HostWithPath,
 			Scheme:     SchemeHTTPS,
-			CA:         pki.CA.Cert,
+			CA:         b.registry.PKI.CA.Cert,
 			Username:   username,
 			Password:   password,
 		}, nil
@@ -75,81 +73,41 @@ func (builder *ConfigBuilder) InclusterData() (Data, error) {
 	}
 }
 
-func (builder *ConfigBuilder) InclusterImagesRepo() string {
-	if builder.registry.Spec.Unmanaged != nil {
-		return builder.registry.Spec.Unmanaged.ImagesRepo
+func (b *ConfigBuilder) InclusterImagesRepo() string {
+	if b.registry.Spec.Unmanaged != nil {
+		return b.registry.Spec.Unmanaged.ImagesRepo
 	}
 	return registry_const.HostWithPath
 }
 
-func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
-	var (
-		imagesBase string
-		mirrorHost string
-		mirrors    []bashible.ContextMirrorHost
-	)
-
-	switch {
-	case builder.registry.Spec.Unmanaged != nil:
-		unmanaged := builder.registry.Spec.Unmanaged
-		imagesBase = unmanaged.ImagesRepo
-		mirrorHost, mirrors, _ = unmanagedHostMirrors(unmanaged)
-	case builder.registry.Spec.Direct != nil:
-		direct := builder.registry.Spec.Direct
-		imagesBase = registry_const.HostWithPath
-		mirrorHost, mirrors, _ = directHostMirrors(direct)
-	default:
-		return nil, ErrorUnknownRegistryMode
-	}
-
-	ret := bashible.Context{
-		RegistryModuleEnable: true,
-		Mode:                 builder.registry.Spec.Mode,
-		ImagesBase:           imagesBase,
-		Hosts: map[string]bashible.ContextHosts{
-			mirrorHost: {Mirrors: mirrors}},
-	}
-
-	version, err := registry_pki.ComputeHash(&ret)
+func (b *ConfigBuilder) KubeadmTplCtx() (map[string]interface{}, error) {
+	data, err := b.InclusterData()
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute context version: %w", err)
-	}
-	ret.Version = version
-
-	if err := ret.Validate(); err != nil {
-		return nil, err
-	}
-	return ret.ToMap()
-}
-
-func (builder *ConfigBuilder) KubeadmTplCtx() (map[string]interface{}, error) {
-	data, err := builder.InclusterData()
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get in-cluster registry data: %w", err)
 	}
 
 	address, path := addressAndPathFromImagesRepo(data.ImagesRepo)
-	authBase64 := data.AuthBase64()
 	dockerCfgBase64, err := data.DockerCfgBase64()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode Docker config: %w", err)
 	}
 
-	ret := map[string]interface{}{
+	ctx := map[string]interface{}{
 		"address":   address,
 		"path":      path,
 		"scheme":    strings.ToLower(string(data.Scheme)),
 		"ca":        data.CA,
 		"dockerCfg": dockerCfgBase64,
 	}
-	if authBase64 != "" {
-		ret["auth"] = authBase64
+
+	if auth := data.AuthBase64(); auth != "" {
+		ctx["auth"] = auth
 	}
-	return ret, nil
+	return ctx, nil
 }
 
-func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, error) {
-	data, err := builder.InclusterData()
+func (b *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, error) {
+	data, err := b.InclusterData()
 	if err != nil {
 		return nil, err
 	}
@@ -181,62 +139,15 @@ func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, 
 	return ret, nil
 }
 
-func (builder *ConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]byte, error) {
-	var (
-		imagesBase string
-		mirrorHost string
-		mirrors    []bashible.ConfigMirrorHost
-	)
-
-	switch {
-	case builder.registry.Spec.Unmanaged != nil:
-		unmanaged := builder.registry.Spec.Unmanaged
-		imagesBase = unmanaged.ImagesRepo
-		mirrorHost, _, mirrors = unmanagedHostMirrors(unmanaged)
-	case builder.registry.Spec.Direct != nil:
-		direct := builder.registry.Spec.Direct
-		imagesBase = registry_const.HostWithPath
-		mirrorHost, _, mirrors = directHostMirrors(direct)
-	default:
-		return nil, ErrorUnknownRegistryMode
-	}
-
-	ret := bashible.Config{
-		Mode:       builder.registry.Spec.Mode,
-		ImagesBase: imagesBase,
-		Hosts: map[string]bashible.ConfigHosts{
-			mirrorHost: {Mirrors: mirrors}},
-	}
-
-	version, err := registry_pki.ComputeHash(&ret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute config version: %w", err)
-	}
-	ret.Version = version
-
-	if err := ret.Validate(); err != nil {
-		return nil, err
-	}
-
-	config, err := yaml.Marshal(ret)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string][]byte{
-		"config": config,
-	}, nil
-}
-
-func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
+func (b *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
 	config, err := yaml.Marshal(
 		registry_init.Config{
 			CA: &registry_init.CertKey{
-				Cert: builder.registry.PKI.CA.Cert,
-				Key:  builder.registry.PKI.CA.Key,
+				Cert: b.registry.PKI.CA.Cert,
+				Key:  b.registry.PKI.CA.Key,
 			},
-			UserRW: &builder.registry.PKI.UserRW,
-			UserRO: &builder.registry.PKI.UserRO,
+			UserRW: &b.registry.PKI.UserRW,
+			UserRO: &b.registry.PKI.UserRO,
 		})
 	if err != nil {
 		return nil, err
@@ -247,14 +158,103 @@ func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error
 	}, nil
 }
 
+func (b *ConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]byte, error) {
+	var (
+		err error
+		cfg bashible.Config
+	)
+
+	_, cfg, err = b.bashibleContexAndConfig(true)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]byte{
+		"config": config,
+	}, nil
+}
+
+func (b *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
+	var (
+		err error
+		ctx bashible.Context
+	)
+	ctx, _, err = b.bashibleContexAndConfig(true)
+	if err != nil {
+		return nil, err
+	}
+	return ctx.ToMap()
+}
+
+func (b *ConfigBuilder) bashibleContexAndConfig(registryModuleEnable bool) (bashible.Context, bashible.Config, error) {
+	var (
+		imagesBase string
+		mirrorHost string
+		ctxMirrors []bashible.ContextMirrorHost
+		cfgMirrors []bashible.ConfigMirrorHost
+	)
+
+	switch {
+	case b.registry.Spec.Unmanaged != nil:
+		unmanaged := b.registry.Spec.Unmanaged
+		imagesBase = unmanaged.ImagesRepo
+		mirrorHost, ctxMirrors, cfgMirrors = unmanagedHostMirrors(unmanaged)
+	case b.registry.Spec.Direct != nil:
+		direct := b.registry.Spec.Direct
+		imagesBase = registry_const.HostWithPath
+		mirrorHost, ctxMirrors, cfgMirrors = directHostMirrors(direct)
+	default:
+		return bashible.Context{}, bashible.Config{}, ErrorUnknownRegistryMode
+	}
+
+	ctx := bashible.Context{
+		RegistryModuleEnable: registryModuleEnable,
+		Mode:                 b.registry.Spec.Mode,
+		ImagesBase:           imagesBase,
+		Hosts: map[string]bashible.ContextHosts{
+			mirrorHost: {Mirrors: ctxMirrors}},
+	}
+
+	cfg := bashible.Config{
+		Mode:       b.registry.Spec.Mode,
+		ImagesBase: imagesBase,
+		Hosts: map[string]bashible.ConfigHosts{
+			mirrorHost: {Mirrors: cfgMirrors}},
+	}
+
+	// Version only from config!
+	version, err := registry_pki.ComputeHash(&cfg)
+	if err != nil {
+		return bashible.Context{}, bashible.Config{}, fmt.Errorf("failed to compute version: %w", err)
+	}
+	cfg.Version = version
+	ctx.Version = version
+
+	if err := cfg.Validate(); err != nil {
+		return bashible.Context{}, bashible.Config{}, err
+	}
+
+	if err := ctx.Validate(); err != nil {
+		return bashible.Context{}, bashible.Config{}, err
+	}
+
+	return ctx, cfg, nil
+}
+
 func unmanagedHostMirrors(unmapaged *UnmanagedModeSpec) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, _ := addressAndPathFromImagesRepo(unmapaged.ImagesRepo)
 	username, password := unmapaged.UsernamePassword()
+	scheme := strings.ToLower(string(unmapaged.Scheme))
 	return host,
 		[]bashible.ContextMirrorHost{{
 			Host:   host,
 			CA:     unmapaged.CA,
-			Scheme: strings.ToLower(string(unmapaged.Scheme)),
+			Scheme: scheme,
 			Auth: bashible.ContextAuth{
 				Username: username,
 				Password: password,
@@ -263,7 +263,7 @@ func unmanagedHostMirrors(unmapaged *UnmanagedModeSpec) (string, []bashible.Cont
 		[]bashible.ConfigMirrorHost{{
 			Host:   host,
 			CA:     unmapaged.CA,
-			Scheme: strings.ToLower(string(unmapaged.Scheme)),
+			Scheme: scheme,
 			Auth: bashible.ConfigAuth{
 				Username: username,
 				Password: password,
@@ -274,31 +274,34 @@ func unmanagedHostMirrors(unmapaged *UnmanagedModeSpec) (string, []bashible.Cont
 func directHostMirrors(direct *DirectModeSpec) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, path := addressAndPathFromImagesRepo(direct.ImagesRepo)
 	username, password := direct.UsernamePassword()
+	scheme := strings.ToLower(string(direct.Scheme))
+	rewriteFrom := registry_const.PathRegexp
+	rewriteTo := strings.TrimLeft(path, "/")
 	return registry_const.Host,
 		[]bashible.ContextMirrorHost{{
 			Host:   host,
 			CA:     direct.CA,
-			Scheme: strings.ToLower(string(direct.Scheme)),
+			Scheme: scheme,
 			Auth: bashible.ContextAuth{
 				Username: username,
 				Password: password,
 			},
 			Rewrites: []bashible.ContextRewrite{{
-				From: registry_const.PathRegexp,
-				To:   strings.TrimLeft(path, "/"),
+				From: rewriteFrom,
+				To:   rewriteTo,
 			}},
 		}},
 		[]bashible.ConfigMirrorHost{{
 			Host:   host,
 			CA:     direct.CA,
-			Scheme: strings.ToLower(string(direct.Scheme)),
+			Scheme: scheme,
 			Auth: bashible.ConfigAuth{
 				Username: username,
 				Password: password,
 			},
 			Rewrites: []bashible.ConfigRewrite{{
-				From: registry_const.PathRegexp,
-				To:   strings.TrimLeft(path, "/"),
+				From: rewriteFrom,
+				To:   rewriteTo,
 			}},
 		}}
 }
