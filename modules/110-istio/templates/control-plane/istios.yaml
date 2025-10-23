@@ -111,10 +111,10 @@ spec:
       trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
       accessLogFile: /dev/stdout
 
-      {{- if $.Values.istio.accessLogging }}
-        {{- if and $.Values.istio.accessLogging.extensionProviders (ne (len $.Values.istio.accessLogging.extensionProviders) 0) }}
+      {{- if $.Values.istio.dataPlane.accessLogging }}
+        {{- if and $.Values.istio.dataPlane.accessLogging.extensionProviders (ne (len $.Values.istio.dataPlane.accessLogging.extensionProviders) 0) }}
       extensionProviders:
-        {{ $.Values.istio.accessLogging.extensionProviders | toYaml | nindent 8 }}
+        {{ $.Values.istio.dataPlane.accessLogging.extensionProviders | toYaml | nindent 8 }}
         {{- end }}
       {{- end }}
 
