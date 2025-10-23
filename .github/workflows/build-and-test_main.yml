@@ -3381,27 +3381,27 @@ jobs:
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
-    # <template: import_secrets>
-    - name: Split repository name
-      id: split
-      env:
-        REPO: ${{ github.repository }}
-      run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-    - name: Import secrets
-      id: secrets
-      uses: hashicorp/vault-action@v2
-      with:
-        url: https://seguro.flant.com
-        path: github
-        role: "${{ steps.split.outputs.name }}"
-        method: jwt
-        jwtGithubAudience: github-access-aud
-        secrets: |
-          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-          projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-          projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
 
-    # </template: import_secrets>
+      # </template: import_secrets>
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
