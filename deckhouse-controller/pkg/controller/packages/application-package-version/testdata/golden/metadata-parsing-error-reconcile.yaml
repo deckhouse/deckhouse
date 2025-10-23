@@ -12,7 +12,14 @@ spec:
   packageName: test-package
   repository: test-repo
   version: 1.0.0
-status: {}
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'failed to fetch package metadata: unmarshal package yaml failed: yaml:
+      mapping values are not allowed in this context'
+    reason: FetchingReleaseError
+    status: "False"
+    type: IsEnriched
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

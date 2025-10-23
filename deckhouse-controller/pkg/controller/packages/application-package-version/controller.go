@@ -21,6 +21,7 @@ import (
 	"path"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -153,8 +154,29 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
 		r.logger.Warn("failed to fetch package metadata", slog.String("name", packageVersion.Name), log.Err(err))
-		// Continue with empty metadata - don't fail the reconciliation
-		packageMeta = &PackageMetadata{}
+
+		original := packageVersion.DeepCopy()
+
+		packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
+			Type:               "IsEnriched",
+			Status:             v1.ConditionFalse,
+			Reason:             "FetchingReleaseError",
+			Message:            fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
+			LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
+		})
+
+		err := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		if err != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		}
+
+		delete(packageVersion.Labels, "draft")
+		err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+		if err != nil {
+			return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+		}
+
+		return nil
 	}
 	if packageMeta.PackageDefinition != nil {
 		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
