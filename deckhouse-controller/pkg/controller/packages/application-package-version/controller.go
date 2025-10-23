@@ -115,7 +115,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) error {
 	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
-	// - get registry creds from PackageRepository resource
+	// Clear old status (if any)
+	packageVersion.Status = v1alpha1.ApplicationPackageVersionStatus{}
+
+	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
 	err := r.client.Get(ctx, types.NamespacedName{Name: packageVersion.Spec.Repository}, &packageRepo)
 	if err != nil {
@@ -125,7 +128,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		slog.String("package_version", packageVersion.Name),
 		slog.String("repo", packageRepo.Spec.Registry.Repo))
 
-	// - create go registry client from creds from PackageRepository
+	// Create go registry client from credentials from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:$version
 	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
 	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release")
@@ -141,7 +144,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
 	}
 
-	// - get package.yaml from release image
+	// Get package.yaml from release image
 	img, err := registryClient.Image(ctx, packageVersion.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("get release image for %s: %w", packageVersion.Name, err)
@@ -157,19 +160,19 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
-	// here we start changing the packageVersion object
+	// Start changing the packageVersion object
 	original := packageVersion.DeepCopy()
 
 	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
-	// - patch the status
+	// Patch the status
 	r.logger.Info("patch package version status", slog.String("name", packageVersion.Name))
 	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
 	}
 
-	// - delete label "draft" and patch the main object
+	// Delete label "draft" and patch the main object
 	delete(packageVersion.Labels, "draft")
 
 	r.logger.Info("patch package version", slog.String("name", packageVersion.Name))
