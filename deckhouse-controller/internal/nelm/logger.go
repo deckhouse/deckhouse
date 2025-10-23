@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	nelmlog "github.com/werf/nelm/pkg/log"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Ensure nelmLogger implements the nelmlog.Logger interface

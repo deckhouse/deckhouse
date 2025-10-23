@@ -67,9 +67,9 @@ type Options struct {
 type Option func(*Options)
 
 // WithHistoryMax sets the maximum number of release revisions to keep in history
-func WithHistoryMax(max int32) Option {
+func WithHistoryMax(historyMax int32) Option {
 	return func(o *Options) {
-		o.HistoryMax = max
+		o.HistoryMax = historyMax
 	}
 }
 
