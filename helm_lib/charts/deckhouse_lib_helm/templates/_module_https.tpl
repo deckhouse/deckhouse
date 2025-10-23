@@ -120,7 +120,7 @@ certManager:
 {{- end -}}
 
 {{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} */ -}}
-{{- /* Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) */ -}}
+{{- /* Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) */ -}}
 {{- /* in passed namespace with passed prefix */ -}}
 {{- define "helm_lib_module_https_copy_custom_certificate" -}}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
