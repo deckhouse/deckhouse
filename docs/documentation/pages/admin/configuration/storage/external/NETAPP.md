@@ -14,14 +14,14 @@ This page provides instructions for connecting NetApp to DKP, configuring the co
 
 ## System Requirements
 
-Before configuring the `csi-netapp` module, ensure the following requirements are met:
+Before configuring work with the NetApp storage system, make sure that the following requirements are met:
 
 - Availability of deployed and configured NetApp storage system.
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
 ## Configuration
 
-To start working with NetApp storage, enable the [`csi-netapp` module](/modules/csi-netapp/) and configure the connection to the storage system. Execute all commands on a machine with access to Kubernetes API with administrator privileges.
+To start working with the NetApp storage system, enable the [csi-netapp module](/modules/csi-netapp/) following the [instructions](/modules/csi-netapp/stable/#enabling-the-module), then configure the connection to the storage system. Run all commands on a machine with administrative access to the Kubernetes API.
 
 {% alert level="info" %}
 To work with snapshots, the [snapshot-controller](../../snapshot-controller/) module must be connected.
