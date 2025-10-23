@@ -575,7 +575,7 @@ check_e2e_labels:
 
         if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
           # Use stage-registry for release branches.
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         else
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
@@ -909,7 +909,7 @@ check_e2e_labels:
       id: setup
       env:
         DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-        DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
         DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
         INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -927,7 +927,7 @@ check_e2e_labels:
 
         if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
           # Use stage-registry for release branches.
-          DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
+          DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
         fi
 
         INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -944,7 +944,7 @@ check_e2e_labels:
 {!{- if eq $provider "eks" }!}
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
         if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         else
           BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         fi
