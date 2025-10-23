@@ -41,6 +41,7 @@ runcmd:
 
 ssh_authorized_keys:
 - {{ $context.Values.nodeManager.internal.cloudProvider.sshPublicKey| default "" | quote }}
+prefer_fqdn_over_hostname: false
 package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
