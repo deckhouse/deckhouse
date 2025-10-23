@@ -265,12 +265,12 @@ function prepare_environment() {
   fi
   DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
-  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
-    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
-    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
-  else
-    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
-  fi
+  # if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+  #   echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+  #   export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  # else
+  #   echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  # fi
 
   decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
   IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
