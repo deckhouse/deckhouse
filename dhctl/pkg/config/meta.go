@@ -103,17 +103,17 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	{
 		// Find the "deckhouse" module config
 		var (
-			err             error
-			deckhouseConfig *ModuleConfig
+			err               error
+			deckhouseSettings map[string]interface{}
 		)
 		for _, cfg := range m.ModuleConfigs {
 			if cfg.GetName() == "deckhouse" {
-				deckhouseConfig = cfg
+				deckhouseSettings = cfg.Spec.Settings
 				break
 			}
 		}
 
-		if m.Registry, err = registry.New(deckhouseConfig.Spec.Settings, nil); err != nil {
+		if m.Registry, err = registry.New(deckhouseSettings, nil); err != nil {
 			return nil, fmt.Errorf("failed to initialize registry from settings: %w", err)
 		}
 		if err = m.Registry.InitWithGlobalCache(); err != nil {
