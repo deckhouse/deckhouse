@@ -117,7 +117,12 @@ After completing these steps, the node will no longer be considered a master nod
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
-1. Ensure the DKP queue is empty.
+1. Ensure the DKP queue is empty:
+
+   ```shell
+   d8 platform queue list
+   ```
+
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):
 
    ```bash

@@ -67,7 +67,12 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 platform queue list
+   ```
+
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -128,7 +133,12 @@ The steps described below must be performed from the first in order of the maste
 1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 platform queue list
+   ```
+
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -217,7 +227,12 @@ The steps described below must be performed from the first in order of the maste
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 platform queue list
+   ```
+
 1. Remove the following labels:
    * `node-role.kubernetes.io/control-plane`
    * `node-role.kubernetes.io/master`
@@ -259,7 +274,12 @@ The steps described below must be performed from the first in order of the maste
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 platform queue list
+   ```
+
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
