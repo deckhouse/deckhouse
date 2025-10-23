@@ -306,8 +306,10 @@ properties:
                       Настройка ограничений использования памяти (memory limits).
   dataPlane:
     properties:
-      accessLogFormat:
-        description: Формат access-логов сайдкаров. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+      accessLog:
+        properties:
+          format:
+            description: Формат access-логов сайдкаров. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.
