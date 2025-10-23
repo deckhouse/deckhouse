@@ -50,7 +50,7 @@ grafana: {}
 https:
   mode: CustomCertificate
 internal:
- customCertificateData:
+  customCertificateData:
     tls.crt: |
       -----BEGIN CERTIFICATE-----
       TEST
