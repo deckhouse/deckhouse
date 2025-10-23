@@ -1034,24 +1034,24 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h2 {
-    font-size: 24px;
-    font-weight: 600;
-    font-style: normal;
-    font-stretch: normal;
-    line-height: normal;
-    letter-spacing: normal;
-    color: #00122c;
+  font-size: 24px;
+  font-weight: 600;
+  font-style: normal;
+  font-stretch: normal;
+  line-height: normal;
+  letter-spacing: normal;
+  color: #00122c;
 }
 
 .docs h3 {
-    font-size: 21px;
-    font-weight: 600;
-    font-style: normal;
-    font-stretch: normal;
-    line-height: normal;
-    letter-spacing: -0.4px;
-    //color: #0066FF;
-    color: #00122c;
+  font-size: 21px;
+  font-weight: 600;
+  font-style: normal;
+  font-stretch: normal;
+  line-height: normal;
+  letter-spacing: -0.4px;
+  //color: #0066FF;
+  color: #00122c;
 }
 
 .docs h4 {
@@ -1489,6 +1489,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .clickable-header {
+    width: max-content;
     cursor: pointer;
 }
 
