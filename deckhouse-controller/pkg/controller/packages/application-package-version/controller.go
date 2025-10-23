@@ -129,10 +129,10 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		slog.String("repo", packageRepo.Spec.Registry.Repo))
 
 	// Create go registry client from credentials from PackageRepository
-	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:$version
-	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
+	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/version:$version
+	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "version")
 	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release")
-	r.logger.Debug("release registry path", slog.String("name", packageVersion.Name), slog.String("path", registryPath))
+	r.logger.Debug("registry path", slog.String("name", packageVersion.Name), slog.String("path", registryPath))
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
 		CA:           packageRepo.Spec.Registry.CA,
@@ -144,10 +144,10 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
 	}
 
-	// Get package.yaml from release image
+	// Get package.yaml from image
 	img, err := registryClient.Image(ctx, packageVersion.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("get release image for %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("get image for %s: %w", packageVersion.Name+":"+packageVersion.Spec.Version, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
