@@ -88,8 +88,12 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	return downloaded, nil
 }
 
-func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName string, moduleVersion string) (string, error) {
-	return i.registry.Download(ctx, source, moduleName, moduleVersion)
+func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
+	return i.registry.GetImageDigest(ctx, source, moduleName, version)
+}
+
+func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
+	return i.registry.Download(ctx, source, moduleName, version)
 }
 
 // Install creates an erofs module image and enables the module(mount the image)

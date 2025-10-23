@@ -257,7 +257,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	digest, err := r.loader.Installer().Registry().GetImageDigest(ctx, source, mpo.Name, mpo.Spec.ImageTag)
+	digest, err := r.loader.Installer().GetImageDigest(ctx, source, mpo.Name, mpo.Spec.ImageTag)
 	if err != nil {
 		mpo.Status.Message = fmt.Sprintf("Download error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
@@ -328,7 +328,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 // deployModule downloads module on tmp, validates and installs
 func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSource, mpo *v1alpha2.ModulePullOverride) error {
-	modulePath, err := r.loader.Installer().Registry().Download(ctx, source, mpo.Name, mpo.Spec.ImageTag)
+	modulePath, err := r.loader.Installer().Download(ctx, source, mpo.Name, mpo.Spec.ImageTag)
 	if err != nil {
 		return fmt.Errorf("download the module '%s': %w", mpo.Name, err)
 	}
