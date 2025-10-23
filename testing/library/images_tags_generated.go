@@ -526,7 +526,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1335VexArtifact":          "imageHash-registrypackages-kubelet1335VexArtifact",
 		"kubernetesApiProxy":              "imageHash-registrypackages-kubernetesApiProxy",
 		"kubernetesCni162":                "imageHash-registrypackages-kubernetesCni162",
-		"lsblk2402":                       "imageHash-registrypackages-lsblk2402",
+		"lsblk2393":                       "imageHash-registrypackages-lsblk2393",
 		"netcat110481":                    "imageHash-registrypackages-netcat110481",
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
