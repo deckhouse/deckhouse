@@ -82,17 +82,23 @@ type PackageRepositoryOperationUpdate struct {
 }
 
 type PackageRepositoryOperationStatus struct {
-	Phase          string                                    `json:"phase,omitempty"`
-	Message        string                                    `json:"message,omitempty"`
-	StartTime      *metav1.Time                              `json:"startTime,omitempty"`
-	CompletionTime *metav1.Time                              `json:"completionTime,omitempty"`
-	Packages       *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
+	Phase             string                                         `json:"phase,omitempty"`
+	Message           string                                         `json:"message,omitempty"`
+	StartTime         *metav1.Time                                   `json:"startTime,omitempty"`
+	CompletionTime    *metav1.Time                                   `json:"completionTime,omitempty"`
+	Packages          *PackageRepositoryOperationStatusPackages      `json:"packages,omitempty"`
+	PackagesToProcess []PackageRepositoryOperationStatusPackageQueue `json:"packagesToProcess,omitempty"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
 	Discovered int `json:"discovered,omitempty"`
 	Processed  int `json:"processed,omitempty"`
 	Total      int `json:"total,omitempty"`
+}
+
+type PackageRepositoryOperationStatusPackageQueue struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 // +kubebuilder:object:root=true

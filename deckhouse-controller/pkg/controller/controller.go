@@ -334,12 +334,12 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register package repository controller: %w", err)
 		}
 
-		err = packagerepositoryoperation.RegisterController(runtimeManager, logger.Named("package-repository-operation-controller"))
+		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
 		}
 
-		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, logger.Named("cluster-application-package-version-controller"))
+		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("cluster-application-package-version-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
 		}
@@ -349,7 +349,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register cluster application controller: %w", err)
 		}
 
-		err = packageapplicationpackageversion.RegisterController(runtimeManager, logger.Named("application-package-version-controller"))
+		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}

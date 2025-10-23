@@ -18,8 +18,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -33,6 +35,15 @@ const (
 	controllerName = "d8-package-repository-controller"
 
 	maxConcurrentReconciles = 1
+
+	// requeueInterval is the interval at which the controller will requeue the PackageRepository
+	// after successful reconciliation to trigger periodic scanning
+	// TODO: switch to 6h before merging
+	requeueInterval = 2 * time.Minute
+
+	// operationLabelRepository is the label used to identify PackageRepositoryOperations
+	// that belong to a specific PackageRepository
+	operationLabelRepository = "packages.deckhouse.io/repository"
 )
 
 type reconciler struct {
@@ -85,14 +96,110 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.handle(ctx, packageRepository)
 }
 
-func (r *reconciler) handle(_ context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	// TODO: implement package repository reconciliation logic
-	r.logger.Info("handling PackageRepository", slog.String("name", packageRepository.Name))
-	return ctrl.Result{}, nil
+func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
+	r.logger.Debug("handling PackageRepository", slog.String("name", packageRepository.Name))
+
+	// Check if there are any existing PackageRepositoryOperations for this repository
+	operationList := &v1alpha1.PackageRepositoryOperationList{}
+	err := r.client.List(ctx, operationList, client.MatchingLabels{
+		operationLabelRepository: packageRepository.Name,
+	})
+	if err != nil {
+		r.logger.Error("failed to list package repository operations",
+			slog.String("name", packageRepository.Name),
+			log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	// Check if there is an active operation (Pending or Processing)
+	hasActiveOperation := false
+	for _, op := range operationList.Items {
+		if op.Status.Phase == "" ||
+			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhasePending ||
+			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhaseProcessing {
+			hasActiveOperation = true
+			r.logger.Debug("active operation exists, skipping creation",
+				slog.String("operation", op.Name),
+				slog.String("phase", op.Status.Phase))
+			break
+		}
+	}
+
+	// Only create a new operation if there is no active operation
+	if hasActiveOperation {
+		r.logger.Debug("skipping operation creation, active operation in progress",
+			slog.String("repository", packageRepository.Name))
+		// Requeue to check again later
+		return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	}
+
+	// Determine if we should do a full scan or incremental scan
+	// fullScan = true if this is the first operation ever (no operations at all)
+	fullScan := len(operationList.Items) == 0
+
+	// Create a new PackageRepositoryOperation
+	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, time.Now().Unix())
+	operation := &v1alpha1.PackageRepositoryOperation{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.PackageRepositoryOperationGVK.GroupVersion().String(),
+			Kind:       v1alpha1.PackageRepositoryOperationKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: operationName,
+			Labels: map[string]string{
+				operationLabelRepository: packageRepository.Name,
+			},
+		},
+		Spec: v1alpha1.PackageRepositoryOperationSpec{
+			PackageRepository: packageRepository.Name,
+			Type:              v1alpha1.PackageRepositoryOperationTypeScan,
+			Update: &v1alpha1.PackageRepositoryOperationUpdate{
+				FullScan: fullScan,
+				Timeout:  "5m",
+			},
+		},
+	}
+
+	err = r.client.Create(ctx, operation)
+	if err != nil {
+		r.logger.Error("failed to create package repository operation",
+			slog.String("name", packageRepository.Name),
+			slog.String("operation", operationName),
+			log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	r.logger.Info("created package repository operation",
+		slog.String("repository", packageRepository.Name),
+		slog.String("operation", operationName),
+		slog.Bool("fullScan", fullScan))
+
+	// Requeue after requeueInterval to trigger the next scan
+	return ctrl.Result{RequeueAfter: requeueInterval}, nil
 }
 
-func (r *reconciler) delete(_ context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	// TODO: implement package repository deletion logic
+func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	r.logger.Info("deleting PackageRepository", slog.String("name", packageRepository.Name))
+
+	// Delete all PackageRepositoryOperations associated with this repository
+	operationList := &v1alpha1.PackageRepositoryOperationList{}
+	err := r.client.List(ctx, operationList, client.MatchingLabels{
+		operationLabelRepository: packageRepository.Name,
+	})
+	if err != nil {
+		r.logger.Error("failed to list operations for deletion", log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	for _, op := range operationList.Items {
+		if err := r.client.Delete(ctx, &op); err != nil && !apierrors.IsNotFound(err) {
+			r.logger.Error("failed to delete operation",
+				slog.String("operation", op.Name),
+				log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
+
+	r.logger.Info("cleanup completed", slog.String("repository", packageRepository.Name))
 	return ctrl.Result{}, nil
 }
