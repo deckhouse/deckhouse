@@ -23,75 +23,58 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func tryToExtractPassPhraseFromConfig(path string) []byte {
+func tryToExtractPassPhraseFromConfig(path string) string {
 	if path == "" {
-		return nil
+		return ""
 	}
 
-	if len(app.PrivateKeysToPassPhrasesFromConfig) == 0 {
-		return nil
+	l := len(app.PrivateKeysToPassPhrasesFromConfig)
+	log.DebugF("Passphrases map has %d passphrases\n", l)
+
+	if l == 0 {
+		return ""
 	}
 
 	p, ok := app.PrivateKeysToPassPhrasesFromConfig[path]
-	if !ok {
-		return nil
+	if !ok || len(p) == 0 {
+		return ""
 	}
 
-	if len(p) == 0 {
-		return nil
-	}
+	log.DebugF("Passphrase for key %s found in map!\n", path)
 
 	return p
 }
 
-func tryToExtractPassPhraseFromConfigOrTerminal(path string) ([]byte, error) {
+func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
 	p := tryToExtractPassPhraseFromConfig(path)
 	if len(p) > 0 {
 		return p, nil
 	}
 
-	p, err := terminal.AskPassword(
+	log.DebugF("Passphrase for key %s not found in map. Try to get from terminal\n", path)
+
+	enteredPassword, err := terminal.AskPassword(
 		fmt.Sprintf("Enter passphrase for ssh key %q: ", path),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Getting passphrase for ssh key %q get error: %w", path, err)
+		return "", fmt.Errorf("Getting passphrase for ssh key %q get error: %w", path, err)
 	}
 
-	if len(p) == 0 {
-		return nil, fmt.Errorf("Passphrase for ssh key %q is empty", path)
+	if len(enteredPassword) == 0 {
+		return "", fmt.Errorf("Passphrase for ssh key %q is empty", path)
 	}
 
-	return p, nil
+	return string(enteredPassword), nil
 }
 
-func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
-	keyData, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
-	}
+func GetPrivateKeys(keyPath string, passphrase string) (*session.AgentPrivateKey, error) {
+	log.DebugF("Parsing private ssh key %s\n", keyPath)
 
-	keyData = append(bytes.TrimSpace(keyData), '\n')
-
-	var privateKey interface{}
-
-	if len(passphrase) == 0 {
-		passphrase = tryToExtractPassPhraseFromConfig(keyPath)
-	}
-
-	if len(passphrase) == 0 {
-		privateKey, err = ssh.ParseRawPrivateKey(keyData)
-	} else {
-		privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
-	}
-
-	return privateKey, nil
-}
-
-func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("Reading key file %q got error: %w", keyPath, err)
@@ -99,7 +82,6 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 
 	keyData = append(bytes.TrimSpace(keyData), '\n')
 
-	var passphrase []byte
 	_, err = ssh.ParseRawPrivateKey(keyData)
 	if err != nil {
 		var passphraseMissingError *ssh.PassphraseMissingError
@@ -109,7 +91,7 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath); err != nil {
 				return nil, err
 			}
-			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
 			if err != nil {
 				return nil, fmt.Errorf("Wrong passphrase for ssh key")
 			}
@@ -118,5 +100,5 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 		}
 	}
 
-	return &session.AgentPrivateKey{Key: keyPath, Passphrase: string(passphrase)}, nil
+	return &session.AgentPrivateKey{Key: keyPath, Passphrase: passphrase}, nil
 }

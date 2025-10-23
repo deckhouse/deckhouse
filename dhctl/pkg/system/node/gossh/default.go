@@ -36,7 +36,7 @@ func NewClientFromFlags() (*Client, error) {
 
 	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
 	for _, key := range app.SSHPrivateKeys {
-		k, err := genssh.GetPrivateKeys(key)
+		k, err := genssh.GetPrivateKeys(key, "")
 		if err != nil {
 			return nil, err
 		}
