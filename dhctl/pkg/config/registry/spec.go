@@ -26,34 +26,18 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-var (
+const (
+	DefaultImagesRepo = "registry.deckhouse.io/deckhouse/ce"
+	DefaultScheme     = SchemeHTTPS
+	LicenseUsername   = "license-token"
+)
+
+const (
 	SchemeHTTP  Scheme = "HTTP"
 	SchemeHTTPS Scheme = "HTTPS"
 )
 
-type Spec struct {
-	Mode      registry_const.ModeType `json:"mode" yaml:"mode"`
-	Direct    *DirectModeSpec         `json:"direct,omitempty" yaml:"direct,omitempty"`
-	Unmanaged *UnmanagedModeSpec      `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-}
-
 type Scheme = string
-
-type DirectModeSpec struct {
-	ImagesRepo string `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     Scheme `json:"scheme" yaml:"scheme"`
-	CA         string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
-}
-
-type UnmanagedModeSpec struct {
-	ImagesRepo string `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     Scheme `json:"scheme" yaml:"scheme"`
-	CA         string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
-}
 
 type InitConfigSpec struct {
 	ImagesRepo        string `json:"imagesRepo" yaml:"imagesRepo"`
@@ -62,7 +46,26 @@ type InitConfigSpec struct {
 	RegistryScheme    string `json:"registryScheme,omitempty" yaml:"registryScheme,omitempty"`
 }
 
-func (s *Spec) fromInitConfig(initConfig InitConfigSpec) error {
+type DeckhousModuleSpec struct {
+	Mode      registry_const.ModeType `json:"mode" yaml:"mode"`
+	Direct    *DirectModeSpec         `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Unmanaged *UnmanagedModeSpec      `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+}
+
+type DirectModeSpec struct {
+	ImagesRepo string `json:"imagesRepo" yaml:"imagesRepo"`
+	Scheme     Scheme `json:"scheme" yaml:"scheme"`
+	CA         string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
+	License    string `json:"license,omitempty" yaml:"license,omitempty"`
+}
+
+type UnmanagedModeSpec struct {
+	DirectModeSpec
+}
+
+func (s *DeckhousModuleSpec) fromInitConfig(initConfig InitConfigSpec) error {
 	initConfig.ImagesRepo = strings.TrimRight(initConfig.ImagesRepo, "/")
 	address, _ := addressAndPathFromImagesRepo(initConfig.ImagesRepo)
 
@@ -75,15 +78,15 @@ func (s *Spec) fromInitConfig(initConfig InitConfigSpec) error {
 		return err
 	}
 
-	*s = Spec{
+	*s = DeckhousModuleSpec{
 		Mode: registry_const.ModeUnmanaged,
-		Unmanaged: &UnmanagedModeSpec{
+		Unmanaged: &UnmanagedModeSpec{DirectModeSpec{
 			ImagesRepo: initConfig.ImagesRepo,
 			Scheme:     SchemeFromString(initConfig.RegistryScheme),
 			CA:         initConfig.RegistryCA,
 			Username:   username,
 			Password:   password,
-		},
+		}},
 	}
 	if err := s.Validate(); err != nil {
 		return err
@@ -91,9 +94,9 @@ func (s *Spec) fromInitConfig(initConfig InitConfigSpec) error {
 	return nil
 }
 
-func (s *Spec) fromDeckhouseSettings(rawJson string) error {
+func (s *DeckhousModuleSpec) fromDeckhouseSettings(rawJson string) error {
 	var err error
-	var spec Spec
+	var spec DeckhousModuleSpec
 
 	err = json.Unmarshal([]byte(rawJson), &spec)
 	if err != nil {
@@ -114,16 +117,17 @@ func (s *Spec) fromDeckhouseSettings(rawJson string) error {
 	return nil
 }
 
-func (s *Spec) fromDefault() error {
-	*s = Spec{
+func (s *DeckhousModuleSpec) fromDefault() error {
+	*s = DeckhousModuleSpec{
 		Mode: registry_const.ModeUnmanaged,
-		Unmanaged: &UnmanagedModeSpec{
-			ImagesRepo: "registry.deckhouse.io/deckhouse/ce",
-			Scheme:     SchemeHTTPS,
+		Unmanaged: &UnmanagedModeSpec{DirectModeSpec{
+			ImagesRepo: DefaultImagesRepo,
+			Scheme:     DefaultScheme,
 			CA:         "",
 			Username:   "",
 			Password:   "",
-		},
+			License:    "",
+		}},
 	}
 	if err := s.Validate(); err != nil {
 		return err
@@ -131,7 +135,7 @@ func (s *Spec) fromDefault() error {
 	return nil
 }
 
-func (s Spec) Validate() error {
+func (s DeckhousModuleSpec) Validate() error {
 	return validation.ValidateStruct(&s,
 		validation.Field(&s.Mode,
 			validation.In(registry_const.ModeDirect, registry_const.ModeUnmanaged),
@@ -147,24 +151,23 @@ func (s Spec) Validate() error {
 	)
 }
 
-func (s UnmanagedModeSpec) Validate() error {
-	return validation.ValidateStruct(&s,
-		validation.Field(&s.ImagesRepo, validation.Required),
-		validation.Field(&s.Scheme, validation.In(SchemeHTTP, SchemeHTTPS)),
-		validation.Field(&s.Username, validation.When(s.Password != "", validation.Required)),
-		validation.Field(&s.Password, validation.When(s.Username != "", validation.Required)),
-		validation.Field(&s.CA, validation.When(s.Scheme == SchemeHTTP, validation.Empty)),
-	)
-}
-
 func (s DirectModeSpec) Validate() error {
 	return validation.ValidateStruct(&s,
 		validation.Field(&s.ImagesRepo, validation.Required),
 		validation.Field(&s.Scheme, validation.In(SchemeHTTP, SchemeHTTPS)),
 		validation.Field(&s.Username, validation.When(s.Password != "", validation.Required)),
 		validation.Field(&s.Password, validation.When(s.Username != "", validation.Required)),
+		validation.Field(&s.License,
+			validation.When(s.Username != "" || s.Password != "", validation.Empty)),
 		validation.Field(&s.CA, validation.When(s.Scheme == SchemeHTTP, validation.Empty)),
 	)
+}
+
+func (s *DirectModeSpec) UsernamePassword() (username string, password string) {
+	if s.License != "" {
+		return LicenseUsername, s.License
+	}
+	return s.Username, s.Password
 }
 
 func validateRegistryDockerCfg(cfg string, repo string) error {
