@@ -11,28 +11,45 @@ lang: ru
 На данный момент модулем поддерживаются СХД, совместимые с [Trident CSI от NetApp](https://github.com/NetApp/trident). Для поддержки других СХД NetApp свяжитесь [с технической поддержкой Deckhouse](/tech-support/).
 {% endalert %}
 
-На этой странице представлены инструкции по подключению NetApp в DKP, настройке соединения и созданию StorageClass.
+На этой странице представлены инструкции по подключению NetApp к DKP, настройке соединения и созданию StorageClass.
 
 ## Системные требования
 
-Перед настройкой работы с СХД NetApp, убедитесь что выполнены следующие требования:
+Перед настройкой работы с СХД NetApp убедитесь, что выполнены следующие требования:
 
 - Наличие развернутой и настроенной СХД NetApp.
 - Уникальные IQN в `/etc/iscsi/initiatorname.iscsi` на каждом узле Kubernetes.
 
-## Настройка
+## Настройка интеграции кластера с системой хранения NetApp
 
-Чтобы начать работу с СХД NetApp, включите [модуль `csi-netapp`](/modules/csi-netapp/) согласно [инструкции](/modules/csi-netapp/stable/#включение-модуля), затем настройте подключение к системе хранения. Все команды выполняйте на машине с административным доступом к API Kubernetes.
+Чтобы начать работу с СХД NetApp, следуйте пошаговым инструкциям ниже. Все команды выполняйте на машине с административным доступом к API Kubernetes.
 
 {% alert level="info" %}
 Для работы со снимками требуется подключенный модуль [snapshot-controller](../../snapshot-controller/).
 {% endalert %}
 
-### Создание StorageClass
+1. Выполните команду для активации модуля `csi-netapp`. После активации на всех узлах кластера будут:
 
-Создайте StorageClass для работы с томами NetApp. Используйте ресурсы [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass) и [NetappStorageConnection](/modules/csi-netapp/cr.html#netappstorageconnection) для создания StorageClass. Пример команд для создания таких ресурсов:
+   - Зарегистрирован CSI-драйвер;
+   - Развернуты служебные поды компонентов `csi-netapp`.
 
-1. Создайте ресурс NetappStorageConnection:
+   ```shell
+   d8 s module enable csi-netapp
+   ```
+
+1. Дождитесь перехода модуля в состояние `Ready`:
+
+   ```shell
+   d8 k get module csi-netapp -w
+   ```
+
+1. Убедитесь, что все поды в пространстве имен `d8-csi-netapp` находятся в состоянии `Running` или `Completed` и развернуты на всех узлах кластера:
+
+   ```shell
+   d8 k -n d8-csi-netapp get pod -owide -w
+   ```
+
+1. Создайте ресурс [NetappStorageConnection](/modules/csi-netapp/cr.html#netappstorageconnection):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -42,11 +59,10 @@ lang: ru
      name: netapp
    spec:
      controlPlane:
-       backendAddress: "172.17.1.55" # Адрес СХД (изменяемый параметр).
-       username: "admin" # Имя пользователя для доступа к API (изменяемый параметр).
-       password: "password" # Пароль для доступа к API (изменяемый параметр).
-       serviceName: "trident-csp-svc"
-       servicePort: "8080"
+       address: "172.17.1.55"
+       username: "admin"
+       password: "password"
+       svm: "svm1"
    EOF
    ```
 
@@ -56,7 +72,7 @@ lang: ru
    d8 k get netappstorageconnections.storage.deckhouse.io <имя netappstorageconnection>
    ```
 
-1. Создайте ресурс NetappStorageClass:
+1. Создайте ресурс [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -65,12 +81,12 @@ lang: ru
    metadata:
      name: netapp
    spec:
-     pool: "test-pool"
-     accessProtocol: "fc" # fc или iscsi (по умолчанию iscsi), неизменяемый параметр.
+     pool: "test-cpg"
+     accessProtocol: "iscsi" # fc или iscsi (по умолчанию iscsi), неизменяемый параметр.
      fsType: "xfs" # xfs, ext3, ext4 (по умолчанию ext4), изменяемый параметр.
      storageConnectionName: "netapp" # Неизменяемый параметр.
      reclaimPolicy: Delete # Delete или Retain.
-     cpg: "test-pool"
+     cpg: "test-cpg"
    EOF
    ```
 
