@@ -87,12 +87,12 @@
   LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
   LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
   LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
-{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
-  LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "openstack" }!}
   TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+  LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "static" }!}
   TEMPLATE_ID: "dbe33391-02c1-4f23-a77b-0edb8b079ff6"
+  LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "vsphere" }!}
   TEMPLATE_ID: "3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
   LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}

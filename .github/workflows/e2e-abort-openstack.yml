@@ -339,6 +339,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -657,6 +658,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -975,6 +977,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1293,6 +1296,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1611,6 +1615,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1929,6 +1934,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2247,6 +2253,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2565,6 +2572,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2883,6 +2891,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3201,6 +3210,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3519,6 +3529,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3837,6 +3848,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4155,6 +4167,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4473,6 +4486,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
