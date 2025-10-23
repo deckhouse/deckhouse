@@ -462,7 +462,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
@@ -830,7 +830,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
@@ -1198,7 +1198,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
@@ -1554,7 +1554,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
@@ -1910,7 +1910,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
@@ -2266,7 +2266,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
           COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
