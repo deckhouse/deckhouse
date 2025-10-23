@@ -14,9 +14,8 @@ spec:
   version: 1.0.0
 status:
   conditions:
-  - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ""
-    reason: ""
+  - lastProbeTime: null
+    lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: IsEnriched
   metadata:
