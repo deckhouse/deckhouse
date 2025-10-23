@@ -184,7 +184,7 @@ function prepare_environment() {
 
     if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
       echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
-      registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+      registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
     else
       registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
     fi
