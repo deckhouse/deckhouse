@@ -8,6 +8,8 @@ import:
   add: /terraform-provider-yandex
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

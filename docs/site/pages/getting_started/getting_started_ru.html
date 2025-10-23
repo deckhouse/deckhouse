@@ -1,6 +1,6 @@
 ---
 title: "Быстрый старт — выбор инфраструктуры"
-permalink: ru/gs/index.html
+permalink: ru/gs/
 description: Пошаговый процесс установки Deckhouse Kubernetes Platform поверх любой инфраструктуры.
 layout: page-nosidebar
 lang: ru
@@ -37,32 +37,11 @@ toc: false
     <div>
       <h3>Облачная платформа</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
-        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
-        {%- if provider[1].languages %}
-          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
-        {%- endif %}
-        {%- if provider[1].wip == true %}
-        <a
-          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
-        {%- else %}
-        <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
-          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
-          <span class="name">{{ provider[1].name[page.lang] }}</span>
-          {% if provider[1].extraIcons %}
-          <div class="footer">
-            {%- for extraIcon in provider[1].extraIcons %}
-            <img src="/{{extraIcon[1]}}" alt=""/>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </a>
-        {%- endif %}
-        {% endfor %}
+        {% include getting_started/buttons-cloud-sorted.liquid %}
       </div>
       <p>
         <small>
-          Полный список настроек облачных провайдеров Deckhouse&nbsp;Kubernetes&nbsp;Platform доступен <a href="/products/kubernetes-platform/documentation/v1/kubernetes.html"
+          Полный список настроек облачных провайдеров Deckhouse&nbsp;Kubernetes&nbsp;Platform доступен <a href="/products/kubernetes-platform/documentation/v1/admin/integrations/integrations-overview.html"
           title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.
         </small>
       </p>
@@ -96,6 +75,14 @@ toc: false
 
 <script>
   function openInstallTab(evt, installTabName) {
+      const url = new URL(window.location.href);
+      if (installTabName == 'tab-manual-install') {
+        url.hash = '';
+      }
+      if (installTabName == 'tab-gui-install') {
+        url.hash = 'gui-install';
+      }
+      window.history.replaceState(null, '', url.toString());
       document.getElementById("tab-manual-install").classList.remove("active");
       document.getElementById("tab-gui-install").classList.remove("active");
 
@@ -105,4 +92,19 @@ toc: false
       document.getElementById(installTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
   }
+
+  function getHashValue() {
+      const hash = window.location.hash;
+      return hash.substring(1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const hashValue = getHashValue();
+      if (hashValue == "gui-install") {
+        document.getElementById("tab-manual-install").classList.remove("active");
+        document.getElementById("tab-gui-install").classList.add("active");
+        document.getElementById("tab-button-manual-install").classList.remove("active");
+        document.getElementById("tab-button-gui-install").classList.add("active");
+      }
+  });
 </script>

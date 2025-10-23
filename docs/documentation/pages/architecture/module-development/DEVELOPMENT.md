@@ -5,7 +5,7 @@ permalink: en/architecture/module-development/development/
 
 {% raw %}
 
-When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride) resource is used for this purpose.
+When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
 
 {% alert level="warning" %}
 The ModulePullOverride resource is intended **for development and debugging environments only**.
@@ -197,11 +197,11 @@ status:
   phase: Ready
 ```
 
-The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](../../../reference/api/cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
+The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
 
 ### An example
 
-1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](../../../reference/api/cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
+1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -223,7 +223,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
      modulesCount: 2
    ```
 
-1. Enable the module and create [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride) for the `echo` module:
+1. Enable the module and create [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) for the `echo` module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -291,18 +291,21 @@ The module will keep running after ModulePullOverride is removed. But if there i
 1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
 
 1. **Module disabling**. When a module is disabled (`disable module <module name>`):
+
    - The module stops receiving new releases.
    - The currently deployed version remains in the cluster with the `Deployed` status.
 
 1. **Behavior on re-enabling**.
 
    If the module is re-enabled within 72 hours:
+
    - The previously deployed version (ModuleRelease v1.0.0) is used.
    - New releases are checked.
    - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
-   - The module is then updated according to [the standard update rules](../../../reference/deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+   - The module is then updated according to [the standard update rules](../../../reference/release-channels.html) (Update). [More information](/modules/deckhouse/configuration.html#parameters-update)
 
    If the module is re-enabled after 72 hours:
+
    - The old version is deleted (`delete ModuleRelease v1.0.0`).
    - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
    - The cycle starts again as if the module was enabled for the first time (see step 1).
@@ -324,7 +327,7 @@ update:
       to:   "2.0" # Transitions between major versions are specified in the X.Y format.
 ```
 
-> A constrained release is a module release whose `module.yaml` contains the [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
+> A constrained release is a module release whose `module.yaml` contains the [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
 
 Conditions for applying `from-to`:
 
@@ -333,9 +336,9 @@ Conditions for applying `from-to`:
 - If multiple releases match at the same time, the option with the largest `to` is chosen (the rules may reside in different ModuleRelease objects of the same module).
 - If no release meets these conditions, the update proceeds as usual — without skipping intermediate versions.
 
-If a release with [update.versions](../../cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
+If a release with [update.versions](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
 
-![From-to mechanism logic](../../images/architecture/module-development/from_to.svg)
+![From-to mechanism logic](../../../images/architecture/module-development/from_to.svg)
 
 Check available releases (ModuleRelease) with:
 
@@ -372,7 +375,7 @@ p-o-test-v0.6.11   Skipped
 p-o-test-v0.7.25   Deployed
 ```
 
-Whether an annotation is required depends on the module’s update policy. More details — [Module update policy](../run#module-update-policy).
+Whether an annotation is required depends on the module’s update policy. More details — [Module update policy](../run/#module-update-policy).
 
 ### Examples
 
@@ -460,7 +463,7 @@ update:
 
 ## Module artifacts in the container registry
 
-After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](../../../reference/api/cr.html#modulesource) resource.
+After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource.
 
 Below is an example of the container image hierarchy after pushing the `module-1` and `modules-2` module artifacts into the registry:
 
@@ -556,6 +559,30 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
   "frontend": "sha256:f31f4b7da5faa5e320d3aad809563c6f5fcaa97b571fffa5c9cab103327cc0e8"
 }
 ```
+
+### Configuring extra images
+
+Modules can include additional images (such as vulnerability databases or other supplementary data) by adding an `extra_images.json` file. This file specifies extra images that need to be manually pushed to the registry and are separate from the main module images.
+
+To view the extra images configuration:
+
+```shell
+crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - extra_images.json
+```
+
+An example of `extra_images.json` for neuvector vulnerability database:
+
+```json
+{
+  "scanner": 3
+}
+```
+
+Important notes:
+
+- Extra images must be manually pushed to the module registry under the `extra/` path.
+- Use the `d8 mirror pull --only-extra-images` command to pull only extra images.
+- Extra images are stored in the registry as `<module-name>/extra/<image-name>`.
 
 ### Print the list of releases
 

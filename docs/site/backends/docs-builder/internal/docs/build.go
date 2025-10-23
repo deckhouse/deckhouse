@@ -55,9 +55,13 @@ func (svc *Service) Build() error {
 			return fmt.Errorf("clear %s: %w", svc.destDir, err)
 		}
 
+		syncer := fsync.NewSyncer()
+		syncer.NoChmod = true
+		syncer.NoTimes = true
+
 		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
 		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
-		err = fsync.Sync(newLocation, oldLocation)
+		err = syncer.Sync(newLocation, oldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
 		}
@@ -71,7 +75,7 @@ func (svc *Service) Build() error {
 
 		searchOldLocation := filepath.Join(svc.baseDir, "public", lang, "search")
 		searchNewLocation := filepath.Join(svc.destDir, "public", lang, "search")
-		err = fsync.Sync(searchNewLocation, searchOldLocation)
+		err = syncer.Sync(searchNewLocation, searchOldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", searchOldLocation, searchNewLocation, err)
 		}
@@ -83,7 +87,7 @@ func (svc *Service) Build() error {
 }
 
 func (svc *Service) buildHugo() error {
-	flags := hugo.Flags{
+	flags := &hugo.Flags{
 		LogLevel: "debug",
 		Source:   svc.baseDir,
 		CfgDir:   filepath.Join(svc.baseDir, "config"),

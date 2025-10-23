@@ -62,13 +62,6 @@ spec:
       - name: extended-monitoring
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "extendedMonitoringExporter") }}
-        args:
-        - "/app/extended-monitoring.py"
-        - "127.0.0.1"
-        - "8080"
-        env:
-        - name: "PYTHONUNBUFFERED"
-          value: "1"
         startupProbe:
           httpGet:
             path: /startup

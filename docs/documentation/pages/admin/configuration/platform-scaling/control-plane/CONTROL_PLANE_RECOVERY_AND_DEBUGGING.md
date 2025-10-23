@@ -51,27 +51,41 @@ Below is an instruction on how you can restore the master node.
 
 ### Viewing etcd cluster members
 
-Below are the steps to view the list of nodes that are part of the etcd cluster:
+#### Option 1
 
-1. Find the etcd pod:
+Use the `etcdctl member list` command.
 
-   ```shell
-   d8 k -n kube-system get pods -l component=etcd,tier=control-plane
-   ```
+Example:
 
-   Typically, pod name has the `etcd-` prefix.
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
 
-1. Run the following command on any available etcd Pod (assuming it is running in the `kube-system` namespace):
+**Warning.** The last parameter in the output table shows etcd member is in [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in `leader` state.
 
-   ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-     etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
+#### Option 2
 
-   This command uses substitution: `$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`.
-   It automatically inserts the name of the first Pod matching the specified labels.  
+To obtain information about etcd cluster nodes in tabular form, use the `etcdctl endpoint status` command. For the leader, the `IS LEADER` column will show `true`.
+
+Example:
+
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
 
 ### Restoring the etcd cluster in case of complete unavailability
 
@@ -97,7 +111,7 @@ In some cases, manual restoration via `etcdutl snapshot restore` can help:
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -109,7 +123,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -269,7 +283,7 @@ After new control plane nodes are added:
 - The label `node-role.kubernetes.io/control-plane=""` is applied.
 - A DaemonSet launches control plane pods on the new nodes.
 - DKP creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
-- All DKP modules that support high availability will enable it automatically, unless the global setting `highAvailability` is manually overridden.
+- All DKP modules that support high availability will enable it automatically, unless the global setting [`highAvailability`](../../../../reference/api/global.html#parameters-highavailability) is manually overridden.
 
 Control plane node removal is performed in reverse:
 

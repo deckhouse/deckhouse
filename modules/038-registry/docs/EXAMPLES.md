@@ -1,6 +1,6 @@
 ---
 title: "Module registry: usage example"
-description: ""
+description: "Examples for switching between Direct and Unmanaged registry modes in Deckhouse Kubernets Platform, including configuration examples and status monitoring."
 ---
 
 ## Switching to the `Direct` Mode
@@ -50,9 +50,22 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Ensure the [Deckhouse job queue](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse) is empty and contains no errors.
+1. Ensure the Deckhouse job queue is empty and contains no errors:
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for correct configuration.
+   ```shell
+   d8 platform queue list
+   ```
+
+   Example output:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -113,7 +126,20 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    registry   38     ...  Ready   True                         True
    ```
 
-1. Ensure the [Deckhouse job queue](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse) is empty and contains no errors.
+1. Ensure the Deckhouse job queue is empty and contains no errors:
+
+   ```shell
+   d8 platform queue list
+   ```
+
+   Example output:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
 
 1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for correct configuration.
 

@@ -206,7 +206,7 @@ entries:
             ru: Введение
           url: /stronghold/documentation/user/overview.html
         - title:
-            en: Configuring access to the project
+            en: Configuring access to project
             ru: Настройка доступа к проекту
           url: /stronghold/documentation/user/access.html
         - title:
@@ -231,7 +231,7 @@ entries:
               url: /stronghold/documentation/user/concepts/policy.html
             - title:
                 en: Identity
-                ru: Сущности
+                ru: Идентичность
               url: /stronghold/documentation/user/concepts/identity.html
             - title:
                 en: Token
@@ -396,4 +396,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/cli/d8/
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/

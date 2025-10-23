@@ -24,6 +24,10 @@ entries:
             en: Requirements
             ru: Требования
           url: /virtualization-platform/documentation/about/requirements.html
+        - title:
+            en: Architecture options
+            ru: Архитектурные решения
+          url: /virtualization-platform/documentation/about/architecture-options.html
     - title:
         en: Administration
         ru: Администрирование
@@ -95,7 +99,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
@@ -238,10 +241,6 @@ entries:
                     ru: Настройка хранилищ
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
-                    en: Configuring volume snapshot creation
-                    ru: Настройка создания снимков томов
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
-                - title:
                     en: Software-defined storage (SDS)
                     ru: Программно-определяемые хранилища (SDS)
                   folders:
@@ -306,8 +305,8 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
                     - title:
-                        en: NFS data storage
-                        ru: Хранилище данных NFS
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                     - title:
                         en: SCSI-based data storage
@@ -568,7 +567,7 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /virtualization-platform/reference/console-utilities/d8.html
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/
         - title:
             en: FAQ
             ru: FAQ

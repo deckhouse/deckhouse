@@ -10,6 +10,8 @@ defaultContentLanguageInSubdir: true
 uglyURLs: true
 #relativeURLs: true
 
+printI18nWarnings: true
+
 params:
   display_toc: true
 

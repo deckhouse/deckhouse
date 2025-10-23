@@ -3,7 +3,11 @@ title: "Images"
 permalink: en/virtualization-platform/documentation/user/resource-management/images.html
 ---
 
-The `VirtualImage` resource is designed to load virtual machine images and then use them to create virtual machine disks. This resource is available only in the namespace or project in which it was created.
+The [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
+
+{% alert level="warning" %}
+Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
 
 When connected to a virtual machine, the image is accessed in read-only mode.
 
@@ -53,7 +57,7 @@ Project image two storage types are supported:
 Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
 {% endalert %}
 
-A full description of the `VirtualImage` resource configuration settings can be found at [link](/products/virtualization-platform/reference/cr/virtualimage.html).
+A full description of the `VirtualImage` resource configuration settings can be found at [link](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Creating image from HTTP server
 

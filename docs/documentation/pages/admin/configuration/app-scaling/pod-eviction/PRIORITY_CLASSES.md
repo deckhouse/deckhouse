@@ -1,6 +1,7 @@
 ---
 title: "Priority classes"
 permalink: en/admin/configuration/app-scaling/pod-eviction/priority-classes.html
+description: "Configure pod priority classes in Deckhouse Kubernetes Platform. Pod eviction policies, resource allocation priorities, and cluster resource management optimization."
 ---
 
 ## Pod priorities (Priority Classes)

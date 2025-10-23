@@ -10,18 +10,18 @@ lang: en
 
 The following custom resources are used to create a project:
 
-* [ProjectTemplate](/products/virtualization-platform/reference/cr/project.html): Describes the project template.
+* [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate): Describes the project template.
   It defines the list of resources to be created in the project
   and the parameter schema that can be passed during project creation.
-* [Project](/products/virtualization-platform/reference/cr/project.html): Describes a specific project.
+* [Project](/modules/multitenancy-manager/cr.html#project): Describes a specific project.
 
 When a Project is created from a specified ProjectTemplate, the following occurs:
 
-1. The provided [parameters](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) are validated against the OpenAPI specification
-   (defined in the [`openAPI`](/products/virtualization-platform/reference/cr/project.html#projecttemplate-v1alpha1-spec-parametersschema) parameter of the [ProjectTemplate](/products/virtualization-platform/reference/cr/project.html#projecttemplate) resource).
-1. The [resource template](/products/virtualization-platform/reference/cr/project.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/).
-   The rendering values are taken from the [`parameters`](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) field of the [Project](/products/virtualization-platform/reference/cr/project.html) resource.
-1. A namespace is created with the same name as the [Project](/products/virtualization-platform/reference/cr/project.html).
+1. The provided [parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) are validated against the OpenAPI specification
+   (defined in the [`openAPI`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema) parameter of the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
+1. The [resource template](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/).
+   The rendering values are taken from the [`parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field of the [Project](/modules/multitenancy-manager/cr.html#project) resource.
+1. A namespace is created with the same name as the [Project](/modules/multitenancy-manager/cr.html#project).
 1. All resources described in the template are created one by one.
 
 {% alert level="warning" %}

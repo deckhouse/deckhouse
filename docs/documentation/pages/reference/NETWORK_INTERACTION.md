@@ -32,7 +32,7 @@ tunnel-protocol: vxlan
 
 {% alert level="info" %}
 Changes related to the addition, removal, or reassignment of ports in the tables
-are listed in the "Network" section of a respective DKP version on the [Release notes](release-notes.html) page.
+are listed in the "Network" section of a respective DKP version on the [Release notes](../release-notes.html) page.
 {% endalert %}
 
 {% include network_security_setup.liquid %}

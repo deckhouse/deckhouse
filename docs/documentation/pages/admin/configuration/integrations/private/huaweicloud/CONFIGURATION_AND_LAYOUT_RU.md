@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/private/huaweicloud/huawei-layout.html
+permalink: ru/admin/integrations/private/huaweicloud/layout.html
 lang: ru
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: "Adding and managing bare-metal nodes"
 permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
+description: "Manage bare-metal nodes in Deckhouse Kubernetes Platform. Node addition, configuration, and lifecycle management."
 ---
 
 ## Adding nodes to a bare-metal cluster
@@ -252,7 +253,7 @@ You can also perform this operation using a patch:
 When changing the `cri.type` for a NodeGroup created using `dhctl`, you must also update this value in `dhctl config edit provider-cluster-configuration` and in the NodeGroup object settings.
 {% endalert %}
 
-After changing the CRI for a NodeGroup, the `node-manager` module will sequentially reboot the nodes, applying the new CRI.  
+After changing the CRI for a NodeGroup, the [`node-manager`](/modules/node-manager/) module will sequentially reboot the nodes, applying the new CRI.  
 Node updates involve disruption. Depending on the `disruption` settings for the NodeGroup, the `node-manager` module will either automatically update the nodes or require manual approval.
 
 ## Changing the NodeGroup of a static node

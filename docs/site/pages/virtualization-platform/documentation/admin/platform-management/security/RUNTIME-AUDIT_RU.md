@@ -68,7 +68,7 @@ DVP использует два основных источника событи
 1. (**Опционально**) Если control plane в кластере не управляется DVP при помощи `control-plane-manager`,
    настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
 
-Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html).
+Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
 
 ### Настройка вебхука API Kubernetes вручную
 
@@ -117,18 +117,18 @@ DVP использует два основных источника событи
   - правила для аудита Kubernetes (располагаются в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`);
   - правила, удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022 г.
     «Требования по безопасности информации к средствам контейнеризации»
-    (`fstec`, в формате [кастомного ресурса FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules));
+    (`fstec`, в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules));
 
   Чтобы настроить список встроенных правил,
-  используйте [параметр `settings.builtInRulesList`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
+  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
 
-- **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules).
+- **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
 Подробности о работе правил аудита безопасности можно найти [в разделе Архитектура](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ### Добавление пользовательского правила
 
-Чтобы добавить правило, создайте [ресурс FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) с необходимыми условиями.
+Чтобы добавить правило, создайте [ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) с необходимыми условиями.
 Используйте [синтаксис условий Falco](https://falco.org/docs/concepts/rules/conditions/).
 Агенты Falco автоматически применят созданное правило.
 
@@ -164,7 +164,7 @@ spec:
 ### Применение стороннего правила
 
 Поскольку структура правил Falco отличается от схемы кастомных ресурсов DVP,
-сторонние правила из интернета необходимо сконвертировать [в ресурс FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) перед применением.
+сторонние правила из интернета необходимо сконвертировать [в ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) перед применением.
 
 Используйте следующий скрипт для конвертации:
 
@@ -218,7 +218,7 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ## Сбор логов и оповещения
 
 DVP экспортирует события аудита безопасности в формате метрик Prometheus,
-по которым можно настроить оповещения через [ресурс CustomPrometheusRules](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customprometheusrules).
+по которым можно настроить оповещения через [ресурс CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules).
 Это позволяет:
 
 - подключить внешнее хранилище для сбора логов (например, Loki или Elasticsearch);
@@ -227,7 +227,7 @@ DVP экспортирует события аудита безопасност�
 ### Настройка сбора логов и событий
 
 Все события аудита безопасности выводятся в stdout.
-Для сбора и отправки событий в хранилище логов создайте [ресурс ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig), следуя примеру:
+Для сбора и отправки событий в хранилище логов создайте [ресурс ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), следуя примеру:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -253,7 +253,7 @@ spec:
 
 ### Настройка оповещений о критических событиях
 
-Для создания оповещений о критических событиях создайте [объект CustomPrometheusRules](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customprometheusrules), следуя примеру:
+Для создания оповещений о критических событиях создайте [объект CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules), следуя примеру:
 {% raw %}
 
 ```yaml
@@ -299,7 +299,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 В Falco по умолчанию используется отладочный уровень логирования `debug`.
 
 В Falcosidekick по умолчанию отладочное логирование отключено.
-Для включения установите [параметр `spec.settings.debugLogging`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) в `true`, следуя примеру
+Для включения установите [параметр `spec.settings.debugLogging`](/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) в `true`, следуя примеру
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
@@ -72,7 +73,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderOpenstack.internal.tags", providerClusterConfiguration.Tags)
 
 	return nil
-})
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)

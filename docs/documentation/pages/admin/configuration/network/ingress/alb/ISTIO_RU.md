@@ -1,6 +1,7 @@
 ---
 title: "ALB средствами Istio"
 permalink: ru/admin/configuration/network/ingress/alb/istio.html
+description: "Настройка Application Load Balancer с Istio в Deckhouse Kubernetes Platform. Настройка Istio Ingress Gateway, управление трафиком и интеграция с service mesh."
 lang: ru
 ---
 

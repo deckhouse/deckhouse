@@ -143,13 +143,33 @@ properties:
                   additionalMetadata:
                     type: object
                     description: |
-                      Custom string key-value pairs to be stored in the Metadata of every master node VM,
-                      useful for organizing and categorizing your virtualization inventory.
+                      Custom string key-value pairs to be stored in the Metadata of every master node VM, useful for organizing and categorizing your virtualization inventory.
 
-                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
-                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
+                  affinityRule:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Specifies the affinity rule applied to virtual machines of the master nodes within the cluster.
+                      Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                      which can help improve fault tolerance, and control the distribution of workloads.
+                      If not specified, no affinity rule will be applied by default.
+                    properties:
+                      polarity:
+                        type: string
+                        description: |
+                          The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                          `Affinity` means that nodes should be placed on the same host,
+                          while `AntiAffinity` means they should be placed on different hosts.
+                        enum: [Affinity, AntiAffinity]
+                      required:
+                        type: boolean
+                        description: |
+                          Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                          If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                        x-doc-default: false
           nodeGroups:
             type: array
             description: |
@@ -271,13 +291,34 @@ properties:
                     additionalMetadata:
                       type: object
                       description: |
-                        Custom string key-value pairs to be stored in the Metadata of every node VM,
-                        useful for organizing and categorizing your virtualization inventory.
+                        Custom string key-value pairs to be stored in the Metadata of every node VM, useful for organizing and categorizing your virtualization inventory.
 
-                        The properties in this field will be merged with the existing metadata stored in the `metadata` field
-                        at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                        The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                       additionalProperties:
                         type: string
+                    affinityRule:
+                      type: object
+                      additionalProperties: false
+                      description: |
+                        Specifies the affinity rule applied to virtual machines of nodes of the NodeGroup within the cluster.
+                        Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                        which can help improve fault tolerance, and control the distribution of workloads.
+                        If not specified, no affinity rule will be applied by default.
+                      required: [polarity]
+                      properties:
+                        polarity:
+                          type: string
+                          description: |
+                            The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                            `Affinity` means that nodes should be placed on the same host,
+                            while `AntiAffinity` means they should be placed on different hosts.
+                          enum: [Affinity, AntiAffinity]
+                        required:
+                          type: boolean
+                          description: |
+                            Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                            If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                          x-doc-default: false
           bastion:
             type: object
             additionalProperties: false
@@ -341,11 +382,9 @@ properties:
                   additionalMetadata:
                     type: object
                     description: |
-                      Custom string key-value pairs to be stored in the Metadata of the bastion,
-                      useful for organizing and categorizing your virtualization inventory.
+                      Custom string key-value pairs to be stored in the Metadata of the bastion, useful for organizing and categorizing your virtualization inventory.
 
-                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
-                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
           sshPublicKey:
@@ -395,7 +434,8 @@ properties:
               externalPort:
                 type: integer
                 description: |
-                  The external port mapped by the DNAT rule to forward incoming SSH connections to the master node.
+                  The external port mapped by the DNAT rule to forward incoming SSH
+                  connections to the master node.
                 minimum: 1
                 maximum: 65535
                 example: 22
@@ -464,7 +504,7 @@ properties:
             description: |
               The way resources are located in the cloud.
 
-              Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
+              Read [more](https://deckhouse.io/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
           provider:
             type: object
             additionalProperties: false
@@ -505,10 +545,10 @@ properties:
             description: |
               Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
 
-              Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the `CloudEphemeral` type.
+              Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the CloudEphemeral type.
               This means that if you need to remove metadata entirely, you will have to do it manually.
 
-              > **Caution!** Changing the metadata will cause the recreation of CloudEphemeral nodes.
+              > **Warning.** Changing the metadata will cause the recreation of CloudEphemeral nodes.
             additionalProperties:
               type: string
       capcdControllerManagerWebhookCert:
@@ -550,19 +590,19 @@ properties:
             items:
               type: string
               minLength: 1
-            description: List of flavors.
+            description: The list of flavors.
             uniqueItems: true
-          zones:
-            type: array
-            items:
-              type: string
           internalNetworks:
             type: array
             items:
               type: string
               minLength: 1
-            description: List of internal networks.
+            description: The list of internal networks.
             uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
           storageProfiles:
             type: array
             items:
@@ -576,13 +616,21 @@ properties:
                   type: boolean
                 isDefaultStorageProfile:
                   type: boolean
-            description: List of storage classes.
+            description: The list of storage classes.
           vcdInstallationVersion:
             type: string
             description: VCD installation version.
           vcdAPIVersion:
             type: string
             description: VCD API version.
+          loadBalancer:
+            type: object
+            additionalProperties: false
+            description: Parameters for the NSX-T ALB.
+            properties:
+              enabled:
+                type: boolean
+                description: Whether the NSX-T ALB feature is enabled.
       providerDiscoveryData:
         type: object
         additionalProperties: false
@@ -603,19 +651,19 @@ properties:
             items:
               type: string
               minLength: 1
-            description: List of flavors.
+            description: The list of flavors.
             uniqueItems: true
-          zones:
-            type: array
-            items:
-              type: string
           internalNetworks:
             type: array
             items:
               type: string
               minLength: 1
-            description: List of internal networks.
+            description: The list of internal networks.
             uniqueItems: true
+          zones:
+            type: array
+            items:
+              type: string
           storageProfiles:
             type: array
             items:
@@ -629,13 +677,21 @@ properties:
                   type: boolean
                 isDefaultStorageProfile:
                   type: boolean
-            description: List of storage classes.
+            description: The list of storage classes.
           vcdInstallationVersion:
             type: string
             description: VCD installation version.
           vcdAPIVersion:
             type: string
             description: VCD API version.
+          loadBalancer:
+            type: object
+            additionalProperties: false
+            description: Parameters for the NSX-T ALB.
+            properties:
+              enabled:
+                type: boolean
+                description: Whether the NSX-T ALB feature is enabled.
       storageClasses:
         type: array
         items:
@@ -650,3 +706,26 @@ properties:
         description: |
           If set to `true`, an API version below `37.2` will be used.
         x-doc-default: false
+      affinityRules:
+        type: array
+        additionalProperties: false
+        description: |
+          A list of affinity rules that will be applied to node groups and master nodes.
+        items:
+          required: [polarity]
+          type: object
+          properties:
+            polarity:
+              type: string
+              description: |
+                The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+              enum: [Affinity, AntiAffinity]
+            required:
+              type: boolean
+              description: |
+                If true, the rule is required. If false, the rule is preferred.
+              x-doc-default: false
+            nodeGroupName:
+              type: string
+              description: |
+                The name of the node group to which the affinity rule will be applied.

@@ -1,6 +1,7 @@
 ---
 title: "Горизонтальное масштабирование"
 permalink: ru/admin/configuration/app-scaling/hpa.html
+description: "Настройка Horizontal Pod Autoscaler (HPA) в Deckhouse Kubernetes Platform. Автоматическое масштабирование подов на основе CPU, памяти и пользовательских метрик для оптимального использования ресурсов."
 lang: ru
 ---
 

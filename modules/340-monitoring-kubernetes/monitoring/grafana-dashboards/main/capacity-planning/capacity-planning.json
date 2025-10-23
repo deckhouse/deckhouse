@@ -25,8 +25,6 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 20,
-  "iteration": 1663071955430,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -76,9 +74,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -139,9 +139,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -202,9 +204,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -232,10 +236,15 @@
       },
       "id": 25,
       "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "✓ If you have pods in pending state in your cluster, it can be caused because the scheduler cannot find a node with enough memory and CPU allocatable. <br>\n✓ Check that you have at least 1 node in your cluster with enough allocatable CPU and memory to accomplish the requests of the pending pods. <b>Be sure that the node with enough resources has not a taint or is not unscheduleable.</b> <br>\n✓ Check that that node has pods available to schedule in it. <br>\n✓ If the nodes ran out of allocatable resources you can try to adjust the requests of your pods to optimize the capacity of your nodes using the Memory Allocation Optimization and CPU Allocation Optimization dashboards. If this is not possible, you will have to increase the number of nodes in your cluster. <br>\n✓ If there are enough resources in the nodes, go to the Main folder dashboards and check the available resource in the quotas of the namespace.",
         "mode": "markdown"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "title": "Tips",
       "transparent": true,
       "type": "text"
@@ -289,8 +298,9 @@
         "y": 7
       },
       "id": 42,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -300,9 +310,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -359,8 +370,9 @@
         "y": 7
       },
       "id": 41,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -370,9 +382,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -429,8 +442,9 @@
         "y": 7
       },
       "id": 46,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -440,9 +454,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -499,8 +514,9 @@
         "y": 7
       },
       "id": 45,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -510,9 +526,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -569,8 +586,9 @@
         "y": 7
       },
       "id": 47,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -580,9 +598,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -639,8 +658,9 @@
         "y": 7
       },
       "id": 48,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -650,9 +670,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -709,8 +730,9 @@
         "y": 7
       },
       "id": 40,
-      "links": [],
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -720,9 +742,10 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -766,6 +789,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -777,6 +803,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -808,7 +835,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "CPU"
         },
         "overrides": [
           {
@@ -839,14 +866,14 @@
         "y": 16
       },
       "id": 1,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -884,7 +911,6 @@
         }
       ],
       "title": "Allocatable CPU",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -899,6 +925,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -910,6 +939,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -941,7 +971,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "CPU"
         },
         "overrides": [
           {
@@ -972,7 +1002,6 @@
         "y": 16
       },
       "id": 28,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -980,7 +1009,10 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1032,6 +1064,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1043,6 +1078,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1074,7 +1110,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "CPU"
         },
         "overrides": [
           {
@@ -1105,7 +1141,6 @@
         "y": 16
       },
       "id": 31,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1113,7 +1148,10 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1165,6 +1203,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1176,6 +1217,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1238,14 +1280,14 @@
         "y": 27
       },
       "id": 23,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1297,6 +1339,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1308,6 +1353,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1370,7 +1416,6 @@
         "y": 27
       },
       "id": 29,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1378,7 +1423,10 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1430,6 +1478,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1441,6 +1492,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1473,7 +1525,7 @@
               }
             ]
           },
-          "unit": "decbytes"
+          "unit": "bytes"
         },
         "overrides": [
           {
@@ -1504,7 +1556,6 @@
         "y": 27
       },
       "id": 32,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1512,7 +1563,10 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1564,6 +1618,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1575,6 +1632,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1637,14 +1695,14 @@
         "y": 38
       },
       "id": 26,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1696,6 +1754,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1707,6 +1768,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1769,7 +1831,6 @@
         "y": 38
       },
       "id": 30,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1777,7 +1838,10 @@
             "lastNotNull"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1842,7 +1906,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
@@ -1876,8 +1942,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           }
@@ -1891,16 +1960,24 @@
       },
       "id": 36,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
           ],
           "show": false
         },
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Cores"
+          }
+        ]
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -1965,7 +2042,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
@@ -1999,8 +2078,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               },
               {
                 "id": "unit",
@@ -2018,7 +2100,9 @@
       },
       "id": 37,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -2026,9 +2110,14 @@
           "show": false
         },
         "showHeader": true,
-        "sortBy": []
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Bytes"
+          }
+        ]
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -2093,7 +2182,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
@@ -2127,8 +2218,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           }
@@ -2142,16 +2236,24 @@
       },
       "id": 49,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
           ],
           "show": false
         },
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Cores"
+          }
+        ]
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -2216,7 +2318,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
@@ -2250,8 +2354,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               },
               {
                 "id": "unit",
@@ -2269,7 +2376,9 @@
       },
       "id": 50,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -2277,9 +2386,14 @@
           "show": false
         },
         "showHeader": true,
-        "sortBy": []
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Bytes"
+          }
+        ]
       },
-      "pluginVersion": "8.5.9",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -2334,8 +2448,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 36,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [

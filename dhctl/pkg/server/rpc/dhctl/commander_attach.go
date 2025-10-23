@@ -19,12 +19,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"log/slog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -173,21 +173,24 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		Width:       int(p.request.Options.LogWidth),
 		DebugStream: p.logOptions.DebugWriter,
 	})
+
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
-			s.schemaStore,
+			s.params.SchemaStore,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -203,7 +206,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+		if !govalue.IsNil(sshClient) {
 			err = sshClient.Start()
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
@@ -235,6 +238,9 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 			Values:   p.request.ResourcesValues.AsMap(),
 		},
 		ScanOnly: p.request.ScanOnly,
+		TmpDir:   s.params.TmpDir,
+		Logger:   loggerFor,
+		IsDebug:  s.params.IsDebug,
 	})
 
 	result, attachErr := attacher.Attach(ctx)

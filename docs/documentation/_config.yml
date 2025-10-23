@@ -96,27 +96,29 @@ defaults:
       lang: en
       showPrevNextButton: true
       feedback: true
+      # Maximum number of related links to display
+      related_links_max: 6
   - scope:
       path: "pages/admin"
     values:
       sidebar: main
-      sitemap_include: false
+      sitemap_include: true
       showPrevNextButton: true
   - scope:
       path: "pages/architecture"
     values:
       sidebar: main
-      sitemap_include: false
+      sitemap_include: true
       showPrevNextButton: true
   - scope:
       path: "pages/user"
     values:
       sidebar: main
-      sitemap_include: false
+      sitemap_include: true
       showPrevNextButton: true
   - scope:
       path: "pages/reference"
-      sitemap_include: false
+      sitemap_include: true
     values:
       sidebar: main
   - scope:
@@ -125,49 +127,4 @@ defaults:
     values:
       lang: ru
       showPrevNextButton: true
-  #- scope:
-  #    path: "*/030-cloud-provider-dynamix"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/030-cloud-provider-vcd"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/462-loki"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/500-operator-trivy"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/650-runtime-audit-engine"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/500-okmeter"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: proprietaryOkmeter
-  #- scope:
-  #    path: "*/500-openvpn"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/610-service-with-healthchecks"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
-  #- scope:
-  #    path: "*/160-multitenancy-manager"
-  #    type: "pages"
-  #  values:
-  #    featureStatus: experimental
 timezone: Europe/Moscow

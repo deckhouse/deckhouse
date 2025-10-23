@@ -28,8 +28,8 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
-fromCacheVersion: "2025-06-10"
-fromImage: builder/golang-bullseye
+fromCacheVersion: "2025-10-03"
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace-1.25" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -49,12 +49,13 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.7.0 $(cat /run/secrets/SOURCE_REPO)/google/wire.git /src/wire
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc GRAFANA_VERSION={{ $grafanaVersion }}
   - cd /src/wire/cmd/wire && go install
   - rm -rf /src/wire
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
-  - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags -w -ldflags "-X main.version=$GRAFANA_VERSION -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana`) | indent 6 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 final: false
@@ -172,7 +173,7 @@ import:
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
-git:  
+git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -180,3 +181,5 @@ imageSpec:
     workingDir: "/usr/share/grafana"
     env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "{{ $gfPathPlugins }}", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "{{ $gfPathPlugins }}" }
     expose: ["3000"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

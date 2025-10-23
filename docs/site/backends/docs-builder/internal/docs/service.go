@@ -22,6 +22,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/spf13/fsync"
+
 	"github.com/flant/docs-builder/internal/metrics"
 )
 
@@ -33,8 +35,9 @@ var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.ya
 var assembleErrorRegexp = regexp.MustCompile(`"(?P<base>.+?/modules/(?P<module>[^/]+))/(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)"`)
 
 const (
-	modulesDir = "data/modules/"
-	contentDir = "content/modules/"
+	hugoInitDir = "/app/hugo-init/"
+	modulesDir  = "data/modules/"
+	contentDir  = "content/modules/"
 )
 
 type Service struct {
@@ -64,6 +67,21 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 	err := os.MkdirAll(filepath.Join(baseDir, modulesDir), 0700)
 	if err != nil {
 		svc.logger.Error("mkdir all", log.Err(err))
+	}
+
+	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+	// do not delete files in baseDir
+	syncer.DeleteFilter = func(_ fsync.FileInfo) bool {
+		return false
+	}
+
+	oldLocation := filepath.Join(hugoInitDir)
+	newLocation := filepath.Join(svc.baseDir)
+	err = syncer.Sync(newLocation, oldLocation)
+	if err != nil {
+		svc.logger.Error("sync init folder with base dir", log.Err(err))
 	}
 
 	svc.metrics.AddCollectorFunc(func(s metricsstorage.Storage) {

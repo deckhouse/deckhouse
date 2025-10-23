@@ -40,7 +40,7 @@ EOF
    Module chrony disabled
    ```
 
-1. To enable NTP daemons on nodes, create [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration).
+1. To enable NTP daemons on nodes, create [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration).
    Below is an example configuration using systemd-timesyncd:
 
    ```yaml

@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/yandex/yandex-layout.html
+permalink: en/admin/integrations/public/yandex/layout.html
 ---
 
 ## Layouts
@@ -169,15 +169,15 @@ In this layout, a NAT instance is created in a separate subnet,
 and the route tables of the zone subnets are updated with a `0.0.0.0/0` route using the NAT instance as the next hop.
 The subnet is isolated to prevent routing loops and must not overlap with any other networks used in the cluster.
 
-To place the NAT instance in an existing subnet, use the `withNATInstance.internalSubnetID` parameter.
+To place the NAT instance in an existing subnet, use the [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) parameter.
 The instance will be created in the zone corresponding to this subnet.
 
-If you need to create a new subnet, specify the `withNATInstance.internalSubnetCIDR` parameter.
+If you need to create a new subnet, specify the [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) parameter.
 The NAT instance will be placed in this subnet.
 
 > One of the following parameters is required: `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
 
-If `withNATInstance.externalSubnetID` is also specified,
+If [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid) is also specified,
 the NAT instance will be connected to that subnet via a secondary network interface.
 
 ![WithNATInstance layout in Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withnatinstance.png)
@@ -243,7 +243,7 @@ dhcpOptions:
 To integrate DKP with Yandex Cloud, you need to describe the cluster infrastructure
 using the YandexClusterConfiguration resource.
 
-YandexClusterConfiguration is a custom resource (CR) that defines the parameters for integrating with Yandex Cloud.
+[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) is a custom resource (CR) that defines the parameters for integrating with Yandex Cloud.
 DKP uses this resource to:
 
 - Deploy master and worker nodes in the cloud.
@@ -254,7 +254,7 @@ DKP uses this resource to:
 Required fields:
 
 - `apiVersion`: Must be `deckhouse.io/v1`.
-- `kind`: Must be YandexClusterConfiguration.
+- `kind`: Must be `YandexClusterConfiguration`.
 
 Example resource header:
 
@@ -335,7 +335,7 @@ in a DKP cluster deployed in Yandex Cloud.
 
 ### Internal node addressing
 
-The `nodeNetworkCIDR` parameter defines the IP address range for splitting between availability zones
+The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) parameter defines the IP address range for splitting between availability zones
 and applying to the internal node interfaces.
 
 ```yaml
@@ -352,15 +352,15 @@ this subnet will be automatically divided into three equal parts for each availa
 Each part will be used as a separate internal subnet to which the nodes created in the corresponding zone will be connected.
 
 {% alert level="info" %}
-If you plan to use the same subnet across multiple clusters (for example, with `cni-simple-bridge`),
+If you plan to use the same subnet across multiple clusters (for example, with [`cni-simple-bridge`](/modules/cni-simple-bridge/)),
 keep in mind the limitation: one cluster = one routing table = one subnet.
 It impossible to deploy two clusters using `cni-simple-bridge` in the same subnet.
-If you need to reuse subnets across clusters, use `cni-cilium`.
+If you need to reuse subnets across clusters, use [`cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 ### Assigning external IP addresses and outgoing traffic
 
-The `externalSubnetIDs` parameter is specified in the `masterNodeGroup.instanceClass` and `nodeGroups.instanceClass` sections.
+The `externalSubnetIDs` parameter is specified in the [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) and [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) sections.
 It is an array of Yandex Cloud subnet IDs used to attach external network interfaces to nodes.
 This parameter is required when:
 
@@ -384,7 +384,7 @@ using `externalIPAddresses: ["Auto", ...]`.
 
 ### DNS and DHCP settings for internal networks
 
-The `dhcpOptions` parameter lets you set the DHCP server configuration
+The [`dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) parameter lets you set the DHCP server configuration
 applied to all subnets created within the DKP cluster in Yandex Cloud.
 
 Available fields:
@@ -422,7 +422,7 @@ or another appropriate method depending on your system (such as `systemd-network
 
 ### Using pre-existing subnets
 
-The `existingZoneToSubnetIDMap` parameter lets you specify mappings
+The [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter lets you specify mappings
 between availability zones and pre-created subnets in Yandex Cloud.
 This is important if you don’t want DKP to automatically create subnets and prefer to use existing ones.
 
@@ -444,7 +444,7 @@ You need to do that manually via the Yandex Cloud interface.
 
 DKP allows you to explicitly specify a list of additional external networks
 whose IP addresses will be treated as public (external IPs).
-This is configured via the `settings.additionalExternalNetworkIDs` parameter in the ModuleConfig resource.
+This is configured via the [`settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) parameter in the ModuleConfig resource.
 
 This is useful when:
 

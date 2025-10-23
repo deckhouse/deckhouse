@@ -4,7 +4,7 @@ permalink: ru/architecture/module-development/development/
 lang: ru
 ---
 
-При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride).
+При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride).
 
 {% alert level="warning" %}
 Ресурс ModulePullOverride предназначен **только для использования в средах разработки и отладки**.
@@ -197,11 +197,11 @@ status:
   phase: Ready
 ```
 
-После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](../../../reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
+После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
 
-1. В [ModuleSource](../../../reference/api/cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
+1. В [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -223,7 +223,7 @@ status:
      modulesCount: 2
    ```
 
-1. Включите модуль и создайте [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -284,25 +284,28 @@ status:
 
 ## Логика автообновления модулей
 
-![Логика автообновления модулей](../../images/architecture/module-development/module_update_flow_ru.svg)
+![Логика автообновления модулей](../../../images/architecture/module-development/module_update_flow_ru.svg)
 
 > Версии ModuleRelease `v1.0.0` и `v1.1.1` приведены в качестве примера.
 
 1. **Установка модуля**. При включении модуля (`enable module <module name>`) в кластер автоматически загружается и разворачивается актуальная версия модуля из выбранного канала стабильности. Это может быть, например, ModuleRelease v1.0.0. Загружается последняя доступная версия, старые версии не устанавливаются.
 
 1. **Отключение модуля**. При отключении модуля (`disable module <module name>`):
+
    - Модуль перестаёт получать новые версии.
    - Текущая версия остаётся в кластере в состоянии `Deployed`.
 
 1. **Поведение при повторном включении**.
 
    Если модуль включён в течение 72 часов:
+
    - Используется та же версия, которая была задеплоена ранее (ModuleRelease v1.0.0).
    - Проверяются новые релизы.
    - При их наличии они загружаются (например, v1.1.0, v1.1.1).
-   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../../reference/deckhouse-release-channels.html) (Update). [Подробнее](/modules/deckhouse/configuration.html#parameters-update).
+   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../../reference/release-channels.html) (Update). [Подробнее](/modules/deckhouse/configuration.html#parameters-update).
 
    Если модуль включён позже 72 часов:
+
    - Старая версия удаляется (`delete ModuleRelease v1.0.0`).
    - При включении модуля повторно, загружается последняя актуальная версия (например, v1.1.1).
    - Начинается тот же цикл, что и при первоначальном включении (см. шаг 1).
@@ -324,7 +327,7 @@ update:
       to:   "2.0" # Переход между основными версиями задаётся форматом X.0.
 ```
 
-> Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](../../../reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
+> Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
 
 Условия применения `from-to`:
 
@@ -333,7 +336,7 @@ update:
 - Если одновременно подходят несколько релизов, выбирается вариант с наибольшим `to` (правила могут находиться в разных объектах ModuleRelease одного модуля).
 - Если ни один релиз не подходит под эти условия, обновление выполняется как обычно — без пропуска промежуточных версий.
 
-Если в кластер попадает релиз с [update.versions](../../../reference/api/cr.html#modulerelease-v1alpha1-spec-update), DKP не требует обновляться по порядку — такой релиз появляется в списке «как есть», DKP автоматически выбирает подходящий вариант и, при необходимости, ждёт подтверждения. Вы можете сразу подтвердить установку последней доступной версии в пределах `to`. После подтверждения промежуточные релизы между `from` и `to` получат статус `Skipped` после реконсиляции (не сразу); какое-то время между `Superseded` и `Deployed` возможны релизы в статусе `Pending`.
+Если в кластер попадает релиз с [update.versions](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update), DKP не требует обновляться по порядку — такой релиз появляется в списке «как есть», DKP автоматически выбирает подходящий вариант и, при необходимости, ждёт подтверждения. Вы можете сразу подтвердить установку последней доступной версии в пределах `to`. После подтверждения промежуточные релизы между `from` и `to` получат статус `Skipped` после реконсиляции (не сразу); какое-то время между `Superseded` и `Deployed` возможны релизы в статусе `Pending`.
 
 ![Логика механизма `from-to`](../../../images/architecture/module-development/from_to_ru.png)
 
@@ -372,7 +375,7 @@ p-o-test-v0.6.11   Skipped
 p-o-test-v0.7.25   Deployed
 ```
 
-Нужна ли аннотация зависит от политики обновления модуля. Подробнее — [Политика обновления модуля](../run#политика-обновления-модуля).
+Нужна ли аннотация зависит от политики обновления модуля. Подробнее — [Политика обновления модуля](../run/#политика-обновления-модуля).
 
 ### Примеры
 
@@ -460,7 +463,7 @@ update:
 
 ## Артефакты модуля в container registry
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../../../reference/api/cr.html#modulesource).
+После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
 
 Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
 
@@ -556,6 +559,30 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
   "frontend": "sha256:f31f4b7da5faa5e320d3aad809563c6f5fcaa97b571fffa5c9cab103327cc0e8"
 }
 ```
+
+### Конфигурация дополнительных образов
+
+Модули могут включать дополнительные образы (например, базы данных уязвимостей или другие вспомогательные данные) путем добавления файла `extra_images.json`. Этот файл указывает дополнительные образы, которые необходимо вручную загрузить в реестр и которые отделены от основных образов модуля.
+
+Для просмотра конфигурации дополнительных образов:
+
+```shell
+crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - extra_images.json
+```
+
+Пример файла `extra_images.json` для базы уязвимостей neuvector:
+
+```json
+{
+  "scanner": 3
+}
+```
+
+Важные замечания:
+
+- Дополнительные образы должны быть вручную загружены в реестр модулей по пути `extra/`.
+- Используйте команду `d8 mirror pull --only-extra-images` для загрузки только дополнительных образов.
+- Дополнительные образы хранятся в реестре как `<имя-модуля>/extra/<имя-образа>`.
 
 ### Просмотр списка релизов
 

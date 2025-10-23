@@ -38,29 +38,17 @@ entries:
                     ru: Внутренний registry
                   url: /admin/configuration/registry/internal.html
                 - title:
+                    en: Restoring registry access
+                    ru: Восстановление подключения к registry
+                  url: /admin/configuration/registry/restore-token.html
+                - title:
                     en: Switching editions
                     ru: Переключение редакций
                   url: /admin/configuration/registry/switching-editions.html
             - title:
-                en: Access
-                ru: Доступ
+                en: IAM
+                ru: IAM
               folders:
-                - title:
-                    en: Connection
-                    ru: Подключение
-                  folders:
-                    - title:
-                        en: OpenVPN
-                        ru: OpenVPN
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/configuration/access/connection/openvpn/overview.html
-                        - title:
-                            en: Configuration
-                            ru: Настройка
-                          url: /admin/configuration/access/connection/openvpn/configuration.html
                 - title:
                     en: Access to API
                     ru: TODO Доступ к API
@@ -119,8 +107,8 @@ entries:
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
             - title:
-                en: Platform integration with infrastructure
-                ru: Интеграция платформы с инфраструктурой
+                en: Integration with IaaS
+                ru: Интеграция с IaaS
               folders:
                 - title:
                     en: Overview
@@ -141,19 +129,19 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/yandex/yandex-authorization.html
+                          url: /admin/integrations/public/yandex/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/yandex/yandex-layout.html
+                          url: /admin/integrations/public/yandex/layout.html
                         - title:
                             en: Storage and load balancing
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/public/yandex/yandex-storage.html
+                          url: /admin/integrations/public/yandex/storage.html
                         - title:
                             en: Integration with Yandex Cloud services
-                            ru: Интеграция с службами Yandex Cloud
-                          url: /admin/integrations/public/yandex/yandex-services.html
+                            ru: Интеграция со службами Yandex Cloud
+                          url: /admin/integrations/public/yandex/services.html
                     - title:
                         en: Integration with VK Cloud
                         ru: Интеграция с VK Cloud
@@ -209,19 +197,19 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/amazon/amazon-authorization.html
+                          url: /admin/integrations/public/amazon/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/amazon/amazon-layout.html
+                          url: /admin/integrations/public/amazon/layout.html
                         - title:
                             en: Storage and load balancing
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/public/amazon/amazon-storage.html
+                          url: /admin/integrations/public/amazon/storage.html
                         - title:
                             en: Integration with Amazon Web Services
-                            ru: Интеграция с службами Amazon Web Services
-                          url: /admin/integrations/public/amazon/amazon-services.html
+                            ru: Интеграция со службами Amazon Web Services
+                          url: /admin/integrations/public/amazon/services.html
                     - title:
                         en: Integration with Microsoft Azure
                         ru: Интеграция с Microsoft Azure
@@ -229,19 +217,19 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/azure/azure-authorization.html
+                          url: /admin/integrations/public/azure/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/azure/azure-layout.html
+                          url: /admin/integrations/public/azure/layout.html
                         - title:
                             en: Storage and load balancing
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/public/azure/azure-storage.html
+                          url: /admin/integrations/public/azure/storage.html
                         - title:
                             en: Integration with Microsoft Azure services
-                            ru: Интеграция с службами Microsoft Azure
-                          url: /admin/integrations/public/azure/azure-services.html
+                            ru: Интеграция со службами Microsoft Azure
+                          url: /admin/integrations/public/azure/services.html
                     - title:
                         en: Integration with Google Cloud Platform (GCP)
                         ru: Интеграция с Google Cloud Platform (GCP)
@@ -293,34 +281,34 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/private/huaweicloud/huawei-authorization.html
+                          url: /admin/integrations/private/huaweicloud/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/huaweicloud/huawei-layout.html
+                          url: /admin/integrations/private/huaweicloud/layout.html
                         - title:
                             en: Storage and load balancing
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/private/huaweicloud/huawei-storage.html
+                          url: /admin/integrations/private/huaweicloud/storage.html
                         - title:
                             en: Integration with Huawei Cloud services
-                            ru: Интеграция с службами Huawei Cloud
-                          url: /admin/integrations/private/huaweicloud/huawei-services.html
+                            ru: Интеграция со службами Huawei Cloud
+                          url: /admin/integrations/private/huaweicloud/services.html
                     - title:
                         ru: Интеграция с Dynamix
                       folders:
                         - title:
                             ru: Подключение и авторизация
-                          url: /admin/integrations/private/dynamix/dynamix-authorization.html
+                          url: /admin/integrations/private/dynamix/authorization.html
                         - title:
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/dynamix/dynamix-layout.html
+                          url: /admin/integrations/private/dynamix/layout.html
                         - title:
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/private/dynamix/dynamix-storage.html
+                          url: /admin/integrations/private/dynamix/storage.html
                         - title:
-                            ru: Интеграция с службами Dynamix
-                          url: /admin/integrations/private/dynamix/dynamix-services.html
+                            ru: Интеграция со службами Dynamix
+                          url: /admin/integrations/private/dynamix/services.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации
@@ -330,37 +318,17 @@ entries:
                         ru: Обзор
                       url: /admin/integrations/virtualization/overview.html
                     - title:
-                        en: Integration with VMware vSphere
-                        ru: Интеграция с VMware vSphere
-                      folders:
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/vsphere/vsphere-authorization.html
-                        - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vsphere/vsphere-layout.html
-                        - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/vsphere/vsphere-storage.html
-                        - title:
-                            en: Integration with VMware vSphere services
-                            ru: Интеграция со службами VMware vSphere
-                          url: /admin/integrations/virtualization/vsphere/vsphere-services.html
-                    - title:
                         en: Integration with DVP
                         ru: Интеграция с DVP
                       folders:
                         - title:
                             en: Integration with DVP
                             ru: Интеграция с облаком DVP
-                          url: /admin/integrations/virtualization/dvp/dvp-services.html
+                          url: /admin/integrations/virtualization/dvp/services.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/dvp/dvp-authorization.html
+                          url: /admin/integrations/virtualization/dvp/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
@@ -378,25 +346,45 @@ entries:
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
                     - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vsphere/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vsphere/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/vsphere/storage.html
+                        - title:
+                            en: Integration with VMware vSphere services
+                            ru: Интеграция со службами VMware vSphere
+                          url: /admin/integrations/virtualization/vsphere/services.html
+                    - title:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
                       folders:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/zvirt/zvirt-authorization.html
+                          url: /admin/integrations/virtualization/zvirt/authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/zvirt/zvirt-layout.html
+                          url: /admin/integrations/virtualization/zvirt/layout.html
                         - title:
                             en: Storage and load balancing
                             ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/zvirt/zvirt-storage.html
+                          url: /admin/integrations/virtualization/zvirt/storage.html
                         - title:
                             en: Integration with zVirt services
                             ru: Интеграция со службами zVirt
-                          url: /admin/integrations/virtualization/zvirt/zvirt-services.html
+                          url: /admin/integrations/virtualization/zvirt/services.html
                 - title:
                     en: Hybrid cluster
                     ru: Гибридный кластер
@@ -444,7 +432,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /admin/configuration/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
@@ -646,6 +633,18 @@ entries:
                         en: Synchronizing time on nodes
                         ru: Синхронизация времени на узлах
                       url: /admin/configuration/network/other/ntp.html
+                - title:
+                    en: Access via OpenVPN
+                    ru: Доступ через OpenVPN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/connection/openvpn/overview.html
+                    - title:
+                        en: Configuration
+                        ru: Настройка
+                      url: /admin/configuration/access/connection/openvpn/configuration.html
             - title:
                 en: Storage
                 ru: Хранилища
@@ -801,7 +800,7 @@ entries:
                     - title:
                         en: Configuring monitoring of network interaction and cluster nodes
                         ru: Настройка мониторинга сетевого взаимодействия и узлов кластера
-                      url: /admin/configuration/monitoring/configuring/network-and-pods.html
+                      url: /admin/configuration/monitoring/configuring/network-and-nodes.html
                     - title:
                         en: Writing Prometheus data to longterm storage
                         ru: Запись данных Prometheus в долговременное хранилище
@@ -826,10 +825,6 @@ entries:
                         en: Configuring integrations
                         ru: Настройка интеграций
                       url: /admin/configuration/monitoring/alerts-integrations.html
-                    - title:
-                        en: List of preset alerts
-                        ru: Список предустановленных алертов
-                      url: /admin/configuration/monitoring/alerts-list.html
             - title:
                 en: Logging
                 ru: Логирование

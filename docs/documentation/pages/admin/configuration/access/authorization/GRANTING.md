@@ -1,9 +1,10 @@
 ---
 title: "Granting permissions to users and service accounts"
 permalink: en/admin/configuration/access/authorization/granting.html
+description: "Grant RBAC permissions to users and service accounts in Deckhouse Kubernetes Platform. Role and ClusterRole binding configuration for secure access control."
 ---
 
-To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a `subjects` block in custom resources.
+To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block in custom resources.
 
 For users, it should be specified in the following format:
 
@@ -14,8 +15,8 @@ subjects:
 ```
 
 {% alert level="warning" %}
-If you are using the `user-authn` module and static users, make sure to specify the user’s email in `subjects`,
-not the name of the User resource.
+If you are using the [`user-authn`](/modules/user-authn/) module and static users, make sure to specify the user’s email in `subjects`,
+not the name of the [User](/modules/user-authn/cr.html#user) resource.
 {% endalert %}
 
 Alternatively, you can grant permissions by group:
@@ -52,10 +53,13 @@ apiVersion: deckhouse.io/v1
 kind: AuthorizationRule
 metadata:
   name: dev-access
+  namespace: dev-namespace
 spec:
   subjects:
   - kind: User
     name: dev-user@example.com
+  accessLevel: Admin
+  portForwarding: true
 ```
 
 ### Granting permissions to a user in all namespaces
@@ -313,7 +317,7 @@ The user’s permissions will be limited to the following within the `myapp` nam
 
   - DexAuthenticator
   - DexClient
-  - PodLogginConfig
+  - PodLoggingConfig
 
 - Run the following commands on Pods and Services:
 

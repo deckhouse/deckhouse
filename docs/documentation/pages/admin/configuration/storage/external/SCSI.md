@@ -33,7 +33,7 @@ All commands should be executed on a machine with access to the Kubernetes API a
 
 ### Enabling the module
 
-Enable the `csi-scsi-generic` module. This will ensure that the following happens on all cluster nodes:
+Enable the [`csi-scsi-generic`](/modules/csi-scsi-generic/) module. This will ensure that the following happens on all cluster nodes:
 
 - The CSI driver is registered.
 - Auxiliary Pods for the `csi-scsi-generic` components are launched.

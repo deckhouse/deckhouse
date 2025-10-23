@@ -1,6 +1,7 @@
 ---
 title: Backup and restore
 permalink: en/admin/configuration/backup/backup-and-restore.html
+description: "Setting up backup and recovery in the Deckhouse Kubernetes Platform. Manual cluster recovery, disaster recovery. Data protection strategies."
 ---
 
 ## Manual cluster restore
@@ -540,7 +541,7 @@ tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
 mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 ```
 
-To configure automatic etcd backups, use the `control-plane-manager` module. The required parameters are specified in its configuration:
+To configure automatic etcd backups, use the [`control-plane-manager`](/modules/control-plane-manager/) module. The required parameters are specified in its configuration:
 
 | Parameter                  | Description                                                                 |
 |---------------------------|-----------------------------------------------------------------------------|

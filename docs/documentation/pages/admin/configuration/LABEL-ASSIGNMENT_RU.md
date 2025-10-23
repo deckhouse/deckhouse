@@ -18,13 +18,14 @@ lang: ru
 
 ## Настройка автоматического назначения лейблов и аннотаций
 
-Включите модуль `namespace-configurator`:
+Включите [модуль `namespace-configurator`](/modules/namespace-configurator/):
 
 ```shell  
 d8 platform module enable namespace-configurator
 ```
 
-Настройте автоматическое назначение лейблов и аннотаций в ModuleConfig [`namespace-configurator`](../../reference/mc/namespace-configurator):
+Настройте автоматическое назначение лейблов и аннотаций в ModuleConfig [`namespace-configurator`](/modules/namespace-configurator/configuration.html):
+
 1. Перечислите аннотации и лейблы, которые должны применяться к пространствам имён, в полях `settings.configurations.annotations` и `settings.configurations.labels` соответственно;
 1. Укажите шаблоны названий пространств имён, к которым должны применяться настройки:
    - в поле `includeNames` перечислите регулярные выражения, соответствующие нужным названиям;

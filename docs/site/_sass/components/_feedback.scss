@@ -91,6 +91,10 @@
         font-weight: 600;
         font-size: 18px;
         color: #00122C;
+
+        .anchorjs-link  {
+            display: none;
+        }
     }
 
     &--descr, label {

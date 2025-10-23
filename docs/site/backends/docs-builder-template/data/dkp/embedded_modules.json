@@ -612,7 +612,7 @@
       }
     },
     {
-      "title": "The monitoring-custom module",
+      "title": "Automatic configuration of the monitoring system to collect metrics from user applications",
       "description": "Monitoring user applications in Deckhouse Kubernetes Platform.",
       "type": [
         "instruction"
@@ -627,7 +627,7 @@
       "editionMinimumAvailable": "ce",
       "url": "monitoring-custom/",
       "ru": {
-        "title": "Модуль monitoring-custom",
+        "title": "Автоматическая настройка системы мониторинга для сбора метрик с пользовательских приложений",
         "description": "Мониторинг приложений пользователей в Deckhouse Kubernetes Platform.",
         "type": [
           "instruction"
@@ -668,8 +668,8 @@
       }
     },
     {
-      "title": "The monitoring-ping module",
-      "description": "Network connectivity monitoring between Deckhouse Kubernetes Platform cluster nodes.",
+      "title": "Monitoring network interaction between all cluster nodes, as well as (optionally) up to additional external nodes",
+      "description": "Monitoring network interaction between all cluster nodes, as well as (optionally) up to additional external nodes",
       "module": "monitoring-ping",
       "embedded": "true",
       "tags": [
@@ -680,8 +680,8 @@
       "editionMinimumAvailable": "ce",
       "url": "monitoring-ping/",
       "ru": {
-        "title": "Модуль monitoring-ping",
-        "description": "Мониторинг сетевого взаимодействия между узлами кластера Deckhouse Kubernetes Platform."
+        "title": "Мониторинг сетевого взаимодействия между всеми узлами кластера, а также (опционально) до дополнительных внешних узлов",
+        "description": "Мониторинг сетевого взаимодействия между всеми узлами кластера, а также (опционально) до дополнительных внешних узлов."
       }
     },
     {
@@ -862,22 +862,6 @@
       }
     },
     {
-      "title": "The pod-reloader module",
-      "description": "Automatic pod restart on ConfigMap or Secret changes in the Deckhouse Kubernetes Platform cluster.",
-      "module": "pod-reloader",
-      "embedded": "true",
-      "tags": [
-        "core",
-        "embedded"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "pod-reloader/",
-      "ru": {
-        "title": "Модуль pod-reloader",
-        "description": "Автоматический перезапуск подов при изменении ConfigMap или Secret в кластере Deckhouse Kubernetes Platform."
-      }
-    },
-    {
       "title": "The Prometheus monitoring module",
       "type": [
         "instruction"
@@ -946,19 +930,19 @@
       }
     },
     {
-      "title": "The runtime-audit-engine module",
-      "description": "Runtime threats detection engine in a Deckhouse Kubernetes Platform cluster.",
-      "module": "runtime-audit-engine",
+      "title": "Registry Module",
+      "description": "Configuration management of DKP component registry and organization of an internal container registry.",
+      "module": "registry",
       "embedded": "true",
       "tags": [
-        "embedded",
-        "security"
+        "core",
+        "embedded"
       ],
-      "editionMinimumAvailable": "ee",
-      "url": "runtime-audit-engine/",
+      "editionMinimumAvailable": "ce",
+      "url": "registry/",
       "ru": {
-        "title": "Модуль runtime-audit-engine",
-        "description": "Поиск угроз безопасности в кластере Deckhouse Kubernetes Platform."
+        "title": "Модуль registry",
+        "description": "Управление конфигурацией registry компонентов DKP и организация внутреннего хранилища образов контейнеров (container registry, registry)."
       }
     },
     {
@@ -1013,7 +997,7 @@
       }
     },
     {
-      "title": "The upmeter module",
+      "title": "Cluster SLA Monitoring",
       "description": "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components.",
       "webIfaces": [
         {
@@ -1032,7 +1016,7 @@
       "editionMinimumAvailable": "ce",
       "url": "upmeter/",
       "ru": {
-        "title": "Модуль upmeter",
+        "title": "Мониторинг SLA кластера",
         "description": "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform.",
         "webIfaces": [
           {

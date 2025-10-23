@@ -49,6 +49,7 @@ var (
 	AskBastionPass = false
 
 	SSHLegacyMode = false
+	SSHModernMode = false
 )
 
 type connectionConfigParser interface {
@@ -97,9 +98,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
-	cmd.Flag("ssh-legacy-mode", "Switch to legacy SSH mode").
+	cmd.Flag("ssh-legacy-mode", "Force legacy SSH mode").
 		Envar(configEnvName("SSH_LEGACY_MODE")).
 		BoolVar(&SSHLegacyMode)
+	cmd.Flag("ssh-modern-mode", "Force modern SSH mode").
+		Envar(configEnvName("SSH_MODERN_MODE")).
+		BoolVar(&SSHModernMode)
 	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
 		Envar(configEnvName("ASK_BASTION_PASS")).
 		BoolVar(&AskBastionPass)
@@ -132,6 +136,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 			return nil
 		}
 		return processConnectionConfigFlags()
+	})
+	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+		if SSHLegacyMode && (AskBecomePass && len(SSHPrivateKeys) == 0) {
+			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
+		}
+		return nil
 	})
 }
 

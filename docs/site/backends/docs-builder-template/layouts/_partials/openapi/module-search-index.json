@@ -8,7 +8,7 @@
   {{- range $crdName, $crdData := $moduleData.crds }}
     {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
     {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
-    {{- $crdSearchParams := partial "openapi/extract-crd-search-params.json" (dict "crdData" $crdData "langData" $langData "moduleName" $moduleName "moduleChannel" $moduleChannel "crdName" $crdName) }}
+    {{- $crdSearchParams := partial "openapi/extract-crd-search-params.json" (dict "crdData" $crdData "langData" $langData "moduleName" $moduleName "moduleChannel" $moduleChannel ) }}
     {{- if gt (len $crdSearchParams) 0 }}
       {{- $allSearchParams = $allSearchParams | append $crdSearchParams }}
     {{- end }}

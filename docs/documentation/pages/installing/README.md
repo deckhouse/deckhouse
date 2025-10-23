@@ -19,7 +19,7 @@ The Deckhouse installer is available as a container image and is based on the [d
 
 Deckhouse installation options:
 
-* **In a supported cloud.** The `dhctl` utility automatically creates and configures all necessary resources, including virtual machines, deploys the Kubernetes cluster, and installs Deckhouse. A full list of supported cloud providers is available in the [Kubernetes Cluster](../kubernetes.html) section.
+* **In a supported cloud.** The `dhctl` utility automatically creates and configures all necessary resources, including virtual machines, deploys the Kubernetes cluster, and installs Deckhouse. A full list of supported cloud providers is available in the [Platform integration with infrastructure](../admin/integrations/integrations-overview.html) section.
 
 * **On bare-metal servers or in unsupported clouds.** In this option, `dhctl` configures the server or virtual machine, deploys the Kubernetes cluster with a single master node, and installs Deckhouse. Additional nodes can be added to the cluster using pre-existing setup scripts.
 
@@ -70,25 +70,26 @@ The installation configuration YAML file contains parameters for several resourc
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
    * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration) — Huawei Cloud;
    * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
    * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
    * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. `ModuleConfig` — a set of resources containing configuration parameters for [Deckhouse built-in modules](../).
+1. [ModuleConfig](/products/kubernetes-platform/documentation/latest/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
    For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter.
 
-1. `IngressNginxController` — deploying the Ingress controller.
+1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — deploying the Ingress controller.
 
-1. `NodeGroup` — creating additional node groups.
+1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — creating additional node groups.
 
-1. `InstanceClass` — adding configuration resources.
+1. InstanceClass — adding configuration resources.
 
-1. `ClusterAuthorizationRule`, `User` — setting up roles and users.
+1. [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), [User](/modules/user-authn/cr.html#user) — setting up roles and users.
 
 {% offtopic title="An example of the installation config..." %}
 
@@ -597,7 +598,7 @@ The `d8 mirror` utility is not available for use with the Community Edition (CE)
 You can check the current status of versions in the release channels at [releases.deckhouse.ru](https://releases.deckhouse.ru).
 {% endalert %}
 
-1. [Download and install the Deckhouse CLI utility](deckhouse-cli/).
+1. [Download and install the Deckhouse CLI utility](../cli/d8/).
 
 1. Download DKP images to a dedicated directory using the `d8 mirror pull` command.
 
@@ -615,38 +616,49 @@ You can check the current status of versions in the release channels at [release
 
    where:
 
-   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted;
-   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key;
+   - `--source` — address of the Deckhouse Kubernetes Platform container registry.
+   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
+   - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
+   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — directory where the image packages will be placed. It will be created if it does not exist.
 
    > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
 
-   You can also use the following command options:
+   {% offtopic title="Other command parameters available for use:" %}
 
    - `--no-pull-resume` — force the download to start from the beginning;
    - `--no-platform` — skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`);
    - `--no-modules` — skip downloading module packages (`module-*.tar`);
    - `--no-security-db` — skip downloading the vulnerability scanner database package (`security.tar`);
-   - `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`;
+   - `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
+
+     The following syntax options are supported for specifying module versions:
+     - `module-name@1.3.0` — pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1;
+     - `module-name@~1.3.0` — pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3;
+     - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
+     - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
    - `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
    - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.ru/deckhouse/EDITION/modules`);
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
    - `--deckhouse-tag` — download only the specific DKP version (regardless of update channels). Cannot be used with `--since-version`;
    - `--gost-digest` — calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball;
-   - `--source` — specify the source image registry address (default: `registry.deckhouse.ru/deckhouse/ee`);
-   - use the `--license` parameter with a valid license key to authenticate with the official DKP image registry;
    - use the `--source-login` and `--source-password` parameters to authenticate with an external image registry;
    - `--images-bundle-chunk-size=N` — set the maximum file size (in GB) to split the image archive. As a result, instead of one image archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (e.g., `d8.tar` for files `d8.tar.NNNN.chunk`);
    - `--tmp-dir` — path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
+  
+   {% endofftopic %}
 
-   Additional configuration parameters for the `d8 mirror` command family are available as environment variables:
+   Additional configuration parameters for the `d8 mirror` command family are available as environment variables.
 
-   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable;
-   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying;
-   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used;
-   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
-   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry;
+   {% offtopic title="More details:" %}
 
+   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable.
+   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying.
+   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used.
+   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
+   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry.
+
+   {% endofftopic %}
 
    Example command to download all DKP EE versions starting from version 1.59 (specify your license key):
 
@@ -700,9 +712,39 @@ You can check the current status of versions in the release channels at [release
    /home/user/d8-bundle
    ```
 
-1. On the host with access to the registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/).
+   Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
 
-1. Copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/) on the host that has access to the target image registry.
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@1.2.0 \
+   /home/user/d8-bundle
+   ```
+
+   Example command to download `secrets-store-integration` module with semver `~` constraint from version 1.1.0:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module secrets-store-integration@~1.1.0 \
+   /home/user/d8-bundle
+   ```
+
+   Example command to download exact version of `stronghold` module 1.2.5 and publish to all release channels:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@=v1.2.5 \
+   /home/user/d8-bundle
+   ```
+
+1. On the host with access to the registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](../cli/d8/).
+
+1. Copy the downloaded DKP image bundle and install the [Deckhouse CLI](../cli/d8/) on the host that has access to the target image registry.
 
 1. Upload the DKP images to the registry using the `d8 mirror push` command.
 

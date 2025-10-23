@@ -1,12 +1,14 @@
 ---
 layout: sidebar
 ---
+
 <div class="docs">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
     </div>
 
     {%- include warning-latest.html %}
+    {%- include related_links.liquid %}
 
     <div class="post-content">
 
@@ -44,7 +46,7 @@ layout: sidebar
         {%- if site.disqus %}
     {%- include disqus.html %}
         {%- endif %}
-        
+
     </div>
 
     {%- if page.showPrevNextButton %}

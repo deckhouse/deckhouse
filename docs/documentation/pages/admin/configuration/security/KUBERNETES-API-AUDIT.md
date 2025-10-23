@@ -1,6 +1,7 @@
 ---
 title: Kubernetes API event audit
 permalink: en/admin/configuration/security/events/kubernetes-api-audit.html
+description: "Configure Kubernetes API audit logging in Deckhouse Kubernetes Platform. API server event tracking, audit policy configuration, and security event analysis."
 ---
 
 The [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) feature allows you to track requests
@@ -124,7 +125,7 @@ If the API server fails to start, take the following steps:
 
 By default, the audit log is saved to the `/var/log/kube-audit/audit.log` file on master nodes.
 If necessary, you can redirect its output to the `kube-apiserver` process stdout instead of a file
-by setting the [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the `control-plane-manager` module to `Stdout`:
+by setting the [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the [`control-plane-manager`](/modules/control-plane-manager/) module to `Stdout`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

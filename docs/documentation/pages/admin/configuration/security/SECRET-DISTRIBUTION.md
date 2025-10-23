@@ -1,6 +1,7 @@
 ---
 title: Automatic distribution of secrets across namespaces
 permalink: en/admin/configuration/security/secret-distribution.html
+description: "Configure automatic secret distribution across namespaces in Deckhouse Kubernetes Platform. Secret replication, CI/CD integration, and secure secret management automation."
 ---
 
 Deckhouse Kubernetes Platform (DKP) lets you automatically distribute secrets across all namespaces in the cluster.

@@ -2,6 +2,7 @@
 title: "Архитектура мониторинга в Deckhouse Kubernetes Platform"
 permalink: ru/architecture/monitoring/
 lang: ru
+search: monitoring architecture, prometheus architecture, monitoring components, observability architecture, архитектура мониторинга, компоненты мониторинга
 ---
 
 ## Состав и схема взаимодействия компонентов мониторинга
@@ -162,9 +163,9 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 ![Как обрабатываются Service Monitor'ы](../../images/operator-prometheus/servicemonitors.png)
 
-1. Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
+1. Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md)).
 1. Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
-1. На основании прочитанных ресурсов `servicemonitor` (см. [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфига (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
+1. На основании прочитанных ресурсов `servicemonitor` (см. [официальную документацию](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitorspec)) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфига (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
 1. Штатными средствами самого Kubernetes данные из секрета прилетают в Pod (файл `prometheus.yaml` обновляется).
 1. Изменение файла замечает `prometheus-config-reloader`, который по HTTP отправляет запрос Prometheus'у на перезагрузку.
 1. Prometheus перечитывает конфиг и видит изменения в scrape_configs, которые обрабатывает уже согласно своей логике работы (см. подробнее выше).
@@ -184,9 +185,9 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
 ## Архитектура оценки доступности компонентов DKP (upmeter)
 
-Оценка доступности в DKP осуществляется модулем `upmeter`.
+Оценка доступности в DKP осуществляется модулем [upmeter](/modules/upmeter/).
 
-Состав модуля `upmeter`:
+Состав модуля [upmeter](/modules/upmeter/):
 
 - **agent** — работает на master-узлах и делает пробы доступности, отправляет результаты на сервер.
 - **upmeter** — собирает результаты и поддерживает API-сервер для их извлечения.

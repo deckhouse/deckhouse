@@ -2,7 +2,6 @@
 title: Overview
 permalink: en/admin/configuration/high-reliability-and-availability/
 description: High reliability and availability
-lang: en
 ---
 
 The reliability and resilience of a Kubernetes cluster are key characteristics
@@ -24,7 +23,7 @@ These tools let you deliberately or randomly disrupt individual components and o
 For information on configuring these tools, refer to [Chaos engineering](chaos-engineering.html).
 
 You can further increase cluster fault tolerance by enabling inter-cluster communication
-based on the Service Mesh mode of the `istio` module.
+based on the Service Mesh mode of the [`istio`](/modules/istio/) module.
 In this mode, federation is configured between multiple clusters.
 In case of failures in one cluster, the load is automatically redistributed to others.
 For configuration details, refer to [Federation](../network/alliance/federation.html).

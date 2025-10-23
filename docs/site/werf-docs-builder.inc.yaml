@@ -12,7 +12,7 @@ import:
   before: setup
 - image: d8-docs-artifacts
   add: /export/embedded_modules.json
-  to: /app/hugo/data/dkp/embedded_modules.json
+  to: /app/hugo-init/data/dkp/embedded_modules.json
   before: setup
 imageSpec:
   config:
@@ -20,14 +20,14 @@ imageSpec:
     entrypoint: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
-    to: /app/hugo
+    to: /app/hugo-init
 {{ if ne .ModuleName "website-docs" }}
-{{- include "image mount points" . | nindent 2 }}
     excludePaths:
     - config/production/
     - data/dkp/embedded_modules.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
-    to: /app/hugo/config/production/hugo.yaml
+    to: /app/hugo-init/config/production/hugo.yaml
+{{- include "image mount points" . | nindent 2 }}
 {{ end }}
 
 ---

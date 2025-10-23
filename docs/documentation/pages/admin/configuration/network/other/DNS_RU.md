@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/network/other/dns.html
 lang: ru
 ---
 
-Управление DNS в кластере Kubernetes реализуется с помощью модуля [`kube-dns`](../../../../modules/kube-dns/).
+Управление DNS в кластере Kubernetes реализуется с помощью модуля [`kube-dns`](/modules/kube-dns/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/kube-dns/ -->
 

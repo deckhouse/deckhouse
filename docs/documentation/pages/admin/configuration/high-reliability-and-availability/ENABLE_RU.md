@@ -15,7 +15,7 @@ lang: ru
 
 ### Через кастомный ресурс ModuleConfig/global
 
-1. Установите в `ModuleConfig/global` параметр `settings.highAvailability` в значение `true`:
+1. Установите в `ModuleConfig/global` [параметр `settings.highAvailability`](../../../reference/api/global.html#parameters-highavailability) в значение `true`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -44,7 +44,7 @@ lang: ru
 
 ### Через веб-интерфейс Deckhouse
 
-Если в кластере включен модуль [`console`](/modules/console), откройте веб-интерфейс Deckhouse, перейдите в раздел «Deckhouse» — «Глобальные настройки» — «Глобальные настройки модулей» и установите переключатель «Режим отказоустойчивости» в положение «Да».
+Если в кластере включен модуль [`console`](/modules/console/), откройте веб-интерфейс Deckhouse, перейдите в раздел «Deckhouse» — «Глобальные настройки» — «Глобальные настройки модулей» и установите переключатель «Режим отказоустойчивости» в положение «Да».
 
 ## Включение режима HA для отдельных компонентов
 
@@ -52,16 +52,16 @@ lang: ru
 
 Перечень модулей, для которых доступно управление режимом HA:
 
-* `deckhouse`;
-* `openvpn`;
-* `istio`;
-* `dashboard`;
-* `multitenancy-manager`;
-* `user-authn`;
-* `ingress-nginx`;
-* `prometheus-monitoring`;
-* `monitoring-kubernetes`;
-* `snapshot-controller`.
+* [`deckhouse`](/modules/deckhouse/);
+* [`openvpn`](/modules/openvpn/);
+* [`istio`](/modules/istio/);
+* [`dashboard`](/modules/dashboard/);
+* [`multitenancy-manager`](/modules/multitenancy-manager/);
+* [`user-authn`](/modules/user-authn/);
+* [`ingress-nginx`](/modules/ingress-nginx/);
+* [`prometheus-monitoring`](/modules/prometheus/);
+* [`monitoring-kubernetes`](/modules/monitoring-kubernetes/);
+* [`snapshot-controller`](/modules/snapshot-controller/).
 
 Чтобы вручную включить режим HA в конкретном модуле, добавьте в его конфигурацию параметр `settings.highAvailability`:
 

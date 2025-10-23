@@ -20,8 +20,10 @@ shell:
   - cd /src
   - git clone --depth 1 --branch v{{$promuVersion}} $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git promu
   - git clone --depth 1 --branch v{{$chronyExproterVersion}} $(cat /run/secrets/SOURCE_REPO)/SuperQ/chrony_exporter.git chrony_exporter
-  - cd chrony_exporter
-  - git apply /patches/*.patch --verbose
+  - cd /src/promu
+  - git apply /patches/promu/*.patch --verbose
+  - cd /src/chrony_exporter
+  - git apply /patches/chrony_exporter/*.patch --verbose
   - rm -rf /src/promu/.git /src/chrony_exporter/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact

@@ -105,7 +105,7 @@ apiVersions:
         description: |
           Cluster domain (used for local routing).
 
-          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
           > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
         default: "cluster.local"
@@ -133,7 +133,7 @@ apiVersions:
         description: |
           Kubernetes version (control plane components of the cluster).
 
-          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/#version-control) the cluster's control plane version.
+          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/modules/control-plane-manager/#version-control) the cluster's control plane version.
 
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).

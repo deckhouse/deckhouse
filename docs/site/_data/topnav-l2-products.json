@@ -141,12 +141,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Documentation",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },
@@ -183,6 +177,26 @@
           "url": "/products/kubernetes-platform/",
           "target": "",
           "rel": ""
+        },
+        {
+          "title": "Возможности",
+          "url": "/products/kubernetes-platform/features/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "title": "Обзор",
+              "url": "/products/kubernetes-platform/features/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "title": "Наблюдаемость",
+              "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            }
+          ]
         },
         {
           "title": "ФСТЭК-редакция",
@@ -337,12 +351,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },

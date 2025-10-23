@@ -1,4 +1,4 @@
-2506
+2516
 1GB
 2GB
 5XX
@@ -96,6 +96,7 @@ autoscaler
 autoscalers
 autoscaling
 autounattend
+Avi
 aws
 AWS
 awscli
@@ -487,6 +488,7 @@ externalNetworkName
 externalNetworkNames
 ExternalSecret
 externalTargets
+ExtraConfig
 extraGroups
 extranet
 failover
@@ -687,6 +689,7 @@ internalNetworkCIDRs
 internalNetworkDNSServers
 internalNetworkNames
 internalNetworkSecurity
+internet
 interoperate
 interpod
 InterPodAntiAffinity
@@ -1056,6 +1059,7 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+OVF
 ovh
 OVH
 ovirt
@@ -1334,6 +1338,7 @@ SSZ
 stakater
 StandardSSD
 StandardWithInternalNetwork
+StandardWithNetwork
 StandardWithNoRouter
 Stapel
 startTLS
@@ -1484,6 +1489,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDC
 VDI
 ve
 vectoradd
@@ -2067,6 +2073,7 @@ ZvirtInstanceClass
 оверселлинг
 оверселлинга
 одностраничных
+однострочник
 одноузлового
 ООМ
 опциональные
@@ -2105,6 +2112,7 @@ ZvirtInstanceClass
 патча
 патчем
 патчи
+патчится
 патчить
 Перебалансировке
 Перевыкат
@@ -2327,6 +2335,7 @@ ZvirtInstanceClass
 сервисах
 сервисов
 сервисы
+синтаксисы
 скачался
 скачаться
 скейлить
@@ -2451,6 +2460,7 @@ ZvirtInstanceClass
 хост
 хоста
 хостам
+хостами
 хосте
 хостнейм
 хостов

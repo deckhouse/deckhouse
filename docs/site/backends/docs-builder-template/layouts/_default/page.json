@@ -1,8 +1,7 @@
 {{- if and (eq .Section "search") (eq .Type "search") -}}
 {{- $modulesData := .Site.Data.modules_all -}}
 {{- $currentLang := .Site.Language.Lang -}}
-{
-  "documents": [
+{"documents": [
     {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
     {{- $first := true -}}
     {{- range $modulesStablestList }}
@@ -11,12 +10,12 @@
       {{- $moduleData := index $modulesData $moduleName -}}
       {{- $moduleSection := printf "modules/%s/%s" $moduleName $moduleChannel }}
       {{- range $.Site.Pages }}
-        {{- if and (hasPrefix .RelPermalink (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix .RelPermalink "/configuration.html")) (not (hasSuffix .RelPermalink "/cr.html")) }}
+        {{- $relPermalinkWithoutLang := replaceRE `/(ru/|en/)` "/" .RelPermalink }}
+        {{- if and (hasPrefix $relPermalinkWithoutLang (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix $relPermalinkWithoutLang "/configuration.html")) (not (hasSuffix $relPermalinkWithoutLang "/cr.html")) }}
           {{- if .File }}
             {{- if not $first -}},{{- end -}}
             {{- $first = false -}}
-            {
-              "title": {{ .Title | jsonify }},
+            { "title": {{ .Title | jsonify }},
               "url": {{ .RelPermalink | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
               {{- $keywords := slice -}}
               {{- if and $moduleData $moduleData.tags -}}
@@ -42,8 +41,8 @@
   {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
   {{- $allParameters := slice }}
   {{- range $modulesStablestList }}
-    {{- $moduleChannel := index . "channel" }}
     {{- $moduleName := index . "name" }}
+    {{- $moduleChannel := index . "channel" }}
     {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
     {{- if not $moduleData }}
       {{- continue -}}
@@ -58,7 +57,7 @@
     {{- if not $first }},{{- end }}
     {{- $first = false }}
     {{ . | jsonify }}
-  {{- end }}
+  {{- end -}}
   ]
 }
 {{- else -}}

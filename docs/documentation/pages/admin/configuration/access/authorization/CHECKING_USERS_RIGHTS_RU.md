@@ -1,6 +1,7 @@
 ---
 title: "Проверка наличия прав у пользователя"
 permalink: ru/admin/configuration/access/authorization/check.html
+description: "Проверка прав доступа пользователей в Deckhouse Kubernetes Platform. Верификация RBAC разрешений, тестирование доступа пользователей и инструменты отладки авторизации."
 lang: ru
 ---
 
@@ -11,7 +12,7 @@ lang: ru
 * `groups` — группы пользователя.
 
 {% alert level="info" %}
-При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `d8 k -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+При совместном использовании с [модулем `user-authn`](/modules/user-authn/) группы и имя пользователя можно посмотреть в логах Dex с помощью команды `d8 k -n d8-user-authn logs -l app=dex` (видны только при авторизации).
 {% endalert %}
 
 ```shell

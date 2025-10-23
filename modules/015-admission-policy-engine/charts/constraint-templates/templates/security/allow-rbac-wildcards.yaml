@@ -1,0 +1,79 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowrbacwildcards
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "RBAC Wildcards"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Prohibits the use of wildcards (`*`) in RBAC Roles and RoleBindings when the corresponding
+      SecurityPolicy flag is disabled. Restricting wildcards helps to reduce the blast radius of
+      granted permissions and avoid accidental over-privileging.
+      
+      For more information, see
+      https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowRbacWildcards
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+          is_binding(input.review.kind.kind)
+          binding := input.review.object
+          ref_name := binding.roleRef.name
+          contains(ref_name, "*")
+          msg := sprintf("Wildcard is forbidden in roleRef.name of %v '%v': '%v'", [input.review.kind.kind, binding.metadata.name, ref_name])
+        }
+
+        violation[{"msg": msg, "details": {}}] {
+          is_binding(input.review.kind.kind)
+          binding := input.review.object
+          subject := binding.subjects[_]
+          contains(subject.name, "*")
+          msg := sprintf("Wildcard is forbidden in subjects of %v '%v': subject '%v' of kind '%v'", [input.review.kind.kind, binding.metadata.name, subject.name, subject.kind])
+        }
+
+        # For Role objects, disallow wildcards in rules fields
+        violation[{"msg": msg, "details": {}}] {
+          is_role(input.review.kind.kind)
+          role := input.review.object
+          rule := role.rules[_]
+          val := rule.apiGroups[_]
+          contains(val, "*")
+          msg := sprintf("Wildcard is forbidden in rules.apiGroups of Role '%v': '%v'", [role.metadata.name, val])
+        }
+
+        violation[{"msg": msg, "details": {}}] {
+          is_role(input.review.kind.kind)
+          role := input.review.object
+          rule := role.rules[_]
+          val := rule.resources[_]
+          contains(val, "*")
+          msg := sprintf("Wildcard is forbidden in rules.resources of Role '%v': '%v'", [role.metadata.name, val])
+        }
+
+        violation[{"msg": msg, "details": {}}] {
+          is_role(input.review.kind.kind)
+          role := input.review.object
+          rule := role.rules[_]
+          val := rule.verbs[_]
+          contains(val, "*")
+          msg := sprintf("Wildcard is forbidden in rules.verbs of Role '%v': '%v'", [role.metadata.name, val])
+        }
+
+        is_binding(kind) {
+          kind == "RoleBinding"
+        }
+
+        is_role(kind) {
+          kind == "Role"
+        }

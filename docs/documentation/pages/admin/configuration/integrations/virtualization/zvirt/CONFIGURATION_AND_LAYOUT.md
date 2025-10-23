@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-layout.html
+permalink: en/admin/integrations/virtualization/zvirt/layout.html
 ---
 
 ## Standard
@@ -11,7 +11,7 @@ with centralized management of templates, storage, and networking.
 
 Key features:
 
-- Use of a single zVirt cluster (`clusterID`).
+- Use of a single zVirt cluster ([`clusterID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-clusterid)).
 - A storage domain accessible to all hosts in the cluster.
 - A virtual machine template created from a cloud image.
 - Assignment of a vNIC network profile when provisioning VMs.
@@ -44,7 +44,7 @@ masterNodeGroup:
     storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
 ```
 
-Required parameters:
+Required parameters for the [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) resource:
 
 - `clusterID`: UUID of the zVirt cluster where virtual machines will be deployed.
 - `sshPublicKey`: Public SSH key used to access the nodes.

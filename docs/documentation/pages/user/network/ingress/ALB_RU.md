@@ -7,13 +7,13 @@ lang: ru
 Application Load Balancer (ALB) реализуется с помощью Ingress-ресурсов и Gateway.
 ALB позволяет обрабатывать следующие виды трафика: HTTP, HTTPS и gRPC.
 Для публикации приложений используется настроенный администратором Ingress-контроллер.
-В большинстве случаев применяется модуль [`ingress-nginx`](/modules/ingress-nginx/), для более сложных задач может использоваться модуль [`istio`](/modules/istio/).
+В большинстве случаев применяется модуль [ingress-nginx](/modules/ingress-nginx/), для более сложных задач может использоваться модуль [istio](/modules/istio/).
 
 ## Советы по выбору и особенности ALB средствами ingress-nginx и istio
 
 ### Ingress-nginx
 
-ALB  [`ingress-nginx`](../../../modules/ingress-nginx/) основан на базе веб-сервера nginx.
+ALB  [ingress-nginx](/modules/ingress-nginx/) основан на базе веб-сервера nginx.
 Этот вариант подходит для:
 
 - базовой маршрутизации трафика на основе доменов или URL;
@@ -21,7 +21,7 @@ ALB  [`ingress-nginx`](../../../modules/ingress-nginx/) основан на ба
 
 ### Istio
 
-ALB на основе [`istio`](../../../modules/istio/) позволяет получить расширенные возможности по управлению трафиком. ALB на базе `istio` стоит рассмотреть, если вам нужны:
+ALB на основе [istio](/modules/istio/) позволяет получить расширенные возможности по управлению трафиком. ALB на базе istio стоит рассмотреть, если вам нужны:
 
 - продвинутая маршрутизация, например, для реализации [canary deployment](../canary-deployment.html).
 - распределение трафика между версиями приложения и микросервисами;
@@ -53,7 +53,7 @@ spec:
 ## Пример ресурса NGINX Ingress
 
 Для работы с NGINX Ingress администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
-Для этого установите параметр [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у кастомного ресурса IngressNginxController модуля `ingress-nginx`.
+Для этого установите параметр [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у кастомного ресурса IngressNginxController модуля [ingress-nginx](/modules/ingress-nginx/).
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
   

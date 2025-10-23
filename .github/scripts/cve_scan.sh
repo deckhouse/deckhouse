@@ -44,20 +44,31 @@ login_dev_registry() {
 }
 
 trivy_scan() {
-  ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json ${1} --output ${2} --quiet ${3} --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+  ${WORKDIR}/bin/trivy i --vex oci --show-suppressed --config-check "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json ${1} --output ${2} --quiet ${3} --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
 }
 
-send_report() {
+function send_report() {
+  dd_scan_type="${1}"
+  dd_report_file_path="${2}"
+  dd_module_name="${3}"
+  dd_image_name="${4}"
+
+  dd_engagement_name="[$(echo "${dd_scan_type}" | tr '[:lower:]' '[:upper:]')] [IMAGES] [${dd_branch}]"
+
+  tags_string="\"dkp\",\"images\",\"${dd_scan_type}\",\"${dd_release_or_dev_tag}\",\"${dd_image_version}\""
+  if [[ -n "${dd_short_release_tag}" && -n "${dd_full_release_tag}" ]]; then
+    tags_string+=",\"${dd_short_release_tag}\",\"${dd_full_release_tag}\""
+  fi
+
   echo ""
-  echo " Uploading trivy ${1} report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
+  echo " Uploading trivy ${dd_branch} report for image \"${dd_image_name}\" of \"${dd_module_name}\" module"
   echo ""
-  curl -s -S -o /dev/null --fail-with-body -X POST \
-    --retry 5 \
-    --retry-delay 10 \
+  dd_upload_response=$(curl -sw "%{http_code}" -X POST \
+    --retry 10 \
+    --retry-delay 20 \
     --retry-all-errors \
     https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
     -H "accept: application/json" \
-    -H "Content-Type: multipart/form-data" \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
     -F "auto_create_context=True" \
     -F "minimum_severity=Info" \
@@ -67,21 +78,56 @@ send_report() {
     -F "close_old_findings=true" \
     -F "do_not_reactivate=false" \
     -F "push_to_jira=false" \
-    -F "file=@${2}" \
+    -F "file=@${dd_report_file_path}" \
     -F "product_type_name=DKP" \
-    -F "product_name=${3}" \
+    -F "product_name=${dd_module_name}" \
     -F "scan_date=${date_iso}" \
-    -F "engagement_name=${1}" \
-    -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
+    -F "engagement_name=${dd_engagement_name}" \
+    -F "service=${dd_module_name} / ${dd_image_name}" \
     -F "group_by=component_name+component_version" \
     -F "deduplication_on_engagement=false" \
-    -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag}" \
-    -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
+    -F "tags=dkp,${dd_scan_type},module:${dd_module_name},image:${dd_image_name},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag},${dd_release_or_dev_tag}" \
+    -F "test_title=[${dd_module_name}]: ${dd_image_name}:${dd_image_version}" \
     -F "version=${dd_image_version}" \
     -F "build_id=${IMAGE_HASH}" \
     -F "commit_hash=${GITHUB_SHA}" \
     -F "branch_tag=${d8_tag}" \
-    -F "apply_tags_to_findings=true"
+    -F "apply_tags_to_findings=true")
+
+  dd_return_code="${dd_upload_response: -3}"
+  dd_return_body="${dd_upload_response:0: -3}"
+  if [ ${dd_return_code} -eq 201 ]; then
+    dd_engagement_id=$(echo ${dd_return_body} | jq ".engagement_id" )
+    echo "dd_engagement_id: ${dd_engagement_id}"
+    echo "Update with tags: ${tags_string}"
+    # Updating engagement
+    dd_eng_patch_response=$(curl -sw "%{http_code}" -X "PATCH" \
+      --retry 10 \
+      --retry-delay 20 \
+      --retry-all-errors \
+      "https://${DEFECTDOJO_HOST}/api/v2/engagements/${dd_engagement_id}/" \
+      -H "accept: application/json" \
+      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "{
+      \"tags\": ["${tags_string}"],
+      \"version\": \"${dd_image_version}\",
+      \"branch_tag\": \"${d8_tag}\"
+    }")
+    if [ ${dd_eng_patch_response: -3} -eq 200 ]; then
+      echo "Engagemet \"${dd_engagement_name}\" updated successfully"
+    else
+      echo "!!!WARNING!!!"
+      echo "Engagemet \"${dd_engagement_name}\" WAS NOT UPDATED"
+      echo "HTTP_CODE: ${dd_eng_patch_response: -3}"
+      echo "DD_RESPONSE: ${dd_eng_patch_response:0: -3}"
+    fi
+  else
+    echo "!!!WARNING!!!"
+    echo "Report for image \"${dd_image_name}\" of \"${dd_module_name}\" module WAS NOT UPLOADED"
+    echo "HTTP_CODE: ${dd_return_code}"
+    echo "DD_RESPONSE: ${dd_return_body}"
+  fi
 }
 
 # Create docker config file to use during this CI Job
@@ -149,6 +195,7 @@ for d8_tag in "${d8_tags[@]}"; do
   dd_default_branch_tag=""
   dd_short_release_tag=""
   dd_full_release_tag=""
+  dd_release_or_dev_tag="dev"
   dd_image_version="${d8_tag}"
   dd_branch="${d8_tag}"
   date_iso=$(date -I)
@@ -173,11 +220,37 @@ for d8_tag in "${d8_tags[@]}"; do
     d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
     dd_short_release_tag="release:$(echo ${d8_tag} | cut -d '.' -f -2 | sed 's/^v//')"
     dd_full_release_tag="image_release_tag:${d8_tag}"
+    dd_release_or_dev_tag="release"
     dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
-    dd_branch="$(echo ${dd_short_release_tag} | sed 's/\:/\-/')"
     trivy_registry_user="${PROD_REGISTRY_USER}"
     trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
+  echo "=============================================="
+  echo "Scanning additional images:"
+  # Additional images to scan
+  declare -a additional_images=("${d8_image}"
+                "${d8_image}/install"
+                )
+
+  for additional_image in "${additional_images[@]}"; do
+    a_module_name=""
+    a_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
+    # if it is deckhouse-oss - add it as deckhouse-controller module
+    if [ "${a_image_name}" == "deckhouse-oss" ]; then
+      a_module_name="deckhouseController"
+    elif [ "${a_image_name}" == "install" ]; then
+      a_module_name="dhctl"
+    fi
+    echo "----------------------------------------------"
+    echo "👾 Scaning Deckhouse image \"${a_image_name}\" of module \"${a_module_name}\" for tag \"${d8_tag}\""
+    echo ""
+    # CVE Scan
+    trivy_scan "--scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
+    # License scan
+    trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
+    send_report "CVE" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${a_module_name}" "${a_image_name}"
+    send_report "License" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${a_module_name}" "${a_image_name}"
+  done
 
   echo "Deckhouse image to check: ${d8_image}:${d8_tag}"
   echo "Severity: ${SEVERITY}"
@@ -186,15 +259,9 @@ for d8_tag in "${d8_tags[@]}"; do
   docker pull "${d8_image}:${d8_tag}"
   digests=$(docker run --rm "${d8_image}:${d8_tag}" cat /deckhouse/modules/images_digests.json)
 
-  # Additional images to scan
-  declare -a additional_images=("${d8_image}"
-                "${d8_image}/install"
-                "${d8_image}/install-standalone"
-                )
-  for additional_image in "${additional_images[@]}"; do
-    additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
-    digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse += { ($i): ($s) }')
-  done
+  echo "=============================================="
+  echo "The following images will be scanned:"
+  echo "${digests}"
 
   for module in $(jq -rc 'to_entries[]' <<< "${digests}"); do
     MODULE_NAME=$(jq -rc '.key' <<< "${module}")
@@ -238,35 +305,16 @@ for d8_tag in "${d8_tags[@]}"; do
     for module_image in $(jq -rc '.value | to_entries[]' <<<"${module}"); do
       IMAGE_NAME="$(jq -rc '.key' <<< ${module_image})"
       IMAGE_HASH="$(jq -rc '.value' <<< ${module_image})"
-      if [[ "${IMAGE_NAME}" == "trivy" ]]; then
-        continue
-      fi
-      # Set flag if additional image to use tag instead of hash
-      additional_image_detected=false
-      for image_item in "${additional_images[@]}"; do
-        if [ "${IMAGE_NAME}" == $(echo "${image_item}"| grep -o '[^/]*$') ]; then
-          additional_image_detected=true
-          break
-        fi
-      done
 
       echo "----------------------------------------------"
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
-      if [ "${additional_image_detected}" == true ]; then
-        # CVE Scan
-        trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}:${d8_tag}"
-        # License scan
-        trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}:${d8_tag}"
-      else
-        # CVE Scan
-        trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
-        # License scan
-        trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
-      fi
-
-      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}"
-      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}"
+      # CVE Scan
+      trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
+      # License scan
+      trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
+      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}" "${IMAGE_NAME}"
+      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}" "${IMAGE_NAME}"
     done
   done
 done

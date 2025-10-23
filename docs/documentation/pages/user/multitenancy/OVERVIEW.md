@@ -29,7 +29,7 @@ Using projects helps address these limitations and offers the following benefits
   allowing developers to deploy and test their applications without affecting others.
 
 {% alert level="warning" %}
-[Secret copying](/modules/secret-copier) across all namespaces is incompatible with projects in multitenancy mode.
+[Secret copying](/modules/secret-copier/) across all namespaces is incompatible with projects in multitenancy mode.
 
 This mode creates isolated environments for users within their projects,
 while `secret-copier` automatically distributes secrets to all namespaces.
@@ -46,12 +46,12 @@ Projects has several limitations:
 
 ## Creating a project
 
-1. To create a project, create a [Project](cr.html#project) custom resource
-   and specify the project template name in the [`.spec.projectTemplateName`](cr.html#project-v1alpha2-spec-projecttemplatename) field.
-1. In the [`.spec.parameters`](cr.html#project-v1alpha2-spec-parameters) field,
-   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
+1. To create a project, create a [Project](/modules/multitenancy-manager/cr.html#project) custom resource
+   and specify the project template name in the [`.spec.projectTemplateName`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename) field.
+1. In the [`.spec.parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field,
+   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
 
-   Example of creating a project using [Project](cr.html#project) from the `default` [ProjectTemplate](cr.html#projecttemplate):
+   Example of creating a project using [Project](/modules/multitenancy-manager/cr.html#project) from the `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -131,4 +131,4 @@ Note that changing the template might cause resource conflicts.
 If the new template’s chart defines resources that already exist in the namespace, the template can't be applied.
 {% endalert %}
 
-For details on project templates and their creation, refer to the [Administration section](../admin/multitenancy.html).
+For details on project templates and their creation, refer to the [Administration section](../../admin/multitenancy.html).

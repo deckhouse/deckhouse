@@ -1,6 +1,7 @@
 ---
 title: "Вертикальное масштабирование"
 permalink: ru/admin/configuration/app-scaling/vpa.html
+description: "Настройка Vertical Pod Autoscaler (VPA) в Deckhouse Kubernetes Platform. Автоматическое управление ресурсами контейнеров и оптимизация на основе метрик использования для повышения эффективности."
 lang: ru
 ---
 

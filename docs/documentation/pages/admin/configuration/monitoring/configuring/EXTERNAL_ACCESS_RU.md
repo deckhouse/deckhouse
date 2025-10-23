@@ -65,7 +65,7 @@ data:
 В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**.
 {% endalert %}
 
-<img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
+<img src="../../../../images/prometheus/prometheus_connect_settings.png" height="500">
 
 * **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`.
 
@@ -142,9 +142,8 @@ spec:
 
 Prometheus, находящийся в основе системы мониторинга DKP, преимущественно использует pull-модель для сбора метрик. При таком подходе происходит опрос экспортеров метрик со стороны DKP. Когда применение pull-модели затруднено, например, для сервисов без постоянного сетевого интерфейса, можно использовать сбор метрик через шлюз (Pushgateway). Pushgateway позволяет таким задачам самим отправлять метрики, которые затем могут быть собраны Prometheus. Важно отметить, что Pushgateway может стать единой точкой отказа и узким местом в системе. Как отправлять метрики из приложения в Pushgateway можно узнать [в документации Prometheus](https://prometheus.io/docs/instrumenting/pushing/).
 
-
 Пример настройки сбора метрик через шлюз (Pushgateway):
-- Включите и настройте модуль `prometheus-pushgateway`.
+- Включите и настройте [модуль `prometheus-pushgateway`](/modules/prometheus-pushgateway/).
 
   Включить модуль можно в веб-интерфейсе (Deckhouse Console), или с помощью следующей команды:
 

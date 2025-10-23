@@ -26,6 +26,8 @@ var sensitiveKeywords = []string{
 	`"kind":"DexProvider"`,
 	`"kind":"ModuleConfig"`,
 	`"kind":"Secret"`,
+	`"kind":"SSHCredentials"`,
+	`"kind":"ClusterLogDestination"`,
 }
 
 type LogSanitizer struct{}

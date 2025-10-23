@@ -24,7 +24,7 @@
 {%- endif %}
 {
 "name": "{{ item.name }}",
-"module": "{{ item.module }}",
+"module": "{{ item.module | default: "global" }}",
 "moduletype": "embedded",
 "url": "{{ page_canonical_url }}",
 "resName": "{{ item.resourceName | escape }}",

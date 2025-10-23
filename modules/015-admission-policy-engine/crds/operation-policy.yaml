@@ -89,7 +89,7 @@ spec:
                       description: |
                         Deny Pods that have tolerations from the ones in the specified list.
 
-                        See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
+                        See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
                       items:
                         type: object
                         properties:

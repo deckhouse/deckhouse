@@ -6,8 +6,8 @@ import:
     add: /src/self-signed-generator
     to: /self-signed-generator
     before: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/self-signed-generator" ]
@@ -20,7 +20,7 @@ git:
     to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-src-artifact
@@ -36,6 +36,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags="-w -s" -o self-signed-generator main.go
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-w -s" -o self-signed-generator main.go`) | indent 6 }}
     - chown 64535:64535 self-signed-generator
     - chmod 0700 self-signed-generator

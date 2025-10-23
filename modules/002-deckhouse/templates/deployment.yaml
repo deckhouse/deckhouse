@@ -113,7 +113,7 @@ spec:
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       initContainers:
         - name: init-downloaded-modules
           image: {{ include "helm_lib_module_image" (list . "init") }}
@@ -122,6 +122,7 @@ spec:
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
+            readOnlyRootFilesystem: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
@@ -130,7 +131,7 @@ spec:
               name: deckhouse
       containers:
         - name: deckhouse
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             capabilities:
               drop:
@@ -161,6 +162,7 @@ spec:
               valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
             - name: KUBERNETES_SERVICE_PORT
               value: "6445"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
   {{- else }}
   # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
@@ -170,6 +172,11 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
+            {{- $bootstrapContext := deepCopy . }}
+            {{- if and $bootstrapContext.Values.global.clusterConfiguration $bootstrapContext.Values.global.clusterConfiguration.proxy }}
+            {{- $_ := set $bootstrapContext.Values.global.clusterConfiguration.proxy "noProxy" (append ($bootstrapContext.Values.global.clusterConfiguration.proxy.noProxy | default list) "$(KUBERNETES_SERVICE_HOST)") }}
+            {{- end }}
+            {{- include "helm_lib_envs_for_proxy" $bootstrapContext | nindent 12 }}
   {{- end }}
 {{- end }}
             - name: LOG_LEVEL
@@ -245,7 +252,6 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
-            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"
@@ -283,7 +289,11 @@ spec:
               {{- include "deckhouse_resources" . | nindent 14 }}
           workingDir: /deckhouse
           volumeMounts:
+          - mountPath: /dev
+            name: dev-dir
           - mountPath: /tmp
+            name: tmp
+          - mountPath: /run
             name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
@@ -349,6 +359,10 @@ spec:
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
       volumes:
+      - name: dev-dir
+        hostPath:
+          path: /dev
+          type: Directory
       - emptyDir:
           medium: Memory
         name: tmp

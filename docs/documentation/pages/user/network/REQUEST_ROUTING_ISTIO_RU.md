@@ -4,7 +4,7 @@ permalink: ru/user/network/request_routing_istio.html
 lang: ru
 ---
 
-Для маршрутизации HTTP- и TCP-запросов в Deckhouse Kubernetes Platform можно использовать модуль [`istio`](../../modules/istio/).
+Для маршрутизации HTTP- и TCP-запросов в Deckhouse Kubernetes Platform можно использовать модуль [`istio`](/modules/istio/).
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%BC%D0%B0%D1%80%D1%88%D1%80%D1%83%D1%82%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8F-%D0%B7%D0%B0%D0%BF%D1%80%D0%BE%D1%81%D0%BE%D0%B2 -->
 

@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/hybrid/overview.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html) и [vSphere](../virtualization/vsphere/vsphere-authorization.html).
+Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html) и [vSphere](../virtualization/vsphere/authorization.html).
 
 Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы провайдера. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 

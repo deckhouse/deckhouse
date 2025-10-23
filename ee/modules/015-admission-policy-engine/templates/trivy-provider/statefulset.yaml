@@ -3,6 +3,8 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
+{{ $allowedSeverityLevels := dig "denyVulnerableImages" "allowedSeverityLevels" nil .Values.admissionPolicyEngine }}
+
 {{- if include "trivy.provider.enabled" $ }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -57,6 +59,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "trivyProvider") }}
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list)) | nindent 8 }}
+          readOnlyRootFilesystem: true
         name: trivy-provider
         args:
           - --port=8443
@@ -65,6 +68,10 @@ spec:
           - --client-ca-file=/client-cert/ca.crt
           - --timeout=25
         env:
+       {{ if $allowedSeverityLevels }}
+        - name: ALLOWED_SEVERITIES
+          value: {{ $allowedSeverityLevels | join "," }}
+       {{ end }}
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
         - name: TRIVY_JAVA_DB_IMAGE
@@ -76,6 +83,8 @@ spec:
         - containerPort: 8443
           protocol: TCP
         volumeMounts:
+        - mountPath: /tmp
+          name: tmp
         - mountPath: /certs
           name: cert
           readOnly: true
@@ -101,6 +110,8 @@ spec:
       terminationGracePeriodSeconds: 60
       serviceAccountName: admission-policy-engine
       volumes:
+      - name: tmp
+        emptyDir: {}
       - name: cert
         secret:
           defaultMode: 420

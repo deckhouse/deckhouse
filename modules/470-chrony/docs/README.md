@@ -9,7 +9,7 @@ Provides time synchronization on all cluster nodes using the [chrony](https://ch
 
 The module starts `chrony` agents on all cluster nodes.
 
-By default, the NTP server `pool.ntp.org` is used. The NTP server can be changed via the [settings](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) module.
+By default, the NTP server `pool.ntp.org` is used. The NTP server can be changed via the [settings](/modules/chrony/configuration.html) module.
 To view the NTP servers used, you can use the command:
 
 ```bash

@@ -64,7 +64,7 @@ Add the data source to Grafana:
 As the URL, you need to specify `https://prometheus-api.<your-cluster-domain>`.
 {% endalert %}
 
-<img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
+<img src="../../../../images/prometheus/prometheus_connect_settings.png" height="500">
 
 * **Basic authorization** is not a reliable security measure. It is recommended to implement additional security measures, such as specifying the `nginx.ingress.kubernetes.io/whitelist-source-range` annotation.
 
@@ -141,9 +141,8 @@ The `Job` should complete successfully.
 
 Prometheus, which is the foundation of the DKP monitoring system, primarily uses a pull model for metrics collection. In this approach, DKP polls metric exporters. When applying the pull model is difficult, for example, for services without a permanent network interface, you can use metrics collection via a gateway (Pushgateway). Pushgateway allows such tasks to send metrics themselves, which can then be collected by Prometheus. It's important to note that Pushgateway can become a single point of failure and bottleneck in the system. How to send metrics from an application to Pushgateway can be learned from the [Prometheus documentation](https://prometheus.io/docs/instrumenting/pushing/).
 
-
 Example of configuring metrics collection via gateway (Pushgateway):
-- Enable and configure the `prometheus-pushgateway` module.
+- Enable and configure the [`prometheus-pushgateway`](/modules/prometheus-pushgateway/) module.
 
   You can enable the module in the web interface (Deckhouse Console), or using the following command:
 

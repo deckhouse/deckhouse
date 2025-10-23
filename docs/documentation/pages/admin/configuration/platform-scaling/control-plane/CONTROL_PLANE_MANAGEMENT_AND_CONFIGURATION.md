@@ -1,6 +1,7 @@
 ---
 title: "General management and configuration of the control plane"
 permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+description: "Configure and manage Kubernetes control plane in Deckhouse Kubernetes Platform. High availability, certificate management, and control plane component configuration."
 ---
 
 ## Main features
@@ -50,7 +51,7 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
    d8 platform module disable control-plane-manager
    ```  
   
-1. Via the [Deckhouse web interface](/modules/console):
+1. Via the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section.
    - Find the `control-plane-manager` module and click on it.
@@ -58,7 +59,7 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
 
 ### Configuration
 
-To configure the module, use the ModuleConfig/control-plane-manager resource and specify the required parameters in `spec.settings`.
+To configure the module, use the ModuleConfig/control-plane-manager resource and specify the required parameters in [`spec.settings`](/modules/control-plane-manager/configuration.html#parameters-settings).
 
 Example with the schema version, enabled module, and a few settings:
 
@@ -153,14 +154,14 @@ DKP assumes control of this PKI after the initial cluster installation and once 
 
 Deckhouse simplifies the addition of new Subject Alternative Names (SANs) for the Kubernetes API endpoint: you only need to specify them in the configuration. After any SAN change, the module automatically regenerates the certificates and updates the kubeconfig.
 
-To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the `spec.settings.apiserver.certSANs` field of your ModuleConfig/control-plane-manager resource.
+To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the [`spec.settings.apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) field of your ModuleConfig/control-plane-manager resource.
 
 DKP will automatically generate new certificates and update all required configuration files (including kubeconfig).
 
 ### Kubelet certificate rotation
 
 In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
-The `--tls-cert-file` and `--tls-private-key-file` parameters for kubelet are not set directly. Instead, a dynamic TLS certificate mechanism is used: kubelet applies the client certificate located at `/var/lib/kubelet/pki/kubelet-client-current.pem`, which it uses to request a new client or server certificate (file `/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the `operator-trivy` module.
+The `--tls-cert-file` and `--tls-private-key-file` parameters for kubelet are not set directly. Instead, a dynamic TLS certificate mechanism is used: kubelet applies the client certificate located at `/var/lib/kubelet/pki/kubelet-client-current.pem`, which it uses to request a new client or server certificate (file `/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the [`operator-trivy`](/modules/operator-trivy/) module.
 
 Features of kubelet certificate rotation in Deckhouse Kubernetes Platform:
 
@@ -194,8 +195,8 @@ By default, if a node does not report its status within 40 seconds, it is marked
 
 In specific cases where an application cannot run in multiple instances, there is a way to reduce the downtime period:
 
-1. Reduce the time before a node is marked as `Unreachable` by configuring the `nodeMonitorGracePeriodSeconds` parameter.
-1. Set a shorter timeout for evicting pods from the unreachable node using the `failedNodePodEvictionTimeoutSeconds` parameter.
+1. Reduce the time before a node is marked as `Unreachable` by configuring the [`nodeMonitorGracePeriodSeconds`](/modules/control-plane-manager/configuration.html#parameters-nodemonitorgraceperiodseconds) parameter.
+1. Set a shorter timeout for evicting pods from the unreachable node using the [`failedNodePodEvictionTimeoutSeconds`](/modules/control-plane-manager/configuration.html#parameters-failednodepodevictiontimeoutseconds) parameter.
 
 Example:
 

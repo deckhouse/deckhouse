@@ -2,6 +2,7 @@
 title: "Список алертов"
 permalink: ru/reference/alerts.html
 lang: ru
+search: alerts list, monitoring alerts, список алертов, алерты мониторинга
 ---
 
 На странице приведен список алертов мониторинга в Deckhouse Kubernetes Platform.

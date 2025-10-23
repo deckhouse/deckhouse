@@ -5,24 +5,28 @@ permalink: en/virtualization-platform/documentation/user/resource-management/dis
 
 Disks in virtual machines are necessary for writing and storing data, ensuring that applications and operating systems can fully function. DVP provides the storage for these disks.
 
-The behavior of disks when creating virtual machines depends on the `VolumeBindingMode` property of the corresponding StorageClass:
+Depending on the storage properties, the behavior of disks during creation of virtual machines during operation may differ:
 
-If `VolumeBindingMode = Immediate`, the disk is created immediately after the resource is created (it is assumed that the disk will be available for attachment to the virtual machine on any node in the cluster).
+The behavior of disks during their creation depends on the `VolumeBindingMode` parameter, which defines when exactly the disk is created and on which node:
+
+`Immediate`: The disk is created immediately after the resource is created (the disk is assumed to be available for connection to a virtual machine on any node in the cluster).
 
 ![Immediate](/images/virtualization-platform/vd-immediate.png)
 
-If `VolumeBindingMode = WaitForFirstConsumer`, the disk is created only after it is attached to the virtual machine and will be created on the node where the virtual machine is scheduled to run.
+`WaitForFirstConsumer`: The disk is created only after it is connected to the virtual machine and is created on the node on which the virtual machine will be running.
 
 ![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.png)
 
-The behavior of disks during operation depends on the `AccessMode`:
+The `AccessMode` parameter determines how the virtual machine can access the disk — whether it is used exclusively by one VM or shared among several:
 
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
-- `ReadWriteOnce (RWO)`: Only one instance of the virtual machine can access the disk. Live migration of virtual machines with such disks is supported only in DVP commercial editions. Live migration is only available if all disks are connected statically via `.spec.blockDeviceRefs`. Disks connected dynamically via `VirtualMachineBlockDeviceAttachments` must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
+- `ReadWriteOnce (RWO)`: Only one instance of the virtual machine can access the disk. Live migration of virtual machines with such disks is supported only in DVP commercial editions. Live migration is only available if all disks are connected statically via (`.spec.blockDeviceRefs`). Disks connected dynamically via `VirtualMachineBlockDeviceAttachments` must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
 
 When creating a disk, the controller will independently determine the most optimal parameters supported by the storage.
 
-Attention: It is impossible to create disks from iso-images!
+{% alert level="warning" %}
+It is impossible to create disks from ISO images.
+{% endalert %}
 
 To find out the available storage options, run the following command:
 
@@ -43,7 +47,7 @@ sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/products/virtualization-platform/reference/cr/virtualdisk.html).
+A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/modules/virtualization/cr.html#virtualdisk).
 
 How to find out the available storage options in the DVP web interface:
 

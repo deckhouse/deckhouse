@@ -1,6 +1,7 @@
 ---
 title: "Текущая модель авторизации"
 permalink: ru/admin/configuration/access/authorization/rbac-current.html
+description: "Настройка текущей модели RBAC авторизации в Deckhouse Kubernetes Platform. Настройка модуля user-authz, управление ClusterRole и конфигурация ролевого доступа."
 lang: ru
 ---
 

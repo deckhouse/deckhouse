@@ -1,6 +1,8 @@
 allowed_values: допустимые значения
 search_placeholder_text: Поиск...
-search_placeholder_text_modules: Поиск по документации модулей...
+search_context_dkpdocs_and_modules: Поиск выполняется по всей документации DKP и модулям.
+search_context_modules: Поиск выполняется по всем модулям, не включая документацию DKP.
+search_context_only_product_docs: Поиск выполняется по всей документации продукта, не включая модули.
 modules: модули
 modules2: модулей
 module: модуль
@@ -36,6 +38,7 @@ pattern: шаблон
 length: длина
 min_length: минимальная длина
 max_length: максимальная длина
+moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройка

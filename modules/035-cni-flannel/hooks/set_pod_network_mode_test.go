@@ -91,7 +91,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -104,7 +103,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present, but cni != `flannel`", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniSecretYAML("cilium", "", nil, nil),
 			}
@@ -120,7 +118,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present, cni == `flannel`, but flannel field is not set", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniSecretYAML(cni, "", nil, nil),
 			}
@@ -137,7 +134,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is present, cni = `flannel`, flannel mode = vxlan", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, nil),
 			}
@@ -154,7 +150,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is present, cni = `flannel`, flannel mode = host-gw", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`, nil, nil),
 			}
@@ -171,7 +166,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is absent, MC is present: podNetworkMode set to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
@@ -190,7 +184,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is absent, MC is present: podNetworkMode set to `HostGW`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			resources := []string{
 				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "HostGW",
@@ -208,7 +201,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present, MC is present and has priority", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, map[string]string{
@@ -230,7 +222,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present and has priority (annotation=Secret), MC is present", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, map[string]string{
@@ -252,7 +243,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present and has priority (annotation=Secret), MC is present 2", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`, nil, map[string]string{
@@ -274,7 +264,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is present and has priority (annotation=CustomValue), MC is present", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`, nil, map[string]string{
@@ -297,7 +286,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret and MC are present, priority annotation is absent, cluster is not bootstrapped", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", false)
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, nil),
@@ -318,7 +306,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret and MC are present, priority annotation is absent, cluster is bootstrapped", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, nil),
@@ -339,7 +326,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is absent, MC is present but has empty podNetworkMode", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
 			}
@@ -356,7 +342,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is absent, MC is present with unsupported podNetworkMode value", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "host-gw")
 			resources := []string{
 				cniMCYAML("cni-flannel", ptr.To(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "UnsupportedMode",
@@ -375,7 +360,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is present with empty podNetworkMode, MC is present and has priority", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			resources := []string{
 				cniSecretYAML("flannel", `{"podNetworkMode": ""}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
@@ -397,7 +381,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 	Context("Secret is present with empty podNetworkMode, MC is present has priority but is empty too", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			resources := []string{
 				cniSecretYAML("flannel", `{"podNetworkMode": ""}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
@@ -416,14 +399,13 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 	Context("Secret is absent, MC is absent", func() {
 		BeforeEach(func() {
-			f.ValuesSet("cniFlannel.internal.podNetworkMode", "vxlan")
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, mode should remain unchanged when no sources exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("vxlan"))
+			Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
 		})
 	})
 

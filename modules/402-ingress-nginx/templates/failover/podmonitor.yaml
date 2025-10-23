@@ -16,7 +16,7 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
-    - regex: endpoint|namespace|container
+    - regex: endpoint|container
       action: labeldrop
     - targetLabel: job
       replacement: proxy-failover

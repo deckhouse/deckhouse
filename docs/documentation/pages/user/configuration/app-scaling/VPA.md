@@ -5,7 +5,7 @@ permalink: en/user/configuration/app-scaling/vpa.html
 
 ## How Vertical Pod Autoscaler (VPA) works
 
-The Vertical Pod Autoscaler (VPA) automates container resource management and can significantly improve application performance. VPA is especially useful when it's difficult to estimate resource needs in advance. When VPA is used in an appropriate operating mode, it sets requested resources based on actual usage data collected [from the monitoring system](link-to-monitoring-section). You can also configure it to only provide recommendations without applying changes automatically.
+The Vertical Pod Autoscaler (VPA) automates container resource management and can significantly improve application performance. VPA is especially useful when it's difficult to estimate resource needs in advance. When VPA is used in an appropriate operating mode, it sets requested resources based on actual usage data collected [from the monitoring system](../../monitoring/). You can also configure it to only provide recommendations without applying changes automatically.
 
 ## How VPA interacts with limits
 
@@ -143,7 +143,7 @@ To prevent this, you can:
 
 ## Monitoring VPA in Grafana
 
-To efficiently manage resources using the Vertical Pod Autoscaler (VPA), it is recommended to use [Grafana dashboards](link-to-grafana-section). These dashboards allow you to track the current status of VPA, its configuration, and the percentage of pods on which it is active.
+To efficiently manage resources using the Vertical Pod Autoscaler (VPA), it is recommended to use [Grafana dashboards](../../web/grafana.html#working-with-dashboards). These dashboards allow you to track the current status of VPA, its configuration, and the percentage of pods on which it is active.
 
 Grafana provides several levels of detail for VPA-related information. Key dashboards include:
 

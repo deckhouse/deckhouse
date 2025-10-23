@@ -63,13 +63,20 @@ properties:
     description: |
       Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
     properties:
+      allowedSeverityLevels:
+        type: array
+        description: |
+          Images containing only vulnerabilities of specified severities will not be denied.
+        items:
+          type: string
+          enum: ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
       storageClass:
         type: string
         x-examples: ["ceph-ssd", "false"]
         description: |-
           The name of the StorageClass to use for `trivy-provider`.
 
-          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
 
           The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 

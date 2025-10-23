@@ -1,6 +1,7 @@
 ---
 title: "Объектное хранилище на основе S3"
 permalink: ru/admin/configuration/storage/external/s3.html
+description: "Настройка интеграции с объектным хранилищем S3 в Deckhouse Kubernetes Platform. Настройка GeeseFS, конфигурация StorageClass и руководство по подключению S3-совместимого хранилища."
 lang: ru
 ---
 
@@ -27,7 +28,7 @@ Deckhouse поддерживает работу с объектным храни
 
 ### Включение модуля
 
-Для поддержки работы с S3-хранилищем включите модуль `csi-s3`, который позволяет создавать StorageClass и Secret в Kubernetes с помощью пользовательских ресурсов [S3StorageClass](/modules/csi-s3/cr.html#s3storageclass). После включения модуля на узлах кластера произойдёт:
+Для поддержки работы с S3-хранилищем включите [модуль `csi-s3`](/modules/csi-s3/), который позволяет создавать StorageClass и Secret в Kubernetes с помощью пользовательских ресурсов [S3StorageClass](/modules/csi-s3/cr.html#s3storageclass). После включения модуля на узлах кластера произойдёт:
 
 - регистрация CSI-драйвера;
 - запуск сервисных подов `csi-s3` и создание необходимых компонентов.

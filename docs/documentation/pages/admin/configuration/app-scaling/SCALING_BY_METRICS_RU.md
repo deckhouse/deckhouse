@@ -1,6 +1,7 @@
 ---
 title: "Масштабирование по метрикам"
 permalink: ru/admin/configuration/app-scaling/scaling-by-metrics.html
+description: "Настройка масштабирования на основе метрик в Deckhouse Kubernetes Platform. Масштабирование по пользовательским метрикам, интеграция с Prometheus и настройка HPA для динамической корректировки ресурсов."
 lang: ru
 ---
 

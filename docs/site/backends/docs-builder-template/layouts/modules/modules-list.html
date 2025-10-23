@@ -17,6 +17,7 @@
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
         data-search-index-path="/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        data-search-context='{{ T "search_context_modules" }}'
         >
         <div id="search-results" class="results" style="display: none"></div>
       </div>
@@ -59,11 +60,10 @@
   {{ $moduleDescription := "" }}
   {{ $moduleTags := slice }}
 
-  {{/* Skip the module if there is embedded module with the same name (in the $embeddedModulesList) */}}
+  {{/* Skip the embedded module if there is external module with the same name */}}
   {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
   {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
-    {{ warnf "Found embedded module %s and external modules with the same name. Use only embedded module." $module }}
-    {{ continue }}
+    {{ warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
   {{ end }}
 
   {{ $moduleTags = index (index $modulesEditions $module) "tags" }}
@@ -90,7 +90,16 @@
 {{ warnf "Found %d modules from sources." ($modulesList | len) }}
 {{ if $embeddedModulesList }}
   {{ warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
-  {{ $modulesList = $modulesList | append $embeddedModulesList }}
+  {{ $filteredEmbeddedModules := slice }}
+  {{ range $embeddedModulesList }}
+    {{ $externalModuleWithSameName := (where $modulesList "module" .module) }}
+    {{ if eq ($externalModuleWithSameName | len) 0 }}
+      {{ $filteredEmbeddedModules = $filteredEmbeddedModules | append . }}
+    {{ else }}
+      {{ warnf "Skipping embedded module %s because external module with same name exists." .module }}
+    {{ end }}
+  {{ end }}
+  {{ $modulesList = $modulesList | append $filteredEmbeddedModules }}
 {{ else }}
   {{ warnf "No embedded modules found!" }}
 {{ end }}
@@ -156,13 +165,6 @@
       {{- end }}
 
       </div>
-
-      <button class="tile__pagination">
-        <p class="tile__pagination--descr">{{ T "show_more" }}</p>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
-        </svg>
-      </button>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
     {{- if ne site.Params.mode "module" }}

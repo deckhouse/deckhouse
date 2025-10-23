@@ -45,6 +45,9 @@ func TestExporterGetStatistic(t *testing.T) {
 			OneGaugeMetrics: make(map[string]prometheus.Gauge),
 			GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
 			CounterMetrics:  make(map[string]*prometheus.CounterVec),
+			isDebug:         false,
+			logger:          log.GetDefaultLogger(),
+			tmpDir:          t.TempDir(),
 		}
 	}
 	exporter := newTestConvergeExporter()

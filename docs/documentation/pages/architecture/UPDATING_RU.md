@@ -2,6 +2,7 @@
 title: Обновление
 permalink: ru/architecture/updating.html
 lang: ru
+search: architecture deckhouse updates, release management architecture, update architecture, архитектура обновления Deckhouse, архитектура управления релизами и обновлениями
 ---
 
 ## Релизы
@@ -74,7 +75,7 @@ d8 k get nodes
 
 ### Процесс обновления компонентов control plane
 
-1. Модуль `control-plane-manager` вносит изменения в манифесты основных компонентов (`apiserver`, `controller-manager`, `scheduler` и др.).
+1. Модуль [control-plane-manager](/modules/control-plane-manager/) вносит изменения в манифесты основных компонентов (`apiserver`, `controller-manager`, `scheduler` и др.).
 2. Обновлённые компоненты разворачиваются на всех master-узлах.
 
 При обновлении до новой минорной версии (**upgrade**):

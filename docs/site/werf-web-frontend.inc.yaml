@@ -16,13 +16,11 @@
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine-3.22
 final: false
 shell:
-  install:
-  - apk add --no-cache jq curl
-  - mkdir -p /data
   setup:
+  - mkdir -p /data
   - echo "Getting data from the API server..."
   - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
   - |
@@ -33,6 +31,19 @@ shell:
     jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
   - |
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
+import:
+- image: tools/curl
+  add: /usr/bin/curl-static
+  to: /usr/bin/curl
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 {{- end }}
 ---
 image: web-frontend-artifact
@@ -68,10 +79,12 @@ git:
   - _assets/js/search.js
   - _data/rbac/
   - _includes/rbac/
+  - _includes/related_links.liquid
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
   - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
+  - _plugins/related_links.rb
   - _plugins/sidebar_custom.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb
@@ -132,22 +145,13 @@ import:
     to: /srv/jekyll-data/site/_data/copyright.json
     before: setup
 {{- end }}
+{{- if and (ne $.Env "development") (ne $.Env "local") }}
 ---
-image: web-frontend
-imageSpec:
-  config:
-    workingDir: "/app"
-# TODO use the common image for nginx
-fromImage: builder/alpine-3.20
-shell:
-  beforeInstall:
-  - apk add --no-cache nginx
-  install:
-  - |
-      mkdir -p /scripts
-      cat <<"EOD" > /scripts/channels-convert.sh
-      {{- .Files.Get ".werf/channels-convert.sh" | nindent 6 }}
-      EOD
+image: web-frontend-init
+fromImage: builder/alpine-3.22
+git:
+- add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
+  to: /scripts/channels-convert.sh
 import:
 - image: tools/jq
   add: /usr/bin/jq
@@ -157,16 +161,43 @@ import:
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
+{{- end }}
+---
+image: web-frontend
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+fromImage: builder/alpine-3.22
+{{- else }}
+fromImage: base/nginx
+imageSpec:
+  config:
+    workingDir: "/app"
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+{{- end }}
+shell:
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+  beforeInstall:
+  - apk add --no-cache nginx
+git:
+- add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
+  to: /scripts/channels-convert.sh
+{{- end }}
+import:
 - image: web-frontend-artifact
   add: /app/_site
   to: /app
   before: setup
-  owner: nginx
-  group: nginx
   excludePaths:
   - en/includes/
   - ru/includes/
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 - image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules

@@ -1,17 +1,18 @@
 ---
 title: "Setting up replicated storage based on DRBD"
 permalink: en/admin/configuration/storage/sds/lvm-replicated.html
+description: "Configure replicated storage based on DRBD in Deckhouse Kubernetes Platform. High availability storage with LINSTOR backend for fault tolerance and data replication across nodes."
 ---
 
 Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.
 
-To create replicated block StorageClass objects based on Distributed Replicated Block Device (DRBD), the `sds-replicated-volume` module is used. It leverages [LINSTOR](https://linbit.com/linstor/) as the backend.
+To create replicated block StorageClass objects based on Distributed Replicated Block Device (DRBD), the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module is used. It leverages [LINSTOR](https://linbit.com/linstor/) as the backend.
 
 ## Enabling the module
 
 ### Discovery of LVM components
 
-Before creating StorageClass objects based on Logical Volume Manager (LVM), it is necessary to detect the block devices and volume groups available on the nodes and obtain current information about their state. To do this, enable the `sds-node-configurator` module:
+Before creating StorageClass objects based on Logical Volume Manager (LVM), it is necessary to detect the block devices and volume groups available on the nodes and obtain current information about their state. To do this, enable the [`sds-node-configurator`](/modules/sds-node-configurator/) module:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -25,13 +26,13 @@ spec:
 EOF
 ```
 
-Wait for the `sds-node-configurator` module to reach the `Ready` status. To check the status, run the following command:
+Wait for the [`sds-node-configurator`](/modules/sds-node-configurator/) module to reach the `Ready` status. To check the status, run the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
 ```
 
-In the output, you should see information about the `sds-node-configurator` module:
+In the output, you should see information about the [`sds-node-configurator`](/modules/sds-node-configurator/) module:
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
@@ -40,7 +41,7 @@ sds-node-configurator              Embedded  Available   True       True
 
 ### Connecting DRBD
 
-To enable the `sds-replicated-volume` module with default settings, run the following command:
+To enable the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module with default settings, run the following command:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -54,15 +55,15 @@ spec:
 EOF
 ```
 
-This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the `sds-replicated-volume` component Pods.
+This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the [`sds-replicated-volume`](/modules/sds-replicated-volume/) component Pods.
 
-Wait until the `sds-replicated-volume` module reaches the `Ready` status. To check the module status, run the following command:
+Wait until the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module reaches the `Ready` status. To check the module status, run the following command:
 
 ```shell
 d8 k get modules sds-replicated-volume -w
 ```
 
-In the output, you should see information about the `sds-replicated-volume` module:
+In the output, you should see information about the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module:
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
@@ -84,7 +85,7 @@ Avoid configuring the `LINSTOR` backend manually, as this can can result in erro
 
 ### Creating LVM volume groups
 
-Before configuring the creation of StorageClass objects, you need to combine the available block devices on the nodes into LVM volume groups. These volume groups will later be used to place PersistentVolumes. To get the available block devices, you can use the [BlockDevices](/modules/sds-node-configurator/cr.html#blockdevice) resource, which reflects their current state:
+Before configuring the creation of StorageClass objects, you need to combine the available block devices on the nodes into LVM volume groups. These volume groups will later be used to place PersistentVolumes. To get the available block devices, you can use the [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) resource, which reflects their current state:
 
 ```shell
 d8 k get bd
@@ -310,4 +311,4 @@ NAME                       PROVISIONER                      RECLAIMPOLICY   VOLU
 replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-If a StorageClass with the name `replicated-storage-class` appears, it means the configuration of the `sds-replicated-volume` module is complete. Users can now create PersistentVolume objects by specifying the `replicated-storage-class` StorageClass. With the above configuration, a volume with three replicas across different nodes will be created.
+If a StorageClass with the name `replicated-storage-class` appears, it means the configuration of the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module is complete. Users can now create PersistentVolume objects by specifying the `replicated-storage-class` StorageClass. With the above configuration, a volume with three replicas across different nodes will be created.

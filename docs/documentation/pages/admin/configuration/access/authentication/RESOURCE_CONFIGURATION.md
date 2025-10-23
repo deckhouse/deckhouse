@@ -1,6 +1,7 @@
 ---
 title: "Resource configuration"
 permalink: en/admin/configuration/access/authentication/resource-configuration.html
+description: "Configure resource limits and requests for authentication components in Deckhouse Kubernetes Platform. Dex, Kubeconfig Generator, and Basic Auth Proxy resource management."
 ---
 
 Deckhouse Kubernetes Platform allows you to configure resource limits and requests for all components. By default, the following values are used:

@@ -1,6 +1,7 @@
 ---
 title: "ALB with NGINX Ingress controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
+description: "Configure Application Load Balancer with NGINX Ingress controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
 ---
 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
@@ -248,7 +249,7 @@ metallb:
 Available in DKP Enterprise Edition only.
 {% endalert %}
 
-1. Enable the `metallb` module:
+1. Enable the [`metallb`](/modules/metallb/) module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -260,7 +261,7 @@ Available in DKP Enterprise Edition only.
      version: 2
    ```
 
-1. Create a MetalLoadBalancerClass resource:
+1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -276,7 +277,7 @@ Available in DKP Enterprise Edition only.
      type: L2
    ```
 
-1. Create a IngressNginxController resource:
+1. Create a [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1

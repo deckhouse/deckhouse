@@ -33,7 +33,7 @@ apiVersions:
                 Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
             instanceClass:
               description: |
-                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties: &instanceClassProperties
                 numCPUs:
                   description: |
@@ -150,7 +150,7 @@ apiVersions:
                   Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
                 properties:
                   <<: *instanceClassProperties
         sshPublicKey:
@@ -206,7 +206,7 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
+            [Подробнее](https://deckhouse.ru/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
         provider:
           description: Параметры подключения к vCenter.
           properties:

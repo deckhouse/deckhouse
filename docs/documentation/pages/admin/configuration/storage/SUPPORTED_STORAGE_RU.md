@@ -1,7 +1,9 @@
 ---
 title: "Настройка хранилищ"
 permalink: ru/admin/configuration/storage/supported-storage.html
+description: "Настройка поддерживаемых типов хранилищ в Deckhouse Kubernetes Platform. Конфигурация StorageClass, управление хранилищами и настройка различных типов хранилищ."
 lang: ru
+search: default storage class, supported-storagestorage configuration, storage setup, storage management, storage types, настройка хранилищ, конфигурация хранилища, управление хранилищем, типы хранилищ, поддерживаемые хранилища
 ---
 
 Настройка хранилищ происходит в несколько шагов, которые зависят от выбранного [типа хранилища](../storage/#поддерживаемые-типы-хранилищ). Основные этапы настройки:

@@ -53,8 +53,8 @@ function prepare_environment() {
   root_wd="/deckhouse/testing/cloud_layouts/"
   export cwd="/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/"
 
-  export AWS_ACCESS_KEY_ID="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")"
-  export AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")"
+  export AWS_ACCESS_KEY_ID="$LAYOUT_AWS_ACCESS_KEY"
+  export AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY"
   export KUBERNETES_VERSION="$KUBERNETES_VERSION"
   export CRI="$CRI"
   export LAYOUT="$LAYOUT"
@@ -83,6 +83,16 @@ function prepare_environment() {
   fi
   export DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  else
+    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  fi
+
+  decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
+  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
     # Then update cluster to DECKHOUSE_IMAGE_TAG.
@@ -98,7 +108,7 @@ function prepare_environment() {
   fi
 
   # shellcheck disable=SC2016
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" ="$FOX_DOCKERCFG" \
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" ="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \

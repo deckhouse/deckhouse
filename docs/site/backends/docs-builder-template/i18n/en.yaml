@@ -1,6 +1,8 @@
 allowed_values: allowed values
 search_placeholder_text: Search...
-search_placeholder_text_modules: Search by modules documentation...
+search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
+search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
+search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
 modules: modules
 modules2: modules
 module: module
@@ -36,6 +38,7 @@ found: found
 length: length
 min_length: minimal length
 max_length: maximum length
+moduleLinkTitleADVANCED_USAGE: Advanced usage
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples
 moduleLinkTitleCONFIGURATION: Configuration

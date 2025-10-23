@@ -1,6 +1,7 @@
 ---
 title: Managing the internal container image registry
 permalink: en/admin/configuration/registry/internal.html
+description: "Configure internal container image registry in Deckhouse Kubernetes Platform. Image caching, storage optimization, and high availability registry management."
 ---
 
 The ability to use internal registry is implemented by the [`registry`](/modules/registry/) module.
@@ -9,9 +10,9 @@ The internal registry allows for optimizing the downloading and storage of image
 
 ## Modes of operation with the internal registry
 
-The `registry` module, which implements internal storage, operates in the following modes:
+The [`registry`](/modules/registry/) module, which implements internal storage, operates in the following modes:
 
-- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
+- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the [`deckhouse`](/modules/deckhouse/configuration.html) ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
 
 - `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../registry/third-party.html).
 
@@ -21,7 +22,7 @@ The `registry` module, which implements internal storage, operates in the follow
 
 ## Restrictions on working with the internal registry
 
-Working with the internal registry using the `registry` module has a number of limitations and restrictions concerning installation, operating conditions, and mode switching.
+Working with the internal registry using the [`registry`](/modules/registry/) module has a number of limitations and restrictions concerning installation, operating conditions, and mode switching.
 
 ### Cluster installation limitations
 
@@ -29,7 +30,7 @@ Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The clu
 
 ### Operating conditions restrictions
 
-The module works under the following conditions:
+The [`registry`](/modules/registry/) module works under the following conditions:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
@@ -81,7 +82,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
+1. Make sure the [`registry`](/modules/registry/) module is enabled and running. To do this, execute the following command:
 
    ```bash
    d8 k get module registry -o wide
@@ -94,7 +95,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    registry   38     ...  Ready   True                         True
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the [`deckhouse`](/modules/deckhouse/configuration.html) ModuleConfig. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -166,7 +167,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Ensure that the `registry` module is running in `Direct` mode and the switch status to `Direct` is `Ready`. You can verify the state via the `registry-state` secret using [this guide](#check-registry-mode-switch-status). Example output:
+1. Ensure that the [`registry`](/modules/registry/) module is running in `Direct` mode and the switch status to `Direct` is `Ready`. You can verify the state via the `registry-state` secret using [this guide](#check-registry-mode-switch-status). Example output:
 
    ```yaml
    conditions:
@@ -181,7 +182,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    target_mode: Direct
    ```
 
-1. Set the `Unmanaged` mode in the ModuleConfig `deckhouse`:
+1. Set the `Unmanaged` mode in the [`deckhouse`](/modules/deckhouse/configuration.html) ModuleConfig:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

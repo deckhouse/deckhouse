@@ -17,13 +17,13 @@ without having to manually edit each one.
 
 ## Configuring automatic label and annotation assignment
 
-Enable the `namespace-configurator` module:
+Enable the [`namespace-configurator`](/modules/namespace-configurator/) module:
 
 ```shell  
 d8 platform module enable namespace-configurator
 ```
 
-Configure automatic label and annotation assignment in ModuleConfig [`namespace-configurator`](../../reference/mc/namespace-configurator):
+Configure automatic label and annotation assignment in ModuleConfig [`namespace-configurator`](/modules/namespace-configurator/configuration.html):
 
 1. Specify the annotations and labels to be applied to namespaces in the fields `settings.configurations.annotations` and `settings.configurations.labels`, respectively;
 1. Define the matching rules for namespace names:

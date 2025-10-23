@@ -1,6 +1,7 @@
 ---
 title: "Local authentication"
 permalink: en/admin/configuration/access/authentication/local.html
+description: "Configure local authentication for Deckhouse Kubernetes Platform with password policies, 2FA support, and group management. OWASP-compliant security implementation."
 ---
 
 In addition to external authentication providers, DKP also supports local authentication.
@@ -10,12 +11,12 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 Local authentication involves creating User and Group resources in the cluster for static users and groups:
 
-- A User object stores user information, including email and a hashed password (the password is not stored in plain text).
-- A Group object defines a list of users grouped together.
+- A [User](/modules/user-authn/cr.html#user) object stores user information, including email and a hashed password (the password is not stored in plain text).
+- A [Group](/modules/user-authn/cr.html#group) object defines a list of users grouped together.
 
 ## Creating a static user
 
-To create a static user, create a User resource.
+To create a static user, create a [User](/modules/user-authn/cr.html#user) resource.
 
 Example resource definition (note that the example includes a [ttl](/modules/user-authn/cr.html#user-v1-spec-ttl)):
 
@@ -53,7 +54,7 @@ It is forbidden to use users and groups with the `system:` prefix.
 Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
 {% endalert %}
 
-To group static users together, create a Group resource.
+To group static users together, create a [Group](/modules/user-authn/cr.html#group) resource.
 
 Example resource definition:
 

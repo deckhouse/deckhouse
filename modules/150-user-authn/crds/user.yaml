@@ -39,9 +39,11 @@ spec:
                   type: string
                   minLength: 1
                   description: |
-                    User email.
+                    User email. Must be in lowercase.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+
+                    **Important!** Email addresses are case-insensitive for uniqueness validation. Dex automatically converts emails to lowercase during authentication. For new users, uppercase letters in email addresses are not allowed. Existing users with uppercase emails can be updated without changing the email field.
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string
@@ -50,7 +52,7 @@ spec:
                     User password hash in plaintext or Base64 encoded.
 
                     Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
-                  
+
                     > **Caution.** If a password policy with complexity checking higher than `None` is used, the user will have to change a password set this way upon their first successful login.
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
                 userID:
@@ -158,9 +160,11 @@ spec:
                   type: string
                   minLength: 1
                   description: |
-                    User email.
+                    User email. Must be in lowercase.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+
+                    **Important!** Email addresses are case-insensitive for uniqueness validation. Dex automatically converts emails to lowercase during authentication. For new users, uppercase letters in email addresses are not allowed. Existing users with uppercase emails can be updated without changing the email field.
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string

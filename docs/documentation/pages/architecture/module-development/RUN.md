@@ -156,7 +156,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the `D8DeckhouseModuleValidationError` alert will appear, and the module will not be successfully activated.
+If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
 
 To get more details, use the following command:
 
@@ -417,7 +417,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-Similar to [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
+Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
 d8 k get mr

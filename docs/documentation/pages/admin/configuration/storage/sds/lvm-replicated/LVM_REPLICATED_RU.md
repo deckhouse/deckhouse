@@ -1,18 +1,19 @@
 ---
 title: "Настройка реплицируемого хранилища на основе DRBD"
 permalink: ru/admin/configuration/storage/sds/lvm-replicated.html
+description: "Настройка реплицируемого хранилища на основе DRBD в Deckhouse Kubernetes Platform. Высокодоступное хранилище с бэкендом LINSTOR для отказоустойчивости и репликации данных между узлами."
 lang: ru
 ---
 
 Репликация данных между несколькими узлами обеспечивает отказоустойчивость и доступность данных даже при сбоях в оборудовании или программном обеспечении одного из узлов. Это гарантирует, что данные сохранятся на других узлах, а доступ к ним будет непрерывным. Такая модель необходима для критически важных данных и распределенных инфраструктур с высокими требованиями к доступности и минимизации потерь при сбоях.
 
-Для создания реплицируемых блочных объектов StorageClass на базе Distributed Replicated Block Device (DRBD, распределенное реплицируемое блочное устройство) используется модуль `sds-replicated-volume`, который использует [LINSTOR](https://linbit.com/linstor/) в качестве бэкенда.
+Для создания реплицируемых блочных объектов StorageClass на базе Distributed Replicated Block Device (DRBD, распределенное реплицируемое блочное устройство) используется модуль [`sds-replicated-volume`](/modules/sds-replicated-volume/), который использует [LINSTOR](https://linbit.com/linstor/) в качестве бэкенда.
 
 ## Включение модуля
 
 ### Обнаружение компонентов LVM
 
-Перед тем как приступить к созданию объектов StorageClass на базе LVM (Logical Volume Manager), необходимо найти доступные на узлах блочные устройства и группы томов и получить актуальную информацию об их состоянии. Для этого включите модуль `sds-node-configurator`:
+Перед тем как приступить к созданию объектов StorageClass на базе LVM (Logical Volume Manager), необходимо найти доступные на узлах блочные устройства и группы томов и получить актуальную информацию об их состоянии. Для этого включите модуль [`sds-node-configurator`](/modules/sds-node-configurator/):
 
 ```shell
 d8 k apply -f - <<EOF
@@ -26,13 +27,13 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
+Дождитесь, когда модуль [`sds-node-configurator`](/modules/sds-node-configurator/) перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get modules sds-node-configurator -w
 ```
 
-В результате будет выведена информация о модуле `sds-node-configurator`:
+В результате будет выведена информация о модуле [`sds-node-configurator`](/modules/sds-node-configurator/):
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
@@ -41,7 +42,7 @@ sds-node-configurator              Embedded  Available   True       True
 
 ### Подключение DRBD
 
-Чтобы включить модуль `sds-replicated-volume` с настройками по умолчанию, выполните команду:
+Чтобы включить модуль [`sds-replicated-volume`](/modules/sds-replicated-volume/) с настройками по умолчанию, выполните команду:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -55,15 +56,15 @@ spec:
 EOF
 ```
 
-Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные поды компонентов `sds-replicated-volume`.
+Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные поды компонентов [`sds-replicated-volume`](/modules/sds-replicated-volume/).
 
-Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
+Дождитесь, когда модуль [`sds-replicated-volume`](/modules/sds-replicated-volume/) перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get modules sds-replicated-volume -w
 ```
 
-В результате будет выведена информация о модуле `sds-replicated-volume`:
+В результате будет выведена информация о модуле [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
@@ -85,7 +86,7 @@ d8 k -n d8-sds-node-configurator get pod -w
 
 ### Создание групп томов LVM
 
-Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс [BlockDevices](/modules/sds-node-configurator/cr.html#blockdevice), который отражает их актуальное состояние:
+Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice), который отражает их актуальное состояние:
 
 ```shell
 d8 k get bd
@@ -311,4 +312,4 @@ NAME                       PROVISIONER                      RECLAIMPOLICY   VOLU
 replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если StorageClass с именем `replicated-storage-class` появился, значит настройка модуля `sds-replicated-volume` завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `replicated-storage-class`. При указанных выше настройках будет создаваться том с тремя репликами на разных узлах.
+Если StorageClass с именем `replicated-storage-class` появился, значит настройка модуля [`sds-replicated-volume`](/modules/sds-replicated-volume/) завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `replicated-storage-class`. При указанных выше настройках будет создаваться том с тремя репликами на разных узлах.

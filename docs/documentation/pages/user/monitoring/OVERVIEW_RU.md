@@ -2,6 +2,7 @@
 title: "Обзор"
 permalink: ru/user/monitoring/
 lang: ru
+search: monitoring overview, cluster monitoring, metrics collection, monitoring setup, observability, обзор мониторинга, мониторинг кластера, сбор метрик, наблюдаемость
 ---
 
 Deckhouse Kubernetes Platform (DKP) предоставляет удобную и готовую к работе систему мониторинга Kubernetes-кластера.

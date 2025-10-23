@@ -1,16 +1,17 @@
 ---
 title: "Setting up local storage based on LVM"
 permalink: en/admin/configuration/storage/sds/lvm-local.html
+description: "Configure local LVM-based storage in Deckhouse Kubernetes Platform. High-performance local storage setup for test environments and EDGE clusters with reduced network latency."
 ---
 
-Local storage reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the `sds-local-volume` module.
+Local storage reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the [`sds-local-volume`](/modules/sds-local-volume/) module.
 
 ## Configuring local storage
 
 To ensure the correct operation of the `sds-local-volume` module, follow these steps:
 
 1. Configure LVMVolumeGroup. Before creating a StorageClass, you must create an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `sds-node-configurator` module on the cluster nodes.
-1. Enable the `sds-node-configurator` module. Ensure that the module is enabled **before** enabling the `sds-local-volume` module.
+1. Enable the [`sds-node-configurator`](/modules/sds-node-configurator/) module. Ensure that the module is enabled **before** enabling the `sds-local-volume` module.
 1. Create the corresponding StorageClasses. Creating a StorageClass for the CSI driver `local.csi.storage.deckhouse.io` by a user is **prohibited**.
 
 The module supports two operating modes: LVM and LVMThin.
@@ -21,7 +22,7 @@ All commands are executed on a machine with access to the Kubernetes API and adm
 
 ### Enabling modules
 
-Enabling the `sds-node-configurator` module:
+Enabling the [`sds-node-configurator`](/modules/sds-node-configurator/) module:
 
 1. Create a ModuleConfig resource to enable the module:
 
@@ -43,7 +44,7 @@ Enabling the `sds-node-configurator` module:
    d8 k get modules sds-node-configurator -w
    ```
 
-Enabling the `sds-local-volume` module:
+Enabling the [`sds-local-volume`](/modules/sds-local-volume/) module:
 
 1. Activate the `sds-local-volume` module. The example below starts the module with default settings, which will create service pods for the `sds-local-volume` component on all cluster nodes:
 
@@ -264,7 +265,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    d8 k get sc local-storage-class
    ```
 
-If a StorageClass named `local-storage-class` appears, the configuration of the `sds-local-volume` module is complete. Users can now create PVCs by specifying the StorageClass named `local-storage-class`.
+If a StorageClass named `local-storage-class` appears, the configuration of the [`sds-local-volume`](/modules/sds-local-volume/) module is complete. Users can now create PVCs by specifying the StorageClass named `local-storage-class`.
 
 ### Selecting a volume cleanup method after PV deletion
 
@@ -281,7 +282,7 @@ This is possible, for example, in the following scenario:
 
 ### Thick volumes
 
-To prevent data leaks through thick volumes, the `volumeCleanup` parameter is provided. It allows you to select the volume cleanup method before deleting a PV.
+To prevent data leaks through thick volumes, the [`volumeCleanup`](/modules/sds-node-configurator/cr.html#lvmlogicalvolume-v1alpha1-spec-volumecleanup) parameter is provided. It allows you to select the volume cleanup method before deleting a PV.
 
 Possible values:
 

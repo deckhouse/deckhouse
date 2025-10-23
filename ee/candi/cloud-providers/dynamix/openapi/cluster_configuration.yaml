@@ -222,7 +222,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-dynamix/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-dynamix/layouts.html) about possible provider layouts.
         x-unsafe: true
       provider:
         type: object

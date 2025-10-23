@@ -7,7 +7,7 @@ lang: ru
 Canary deployment — стратегия развертывания приложений, которая позволяет постепенно внедрять в production новую версию приложения.
 Этот подход даёт возможность тестировать новые версии на небольшой части трафика, минимизируя риски и обеспечивая плавный переход.
 С помощью Canary deployment возможно переключение трафика на новую версию по мере уверенности в её стабильности, с возможностью быстрого отката на старую версию при возникновении проблем.
-В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [`ingress-nginx`](../../modules/ingress-nginx/) или [`istio`](../../modules/istio/) (рекомендуемый способ).
+В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [ingress-nginx](/modules/ingress-nginx/) или [istio](/modules/istio/) (рекомендуемый способ).
 
 ## Примеры настроек Canary deployment средствами Ingress NGINX
 

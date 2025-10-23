@@ -10,7 +10,7 @@ lang: ru
 
   Примеры:  
   - [установка kubectl-плагина](node-management.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
-  - [настройка containerd с поддержкой Nvidia GPU](./#как-использовать-containerd-с-поддержкой-nvidia-gpu).
+  - [настройка containerd с поддержкой Nvidia GPU](#как-использовать-containerd-с-поддержкой-nvidia-gpu).
 
 - Обновление ядра ОС на конкретную версию.
 
@@ -65,7 +65,7 @@ cloudProvider:
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
-<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
+<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
 ```yaml
 nodeUsers:
@@ -189,7 +189,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Далее создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
+Далее создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -236,7 +236,7 @@ spec:
   weight: 31
 ```
 
-Добавьте ресурс NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
+Добавьте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для установки драйверов Nvidia для NodeGroup `gpu`.
 
 ### Ubuntu
 

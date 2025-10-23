@@ -46,10 +46,6 @@
   },
   "code": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "external": "true",
@@ -121,30 +117,52 @@
   },
   "csi-netapp": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-netapp/stable/"
   },
-  "csi-vsphere": {
-    "editions": [
-      "se-plus",
-      "ee"
-    ],
-    "external": "true",
-    "path": "/products/kubernetes-platform/documentation/v1/storage/admin/external/vsphere.html"
-  },
   "csi-hpe": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -158,17 +176,6 @@
     ],
     "external": "true",
     "path": "/modules/csi-nfs/stable/"
-  },
-  "csi-netapp": {
-    "editions": [
-      "ce",
-      "se",
-      "se-plus",
-      "ee",
-      "cse-pro"
-    ],
-    "external": "true",
-    "path": "/modules/csi-netapp/stable/"
   },
   "csi-s3": {
     "editions": [
@@ -193,15 +200,11 @@
   },
   "delivery-kit": {
     "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
       "cse-lite",
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "istio": {
     "editionMinimumAvailable": "ce",
@@ -234,24 +237,20 @@
     },
     "path": "modules/metallb/"
   },
-  "managed-memcached": {
-    "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/managed-memcached/stable/"
-  },
-  "managed-postgres": {
-    "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/managed-postgres/stable/"
-  },
   "neuvector": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/neuvector/stable/"
   },
@@ -283,10 +282,27 @@
   },
   "operator-argo": {
     "editions": [
+      "ee",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
+    "external": "true",
+    "path": "/modules/operator-argo/stable/"
+  },
+  "payload-registry": {
+    "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/operator-argo/stable/"
+    "path": "/modules/payload-registry/stable/"
   },
   "pod-reloader": {
     "editions": [
@@ -390,17 +406,6 @@
     "external": "true",
     "path": "/modules/snapshot-controller/stable/"
   },
-  "storage-volume-data-manager": {
-    "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/storage-volume-data-manager/stable/"
-  },
   "static-routing-manager": {
     "editions": [
       "ee"
@@ -410,10 +415,7 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "se",
-      "se-plus",
-      "ee",
-      "cse-pro"
+      "ee"
     ],
     "external": "true",
     "path": "/modules/storage-volume-data-manager/stable/"

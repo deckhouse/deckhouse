@@ -1,6 +1,7 @@
 ---
 title: Сбор и доставка логов
 permalink: ru/admin/configuration/logging/delivery.html
+description: "Настройка сбора и доставки логов в Deckhouse Kubernetes Platform. Централизованное логирование из подов и узлов во внутренние или внешние системы хранения с фильтрацией и маршрутизацией."
 lang: ru
 ---
 
@@ -25,7 +26,7 @@ DKP позволяет:
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
 На основе этих ресурсов формируется *pipeline*, который используется в DKP для чтения логов
-и дальнейшей работы с ними c помощью модуля `log-shipper`.
+и дальнейшей работы с ними c помощью [модуля `log-shipper`](/modules/log-shipper/).
 Полный перечень настроек модуля `log-shipper` доступен [в отдельном разделе документации](/modules/log-shipper/configuration.html).
 
 ## Настройка сбора и доставки логов
@@ -35,7 +36,7 @@ DKP позволяет:
 
 Для настройки выполните следующие шаги:
 
-1. Включите модуль `log-shipper` с помощью следующей команды:
+1. Включите [модуль `log-shipper`](/modules/log-shipper/) с помощью следующей команды:
 
    ```shell
    d8 platform module enable log-shipper
@@ -195,7 +196,7 @@ spec:
 
 {% alert level="info" %}
 `destination` не поддерживает метки пода для индексирования.
-Чтобы добавить нужные метки, используйте опцию `extraLabels`:
+Чтобы добавить нужные метки, используйте [опцию `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
 
 ```yaml
 extraLabels:
@@ -346,7 +347,7 @@ extraLabels:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -409,7 +410,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: replace-dot
 spec:
@@ -454,7 +455,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:
@@ -673,7 +674,7 @@ spec:
 
 ### Включение debug-логов агента log-shipper
 
-Чтобы включить debug-логи агента `log-shipper` на узлах с информацией об HTTP-запросах, переиспользовании подключения,
+Чтобы включить debug-логи [агента `log-shipper`](/modules/log-shipper/) на узлах с информацией об HTTP-запросах, переиспользовании подключения,
 трассировке и прочими данными, включите [параметр `debug`](/modules/log-shipper/configuration.html#parameters-debug) в конфигурации модуля `log-shipper`.
 
 Пример конфигурации модуля:
@@ -780,7 +781,7 @@ del(.test2)
 
 ### Добавление поддержки нового source или sink
 
-Модуль `log-shipper` в DKP собирается на основе Vector с ограниченным набором [cargo-функций](https://doc.rust-lang.org/cargo/reference/features.html),
+[Модуль `log-shipper`](/modules/log-shipper/) в DKP собирается на основе Vector с ограниченным набором [cargo-функций](https://doc.rust-lang.org/cargo/reference/features.html),
 чтобы минимизировать размер запускаемого файла и ускорить сборку.
 
 Чтобы посмотреть весь список поддерживаемых функций, выполните команду `vector list`.

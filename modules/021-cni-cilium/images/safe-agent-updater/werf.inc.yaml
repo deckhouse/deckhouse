@@ -46,6 +46,8 @@ import:
   add: /src/safe-agent-updater
   to: /safe-agent-updater
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/safe-agent-updater"]

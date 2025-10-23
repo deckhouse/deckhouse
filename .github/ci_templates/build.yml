@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -28,7 +28,11 @@ check_changelog:
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
+{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+runs-on: [self-hosted, stage]
+{!{- else }!}
 runs-on: [self-hosted, large]
+{!{- end }!}
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
@@ -39,13 +43,26 @@ steps:
   {!{- $secrets := slice -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key" "access_token" "COSIGN_KEY" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
+  {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+  {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
+  {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
@@ -69,19 +86,49 @@ steps:
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
+{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+      DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+{!{- end }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+      DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+{!{- end }!}
+{!{- if eq $buildType "release" }!}
+      GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+      GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-      DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-      DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+{!{- end }!}
+      SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+      CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+      OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
+      DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
       COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+      COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-{!{- else }!}
+{!{- if eq $buildType "dev" }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- else }!}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+      COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+      COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+      COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+{!{- else }!}
+      COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+      COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+      COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -127,55 +174,43 @@ steps:
       echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
       mkdir -p "$TEMP_WORKDIR"
 
+    {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+      export WERF_REPO="${STAGE_REGISTRY_PATH}"
+    {!{- else }!}
+      DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+    {!{- end }!}
+    {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
       if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+      SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
       else
-        SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+      SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
       fi
+      # Release tag build, set deckhouse registry as final
+      export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-      export WERF_REPO="${DEV_REGISTRY_PATH}"
-      if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        # Release tag build, set deckhouse registry as final
-        export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
-
-        # Set cosign auth values
-        export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-        export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-        export COSIGN_VAULT_KEY="dh-2025-aug"
-        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-        AUTH_ROLE="dh-signer_dh-signer"
-
-        # The Git tag may contain a '+' sign, so use slugify for this situation.
-        # Slugify doesn't change a tag with safe-only characters.
-        IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-        export WERF_DISABLE_META_TAGS=true
-      else
-        # Other build, set deckhouse registry as secondary
-        export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
-
-        # Set cosign auth values
-        export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-        export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-        export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-        AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-        # Determine image tag
-        if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
-        fi
-        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+      # The Git tag may contain a '+' sign, so use slugify for this situation.
+      # Slugify doesn't change a tag with safe-only characters.
+      IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+      export WERF_DISABLE_META_TAGS=true
+    {!{- else if eq $buildType "pre-release" }!}
+      # The Git tag may contain a '+' sign, so use slugify for this situation.
+      # Slugify doesn't change a tag with safe-only characters.
+      IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+      export WERF_DISABLE_META_TAGS=true
+    {!{- else }!}
+      # Determine image tag
+      if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+      IMAGE_EDITION=${WERF_ENV,,}
       fi
-      # Set cosign auth values
-      export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-      ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-      export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-      ACTIONS_ID_TOKEN="null" #clear value
-      AUTH_ROLE="null" #clear value
+      # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+      # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+      IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+    {!{- end }!}
 
       type werf && source $(werf ci-env github --verbose --as-file)
       werf build \
@@ -189,17 +224,17 @@ steps:
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
         echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-        publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-        publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-        publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-        publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+        publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+        publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
         # For release branches, also push release-channel to dev
         if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-          publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-          publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-          publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-          publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+          publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+          publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
         fi
       else
         echo "Branch unset, skipping branch publish."

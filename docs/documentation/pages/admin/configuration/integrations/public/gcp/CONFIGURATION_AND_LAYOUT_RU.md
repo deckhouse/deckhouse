@@ -149,7 +149,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с GCP осуществляется с помощью ресурса GCPClusterConfiguration, который описывает конфигурацию облачного кластера в GCP и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию облачного кластера в GCP и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -195,7 +195,7 @@ provider:
   serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса ([параметр `cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
 
@@ -208,7 +208,7 @@ provider:
 | ssd | none | `pd-ssd-not-replicated` |
 | ssd | regional | `pd-ssd-replicated` |
 
-Можно отфильтровать ненужные StorageClass'ы, для этого укажите их в параметре `exclude`.
+Можно отфильтровать ненужные StorageClass'ы, для этого укажите их в [параметре `exclude`](/modules/cloud-provider-gcp/configuration.html#parameters-storageclass-exclude).
 
 ### Настройка политик безопасности на узлах
 
@@ -224,8 +224,8 @@ provider:
 
 Данный параметр можно задать либо при создании кластера или в уже существующем кластере. В обоих случаях дополнительные network tags указываются в GCPClusterConfiguration:
 
-- для master-узлов — в секции `masterNodeGroup` в поле `additionalNetworkTags`;
-- для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalNetworkTags`.
+- для master-узлов — в секции `masterNodeGroup` в [поле `additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags);
+- для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в [поле `additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags).
 
 Поле `additionalNetworkTags` содержит массив строк с именами network tags.
 

@@ -2,25 +2,51 @@ class ModuleSearch {
   constructor(options = {}) {
     this.searchInput = document.getElementById('search-input');
     this.searchResults = document.getElementById('search-results');
+
+    // Check if required DOM elements exist
+    if (!this.searchInput) {
+      console.error('Search input element not found');
+      return;
+    }
+    if (!this.searchResults) {
+      console.error('Search results element not found');
+      return;
+    }
+
+    // Store the original placeholder from HTML for later restoration
+    this.originalPlaceholder = this.searchInput.placeholder;
+
     this.searchIndex = null;
     this.searchData = null;
     this.lunrIndex = null;
     this.fuseIndex = null;
     this.searchDictionary = [];
     this.lastQuery = '';
+    this.pendingQuery = ''; // For storing user input while index is loading
     this.currentResults = {
-      config: [],
-      other: []
+      isResourceNameMatch: [],
+      nameMatch: [],
+      isResourceOther: [],
+      parameterOther: [],
+      document: []
     };
     this.displayedCounts = {
-      config: 5,
-      other: 5
+      isResourceNameMatch: 5,
+      nameMatch: 5,
+      isResourceOther: 5,
+      parameterOther: 5,
+      document: 5
     };
     this.isDataLoaded = false;
+    this.isLoadingInBackground = false;
+    this.searchTimeout = null; // For debouncing search input
 
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
+      searchDebounceMs: 300, // Debounce search input by 300ms
+      backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
+      searchContext: '', // Search context message to display above ready message
       ...options
     };
 
@@ -30,7 +56,7 @@ class ModuleSearch {
     this.init();
   }
 
-    initI18n() {
+  initI18n() {
     // Get current page language from HTML lang attribute
     this.currentLang = document.documentElement.lang || 'en';
 
@@ -40,7 +66,7 @@ class ModuleSearch {
         api: 'API',
         documentation: 'Documentation',
         showMore: 'Show more',
-        loading: 'Loading search index...',
+        loading: 'Loading search index... (you can formulate query, while index is loading)',
         ready: 'What are we looking for?',
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
@@ -50,7 +76,7 @@ class ModuleSearch {
         api: 'API',
         documentation: 'Документация',
         showMore: 'Показать еще',
-        loading: 'Загрузка поискового индекса...',
+        loading: 'Загрузка поискового индекса... (можно формулировать запрос, пока идет загрузка индекса)',
         ready: 'Что ищем?',
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
@@ -64,7 +90,7 @@ class ModuleSearch {
     }
   }
 
-    // Get translated text
+  // Get translated text
   t(key, params = {}) {
     let text = this.i18n[this.currentLang][key] || this.i18n.en[key] || key;
 
@@ -116,20 +142,40 @@ class ModuleSearch {
 
     // Hide search results by default
     this.searchResults.style.display = 'none';
+
+    // Initialize UI state
+    this.updateUIState();
+
+    // Start background loading of search indexes after page is fully loaded
+    this.startBackgroundLoading();
   }
 
-    setupEventListeners() {
-    // Load search index on focus (only if not already loaded)
+  setupEventListeners() {
+    // Show search results container when focused
     this.searchInput.addEventListener('focus', () => {
-      // Show loading state when user first focuses on search
-      if (!this.isDataLoaded) {
-        this.showLoading();
-        this.searchInput.disabled = true;
-        this.searchInput.placeholder = this.t('loading');
-        this.loadSearchIndex();
-      }
       // Show search results container when focused (even if empty)
       this.searchResults.style.display = 'flex';
+
+      // If data is not loaded and not currently loading, trigger loading
+      if (!this.isDataLoaded && !this.isLoadingInBackground) {
+        this.showLoading();
+        this.searchInput.placeholder = this.t('loading');
+        this.loadSearchIndex();
+      } else if (this.isDataLoaded) {
+        // Data is loaded, check if there's a query in the input
+        const query = this.searchInput.value.trim();
+        if (query.length > 0) {
+          // There's a query, execute the search
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(query);
+        } else {
+          // No query, show ready message
+          this.updateUIState();
+        }
+      } else {
+        // Data is loading in background, show loading state
+        this.updateUIState();
+      }
     });
 
     // Hide results when input loses focus (unless clicking on results)
@@ -154,37 +200,61 @@ class ModuleSearch {
         const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
         if (!isClickingOnSearch && !isBlurToSearch && !hasLoadingOrError) {
           this.searchResults.style.display = 'none';
+          // Restore original HTML placeholder when search is closed
+          this.searchInput.placeholder = this.originalPlaceholder;
+        } else if (!isClickingOnSearch && !isBlurToSearch) {
+          // Even if there are loading/error messages, we should restore the placeholder when closing
+          this.searchInput.placeholder = this.originalPlaceholder;
         }
       }, 150);
     });
 
     this.searchInput.addEventListener('input', (e) => {
-      // Don't allow searching until index is loaded
+      const query = e.target.value.trim();
+
+      // Store user input while index is loading
       if (!this.isDataLoaded) {
+        this.pendingQuery = e.target.value; // Store the full value including spaces
+        // Show search results container to indicate typing is being captured
+        this.searchResults.style.display = 'flex';
+        this.showMessage(this.t('loading'));
         return;
       }
 
-      const query = e.target.value.trim();
+      // Clear existing timeout
+      if (this.searchTimeout) {
+        clearTimeout(this.searchTimeout);
+      }
+
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
-        this.handleSearch(query);
+        // Set placeholder to "ready" when actively searching
+        if (this.isDataLoaded) {
+          this.searchInput.placeholder = this.t('ready');
+        }
+        // Debounce the search to prevent excessive calls
+        this.searchTimeout = setTimeout(() => {
+          this.handleSearch(query);
+        }, this.options.searchDebounceMs);
       } else {
-        // Show "What are we looking for?" message when search is cleared
-        this.searchResults.style.display = 'flex';
-        this.showMessage(this.t('ready'));
+        // Input is cleared - hide search results and restore HTML placeholder
+        this.searchResults.style.display = 'none';
+        this.searchInput.placeholder = this.originalPlaceholder;
       }
     });
 
     this.searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Don't allow searching until index is loaded
+        const query = e.target.value.trim();
+
+        // Store user input while index is loading
         if (!this.isDataLoaded) {
+          this.pendingQuery = e.target.value; // Store the full value including spaces
           return;
         }
 
-        const query = e.target.value.trim();
         if (query.length > 0) {
           this.searchResults.style.display = 'flex';
           this.handleSearch(query);
@@ -233,13 +303,55 @@ class ModuleSearch {
     });
   }
 
+  startBackgroundLoading() {
+    // Don't start if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    // Wait for page to be fully loaded before starting background loading
+    if (document.readyState === 'complete') {
+      // Page is already loaded, start background loading after a delay
+      setTimeout(() => {
+        this.loadSearchIndexInBackground();
+      }, this.options.backgroundLoadDelay);
+    } else {
+      // Wait for page to finish loading
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          this.loadSearchIndexInBackground();
+        }, this.options.backgroundLoadDelay);
+      });
+    }
+  }
+
+  async loadSearchIndexInBackground() {
+    // Don't load if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    this.isLoadingInBackground = true;
+
+    try {
+      await this.loadSearchIndex();
+    } catch (error) {
+      console.warn('Background loading of search index failed:', error);
+    } finally {
+      this.isLoadingInBackground = false;
+    }
+  }
+
   async loadSearchIndex() {
     if (this.isDataLoaded) {
       return; // Already loaded
     }
 
     try {
-      this.showLoading();
+      // Only show loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.showLoading();
+      }
 
       // Parse search index paths with boost levels
       const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
@@ -317,134 +429,132 @@ class ModuleSearch {
       this.buildSearchDictionary();
       this.buildFuseIndex();
       this.isDataLoaded = true;
-      this.hideLoading();
 
-      // Re-enable search input
-      this.searchInput.disabled = false;
-      this.searchInput.placeholder = this.t('ready');
+      // Only hide loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.hideLoading();
+      }
 
-      // Keep focus on search input after loading
-      this.searchInput.focus();
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
-      // Show message that search index is loaded and ready
-      this.showMessage(this.t('ready'));
+      // Only focus and show UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after loading
+        this.searchInput.focus();
+
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after on-demand loading:', this.pendingQuery);
+          this.pendingQuery = ''; // Clear pending query
+        } else {
+          // Show message that search index is loaded and ready
+          this.showMessage(this.t('ready'));
+        }
+      } else {
+        // Background loading completed
+        // Update UI to reflect that data is now loaded
+        this.updateUIState();
+
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after background loading:', this.pendingQuery);
+        }
+
+        // Clear pending query after processing
+        this.pendingQuery = '';
+      }
     } catch (error) {
       console.error('Error loading search index:', error);
-      // Re-enable search input even on error
-      this.searchInput.disabled = false;
-      this.searchInput.placeholder = this.t('ready');
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
-      // Keep focus on search input after error
-      this.searchInput.focus();
-
-      this.showError('Failed to load search index. Please try again later.');
+      // Only show error UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after error
+        this.searchInput.focus();
+        this.showError('Failed to load search index. Please try again later.');
+      }
     }
   }
 
   buildLunrIndex() {
     const searchData = this.searchData;
+    const useRussianSupport = this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined';
 
     // Use multilingual support for Russian, default for English
-    if (this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined') {
-      // Use Russian language support with lunr.multiLanguage
-      this.lunrIndex = lunr(function() {
+    this.lunrIndex = lunr(function() {
+      // Configure language support
+      if (useRussianSupport) {
         this.use(lunr.multiLanguage('en', 'ru'));
-        this.field('title', { boost: 10 });
-        this.field('keywords', { boost: 8 });
-        this.field('module', { boost: 6 });
-        this.field('summary', { boost: 3 });
-        this.field('content', { boost: 1 });
-        this.ref('id');
+      }
 
-        // Add documents from the documents array
-        let docCounter = 0;
-        if (searchData.documents) {
-          searchData.documents.forEach((doc) => {
-            this.add({
-              id: `doc_${docCounter}`,
-              title: doc.title || '',
-              keywords: doc.keywords || '',
-              module: doc.module || '',
-              summary: doc.summary || '',
-              content: doc.content || '',
-              url: doc.url || '',
-              moduletype: doc.moduletype || '',
-              type: 'document'
-            });
-            docCounter++;
-          });
-        }
+      // Configure fields
+      this.field('title', { boost: 10 });
+      this.field('keywords', { boost: 8 });
+      this.field('module', { boost: 6 });
+      this.field('summary', { boost: 3 });
+      this.field('content', { boost: 1 });
+      this.ref('id');
 
-        // Add parameters from the parameters array
-        let paramCounter = 0;
-        if (searchData.parameters) {
-          searchData.parameters.forEach((param) => {
-            this.add({
-              id: `param_${paramCounter}`,
-              title: param.name || '',
-              keywords: param.keywords || '',
-              module: param.module || '',
-              resName: param.resName || '',
-              content: param.content || '',
-              url: param.url || '',
-              moduletype: param.moduletype || '',
-              type: 'parameter'
-            });
-            paramCounter++;
-          });
-        }
-      });
+      // Add documents from the documents array
+      let docCounter = 0;
+      if (searchData.documents) {
+        searchData.documents.forEach((doc) => {
+          const docData = {
+            id: `doc_${docCounter}`,
+            title: doc.title || '',
+            keywords: doc.keywords || '',
+            module: doc.module || '',
+            summary: doc.summary || '',
+            content: doc.content || '',
+            url: doc.url || '',
+            type: 'document'
+          };
 
-      // console.log('Built search index with Russian multilingual support');
-    } else {
-      // Use default English language support
-      this.lunrIndex = lunr(function() {
-        this.field('title', { boost: 10 });
-        this.field('keywords', { boost: 8 });
-        this.field('module', { boost: 6 });
-        this.field('summary', { boost: 3 });
-        this.field('content', { boost: 1 });
-        this.ref('id');
+          // Add moduletype only for Russian support (backward compatibility)
+          if (useRussianSupport && doc.moduletype) {
+            docData.moduletype = doc.moduletype;
+          }
 
-        // Add documents from the documents array
-        let docCounter = 0;
-        if (searchData.documents) {
-          searchData.documents.forEach((doc) => {
-            this.add({
-              id: `doc_${docCounter}`,
-              title: doc.title || '',
-              keywords: doc.keywords || '',
-              module: doc.module || '',
-              summary: doc.summary || '',
-              content: doc.content || '',
-              url: doc.url || '',
-              type: 'document'
-            });
-            docCounter++;
-          });
-        }
+          this.add(docData);
+          docCounter++;
+        });
+      }
 
-        // Add parameters from the parameters array
-        let paramCounter = 0;
-        if (searchData.parameters) {
-          searchData.parameters.forEach((param) => {
-            this.add({
-              id: `param_${paramCounter}`,
-              title: param.name || '',
-              keywords: param.keywords || '',
-              module: param.module || '',
-              resName: param.resName || '',
-              content: param.content || '',
-              url: param.url || '',
-              type: 'parameter'
-            });
-            paramCounter++;
-          });
-        }
-      });
+      // Add parameters from the parameters array
+      let paramCounter = 0;
+      if (searchData.parameters) {
+        searchData.parameters.forEach((param) => {
+          const paramData = {
+            id: `param_${paramCounter}`,
+            title: param.name || '',
+            keywords: param.keywords || '',
+            module: param.module || '',
+            resName: param.resName || '',
+            content: param.content || '',
+            url: param.url || '',
+            type: 'parameter'
+          };
 
-      // console.log('Built search index with default English support');
-    }
+          // Add moduletype only for Russian support (backward compatibility)
+          if (useRussianSupport && param.moduletype) {
+            paramData.moduletype = param.moduletype;
+          }
+
+          this.add(paramData);
+          paramCounter++;
+        });
+      }
+    });
   }
 
   buildSearchDictionary() {
@@ -535,13 +645,13 @@ class ModuleSearch {
 
     // Create Fuse.js index for fuzzy search
     this.fuseIndex = new Fuse(this.searchDictionary, {
-      threshold: 0.8, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
+      threshold: 0.4, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
       distance: 100,  // Maximum distance for fuzzy matching
       includeScore: true,
       minMatchCharLength: 2,
       // Better support for Cyrillic characters
       ignoreLocation: true,
-      findAllMatches: true,
+      findAllMatches: false,
       useExtendedSearch: false
     });
 
@@ -673,19 +783,33 @@ class ModuleSearch {
       }
     }
 
-    // Check for other problematic patterns that might cause Lunr parsing errors
-    // Remove or escape special characters that might be interpreted as field names
-    const problematicPatterns = [
-      /^[a-zA-Z]+:/, // Pattern like "field:value" that might be interpreted as field query
-    ];
+    // Apply comprehensive sanitization for all Lunr special operators and patterns
+    let sanitized = query;
+    let hasChanges = false;
 
-    for (const pattern of problematicPatterns) {
-      if (pattern.test(query)) {
-        // Replace colons with spaces to prevent field interpretation
-        const sanitized = query.replace(/:/g, ' ').trim();
-        console.log(`Problematic pattern detected, sanitized: "${query}" -> "${sanitized}"`);
-        return sanitized;
-      }
+    // Handle field patterns like "field:value" or queries starting with colon like ":version"
+    if (/^[a-zA-Z]*:/.test(sanitized)) {
+      sanitized = sanitized.replace(/:/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle Lunr PRESENCE operator (--)
+    if (sanitized.includes('--')) {
+      sanitized = sanitized.replace(/--/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle other Lunr operators (+ and - at the beginning of words)
+    const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
+    if (lunrOperatorPattern.test(sanitized)) {
+      sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      sanitized = sanitized.trim();
+      // console.log(`Lunr operators detected, sanitized: "${query}" -> "${sanitized}"`);
+      return sanitized;
     }
 
     return query;
@@ -804,11 +928,66 @@ class ModuleSearch {
           boost *= 1.8; // Strong boost for module name matches
         }
 
+        // Check for parameter field matches with specific priority order
+        if (doc.type === 'parameter') {
+          const nameLower = (doc.name || '').toLowerCase();
+          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const contentLower = (doc.content || '').toLowerCase();
+
+          // Priority 1: Name field matches (highest priority)
+          if (nameLower) {
+            if (nameLower === queryLower) {
+              boost *= 4.0; // Very high boost for exact name matches
+            } else if (nameLower.includes(queryLower)) {
+              boost *= 3.5; // High boost for partial name matches
+            }
+          }
+
+          // Priority 2: Keywords field matches
+          if (keywordsLower && keywordsLower.includes(queryLower)) {
+            boost *= 2.0; // Moderate boost for keyword matches
+          }
+
+          // Priority 3: Content field matches (lowest priority for parameters)
+          if (contentLower && contentLower.includes(queryLower)) {
+            boost *= 1.2; // Low boost for content matches
+          }
+        } else {
+          // For non-parameters (documents), use document field priority order
+          const titleLower = (doc.title || '').toLowerCase();
+          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const contentLower = (doc.content || '').toLowerCase();
+
+          // Priority 1: Title field matches (highest priority)
+          if (titleLower) {
+            if (titleLower === queryLower) {
+              boost *= 4.0; // Very high boost for exact title matches
+            } else if (titleLower.includes(queryLower)) {
+              boost *= 3.5; // High boost for partial title matches
+            }
+          }
+
+          // Priority 2: Keywords field matches
+          if (keywordsLower && keywordsLower.includes(queryLower)) {
+            boost *= 2.0; // Moderate boost for keyword matches
+          }
+
+          // Priority 3: Content field matches (lowest priority for documents)
+          if (contentLower && contentLower.includes(queryLower)) {
+            boost *= 1.2; // Low boost for content matches
+          }
+        }
+
         // Apply existing parameter boosting logic
         if (doc.type === 'parameter' && doc.content && doc.content.includes('resources__prop_name')) {
           boost *= 1.5; // Additional boost for parameters with properties
         } else if (doc.type === 'parameter') {
           boost *= 1.2; // Moderate boost for parameters
+        }
+
+        // Apply additional boost for isResource parameters
+        if (doc.type === 'parameter' && doc.isResource === "true") {
+          boost *= 2.0; // High boost for isResource parameters to prioritize them
         }
 
         return {
@@ -832,8 +1011,11 @@ class ModuleSearch {
   }
 
   groupResults(results) {
-    const configResults = [];
-    const otherResults = [];
+    const isResourceNameMatchResults = [];
+    const nameMatchResults = [];
+    const isResourceOtherResults = [];
+    const parameterOtherResults = [];
+    const documentResults = [];
 
     results.forEach(result => {
       const docId = result.ref;
@@ -851,46 +1033,70 @@ class ModuleSearch {
       }
 
       if (doc) {
-        // Configuration results come from parameters array
+        // Check for name matches first
+        const nameLower = (doc.name || doc.title || '').toLowerCase();
+        const queryLower = this.lastQuery.toLowerCase();
+        const hasNameMatch = nameLower && (nameLower === queryLower || nameLower.includes(queryLower));
+
         if (doc.type === 'parameter') {
-          configResults.push(result);
+          // Check if this parameter has isResource: "true"
+          if (doc.isResource === "true") {
+            if (hasNameMatch) {
+              isResourceNameMatchResults.push(result);
+            } else {
+              isResourceOtherResults.push(result);
+            }
+          } else {
+            if (hasNameMatch) {
+              nameMatchResults.push(result);
+            } else {
+              parameterOtherResults.push(result);
+            }
+          }
         } else {
-          // Other documentation comes from documents array
-          otherResults.push(result);
+          // Documents always go to document group
+          documentResults.push(result);
         }
       }
     });
 
     return {
-      config: configResults,
-      other: otherResults
+      isResourceNameMatch: isResourceNameMatchResults,
+      nameMatch: nameMatchResults,
+      isResourceOther: isResourceOtherResults,
+      parameterOther: parameterOtherResults,
+      document: documentResults
     };
   }
 
   displayResults() {
-    if (this.currentResults.config.length === 0 && this.currentResults.other.length === 0) {
+    // Dynamically check all keys in currentResults, so new groups are automatically included
+    if (Object.values(this.currentResults).every(arr => arr.length === 0)) {
       this.showNoResults(this.lastQuery);
       return;
     }
 
     let resultsHtml = '';
 
-    // Display configuration results first
-    if (this.currentResults.config.length > 0) {
+    // Display API results in priority order
+    if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.renderResultGroup(this.currentResults.config, this.currentHighlightQuery || this.lastQuery, 'config')}
+          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, this.currentHighlightQuery || this.lastQuery, 'isResourceNameMatch') : ''}
+          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, this.currentHighlightQuery || this.lastQuery, 'nameMatch') : ''}
+          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, this.currentHighlightQuery || this.lastQuery, 'isResourceOther') : ''}
+          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, this.currentHighlightQuery || this.lastQuery, 'parameterOther') : ''}
         </div>
       `;
     }
 
-    // Display other results
-    if (this.currentResults.other.length > 0) {
+    // Display documentation results (only from documents array)
+    if (this.currentResults.document.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.other, this.currentHighlightQuery || this.lastQuery, 'other')}
+          ${this.renderResultGroup(this.currentResults.document, this.currentHighlightQuery || this.lastQuery, 'document')}
         </div>
       `;
     }
@@ -922,8 +1128,8 @@ class ModuleSearch {
 
       let title, summary, module, description;
 
-      if (groupType === 'config') {
-        // For configuration results (parameters)
+      if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
+        // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', query);
         // summary = this.highlightText(doc.resName || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
@@ -950,23 +1156,11 @@ class ModuleSearch {
       `;
     });
 
-    // Add "More" button if there are more results to show
-    if (displayedCount < results.length) {
-      html += `
-        <button class="tile__pagination" onclick="window.moduleSearch.loadMore('${groupType}')">
-          <p class="tile__pagination--descr">${this.t('showMorePattern', { count: Math.min(5, results.length - displayedCount) })}</p>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
-          </svg>
-        </button>
-      `;
-    }
-
     return html;
   }
 
   loadMore(groupType) {
-    if (groupType === 'config' || groupType === 'other') {
+    if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther' || groupType === 'document') {
       this.displayedCounts[groupType] += 5;
       this.displayResults();
     }
@@ -974,8 +1168,11 @@ class ModuleSearch {
 
   resetPagination() {
     this.displayedCounts = {
-      config: 5,
-      other: 5
+      isResourceNameMatch: 5,
+      nameMatch: 5,
+      isResourceOther: 5,
+      parameterOther: 5,
+      document: 5
     };
   }
 
@@ -1096,7 +1293,7 @@ class ModuleSearch {
 
       // Calculate base URL by subtracting page:url:relative from current page URL
       const currentPageUrl = window.location.pathname;
-      const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-accces|stable|rock-solid|latest)\//);
+      const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-access|stable|rock-solid|latest)\//);
       const currentPageVersion = match ? match[1] : null;
       const currentPageUrlWithoutVersion = currentPageUrl.replace('/' + currentPageVersion + '/', '/');
 
@@ -1166,7 +1363,13 @@ class ModuleSearch {
 
   showMessage(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+
+    // If this is the ready message and we have a search context, show the context message
+    if (message === this.t('ready') && this.options.searchContext) {
+      this.searchResults.innerHTML = `<div class="loading">${this.options.searchContext}</div>`;
+    } else {
+      this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+    }
   }
 
   showNoResults(query) {
@@ -1180,7 +1383,25 @@ class ModuleSearch {
 
   showError(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="no-results">${this.t('error')}</div>`;
+    this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
+  }
+
+  // Check current state and update UI accordingly
+  updateUIState() {
+    if (this.isDataLoaded) {
+      // Only set placeholder to "ready" when search results are visible (user is actively searching)
+      if (this.searchResults.style.display === 'flex') {
+        this.searchInput.placeholder = this.t('ready');
+        this.showMessage(this.t('ready'));
+      }
+      // Don't change placeholder when search results are hidden (let HTML placeholder show)
+    } else if (this.isLoadingInBackground) {
+      this.searchInput.placeholder = this.t('loading');
+      if (this.searchResults.style.display === 'flex') {
+        this.showLoading();
+      }
+    }
+    // Don't set placeholder when data is not loaded and not loading (let HTML placeholder show)
   }
 }
 
@@ -1189,11 +1410,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if there's a data attribute on the search input for custom search index path
   const searchInput = document.getElementById('search-input');
   const searchIndexPath = searchInput?.dataset.searchIndexPath;
+  const searchContext = searchInput?.dataset.searchContext;
 
   // Create search instance with custom options if specified
   const options = {};
   if (searchIndexPath) {
     options.searchIndexPath = searchIndexPath;
+  }
+  if (searchContext) {
+    options.searchContext = searchContext;
   }
 
   window.moduleSearch = new ModuleSearch(options);

@@ -1,6 +1,7 @@
 ---
 title: "Overview"
 permalink: en/admin/configuration/app-scaling/overview.html
+description: "Configure application scaling and pod management in Deckhouse Kubernetes Platform. HPA, VPA, pod eviction, and resource optimization for high availability and efficient resource utilization."
 ---
 
 Scaling applications and managing pod placement in Deckhouse Kubernetes Platform allows dynamic adaptation of cluster resources to the current load, ensuring high availability of services and efficient resource utilization.

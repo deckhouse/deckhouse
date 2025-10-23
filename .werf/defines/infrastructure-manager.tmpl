@@ -1,4 +1,4 @@
-# calculate base image for terraform-auto-exporter and terraform-state-exporteer
+# calculate base image for terraform-auto-exporter and terraform-auto-converger
 # . is dict with keys:
 #   TF - TF from werf.yaml
 #   providerName - from terraform_versions.yaml key in root like azure or decort for example
@@ -17,7 +17,7 @@ terraform-manager/base-terraform-manager
 {{- end }}
 {{- end }}
 
-# calculate plugins dir for terraform-auto-exporter and terraform-state-exporteer
+# calculate plugins dir for terraform-auto-exporter and terraform-auto-converger
 # . is dict with keys:
 #   TF - TF from werf.yaml
 #   providerName - from terraform_versions.yaml key in root like azure or decort for example
@@ -34,4 +34,13 @@ registry.terraform.io
 {{- else }}
     {{- fail (printf "provider %s not found" $context.providerName) -}}
 {{- end }}
+{{- end }}
+
+# add image spec for infrastructure manager image
+# . any value. does not use
+
+{{- define "image_spec_for_infrastructure_manager" }}
+imageSpec:
+  config:
+    entrypoint: ["/dhctl"]
 {{- end }}

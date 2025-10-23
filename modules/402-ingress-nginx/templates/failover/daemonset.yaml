@@ -1,3 +1,8 @@
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
@@ -101,8 +106,13 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "iptablesWrapperInit") }}
         command:
         - /bin/bash
-        - -c
-        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        - -ec
+        - |
+          /usr/bin/cp /iptables-wrapper /sbin/ -rv
+          /usr/bin/cp /_sbin/* /sbin/ -rv
+          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+          /sbin/iptables --version
+          /usr/bin/rm /sbin/iptables-wrapper -v
         volumeMounts:
         - mountPath: /sbin
           name: sbin

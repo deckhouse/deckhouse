@@ -1,6 +1,7 @@
 ---
 title: Security policies
 permalink: en/admin/configuration/security/policies.html
+description: "Configure security policies in Deckhouse Kubernetes Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 
 Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of policies
@@ -33,7 +34,7 @@ When upgrading DKP to v1.55 or later, the default policy will not change automat
 
 You can assign a policy in the following ways:
 
-- Globally, using the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter of the `admission-policy-engine` module.
+- Globally, using the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter of the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 - Per namespace, using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label.
 
   Example command to assign the `restricted` policy to all Pods in the `my-namespace` namespace:
@@ -56,7 +57,7 @@ In this mode, application Pods that do not comply with the policies cannot be ru
 
 As with policy assignment, enforcement mode can be set:
 
-- Globally, using the [`settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) parameter of the `admission-policy-engine` module.
+- Globally, using the [`settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) parameter of the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 - Per namespace, using the `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>` label.
 
   Example command to set the `warn` mode for all Pods in the `my-namespace` namespace:

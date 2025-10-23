@@ -1,6 +1,7 @@
 ---
 title: Configuring updates
 permalink: en/admin/configuration/update/configuration.html
+description: "Configure update settings for Deckhouse Kubernetes Platform including release channels, update modes, and update policies. Automatic and manual update configuration guide."
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports a flexible update mechanism,
@@ -31,7 +32,7 @@ Example output:
 
 ## Switching release channels
 
-To switch the release channel, specify the new channel in the [`settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter of the `deckhouse` module.
+To switch the release channel, specify the new channel in the [`settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter of the [`deckhouse`](/modules/deckhouse/) module.
 
 Example configuration using the `Stable` channel:
 
@@ -59,7 +60,7 @@ DKP supports three update modes that determine how new versions are applied:
 ### Checking the current update mode
 
 To determine the current update mode used in the cluster,
-inspect the configuration of the `deckhouse` module with the following command:
+inspect the configuration of the [`deckhouse`](/modules/deckhouse/) module with the following command:
 
 ```shell
 d8 k get mc deckhouse -o yaml
@@ -83,7 +84,7 @@ spec:
 
 ### Automatic update mode
 
-Automatic update mode is enabled when the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter is specified in the `deckhouse` module configuration.
+Automatic update mode is enabled when the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter is specified in the [`deckhouse`](/modules/deckhouse/) module configuration.
 When this condition is met:
 
 1. DKP checks the release channel every minute for new releases.
@@ -115,7 +116,7 @@ There are three ways to restrict automatic updates in Deckhouse:
   but applying patch and minor versions will require [manual approval](#manual-update-approval).
   
   To enable manual update approval mode,
-  set the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter to `Manual` in the `deckhouse` module configuration using the following command:
+  set the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter to `Manual` in the [`deckhouse`](/modules/deckhouse/) module configuration using the following command:
 
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
@@ -139,7 +140,7 @@ There are three ways to restrict automatic updates in Deckhouse:
   but it will not update to `v1.71.*` without manual approval.
 
   To enable automatic updates for patch versions only,
-  set the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter to `AutoPatch` in the `deckhouse` module configuration using the following command:
+  set the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter to `AutoPatch` in the [`deckhouse`](/modules/deckhouse/) module configuration using the following command:
 
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
@@ -153,7 +154,7 @@ There are three ways to restrict automatic updates in Deckhouse:
   ```
 
 - Manually set the target DKP version tag for the `deckhouse` Deployment
-  and remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+  and remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the [`deckhouse`](/modules/deckhouse/) module configuration.
 
   In this case, DKP will remain at the specified version,
   and no information about newer available versions (DeckhouseRelease objects) will appear in the cluster.
@@ -162,7 +163,7 @@ There are three ways to restrict automatic updates in Deckhouse:
   > which may include critical security or bug fixes.
 
   Example of pinning version `v1.66.3` for DKP EE
-  and removing the `releaseChannel` parameter from the `deckhouse` module configuration:
+  and removing the `releaseChannel` parameter from the [`deckhouse`](/modules/deckhouse/) module configuration:
 
   ```shell
   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
@@ -175,7 +176,7 @@ Manual approval of DKP updates is required in the following cases:
 
 - The DKP update confirmation mode is enabled.
 
-  This means the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter of the `deckhouse` module is set to either
+  This means the [`settings.update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) parameter of the [`deckhouse`](/modules/deckhouse/) module is set to either
   `Manual` (confirmation required for both patch and minor updates) or
   `AutoPatch` (confirmation required only for minor updates).
   
@@ -214,7 +215,7 @@ or during periods of high cluster load.
 
 You can manage DKP update windows in the following ways:
 
-- **To control general updates**, use the [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) parameter in the `deckhouse` module configuration.
+- **To control general updates**, use the [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) parameter in the [`deckhouse`](/modules/deckhouse/) module configuration.
 - **To control updates that may lead to short-term downtime of system components**,
   use the [`disruptions.automatic.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) and [`disruptions.rollingUpdate.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) parameters in the NodeGroup resource.
 

@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry: пример использования"
-description: ""
+description: "Пошаговые примеры переключения между режимами Direct и Unmanaged registry в Deckhouse Kubernets Platform, включая примеры конфигурации и мониторинг статуса."
 ---
 
 ## Переключение на режим `Direct`
@@ -50,9 +50,22 @@ description: ""
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Проверьте, чтобы [очередь Deckhouse](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок.
+1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
-1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](../deckhouse/) для корректной настройки.
+   ```shell
+   d8 platform queue list
+   ```
+
+   Пример вывода:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
 
    Пример конфигурации:
 
@@ -113,7 +126,20 @@ description: ""
    registry   38     ...  Ready   True                         True
    ```
 
-1. Проверьте, чтобы [очередь Deckhouse](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок.
+1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
+
+   ```shell
+   d8 platform queue list
+   ```
+
+   Пример вывода:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
 
 1. Установите настройки режима `Unmanaged` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](../deckhouse/) для корректной настройки.
 

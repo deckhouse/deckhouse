@@ -4,6 +4,7 @@ permalink: ru/admin/configuration/network/policy/configuration.html
 description: |
   Настройка сетевых политик Deckhouse Kubernetes Platform. Условия для включения режимов туннелирования трафика подов.
 lang: ru
+search: network policy configuration, network policies, traffic tunneling, pod traffic, network security, настройка сетевых политик, сетевые политики, сетевая безопасность
 ---
 
 Если на уровне инфраструктуры, где работает Deckhouse Kubernetes Platform, есть требования для ограничения сетевого взаимодействия между серверами, то необходимо соблюсти следующие условия:
@@ -59,7 +60,7 @@ spec:
 
 ## Настройка сетевых политик на уровне всего кластера с помощью CiliumClusterwideNetworkPolicy
 
-Для определения сетевых политик на уровне всего кластера в Deckhouse Kubernetes Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](../../../../modules/cni-cilium/).
+Для определения сетевых политик на уровне всего кластера в Deckhouse Kubernetes Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](/modules/cni-cilium/).
 
 <!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-ciliumclusterwidenetworkpolicies -->
 

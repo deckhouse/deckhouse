@@ -18,7 +18,7 @@ lang: ru
   * **изоляция** — каждый проект обеспечивает изолированное окружение, где разработчики могут развертывать и тестировать свои приложения без влияния на другие проекты.
 
 {% alert level="warning" %}
-[Копирование секретов](/modules/secret-copier) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
+[Копирование секретов](/modules/secret-copier/) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
 
 В этом режиме создаются изолированные окружения для пользователей в их проектах, а `secret-copier` автоматически раздаёт секреты во все пространства имён.
 Если в закрытом окружении пользователя окажутся чувствительные данные, это может привести к утечке данных и нарушению модели безопасности.
@@ -33,10 +33,10 @@ lang: ru
 
 ## Создание проекта
 
-1. Для создания проекта создайте кастомный ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-2. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
+1. Для создания проекта создайте кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename).
+2. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
 
-   Пример создания проекта с помощью [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
+   Пример создания проекта с помощью [Project](/modules/multitenancy-manager/cr.html#project) из `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -108,4 +108,4 @@ lang: ru
 Обратите внимание, что при смене шаблона может возникнуть конфликт ресурсов: если в чарте шаблона прописаны ресурсы, которые уже присутствуют в пространстве имён, то применить шаблон не получится.
 {% endalert %}
 
-Подробнее с шаблонами проектов и из созданием можно ознакомиться [в разделе администрирования](../admin/multitenancy.html).
+Подробнее с шаблонами проектов и из созданием можно ознакомиться [в разделе администрирования](../../admin/multitenancy.html).

@@ -1,6 +1,7 @@
 ---
 title: Configuring notifications on new releases
 permalink: en/admin/configuration/update/notifications.html
+description: "Configure update notifications in Deckhouse Kubernetes Platform. Alert setup, external system integration, and automated notification management for platform updates."
 ---
 
 Deckhouse Kubernetes Platform (DKP) generates [alerts](#alerts-in-the-monitoring-system) in the monitoring system
@@ -19,9 +20,9 @@ If an update requires making changes to the cluster (for example, updating the K
 DKP generates designated alerts.
 These alerts include:
 
-- **D8NodeHasDeprecatedOSVersion**: Nodes with an unsupported OS version have been detected in the cluster.
-- **HelmReleasesHasResourcesWithDeprecatedVersions**: Some Helm releases use deprecated resources.
-- **KubernetesVersionEndOfLife**: The installed Kubernetes version is no longer supported.
+- [`D8NodeHasDeprecatedOSVersion`](../../../reference/alerts.html#monitoring-deckhouse-d8nodehasdeprecatedosversion): Nodes with an unsupported OS version have been detected in the cluster.
+- [`HelmReleasesHasResourcesWithDeprecatedVersions`](../../../reference/alerts.html#monitoring-kubernetes-helmreleaseshasresourceswithdeprecatedversions): Some Helm releases use deprecated resources.
+- [`D8KubernetesVersionIsDeprecated`](../../../reference/alerts.html#control-plane-manager-d8kubernetesversionisdeprecated): The installed Kubernetes version is no longer supported.
 
 If any of these alerts appear, make sure to resolve them before updating.
 This helps avoid disruptions and ensures the cluster remains stable after the update.
@@ -38,7 +39,7 @@ Notifications are available only in the `Auto` update mode; they are not generat
 {% endalert %}
 
 {% alert %}
-Specifying a webhook is optional: if the `update.notification.webhook` parameter is not set but the `update.notification.minimalNotificationTime` parameter is specified, the update will still be postponed for the defined duration. In this case, the appearance of the [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource in the cluster, named after the new version, can be considered the notification.
+Specifying a webhook is optional: if the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter is not set but the [`update.notification.minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is specified, the update will still be postponed for the defined duration. In this case, the appearance of the [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource in the cluster, named after the new version, can be considered the notification.
 {% endalert %}
 
 After a new minor DKP version appears in the selected update channel but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
@@ -156,7 +157,7 @@ func main() {
   (for example, if a self-signed certificate is used).
   Set to `false` by default.
 
-Example `update.notification` configuration using basic authentication:
+Example [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) configuration using basic authentication:
 
 ```yaml
 update:
@@ -170,7 +171,7 @@ update:
     tlsSkipVerify: true
 ```
 
-Example `update.notification` configuration  without authentication:
+Example [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) configuration  without authentication:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

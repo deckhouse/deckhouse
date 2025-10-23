@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/private/dynamix/dynamix-storage.html
+permalink: ru/admin/integrations/private/dynamix/storage.html
 lang: ru
 ---
 
@@ -8,9 +8,9 @@ lang: ru
 
 Хранение данных в облаке Dynamix осуществляется с использованием:
 
-- storageEndpoint — имя хранилища, предоставленное провайдером;
-- pool — имя пула хранения внутри указанного хранилища;
-- rootDiskSizeGb — размер корневого диска каждой виртуальной машины (в гигабайтах).
+- [`storageEndpoint`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-storageendpoint) — имя хранилища, предоставленное провайдером;
+- [`pool`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-pool) — имя пула хранения внутри указанного хранилища;
+- [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) — размер корневого диска каждой виртуальной машины (в гигабайтах).
 
 Эти параметры задаются в секции instanceClass как для master-узлов, так и для рабочих групп узлов (NodeGroup).
 

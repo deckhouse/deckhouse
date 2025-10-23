@@ -1,6 +1,7 @@
 ---
 title: Аудит событий безопасности
 permalink: ru/admin/configuration/security/events/runtime-audit.html
+description: "Настройка аудита событий безопасности в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
 lang: ru
 ---
 
@@ -65,7 +66,7 @@ DKP использует два основных источника событи
      enabled: true
    ```
 
-1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи `control-plane-manager`,
+1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
    настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
 
 Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
@@ -73,8 +74,8 @@ DKP использует два основных источника событи
 ### Настройка вебхука API Kubernetes вручную
 
 {% alert level="info" %}
-Настройка вебхука не требуется, если включён модуль `control-plane-manager`.
-В этом случае при включении модуля `runtime-audit-engine`
+Настройка вебхука не требуется, если включён модуль [`control-plane-manager`](/modules/control-plane-manager/).
+В этом случае при включении модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/)
 настройки сбора событий аудита API Kubernetes применятся автоматически.
 {% endalert %}
 
@@ -120,7 +121,7 @@ DKP использует два основных источника событи
     (`fstec`, в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules));
 
   Чтобы настроить список встроенных правил,
-  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
+  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/).
 
 - **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 

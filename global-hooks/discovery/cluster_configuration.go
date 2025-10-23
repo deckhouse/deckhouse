@@ -69,7 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, clusterConfiguration)
 
-func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.Snapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
@@ -87,7 +87,9 @@ func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
 		configYamlBytes := currentConfig[0]
 
 		var metaConfig *config.MetaConfig
-		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content))
+		// we use dummy preparator because we do not need any preparation and validation from cloud providers
+		// we use only ClusterConfiguration here
+		metaConfig, err = config.ParseConfigFromData(ctx, string(configYamlBytes.Content), config.DummyPreparatorProvider())
 		if err != nil {
 			return err
 		}

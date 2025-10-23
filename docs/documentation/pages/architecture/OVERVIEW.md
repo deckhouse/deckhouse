@@ -9,7 +9,7 @@ Deckhouse makes it possible to run the Kubernetes cluster on **any supported inf
 - on virtual or bare metal machines (including on-premises);
 - on a hybrid infrastructure.
 
-Deckhouse automatically configures and manages both the [cluster nodes](modules/node-manager/) and the  [control plane](modules/control-plane-manager/) components, keeping their configuration up-to-date (using Terraform tools).
+Deckhouse Kubernetes Platform automatically configures and manages both the [cluster nodes](/modules/node-manager/) and the  [control plane](/modules/control-plane-manager/) components, keeping their configuration up-to-date (using Terraform tools).
 
 Deckhouse facilitates non-trivial operations with control-plane and cluster nodes, such as:
 

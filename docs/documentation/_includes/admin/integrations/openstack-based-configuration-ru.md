@@ -113,7 +113,7 @@ provider:
 - В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
   сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
   virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
-- В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании OpenStackInstanceClass в кластере.
+- В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
 
 {% endalert %}
 
@@ -279,7 +279,7 @@ Master-узел и узлы кластера подключаются к сущ�
 
 {% alert level="warning" %}
 В данной схеме размещения не происходит управление SecurityGroups, а подразумевается, что они были ранее созданы.
-Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании OpenStackInstanceClass в кластере.
+Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
 {% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
@@ -358,7 +358,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью ресурса OpenStackClusterConfiguration, который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -374,7 +374,7 @@ d8 platform edit provider-cluster-configuration
 Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
 {% alert level="warning" %}
-При изменении настроек модуля **пересоздания существующих объектов Machines в кластере НЕ происходит** (новые объекты Machine будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров NodeGroup и OpenStackInstanceClass.
+При изменении настроек модуля **пересоздания существующих объектов Machines в кластере НЕ происходит** (новые объекты Machine будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 {% endalert %}
 
 ### Примеры конфигурации
@@ -453,7 +453,7 @@ spec:
 
 #### Пример IngressNginxController
 
-Ниже представлен простой пример конфигурации IngressNginxController:
+Ниже представлен простой пример конфигурации [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -491,7 +491,7 @@ spec:
 #### Установка дополнительных групп безопасности (security groups) на статических и master-узлах
 
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-группы безопасности указываются в OpenStackClusterConfiguration:
+группы безопасности указываются в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration):
 
 * для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
 * для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
@@ -500,7 +500,7 @@ spec:
 
 #### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
 
-Необходимо прописать параметр `additionalSecurityGroups` для всех OpenStackInstanceClass в кластере, которым нужны дополнительные
+Необходимо прописать параметр `additionalSecurityGroups` для всех [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере, которым нужны дополнительные
 групп безопасности.
 
 ### Как загрузить образ в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
@@ -641,7 +641,7 @@ username = {{ nova_service_user_name }}
 
 #### Параметр rootDiskSize
 
-В OpenStackInstanceClass есть параметр `rootDiskSize`, и в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} flavor есть параметр размера диска.
+В OpenStackInstanceClass есть [параметр `rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize), и в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} flavor есть параметр размера диска.
 
 Какой диск будет заказан в зависимости от комбинации параметров, указано в таблице:
 
@@ -652,20 +652,20 @@ username = {{ nova_service_user_name }}
 
 {% if page.cloud_type != 'selectel' %}
 
-> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
 
 {% endif %}
 
 ##### Рекомендация для master-узлов и бастиона — сетевой диск
 
 - Используйте flavor с нулевым размером диска.
-- Задайте `rootDiskSize` в OpenStackInstanceClass.
+- Задайте [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в OpenStackInstanceClass.
 - Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он задан. Если нет, тип диска будет взят из [`volumeTypeMap`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 ##### Рекомендация для ephemeral-узлов — локальный диск
 
 - Используйте flavor с заданным размером диска.
-- Не используйте параметр `rootDiskSize` в OpenStackInstanceClass.
+- Не используйте [параметр `rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в OpenStackInstanceClass.
 - Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, будет использоваться тип диска по умолчанию облачного провайдера.
 
 #### Как проверить объем диска в flavor

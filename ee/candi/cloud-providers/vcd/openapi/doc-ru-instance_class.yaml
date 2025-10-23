@@ -11,7 +11,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы виртуальных машин VCD, используемых `cluster-api-controller-manager` (модулем [cloud-provider-vcd](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/)).
+            Параметры группы виртуальных машин VCD, используемых `cluster-api-controller-manager` (модулем [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/)).
           properties:
             spec:
               properties:
@@ -51,6 +51,22 @@ spec:
                     Свойства из этого поля будут объединены с уже существующими метаданными, хранящимися в поле `metadata` в корне спецификации VCDProviderClusterConfiguration. В случае совпадения ключей значения из этого поля будут иметь приоритет.
 
                     > **Внимание.** Изменение поля `additionalMetadata` приведет к пересозданию CloudEphemeral NodeGroups, использующих данный VCDInstanceClass.
+                affinityRule:
+                  description: |
+                    Определяет правило размещения, применяемое только к виртуальным машинам NodeGroup, ссылающимся на этот класс инстансов внутри кластера.
+                    Такие правила определяют, как узлы располагаются друг относительно друга на уровне гипервизоров,
+                    что может повысить отказоустойчивость и контролировать распределение рабочих нагрузок.
+                    Если не указано, правило размещения применяться не будет.
+                  properties:
+                    polarity:
+                      description: |
+                        Полярность правила размещения. Должно быть либо `Affinity`, либо `AntiAffinity`.
+                        `Affinity` означает, что узлы должны быть размещены на одном хосте,
+                        в то время как `AntiAffinity` означает, что они должны быть размещены на разных хостах.
+                    required:
+                      description: |
+                        Указывает, является ли правило размещения обязательным (`true`) или предпочтительным (`false`).
+                        Если установлено в `true`, правило должно быть соблюдено; если в `false`, правило применяется, если это возможно, но не является строго обязательным.
       additionalPrinterColumns:
         - name: "Node Groups"
           description: NodeGroups, которые используют этот класс инстансов.

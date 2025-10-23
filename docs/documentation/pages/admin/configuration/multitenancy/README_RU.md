@@ -18,9 +18,9 @@ lang: ru
   * **изоляция** — каждый проект обеспечивает изолированное окружение, где разработчики могут развертывать и тестировать свои приложения без влияния на другие проекты.
 
 {% alert level="warning" %}
-[Копирование секретов](/modules/secret-copier) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
+[Копирование секретов](/modules/secret-copier/) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
 
-В этом режиме создаются изолированные окружения для пользователей в их проектах, а `secret-copier` автоматически раздаёт секреты во все пространства имён.
+В этом режиме создаются изолированные окружения для пользователей в их проектах, а [`secret-copier`](/modules/secret-copier/) автоматически раздаёт секреты во все пространства имён.
 Если в закрытом окружении пользователя окажутся чувствительные данные, это может привести к утечке данных и нарушению модели безопасности.
 {% endalert %}
 
@@ -96,9 +96,9 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-Для создания проекта используется кастомный ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) указывается значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса ProjectTemplate.
+Для создания проекта используется кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename).
+В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) указывается значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса ProjectTemplate.
 
 Также существует возможность автоматически создать проект из существующего пространства имён в кластере.
 
-Подробнее с созданием проектов можно ознакомиться [в разделе использования](../user/multitenancy.html).
+Подробнее с созданием проектов можно ознакомиться [в разделе использования](../user/multitenancy/).

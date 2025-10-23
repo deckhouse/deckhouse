@@ -1,12 +1,13 @@
 ---
 title: "ALB средствами NGINX Ingress controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
+description: "Настройка балансировщика нагрузки приложения с помощью контроллера NGINX Ingress в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](../../../../../modules/ingress-nginx/).
+Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
-<!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
+<!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
 Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
@@ -35,7 +36,7 @@ lang: ru
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.
 
-Также модуль интегрирован с модулем [`cert-manager`](../../../../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
+Также модуль интегрирован с модулем [`cert-manager`](/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
 
 ## Мониторинг и статистика
 
@@ -96,7 +97,7 @@ lang: ru
 
 ## Примеры настройки балансировки
 
-<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html -->
+<!-- перенесено из https://deckhouse.ru/modules/ingress-nginx/examples.html -->
 
 Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
@@ -234,7 +235,7 @@ metallb:
 
 {% alert level="info" %}Доступно только в Enterprise Edition.{% endalert %}
 
-1. Включите модуль `metallb`:
+1. Включите [модуль `metallb`](/modules/metallb/):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -246,7 +247,7 @@ metallb:
      version: 2
    ```
 
-1. Создайте ресурс MetalLoadBalancerClass:
+1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -262,7 +263,7 @@ metallb:
      type: L2
    ```
 
-1. Создайте ресурс IngressNginxController:
+1. Создайте [ресурс IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
 
    ```yaml
    apiVersion: deckhouse.io/v1

@@ -27,9 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -38,8 +36,6 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshCl node.SSHClient
-		var err error
 
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
@@ -48,12 +44,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshCl, err = clissh.NewClientFromFlagsWithHosts()
-		} else {
-			sshCl, err = gossh.NewClientFromFlagsWithHosts()
-		}
-
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}
@@ -90,8 +81,6 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
-		var sshCl node.SSHClient
-		var err error
 
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
@@ -100,11 +89,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshCl, err = clissh.NewClientFromFlagsWithHosts()
-		} else {
-			sshCl, err = gossh.NewClientFromFlagsWithHosts()
-		}
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}
@@ -169,8 +154,6 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
 
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
@@ -179,15 +162,10 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlagsWithHosts(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
-			return nil
+			return err
 		}
-
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
 			cmd.Sudo()
@@ -223,9 +201,6 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -233,13 +208,9 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlagsWithHosts(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName)

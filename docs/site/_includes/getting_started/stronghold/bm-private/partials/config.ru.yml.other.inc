@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -26,9 +26,9 @@ proxy:
   noProxy: <NO_PROXY_LIST>
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -46,9 +46,9 @@ deckhouse:
   registryCA: <REGISTRY_CA>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -62,9 +62,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -91,9 +91,9 @@ spec:
           clusterIssuerName: selfsigned
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -105,9 +105,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -126,9 +126,9 @@ spec:
     disableLetsencrypt: true
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+# [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -140,15 +140,15 @@ spec:
   enabled: true
   settings:
     # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
     # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    # [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
     tunnelMode: VXLAN
 ---
 # [<en>] Static cluster settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
 # [<ru>] Параметры статического кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
@@ -175,9 +175,9 @@ spec:
     taints: []
 ---
 # [<en>] stronghold module settings.
-# [<en>] https://deckhouse.io/products/stronghold/reference/mc.html#stronghold
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
 # [<ru>] Настройки модуля stronghold.
-# [<ru>] https://deckhouse.ru/products/stronghold/reference/mc.html#stronghold
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

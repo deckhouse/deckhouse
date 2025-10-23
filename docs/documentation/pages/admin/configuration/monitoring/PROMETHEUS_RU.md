@@ -1,6 +1,7 @@
 ---
 title: "Настройка системы сбора и хранения метрик"
 permalink: ru/admin/configuration/monitoring/prometheus.html
+description: "Настройка сбора и хранения метрик Prometheus в Deckhouse Kubernetes Platform. Установка Deckhouse Prom++, настройка метрик и управление системой мониторинга."
 lang: ru
 ---
 
@@ -19,7 +20,7 @@ Prometheus собирает метрики и выполняет правила:
 
 ## Как работает Prometheus?
 
-Prometheus устанавливается модулем `prometheus-operator` DKP, который выполняет следующие функции:
+Prometheus устанавливается [модулем `prometheus`](/modules/prometheus/) DKP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:
   - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*.
   - `ServiceMonitor` — определяет, как собирать метрики с сервисов.
@@ -54,19 +55,3 @@ spec:
 ```
 
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
-
-## Как настраивается Prometheus?
-
-* У сервера Prometheus есть *config* и есть *rule files* (файлы с правилами)
-* В `config` имеются следующие секции:
-  * `scrape_configs` — настройки поиска *target'ов* (целей для мониторинга, см. подробней следующий раздел).
-  * `rule_files` — список директорий, в которых лежат *rule'ы*, которые необходимо загружать:
-
-    ```yaml
-    rule_files:
-    - /etc/prometheus/rules/rules-0/*
-    - /etc/prometheus/rules/rules-1/*
-    ```
-
-  * `alerting` — настройки поиска *Alert Manager'ов*, в которые слать алерты. Секция очень похожа на `scrape_configs`, только результатом ее работы является список *endpoint'ов*, в которые Prometheus будет слать алерты.
-

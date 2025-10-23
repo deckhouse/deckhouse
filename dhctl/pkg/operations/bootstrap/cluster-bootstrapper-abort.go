@@ -17,12 +17,16 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"sync"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -30,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
@@ -69,7 +74,9 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Session().SetAvailableHosts(mastersIPs)
+		if len(mastersIPs) > 0 {
+			sshClient.Session().SetAvailableHosts(mastersIPs)
+		}
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -82,20 +89,29 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		sshClient.Session().BastionHost = bastionHost
 	}
 
-	if err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
-	}
-
 	return nil
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	metaConfig, err := config.ParseConfig(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
@@ -130,6 +146,24 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	// init ssh client is safe if master hosts not found (error in base infra)
+	if err := b.initSSHClient(); err != nil {
+		return err
+	}
+
+	staticSSHClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+		wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+		if !ok {
+			return nil, fmt.Errorf("destroy operations are not supported for local execution contexts")
+		}
+
+		client := wrapper.Client()
+		if err := client.Start(); err != nil {
+			return nil, err
+		}
+		return client, nil
+	})
+
 	var destroyer destroy.Destroyer
 
 	err = log.Process("common", "Choice abort type", func() error {
@@ -145,17 +179,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					terraStateLoader, stateCache, b.InfrastructureContext,
 					controller.ClusterInfraOptions{
 						PhasedExecutionContext: b.PhasedExecutionContext,
+						TmpDir:                 b.TmpDir,
+						Logger:                 b.Logger,
+						IsDebug:                b.IsDebug,
 					},
 				)
 			} else {
-				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-				if !ok {
-					return fmt.Errorf("destroy operations are not supported for local execution contexts")
-				}
-				if err := b.initSSHClient(); err != nil {
-					return err
-				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{}, nil)
+				destroyer = destroy.NewStaticMastersDestroyer(staticSSHClientProvider, []destroy.NodeIP{})
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -166,10 +196,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			log.InfoLn(logMsg)
 
 			return nil
-		}
-
-		if err := b.initSSHClient(); err != nil {
-			return err
 		}
 
 		if !b.CommanderMode {
@@ -201,7 +227,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
 
-		destroyer, err = destroy.NewClusterDestroyer(destroyParams)
+		destroyParams.Logger = b.logger
+		destroyParams.IsDebug = b.IsDebug
+		destroyParams.TmpDir = b.TmpDir
+
+		destroyer, err = destroy.NewClusterDestroyer(ctx, destroyParams)
 		if err != nil {
 			return err
 		}
@@ -225,13 +255,18 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
 		}
 		bootstrapState := NewBootstrapState(stateCache)
+		// start client todo refactor it
+		if _, err = staticSSHClientProvider(); err != nil {
+			return err
+		}
+
 		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
 		if err := preflightChecker.StaticSudo(ctx); err != nil {
 			return err
 		}
 	}
 
-	if destroyer == nil {
+	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
 
@@ -240,6 +275,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
+	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err

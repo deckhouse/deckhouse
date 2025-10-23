@@ -1,7 +1,9 @@
 ---
 title: Политики безопасности
 permalink: ru/admin/configuration/security/policies.html
+description: "Настройка политик безопасности в Deckhouse Kubernetes Platform с использованием Gatekeeper и Pod Security Standards. Применение политик, соответствие требованиям и управление безопасностью кластера."
 lang: ru
+search: security policies, pod security standards, gatekeeper, security enforcement, policy management, политики безопасности
 ---
 
 Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,
@@ -34,7 +36,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Варианты назначения политики:
 
-- глобально — с помощью [параметра `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`;
+- глобально — с помощью [параметра `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля [`admission-policy-engine`](/modules/admission-policy-engine/);
 - для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy=<POLICY_NAME>`.
 
   Пример команды для назначения политики `restricted` на все поды в пространстве имён `my-namespace`:
@@ -58,7 +60,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Как и в случае с назначением политик, режим их применения можно задать:
 
-- глобально — с помощью [параметра `settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) модуля `admission-policy-engine`;
+- глобально — с помощью [параметра `settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) модуля [`admission-policy-engine`](/modules/admission-policy-engine/);
 - для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>`.
 
   Пример команды для установки режима `warn` на все поды в пространстве имён `my-namespace`:

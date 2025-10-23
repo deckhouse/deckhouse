@@ -74,6 +74,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/014-fix-success-reload-metric.patch
   - patch -p1 < /patches/ingress-nginx/015-disable-error-logs.patch
   - patch -p1 < /patches/ingress-nginx/016-maxmind-alerts.patch
+  - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch

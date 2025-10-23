@@ -1,6 +1,7 @@
 ---
 title: "Node management basics in Deckhouse"
 permalink: en/admin/configuration/platform-scaling/node/node-management.html
+description: "Manage Kubernetes nodes in Deckhouse Kubernetes Platform with automatic scaling, updates, and maintenance. NodeGroup CRD configuration and node lifecycle management."
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node management:
@@ -51,7 +52,7 @@ Node management is implemented via the [`node-manager`](/modules/node-manager/) 
    # Or disable.
    ```
 
-1. Using the [Deckhouse web interface](/modules/console):
+1. Using the [Deckhouse web interface](/modules/console/):
 
    - Go to the "Deckhouse → Modules" section.
    - Find the `node-manager` module and click on it.
@@ -104,10 +105,10 @@ These actions are performed automatically when using `bootstrap.sh` or when conn
 ### Updates that require node downtime
 
 Some updates — for example, upgrading `containerd` or kubelet across multiple versions — require node downtime and may cause short-term disruption of system components (*disruptive updates*).  
-The application mode for such updates is configured via the `disruptions.approvalMode` parameter:
+The application mode for such updates is configured via the [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter:
 
 - `Manual`: Manual approval mode for disruptive updates.  
-  When a disruptive update is available, a special alert is triggered.
+  When a disruptive update is available, the [`NodeRequiresDisruptionApprovalForUpdate`](../../../../reference/alerts.html#node-manager-noderequiresdisruptionapprovalforupdate) alert is triggered.
 
   To approve the update, add the annotation `update.node.deckhouse.io/disruption-approved=` to each node in the group. Example:
 
@@ -124,7 +125,7 @@ The application mode for such updates is configured via the `disruptions.approva
 - `Automatic`: Automatic approval mode for disruptive updates.  
 
   In this mode, the node is drained automatically before applying the update by default.  
-  This behavior can be changed using the `disruptions.automatic.drainBeforeApproval` parameter in the node group settings.
+  This behavior can be changed using the [`disruptions.automatic.drainBeforeApproval`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) parameter in the node group settings.
 
 - `RollingUpdate`: A mode in which a new node with updated settings is created and the old one is removed.  
   Applicable only to cloud nodes.

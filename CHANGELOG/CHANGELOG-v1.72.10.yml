@@ -1,0 +1,17 @@
+ci:
+  fixes:
+    - summary: Delete an extra entry from the changelog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15941
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix hook logick
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16028
+deckhouse-controller:
+  fixes:
+    - summary: fix possibility deadlock
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16012
+istio:
+  fixes:
+    - summary: Reduce RAM for regenerate multicluster JWT token
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15328
+

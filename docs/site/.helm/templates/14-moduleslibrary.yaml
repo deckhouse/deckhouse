@@ -25,7 +25,7 @@ spec:
       serviceAccountName: docs-builder
       initContainers:
         - name: init
-          image: {{ index .Values.werf.image "web-frontend" }}
+          image: {{ index .Values.werf.image "web-frontend-init" }}
           command: ["sh"]
           args: ["/scripts/channels-convert.sh"]
           env:
@@ -45,7 +45,6 @@ spec:
               mountPath: /app/channels-data
       containers:
         - name: web
-          command: ["nginx", "-g", "daemon off;"]
           image: {{ index .Values.werf.image "web-frontend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
@@ -80,10 +79,8 @@ spec:
               name: modules-searchindex-en
             - mountPath: /app/ru/search-external-modules-index
               name: modules-searchindex-ru
-            - mountPath: /cache
-              name: download-cache
             - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
+              mountPath: /usr/conf/nginx.conf
               subPath: nginx.conf
             - mountPath: /tmp
               name: web-tmp
@@ -163,8 +160,6 @@ spec:
         - name: modules-searchindex-en
           emptyDir: {}
         - name: modules-searchindex-ru
-          emptyDir: {}
-        - name: download-cache
           emptyDir: {}
 ---
 apiVersion: v1

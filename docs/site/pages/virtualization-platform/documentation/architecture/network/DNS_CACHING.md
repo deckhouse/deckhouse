@@ -17,7 +17,7 @@ that may cause degradation of key service performance indicators:
 Any minor network delays can significantly degrade service quality due to the above-mentioned issues.
 
 One possible solution is to install a DNS server on each node.
-In Deckhouse Virtualization Platform, this is implemented using the [`node-local-dns`](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/) module.
+In Deckhouse Virtualization Platform, this is implemented using the [`node-local-dns`](/modules/node-local-dns/) module.
 
 When using a caching DNS server,
 external requests (that are not already cached) will still be attempted to resolve through the internal zone chain first.
@@ -27,7 +27,7 @@ caching is enough to significantly improve DNS resolution performance.
 ## Caching DNS server operation principles
 
 When the caching DNS server is deployed,
-the [`node-local-dns`](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/) module applies the following configuration steps on each cluster node:
+the [`node-local-dns`](/modules/node-local-dns/) module applies the following configuration steps on each cluster node:
 
 - Configuring an interface with the IP address of the `kube-dns` service's clusterIP.
 - Starting a caching CoreDNS that listens on that address.

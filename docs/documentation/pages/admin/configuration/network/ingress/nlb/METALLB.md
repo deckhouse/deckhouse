@@ -1,6 +1,7 @@
 ---
 title: "Balancing with MetalLB"
 permalink: en/admin/configuration/network/ingress/nlb/metallb.html
+description: "Configure MetalLB load balancing in Deckhouse Kubernetes Platform for bare-metal and cloud environments. LoadBalancer service support and IP address management."
 ---
 
 The [`metallb`](/modules/metallb/) module implements support for
@@ -36,7 +37,7 @@ This means:
 <div data-presentation="../../../../../presentations/metallb/basics_metallb_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
 
-The `metallb` module removes these limitations. It provides the MetalLoadBalancerClass resource, which lets you:
+The `metallb` module removes these limitations. It provides the [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource, which lets you:
 
 - Bind a group of nodes to an IP address pool using `nodeSelector`.
 - Create a standard LoadBalancer Service and specify the name of the target MetalLoadBalancerClass.
@@ -64,7 +65,7 @@ This approach means:
 
 ### Example of using MetalLB in L2 LoadBalancer mode
 
-1. Enable the `metallb` module:
+1. Enable the [`metallb`](/modules/metallb/) module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -82,7 +83,7 @@ This approach means:
    d8 k create deploy nginx --image=nginx
    ```
 
-1. Create a MetalLoadBalancerClass resource:
+1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -151,7 +152,7 @@ Example output:
 Available in DKP Enterprise Edition only.
 {% endalert %}
 
-In BGP mode, `metallb` provides LoadBalancer-type services in Kubernetes clusters deployed on physical infrastructure.
+In BGP mode, [`metallb`](/modules/metallb/) provides LoadBalancer-type services in Kubernetes clusters deployed on physical infrastructure.
 Service IP addresses are announced directly to routers (or top-of-rack switches) via the BGP protocol.
 
 ### How it works
@@ -200,7 +201,7 @@ Service IP addresses are announced directly to routers (or top-of-rack switches)
 
 ### Example of using MetalLB in BGP LoadBalancer mode
 
-1. Enable the `metallb` module and configure the required parameters:
+1. Enable the [`metallb`](/modules/metallb/) module and configure the required parameters:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

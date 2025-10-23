@@ -1,6 +1,7 @@
 ---
 title: Integration with KUMA and antivirus software
 permalink: en/admin/configuration/security/kuma-and-av-software.html
+description: "Configure KUMA and antivirus software integration in Deckhouse Kubernetes Platform. Security event forwarding, audit log analysis, and Kaspersky integration setup."
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports integration with Kaspersky Unified Monitoring and Analysis Platform (KUMA),
@@ -204,7 +205,7 @@ List of Deckhouse service directories (also available [CSV format](/products/kub
 | `/var/lib/deckhouse/` (master node) | Deckhouse module files dynamically loaded from the image registry |
 | `/var/lib/etcd` (master node) | etcd database |
 | `/var/lib/kubelet/` (any node) | kubelet configuration files |
-| `/var/lib/upmeter` (master node, `upmeter` module) | `upmeter` module database |
+| `/var/lib/upmeter` (master node, `upmeter` module) | [`upmeter`](/modules/upmeter/) module database |
 | `/var/log/containers` (any node) | Container logs (when using containerd) |
 | `/var/log/pods/` (any node) | Logs of all pod containers running on the node |
 

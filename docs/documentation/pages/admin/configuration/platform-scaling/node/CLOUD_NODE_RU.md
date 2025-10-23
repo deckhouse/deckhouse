@@ -90,7 +90,7 @@ spec:
 
 ## Изменение конфигурации облачного провайдера в кластере
 
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
+Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
 
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
@@ -104,7 +104,7 @@ d8 platform edit provider-cluster-configuration
 
 Автоматическое масштабирование происходит только при наличии Pending-подов, которые не могут быть запущены на существующих узлах из-за нехватки ресурсов (например, CPU или памяти). В этом случае `Cluster Autoscaler` пытается добавить узлы, основываясь на конфигурации NodeGroup.
 
-Основные параметры масштабирования задаются в секции `cloudInstances` ресурса NodeGroup:
+Основные параметры масштабирования задаются в [секции `cloudInstances`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances) ресурса NodeGroup:
 
 - `minPerZone` — минимальное количество виртуальных машин в каждой зоне. Это число всегда поддерживается даже при отсутствии нагрузки.
 - `maxPerZone` — максимальное количество узлов, которые можно создать в каждой зоне. Определяет верхнюю границу масштабирования.

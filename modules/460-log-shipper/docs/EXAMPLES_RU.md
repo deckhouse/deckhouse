@@ -525,7 +525,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: string-to-json
 spec:
@@ -560,7 +560,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: klog-to-json
 spec:
@@ -598,7 +598,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: syslog-to-json
 spec:
@@ -643,7 +643,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: clf-to-json
 spec:
@@ -684,7 +684,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: logfmt-to-json
 spec:
@@ -721,7 +721,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -756,7 +756,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -815,7 +815,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: replace-dot
 spec:
@@ -856,7 +856,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:
@@ -876,7 +876,7 @@ spec:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:

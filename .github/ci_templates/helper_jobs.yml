@@ -15,7 +15,7 @@ See:
 {!{- $ctx := . }!}
 git_info:
   name: Get git info
-  runs-on: ubuntu-latest
+  runs-on: "regular"
 {!{- if coll.Has $ctx "dependJobs" -}!}
 {!{- if gt (len $ctx.dependJobs) 0 }!}
   needs:
@@ -103,9 +103,15 @@ git_info:
 {!{- $ctx := . }!}
 block-until-image-is-not-ready:
   name: Block until the docker image is not ready
-  runs-on: ubuntu-latest
+  runs-on: "regular"
+  permissions:
+    contents: read
+    actions: read
+    pull-requests: read
   steps:
     - uses: {!{ index (ds "actions") "actions/checkout" }!}
+      with:
+        ref: "main"
     - name: Block until the docker image is not ready
       id: block-image-dont-ready
       uses: {!{ index (ds "actions") "actions/github-script" }!}
@@ -113,6 +119,7 @@ block-until-image-is-not-ready:
         script: |
           const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
           const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+          const isTag = (branch) => branch.includes("/tags/")
 
           let branchName;
           let prNum;
@@ -120,38 +127,43 @@ block-until-image-is-not-ready:
           if (context.eventName === 'pull_request') {
             branchName = context.payload.pull_request.head.ref;
             prNum = context.payload.pull_request.number;
-          } else {
-            return true;
+          } else if (context.eventName === 'workflow_dispatch') {
+            branchName = context.payload.inputs.ci_commit_ref_name;
+            prNum = context.payload.inputs.issue_number;
           }
 
           if (!branchName) {
             branchName = githubAction.GetBranchNameFromContext(context);
           }
 
-          if (branchName) {
-            let infoText = `Check build workflow is completed for branch: ${branchName}`;
-            if (prNum) {
-              infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
-            }
-            core.info(infoText);
-
-            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
-            try {
-              let workflowName = 'Build and test for dev branches';
-              let jobName = 'Build FE';
-              if (isReleaseBranch(branchName)) {
-                workflowName = 'Build and test for release branches';
-              }
-              if (branchName === 'main') {
-                return true;
-              }
-              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
-            } catch(error) {
-              core.setFailed(error);
-            }
-          } else {
-            core.setFailed("Branch name not found.");
+          if (!branchName) {
+            core.setFailed("Branch not found.");
+            return false;
           }
+
+          core.info(`${branchName} is main? ${branchName === 'main'}`)
+          core.info(`${branchName} is release? ${isReleaseBranch(branchName)}`)
+          core.info(`${branchName} is tag? ${isTag(branchName)}`)
+          if (branchName === 'main' || isReleaseBranch(branchName) || isTag(branchName)) {
+            core.info(`Skip a job because it's a tag, release or main branch: ${branchName}`);
+            return true;
+          }
+          
+          let infoText = `Check build workflow is completed for branch: ${branchName}`;
+          if (prNum) {
+            infoText += ` | PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+          }
+          core.info(infoText);
+
+          const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+          try {
+            let workflowName = 'Build and test for dev branches';
+            let jobName = 'Build FE';
+            await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+          } catch(error) {
+            core.setFailed(error);
+          }
+
 
 # </template: block-until-image-is-not-ready>
 {!{- end -}!}
@@ -165,7 +177,7 @@ block-until-image-is-not-ready:
 # <template: pull_request_info>
 pull_request_info:
   name: Get pull request reference
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   outputs:
     ref: ${{ steps.pr_props.outputs.ref }}
     ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
@@ -181,10 +193,6 @@ pull_request_info:
     build_se: ${{ steps.pr_props.outputs.build_se }}
     build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
     build_ee: ${{ steps.pr_props.outputs.build_ee }}
-
-  permissions:
-      contents: read
-      pull-requests: read
 
   # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
   if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
@@ -401,7 +409,7 @@ pull_request_info:
 # <template: skip_tests_repos>
 skip_tests_repos:
   name: Skip tests repos
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
   steps:
   - name: Do nothing

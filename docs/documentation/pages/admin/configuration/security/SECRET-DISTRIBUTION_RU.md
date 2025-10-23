@@ -1,6 +1,7 @@
 ---
 title: Автоматическое распространение секретов по пространствам имён
 permalink: ru/admin/configuration/security/secret-distribution.html
+description: "Настройка автоматического распространения секретов по пространствам имён в Deckhouse Kubernetes Platform. Репликация секретов, интеграция с CI/CD и автоматизация безопасного управления секретами."
 lang: ru
 ---
 

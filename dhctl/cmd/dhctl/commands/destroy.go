@@ -25,10 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -54,14 +52,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineTFResourceManagementTimeout(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		if !app.SanityCheck {
-			log.WarnLn(destroyApprovalsMessage)
+			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
 		}
-
-		var sshClient node.SSHClient
 
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
@@ -70,16 +68,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient = clissh.NewClientFromFlags()
-		} else {
-			var err error
-			sshClient, err = gossh.NewClientFromFlags()
-			if err != nil {
-				return err
-			}
-		}
-		err := sshClient.Start()
+		sshClient, err := sshclient.NewClientFromFlags()
 		if err != nil {
 			return err
 		}
@@ -88,10 +77,13 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:    cache.Global(),
 			SkipResources: app.SkipResources,
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
+			TmpDir:        app.TmpDirName,
 		})
 		if err != nil {
 			return err

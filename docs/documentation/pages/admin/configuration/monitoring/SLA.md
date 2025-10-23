@@ -1,13 +1,14 @@
 ---
 title: Cluster SLA monitoring
 permalink: en/admin/configuration/monitoring/sla.html
+description: "Configure SLA monitoring in Deckhouse Kubernetes Platform. Cluster availability tracking, SLA compliance monitoring, and uptime statistics collection for platform components."
 ---
 
 DKP can collect statistics about the availability of cluster components and DKP components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.
 
 Additionally, using the [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) custom resource, you can export availability metrics via the Prometheus Remote Write protocol.
 
-To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module in the [Deckhouse web interface](/modules/console/stable/) or using the following command:
+To start collecting availability metrics and activate the [interface](#interface), enable the [`upmeter`](/modules/upmeter/) module in the [Deckhouse web interface](/modules/console/) or using the following command:
 
 ```shell
 d8 platform module enable upmeter
@@ -15,7 +16,7 @@ d8 platform module enable upmeter
 
 ## Module configuration
 
-The `upmeter` module is configured using the `upmeter` ModuleConfig:
+The [`upmeter`](/modules/upmeter/) module is configured using the `upmeter` ModuleConfig:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -58,8 +59,8 @@ DKP provides two web interfaces for availability assessment:
   ![Example of upmeter metrics graphs in Grafana](../../../images/upmeter/image1.png)
 
 ## Status metrics export
- 
-Example of UpmeterRemoteWrite configuration for exporting status metrics via the [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/) protocol:
+
+Example of [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) configuration for exporting status metrics via the [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/) protocol:
 
 ```yaml
 apiVersion: deckhouse.io/v1

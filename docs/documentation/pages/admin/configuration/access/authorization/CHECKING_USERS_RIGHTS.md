@@ -1,6 +1,7 @@
 ---
 title: "Checking user permissions"
 permalink: en/admin/configuration/access/authorization/check.html
+description: "Check user permissions and access rights in Deckhouse Kubernetes Platform. RBAC permission verification, user access testing, and authorization debugging tools."
 ---
 
 To check whether a user has the necessary permissions, run the following command, which includes:
@@ -10,7 +11,7 @@ To check whether a user has the necessary permissions, run the following command
 - `groups`: User groups.
 
 {% alert level="info" %}
-If you’re using the `user-authn` module, you can see the user’s name and groups in the Dex logs
+If you’re using the [`user-authn`](/modules/user-authn/) module, you can see the user’s name and groups in the Dex logs
 (only logged during authorization) by running:
 
 ```shell

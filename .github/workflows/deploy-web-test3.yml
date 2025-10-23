@@ -50,16 +50,16 @@ env:
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  REGISTRY_PATH: "sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
 # Cancel in-progress jobs for the same tag/branch.
@@ -77,7 +77,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -154,7 +154,7 @@ jobs:
   # <template: check_label_job>
   check_label:
     name: Check label
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       should_run: ${{ steps.check_label.outputs.should_run }}
       labels: ${{ steps.check_label.outputs.labels }}

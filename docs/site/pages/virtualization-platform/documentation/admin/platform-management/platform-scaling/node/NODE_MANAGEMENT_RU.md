@@ -11,7 +11,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 - Централизованное управление конфигурацией групп узлов через CRD NodeGroup;
 - Использование различных типов узлов: постоянные, временные или bare-metal.
 
-Группы узлов позволяют логически сегментировать инфраструктуру кластера. В DVP часто используются следующие типы [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) по назначению:
+Группы узлов позволяют логически сегментировать инфраструктуру кластера. В DVP часто используются следующие типы [NodeGroup](/modules/node-manager/cr.html#nodegroup) по назначению:
 
 - `master` — управляющие узлы (control plane);
 - `front` — узлы для маршрутизации HTTP(S)-трафика;
@@ -23,7 +23,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 
 ## Включение механизма управления узлами
 
-Управление узлами реализовано с помощью модуля [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/), который можно включить или выключить несколькими способами:
+Управление узлами реализовано с помощью модуля [`node-manager`](/modules/node-manager/), который можно включить или выключить несколькими способами:
 
 1. Через ресурс ModuleConfig/node-manager:
 
@@ -56,7 +56,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 
 ## Автоматическое развёртывание и обновление
 
-В Deckhouse Virtualization Platform (DVP) реализован автоматизированный механизм управления жизненным циклом узлов на основе объектов [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup). DVP обеспечивает как начальное развёртывание узлов, так и их обновление при изменении конфигурации, поддерживая bare-metal кластеры (при наличии интеграции с модулем `node-manager`).
+В Deckhouse Virtualization Platform (DVP) реализован автоматизированный механизм управления жизненным циклом узлов на основе объектов [NodeGroup](/modules/node-manager/cr.html#nodegroup). DVP обеспечивает как начальное развёртывание узлов, так и их обновление при изменении конфигурации, поддерживая bare-metal кластеры (при наличии интеграции с модулем `node-manager`).
 
 Как это работает:
 
@@ -96,7 +96,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 - установка и конфигурация компонентов container runtime (`containerd`) и `kubelet`;
 - включение узла в состав кластера Kubernetes.
 
-Эти операции выполняются автоматически при использовании `bootstrap.sh` или при подключении узлов через ресурсы [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials).
+Эти операции выполняются автоматически при использовании `bootstrap.sh` или при подключении узлов через ресурсы [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
 ### Обновления, требующие прерывания работы узла
 
@@ -105,7 +105,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 Режим применения таких обновлений настраивается с помощью параметра `disruptions.approvalMode`:
 
 - `Manual` — режим ручного подтверждения disruptive-обновлений.
-  При появлении доступного disruptive-обновления отображается специальный алерт.
+  При появлении доступного disruptive-обновления отображается [алерт `NodeRequiresDisruptionApprovalForUpdate`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#node-manager-noderequiresdisruptionapprovalforupdate).
   
   Чтобы подтвердить disruptive-обновление,
   установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел в группе, следуя примеру:
@@ -180,7 +180,7 @@ spec:
 
 Создание (обновление) ресурса NodeGroup в кластере может занять значительное время (до готовности всех узлов). При использовании werf (например, в CI/CD) это может привести к превышению таймаута сборки.
 
-Чтобы werf игнорировал состояние NodeGroup, добавьте к ресурсу [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) следующие аннотации:
+Чтобы werf игнорировал состояние NodeGroup, добавьте к ресурсу [NodeGroup](/modules/node-manager/cr.html#nodegroup) следующие аннотации:
 
 ```yaml
 metadata:
@@ -191,7 +191,7 @@ metadata:
 
 ## Настройки для групп с узлами Static
 
-Группы узлов с типами Static предназначены для управления вручную созданными узлами. Эти узлы подключаются вручную или через [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) и не поддерживают автоматическое обновление и масштабирование.
+Группы узлов с типами Static предназначены для управления вручную созданными узлами. Эти узлы подключаются вручную или через [StaticInstance](/modules/node-manager/cr.html#staticinstance) и не поддерживают автоматическое обновление и масштабирование.
 
 Особенности конфигурации:
 
@@ -207,16 +207,16 @@ metadata:
 
 - Подключение узлов к кластеру может выполняться вручную или автоматически, в зависимости от конфигурации:
   - **Вручную** — пользователь скачивает bootstrap-скрипт, настраивает сервер, запускает скрипт вручную.
-  - **Автоматически (CAPS)** — при использовании [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials), DVP автоматически подключает и настраивает узлы.
+  - **Автоматически (CAPS)** — при использовании [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DVP автоматически подключает и настраивает узлы.
   - **Смешанный подход** — вручную добавленный узел можно передать под управление CAPS, используя аннотацию `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию `staticInstances`. Это позволяет DVP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
 
-> В [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) с типами Static можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DVP использует это значение для контроля состояния и автоматизации.
+> В [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типами Static можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DVP использует это значение для контроля состояния и автоматизации.
 
 ## Запуск DVP на произвольном узле
 
-Для запуска DVP на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`. Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+Для запуска DVP на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](/modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`. Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
 
 {% alert level="warning" %}
 Используйте для запуска DVP только узлы с типом **Static**. Также избегайте использования для запуска DVP группы узлов (`NodeGroup`), содержащей только один узел.

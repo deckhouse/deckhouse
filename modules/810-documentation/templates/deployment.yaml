@@ -111,6 +111,8 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /app/hugo
+            name: app-hugo
           - mountPath: "/mount/public/en/modules"
             name: modules-docs-en
           - mountPath: "/mount/public/ru/modules"
@@ -177,6 +179,8 @@ spec:
           configMap:
             name: documentation-nginx-config
         - name: tmp
+          emptyDir: {}
+        - name: app-hugo
           emptyDir: {}
         - name: modules-docs-en
           emptyDir: {}

@@ -40,7 +40,7 @@ Available only in DKP Enterprise Edition (EE).
 * Multicluster requires mutual trust between clusters to work.
   This is achieved by a mutual exchange of root certificates between clusters.
 * Istio connects directly to the API server of the neighboring cluster to gather information about its services.
-  The Deckhouse `istio` module establishes the secure communication channel.
+  The Deckhouse [`istio`](/modules/istio/) module establishes the secure communication channel.
 
 ### Enabling the multicluster
 

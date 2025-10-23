@@ -61,7 +61,7 @@ lang: ru
 
 ## Изменение ограничений DRBD‑томов и портов кластера
 
-Портовой диапазон по умолчанию для DRBD-ресурсов — TCP `7000`–`7999`. Переопределить его можно с помощью настройки `drbdPortRange`, указав нужные значения `minPort` и `maxPort`.
+Портовой диапазон по умолчанию для DRBD-ресурсов — TCP `7000`–`7999`. Переопределить его можно с помощью [настройки `drbdPortRange`](/modules/sds-replicated-volume/stable/configuration.html#parameters-drbdportrange), указав нужные значения `minPort` и `maxPort`.
 
 {% alert level="warning" %}
 После изменения параметров `drbdPortRange` перезапустите контроллер LINSTOR, чтобы новые настройки вступили в силу. При этом существующие DRBD-ресурсы сохранят назначенные им порты.
@@ -327,7 +327,7 @@ dmesg | grep 'Remote failed to finish a request within'
 
 ## После удаления ресурса ReplicatedStoragePool остаётся соответствующий ему Storage Pool
 
-Это ожидаемое поведение. Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
+Это ожидаемое поведение. [Модуль `sds-replicated-volume`](/modules/sds-replicated-volume/) не обрабатывает операции удаления ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
 
 ## Ограничения на изменение spec ReplicatedStorageClass
 
@@ -343,7 +343,7 @@ dmesg | grep 'Remote failed to finish a request within'
 
 ## Ошибка "You're not allowed to change state of linstor cluster manually"
 
-Операции, которые требуют ручного вмешательства, в модуле `sds-replicated-volume` частично или полностью автоматизированы. Поэтому модуль `sds-replicated-volume` ограничивает список разрешенных команд в LINSTOR. Например, автоматизировано создание Tie-Breaker, —  сам LINSTOR иногда их не создает для ресурсов с двумя репликами. Чтобы посмотреть список разрешённых команд, выполните:
+Операции, которые требуют ручного вмешательства, в [модуле `sds-replicated-volume`](/modules/sds-replicated-volume/) частично или полностью автоматизированы. Поэтому модуль `sds-replicated-volume` ограничивает список разрешенных команд в LINSTOR. Например, автоматизировано создание Tie-Breaker, —  сам LINSTOR иногда их не создает для ресурсов с двумя репликами. Чтобы посмотреть список разрешённых команд, выполните:
 
 ```shell
 alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
@@ -543,7 +543,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    d8 k get namespace d8-linstor
    ```
 
-1. Создайте ресурс ModuleConfig для `sds-node-configurator`:
+1. Создайте ресурс ModuleConfig для [`sds-node-configurator`](/modules/sds-node-configurator/):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -563,7 +563,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    d8 k get moduleconfig sds-node-configurator
    ```
 
-1. Создайте ресурс ModuleConfig для `sds-replicated-volume`:
+1. Создайте ресурс ModuleConfig для [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `linstor`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
 
@@ -609,7 +609,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ### Миграция на ReplicatedStorageClass
 
-StorageClass в данном модуле управляются через ресурс ReplicatedStorageClass. Вручную StorageClass создаваться не должны.
+StorageClass в данном модуле управляются через [ресурс ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass). Вручную StorageClass создаваться не должны.
 
 При миграции с модуля LINSTOR удалите старые StorageClass и создайте новые через ресурс ReplicatedStorageClass в соответствии с таблицей, представленной ниже.
 
@@ -665,7 +665,7 @@ StorageClass в данном модуле управляются через ре
    d8 k get namespace d8-sds-drbd
    ```
 
-1. Создайте ресурс ModuleConfig для `sds-replicated-volume`:
+1. Создайте ресурс ModuleConfig для [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `sds-drbd`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
 

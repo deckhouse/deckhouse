@@ -731,8 +731,17 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 }
 
 func GetMasterHostsIPs() ([]session.Host, error) {
+	inCache, err := cache.Global().InCache(MasterHostsCacheKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !inCache {
+		return make([]session.Host, 0), nil
+	}
+
 	var hosts map[string]string
-	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
+	err = cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}
@@ -806,7 +815,7 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
-		case strings.HasPrefix(name, "base-infrastructure"):
+		case strings.HasPrefix(name, string(infrastructure.BaseInfraStep)):
 			fallthrough
 		case strings.HasPrefix(name, "uuid"):
 			fallthrough

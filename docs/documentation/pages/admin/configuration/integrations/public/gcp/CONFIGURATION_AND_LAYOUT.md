@@ -154,7 +154,7 @@ provider:
 
 ## Configuration
 
-Integration with GCP is handled via the GCPClusterConfiguration resource,
+Integration with GCP is handled via the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource,
 which describes the cloud cluster configuration in GCP
 and is used by the cloud provider when the control plane is hosted in the cloud.
 The responsible DKP module configures itself automatically based on the selected layout.
@@ -204,7 +204,7 @@ provider:
 ```
 
 Machine provisioning and parameters are configured in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource,
-where the instance class for the node group is specified (the `cloudInstances.classReference` parameter).
+where the instance class for the node group is specified (the [`cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter).
 For GCP, the instance class is a [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) custom resource that defines the machine parameters.
 
 DKP also automatically creates StorageClasses that cover all available disk types in GCP:
@@ -218,7 +218,7 @@ DKP also automatically creates StorageClasses that cover all available disk type
 | ssd | none | `pd-ssd-not-replicated` |
 | ssd | regional | `pd-ssd-replicated` |
 
-You can exclude unnecessary StorageClasses by specifying them in the `exclude` parameter.
+You can exclude unnecessary StorageClasses by specifying them in the [`exclude`](/modules/cloud-provider-gcp/configuration.html#parameters-storageclass-exclude) parameter.
 
 ### Configuring node security policies
 
@@ -235,8 +235,8 @@ To implement this, use additional [network tags](https://cloud.google.com/vpc/do
 This parameter can be set during cluster creation or in an existing cluster.
 In both cases, the additional network tags must be specified in GCPClusterConfiguration:
 
-- **For master nodes**: Under the `additionalNetworkTags` field of the `masterNodeGroup` section.
-- **For static nodes**: Under the `additionalNetworkTags` field of the `nodeGroups` section for the corresponding node group.
+- **For master nodes**: Under the [`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) field of the `masterNodeGroup` section.
+- **For static nodes**: Under the [`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) field of the `nodeGroups` section for the corresponding node group.
 
 The `additionalNetworkTags` field is an array of strings with network tag names.
 

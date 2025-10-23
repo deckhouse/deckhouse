@@ -1,7 +1,9 @@
 ---
 title: Обзор
 permalink: ru/admin/configuration/security/
+description: "Настройка функций безопасности в Deckhouse Kubernetes Platform включая сертификаты, аудит логирование, runtime безопасность, сканирование и политики безопасности."
 lang: ru
+search: security overview, security configuration, security management, platform security, обзор безопасности, конфигурация безопасности, управление безопасностью, безопасность платформы
 ---
 
 Раздел «Безопасность» посвящён вопросам обеспечения безопасности в Deckhouse Kubernetes Platform.
@@ -26,7 +28,7 @@ lang: ru
   - как просматривать результаты и вручную запускать повторную проверку.
 
 - Управление сертификатами:
-  - выпуск, продление и контроль TLS-сертификатов с помощью встроенного инструмента `cert-manager`;
+  - выпуск, продление и контроль TLS-сертификатов с помощью [модуля `cert-manager`](/modules/cert-manager/);
   - примеры использования Let’s Encrypt, HashiCorp Vault, самоподписанных и внешних CA;
   - поддержка видов валидации `HTTP-01` и `DNS-01`.
 

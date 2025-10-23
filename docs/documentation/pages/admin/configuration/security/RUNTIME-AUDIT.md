@@ -1,6 +1,7 @@
 ---
 title: Security event audit
 permalink: en/admin/configuration/security/events/runtime-audit.html
+description: "Configure security event auditing in Deckhouse Kubernetes Platform. Runtime security monitoring, threat detection, and audit logging for cluster security analysis."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for detecting security threats
@@ -63,7 +64,7 @@ On some systems, eBPF probes may not work.
      enabled: true
    ```
 
-1. (**Optional**) If the cluster control plane is not managed by DKP with `control-plane-manager`,
+1. (**Optional**) If the cluster control plane is not managed by DKP with [`control-plane-manager`](/modules/control-plane-manager/),
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
 All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
@@ -71,8 +72,8 @@ All available security audit parameters are listed in the [`runtime-audit-engine
 ### Manually configuring the Kubernetes API audit webhook
 
 {% alert level="info" %}
-Webhook configuration is not required if the `control-plane-manager` module is enabled.
-In this case, when the `runtime-audit-engine` module is enabled,
+Webhook configuration is not required if the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+In this case, when the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module is enabled,
 the settings for collecting Kubernetes API audit events will be applied automatically.
 {% endalert %}
 

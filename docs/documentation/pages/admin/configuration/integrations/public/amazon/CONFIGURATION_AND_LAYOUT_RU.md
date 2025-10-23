@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/public/amazon/amazon-layout.html
+permalink: ru/admin/integrations/public/amazon/layout.html
 lang: ru
 ---
 
@@ -117,7 +117,7 @@ tags:
 
 ## Назначение AWSClusterConfiguration
 
-Ресурс AWSClusterConfiguration описывает параметры кластера и используется Deckhouse Kubernetes Platform (DKP) для:
+[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Kubernetes Platform (DKP) для:
 
 - задания схемы размещения и сетевых CIDR;
 - конфигурации master- и рабочих узлов;
@@ -151,7 +151,7 @@ dhctl converge
 
 ## Внутренняя адресация и подсети
 
-Параметр `nodeNetworkCIDR` определяет диапазон адресов, который будет распределен по зонам доступности. Этот диапазон должен соответствовать или быть вложенным в `vpcNetworkCIDR`. Подсети автоматически создаются на основании количества зон региона.
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) определяет диапазон адресов, который будет распределен по зонам доступности. Этот диапазон должен соответствовать или быть вложенным в [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr). Подсети автоматически создаются на основании количества зон региона.
 
 Пример:
 
@@ -176,9 +176,9 @@ DKP не создаёт группы безопасности автоматич
 
 | Тип узлов              | Где указывать                                                                 |
 |------------------------|-------------------------------------------------------------------------------|
-| Master-узлы            | В поле `masterNodeGroup.instanceClass.additionalSecurityGroups` ресурса AWSClusterConfiguration |
-| Статические worker-узлы| В поле `nodeGroups[].instanceClass.additionalSecurityGroups` того же ресурса |
-| Эфемерные узлы         | В объекте AWSInstanceClass, в поле `spec.additionalSecurityGroups`         |
+| Master-узлы            | В [поле `masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса AWSClusterConfiguration |
+| Статические worker-узлы| В [поле `nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) того же ресурса |
+| Эфемерные узлы         | В объекте AWSInstanceClass, в [поле `spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups)         |
 
 Во всех случаях параметр `additionalSecurityGroups` принимает массив строк — имен (ID) групп безопасности в AWS.
 
@@ -186,9 +186,9 @@ DKP не создаёт группы безопасности автоматич
 
 При использовании `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы безопасности для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
 
-- `additionalSecurityGroups` в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
-- `additionalSecurityGroups` в ресурсе AWSInstanceClass;
-- `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) в ресурсе AWSInstanceClass;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) в секции `nodeGroups.instanceClass`.
 
 Для настройки групп, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
 
@@ -214,7 +214,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ## Настройка доступа через bastion-хост
 
-Для подключения к узлам в приватных подсетях используйте параметр `withNAT.bastionInstance` в AWSClusterConfiguration. Bastion-хост заказывается вместе с инфраструктурой по заданным параметрам `instanceClass`.
+Для подключения к узлам в приватных подсетях используйте [параметр `withNAT.bastionInstance`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-withnat-bastioninstance) в AWSClusterConfiguration. Bastion-хост заказывается вместе с инфраструктурой по заданным параметрам `instanceClass`.
 
 Поддерживаются сценарии:
 
@@ -262,7 +262,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ## Использование существующего VPC (existingVPCID)
 
-Параметр `existingVPCID` в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DKP, вместо создания нового VPC автоматически.
+[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DKP, вместо создания нового VPC автоматически.
 
 Этот параметр может быть полезен в случаях, когда:
 
@@ -276,5 +276,5 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 Совместимость с другими параметрами:
 
-- Если указан `existingVPCID`, не указывайте `vpcNetworkCIDR` — это взаимоисключающие параметры.
-- Параметр `nodeNetworkCIDR` можно (и желательно) указывать — он будет вложен в существующий VPC.
+- Если указан `existingVPCID`, не указывайте [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) — это взаимоисключающие параметры.
+- [Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) можно (и желательно) указывать — он будет вложен в существующий VPC.

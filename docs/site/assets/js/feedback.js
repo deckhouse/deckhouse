@@ -162,17 +162,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function sendFeedback(state, reasons = []) {
-        const lastFeedback = cookieUserData.pages[currentUrl];
-        if (lastFeedback) {
-            const blockingFeedback = 5 * 60 * 1000;
-            const timeSinceLastFeedback = Date.now() - lastFeedback.presentTime;
-            if (timeSinceLastFeedback < blockingFeedback) {
-                showLaterModal();
-                hideAccessModal();
-                return;
-            }
-        }
-
         const jsonReasons = JSON.stringify(reasons);
 
         try {
@@ -216,13 +205,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (likeIcon) {
         likeIcon.addEventListener('click', async function () {
-            await sendFeedback(true, []);
+            const lastFeedback = cookieUserData.pages[currentUrl];
+            if(lastFeedback) {
+                const blockingFeedback = 5 * 60 * 1000;
+                const timeSinceLastFeedback = Date.now() - lastFeedback.presentTime;
+                if(timeSinceLastFeedback < blockingFeedback) {
+                    hideAccessModal();
+                    showLaterModal();
+                } else {
+                    await sendFeedback(true, []);
+                }
+            } else  {
+                await sendFeedback(true, []);
+            }
         })
     }
 
     if (dislikeIcon) {
         dislikeIcon.addEventListener('click', function () {
-            showFormModal();
+            const lastFeedback = cookieUserData.pages[currentUrl];
+            if(lastFeedback) {
+                const blockingFeedback = 5 * 60 * 1000;
+                const timeSinceLastFeedback = Date.now() - lastFeedback.presentTime;
+                if(timeSinceLastFeedback < blockingFeedback) {
+                    hideAccessModal();
+                    showLaterModal();
+                } else {
+                    showFormModal();
+                }
+            } else {
+                showFormModal();
+            }
         })
     }
 

@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -177,20 +178,26 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -204,7 +211,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -227,10 +234,10 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	}
 
 	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
-			s.schemaStore,
+			s.params.SchemaStore,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -246,10 +253,6 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		err = sshClient.Start()
-		if err != nil {
-			return fmt.Errorf("starting ssh client: %w", err)
-		}
 		return nil
 	})
 	if err != nil {
@@ -264,7 +267,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 	}
 
-	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,
@@ -275,6 +278,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
+		TmpDir:  s.params.TmpDir,
+		Logger:  loggerFor,
+		IsDebug: s.params.IsDebug,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
