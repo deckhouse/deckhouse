@@ -29,6 +29,12 @@ const (
 	ApplicationPackageVersionLabelDraft      = "draft"
 	ApplicationPackageVersionLabelPackage    = "package"
 	ApplicationPackageVersionLabelRepository = "repository"
+
+	ApplicationPackageVersionConditionTypeEnriched               = "IsEnriched"
+	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
+	ApplicationPackageVersionConditionReasonGetPackageRepoErr    = "GetPackageRepositoryError"
+	ApplicationPackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
+	ApplicationPackageVersionConditionReasonGetImageErr          = "GetImageError"
 )
 
 var (

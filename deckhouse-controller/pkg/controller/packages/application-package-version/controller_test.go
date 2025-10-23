@@ -302,7 +302,8 @@ version: "1.0.0"
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
+		require.Contains(suite.T(), err.Error(), "failed to fetch package metadata")
 	})
 
 	suite.Run("non-draft resource skip", func() {
@@ -315,6 +316,7 @@ version: "1.0.0"
 	})
 }
 
+// nolint:unparam
 func (suite *ControllerTestSuite) getApplicationPackageVersion(name string) *v1alpha1.ApplicationPackageVersion {
 	var apv v1alpha1.ApplicationPackageVersion
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &apv)

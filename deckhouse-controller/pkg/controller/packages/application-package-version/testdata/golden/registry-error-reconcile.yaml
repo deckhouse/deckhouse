@@ -4,16 +4,21 @@ kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
-    draft: "true"
     package: test-package
     repository: test-repo
   name: test-apv
-  resourceVersion: "1"
+  resourceVersion: "3"
 spec:
   packageName: test-package
   repository: test-repo
   version: 1.0.0
-status: {}
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'failed to get image: registry error'
+    reason: GetImageError
+    status: "False"
+    type: IsEnriched
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

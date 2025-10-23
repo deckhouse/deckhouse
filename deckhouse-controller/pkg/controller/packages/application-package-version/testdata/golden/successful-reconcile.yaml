@@ -13,6 +13,12 @@ spec:
   repository: test-repo
   version: 1.0.0
 status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: IsEnriched
   metadata:
     category: Test
     description:

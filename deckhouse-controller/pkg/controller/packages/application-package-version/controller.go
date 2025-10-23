@@ -123,6 +123,19 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	var packageRepo v1alpha1.PackageRepository
 	err := r.client.Get(ctx, types.NamespacedName{Name: packageVersion.Spec.Repository}, &packageRepo)
 	if err != nil {
+		packageVersion, err := r.setConditionEnrichFalse(ctx,
+			packageVersion,
+			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
+			fmt.Sprintf("failed to get packageRepository %s: %s", packageVersion.Spec.Repository, err.Error()))
+		if err != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		}
+
+		_, err = r.deleteDraftLabel(ctx, packageVersion)
+		if err != nil {
+			return fmt.Errorf("delete draft label: %w", err)
+		}
+
 		return fmt.Errorf("get packageRepository %s: %w", packageVersion.Spec.Repository, err)
 	}
 	r.logger.Debug("got package repository",
@@ -142,41 +155,57 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	}, r.logger)
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
 	if err != nil {
+		packageVersion, err := r.setConditionEnrichFalse(ctx,
+			packageVersion,
+			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
+			fmt.Sprintf("failed to get registry client: %s", err.Error()))
+		if err != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		}
+
+		_, err = r.deleteDraftLabel(ctx, packageVersion)
+		if err != nil {
+			return fmt.Errorf("delete draft label: %w", err)
+		}
+
 		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
 	}
 
 	// Get package.yaml from image
 	img, err := registryClient.Image(ctx, packageVersion.Spec.Version)
 	if err != nil {
+		packageVersion, err := r.setConditionEnrichFalse(ctx,
+			packageVersion,
+			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
+			fmt.Sprintf("failed to get image: %s", err.Error()))
+		if err != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		}
+
+		_, err = r.deleteDraftLabel(ctx, packageVersion)
+		if err != nil {
+			return fmt.Errorf("delete draft label: %w", err)
+		}
+
 		return fmt.Errorf("get image for %s: %w", packageVersion.Name+":"+packageVersion.Spec.Version, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
-		r.logger.Warn("failed to fetch package metadata", slog.String("name", packageVersion.Name), log.Err(err))
-
-		original := packageVersion.DeepCopy()
-
-		packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
-			Type:               "IsEnriched",
-			Status:             v1.ConditionFalse,
-			Reason:             "FetchingReleaseError",
-			Message:            fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
-			LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
-		})
-
-		err := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		packageVersion, err := r.setConditionEnrichFalse(ctx,
+			packageVersion,
+			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
+			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()))
 		if err != nil {
 			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
 		}
 
-		delete(packageVersion.Labels, "draft")
-		err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+		_, err = r.deleteDraftLabel(ctx, packageVersion)
 		if err != nil {
-			return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+			return fmt.Errorf("delete draft label: %w", err)
 		}
 
-		return nil
+		return fmt.Errorf("failed to fetch package metadata %s: %w", packageVersion.Name, err)
 	}
 	if packageMeta.PackageDefinition != nil {
 		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
@@ -188,19 +217,22 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
 	// Patch the status
-	r.logger.Info("patch package version status", slog.String("name", packageVersion.Name))
+	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+		Status:             v1.ConditionTrue,
+		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
+	})
+
+	r.logger.Debug("patch package version status", slog.String("name", packageVersion.Name))
 	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
 	}
 
 	// Delete label "draft" and patch the main object
-	delete(packageVersion.Labels, "draft")
-
-	r.logger.Info("patch package version", slog.String("name", packageVersion.Name))
-	err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+	packageVersion, err = r.deleteDraftLabel(ctx, packageVersion)
 	if err != nil {
-		return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("delete draft label: %w", err)
 	}
 
 	r.logger.Info("handle ApplicationPackageVersion complete", slog.String("name", packageVersion.Name))
@@ -213,6 +245,38 @@ func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.Applicat
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
 	return res, nil
+}
+
+func (r *reconciler) setConditionEnrichFalse(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion, reason string, message string) (*v1alpha1.ApplicationPackageVersion, error) {
+	original := packageVersion.DeepCopy()
+
+	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+		Status:             v1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
+	})
+
+	r.logger.Debug("patch package version status", slog.String("name", packageVersion.Name))
+	err := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+	if err != nil {
+		return packageVersion, fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+	}
+
+	return packageVersion, nil
+}
+
+func (r *reconciler) deleteDraftLabel(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (*v1alpha1.ApplicationPackageVersion, error) {
+	original := packageVersion.DeepCopy()
+
+	delete(packageVersion.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
+	err := r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+	if err != nil {
+		return packageVersion, fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+	}
+
+	return packageVersion, nil
 }
 
 func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
