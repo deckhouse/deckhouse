@@ -182,17 +182,27 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values := moduleValues.Get()
 
 	var (
-		inputs        Inputs
-		err           error
-		hasInitSecret bool
-		initConfig    registry_init.Config
+		inputs Inputs
+		err    error
 	)
 
-	initConfig, err = helpers.SnapshotToSingle[registry_init.Config](input, initSnapName)
+	var (
+		initConfig    registry_init.Config
+		hasInitSecret bool
+	)
+
+	initConfigRaw, err := helpers.SnapshotToSingle[[]byte](input, initSnapName)
 	if err == nil {
 		hasInitSecret = true
-	} else if !errors.Is(err, helpers.ErrNoSnapshot) {
-		return fmt.Errorf("get Init snapshot error: %w", err)
+		if err = yaml.Unmarshal(initConfigRaw, &initConfig); err != nil {
+			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
+		}
+	}
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+		input.Logger.Warn(
+			"Cannot get init secret, the state will be processed without it",
+			"error", err,
+		)
 	}
 
 	if values.State.Mode == "" {
