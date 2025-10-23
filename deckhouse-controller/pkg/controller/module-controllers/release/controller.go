@@ -53,7 +53,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
@@ -82,7 +81,7 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
-	loader *moduleloader.Loader,
+	installer Installer,
 	dc dependency.Container,
 	exts *extenders.ExtendersStack,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
@@ -98,7 +97,7 @@ func RegisterController(
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
-		loader:               loader,
+		installer:            installer,
 		restartCheckTicker:   time.NewTicker(restartCheckDuration),
 		dependencyContainer:  dc,
 		exts:                 exts,
@@ -142,6 +141,12 @@ type MetricsUpdater interface {
 	PurgeReleaseMetric(string)
 }
 
+type Installer interface {
+	Install(ctx context.Context, moduleName string, moduleVersion, modulePath string) error
+	Uninstall(ctx context.Context, moduleName string) error
+	Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName string, moduleVersion string) (string, error)
+}
+
 type reconciler struct {
 	init                *sync.WaitGroup
 	client              client.Client
@@ -149,7 +154,7 @@ type reconciler struct {
 	dependencyContainer dependency.Container
 	exts                *extenders.ExtendersStack
 
-	loader *moduleloader.Loader
+	installer Installer
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
@@ -1287,7 +1292,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		moduleVersion = "v" + moduleVersion
 	}
 
-	modulePath, err := r.loader.Installer().Registry().Download(ctx, source, moduleName, moduleVersion)
+	modulePath, err := r.installer.Download(ctx, source, moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("download the '%s' module: %w", moduleName, err)
 	}
@@ -1363,7 +1368,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		configConfigurationErrorMetricsLabels,
 	)
 
-	if err = r.loader.Installer().Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
+	if err = r.installer.Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
 		r.log.Error("failed to install module", slog.String("module", modulePath), log.Err(err))
 
 		return fmt.Errorf("install the module '%s': %w", moduleName, err)
@@ -1657,7 +1662,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 			r.activeApplyCount.Add(-1)
 		}()
 
-		if err := r.loader.Installer().Uninstall(ctx, release.GetModuleName()); err != nil {
+		if err := r.installer.Uninstall(ctx, release.GetModuleName()); err != nil {
 			r.log.Error("failed to uninstall release", slog.String("release", release.GetName()), log.Err(err))
 
 			return ctrl.Result{}, fmt.Errorf("uninstall module: %w", err)

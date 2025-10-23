@@ -64,10 +64,6 @@ func New(clusterUUID string, dc dependency.Container, logger *log.Logger) *Insta
 	}
 }
 
-func (i *Installer) Registry() *registry.Service {
-	return i.registry
-}
-
 // GetDownloaded gets all downloaded modules from downloaded dir
 func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	entries, err := os.ReadDir(i.downloaded)
@@ -90,6 +86,10 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	}
 
 	return downloaded, nil
+}
+
+func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName string, moduleVersion string) (string, error) {
+	return i.registry.Download(ctx, source, moduleName, moduleVersion)
 }
 
 // Install creates an erofs module image and enables the module(mount the image)
