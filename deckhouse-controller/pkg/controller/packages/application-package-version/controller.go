@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"path"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -216,9 +217,9 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
 	// Patch the status
-	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
+	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-		Status:             v1.ConditionTrue,
+		Status:             corev1.ConditionTrue,
 		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
 	})
 
@@ -249,9 +250,9 @@ func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.Applicat
 func (r *reconciler) setConditionEnrichFalse(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion, reason string, message string) (*v1alpha1.ApplicationPackageVersion, error) {
 	original := packageVersion.DeepCopy()
 
-	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1.Condition{
+	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-		Status:             v1.ConditionFalse,
+		Status:             corev1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
