@@ -82,9 +82,8 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
-			hec.ValuesSetFromYaml("global.modules.https.customCertificateData", `
-			tls.crt: CRTCRTCRT
-			tls.key: KEYKEYKEY`)
+			hec.ValuesSetFromYaml("global.modules.https.customCertificateData", `tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY`)
 
 			hec.HelmRender()
 		})
