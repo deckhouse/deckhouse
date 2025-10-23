@@ -37,8 +37,8 @@ var (
 )
 
 type Registry struct {
-	spec Spec
-	pki  PKI
+	Spec Spec
+	PKI  PKI
 }
 type Data struct {
 	ImagesRepo string `json:"imagesRepo" yaml:"imagesRepo"`
@@ -62,19 +62,19 @@ type CertKey struct {
 func FromDeckhouseSettings(rawJson string) (Registry, error) {
 	spec := Spec{}
 	err := spec.fromDeckhouseSettings(rawJson)
-	return Registry{spec: spec}, err
+	return Registry{Spec: spec}, err
 }
 
 func FromDefault() (Registry, error) {
 	spec := Spec{}
 	err := spec.fromDefault()
-	return Registry{spec: spec}, err
+	return Registry{Spec: spec}, err
 }
 
 func FromInitConfig(initConfig InitConfigSpec) (Registry, error) {
 	spec := Spec{}
 	err := spec.fromInitConfig(initConfig)
-	return Registry{spec: spec}, err
+	return Registry{Spec: spec}, err
 }
 
 func (r *Registry) InitWithGlobalCache() error {
@@ -118,7 +118,7 @@ func (r *Registry) InitWithGlobalCache() error {
 		}
 	}
 
-	r.pki = ret
+	r.PKI = ret
 	return nil
 }
 
@@ -128,8 +128,8 @@ func (r Registry) ConfigBuilder() *ConfigBuilder {
 
 func (r *Registry) UpstreamData() (Data, error) {
 	switch {
-	case r.spec.Unmanaged != nil:
-		unmanaged := r.spec.Unmanaged
+	case r.Spec.Unmanaged != nil:
+		unmanaged := r.Spec.Unmanaged
 		return Data{
 			ImagesRepo: unmanaged.ImagesRepo,
 			Scheme:     unmanaged.Scheme,
@@ -137,8 +137,8 @@ func (r *Registry) UpstreamData() (Data, error) {
 			Username:   unmanaged.Username,
 			Password:   unmanaged.Password,
 		}, nil
-	case r.spec.Direct != nil:
-		direct := r.spec.Direct
+	case r.Spec.Direct != nil:
+		direct := r.Spec.Direct
 		return Data{
 			ImagesRepo: direct.ImagesRepo,
 			Scheme:     direct.Scheme,
