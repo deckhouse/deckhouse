@@ -36,11 +36,11 @@ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.d
 
 Запустите контейнер с установщиком:
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
@@ -53,10 +53,10 @@ docker login -u license-token registry.deckhouse.ru
 Запустите контейнер с установщиком:
 ```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
-{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 </div>
 {% else %}
@@ -73,13 +73,11 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
 <!-- Linux or macOS install, CE -->
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} \
-  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash
 ```
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
@@ -92,11 +90,10 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Windows install, CE -->
 ```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
-{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\config.yml:/config.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
