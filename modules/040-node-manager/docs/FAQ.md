@@ -979,6 +979,50 @@ After applying the configuration file, verify access to the registry from the no
 crictl pull private.registry.example/image/repo:tag
 ```
 
+##### How to set up a mirror for public image registries (deprecated method)?
+
+Example of configuring a mirror for public image registries when using the **deprecated** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    sed -i '/endpoint = \["https:\/\/registry-1.docker.io"\]/d' /var/lib/bashible/bundle_steps/032_configure_containerd.sh
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/mirror-to-harbor.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry.private.network/v2/dockerhub-proxy/"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+              endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
+    EOF
+```
+
 #### New Method
 
 {% alert level="info" %}
@@ -1173,6 +1217,52 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 
 # Via ctr for an HTTP registry
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+```
+
+##### How to set up a mirror for public image registries (actual method)?
+
+Example of configuring a mirror for public image registries when using the **actual** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY1_URL=docker.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY1_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY1_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
+    REGISTRY2_URL=gcr.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY2_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY2_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
 ```
 
 ## How to use NodeGroup's priority feature
