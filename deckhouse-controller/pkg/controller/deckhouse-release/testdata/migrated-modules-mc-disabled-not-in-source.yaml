@@ -18,7 +18,7 @@ metadata:
 spec:
   version: v1.50.0
   requirements:
-    migratedModules: "test-module-1"
+    migratedModules: "disabled-module"
 status:
   approved: false
   message: ""
@@ -28,28 +28,20 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
-  name: source-1
+  name: deckhouse
 spec:
   registry:
-    repo: registry1.example.com/modules
+    repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  modules:
-    - name: other-module
-  modulesCount: 1
+  modulesCount: 0
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
+kind: ModuleConfig
 metadata:
-  name: source-2
+  name: disabled-module
 spec:
-  registry:
-    repo: registry2.example.com/modules
-    scheme: HTTPS
-status:
-  modules:
-    - name: test-module-1
-  modulesCount: 1
+  enabled: false
 ---
 apiVersion: apps/v1
 kind: Deployment

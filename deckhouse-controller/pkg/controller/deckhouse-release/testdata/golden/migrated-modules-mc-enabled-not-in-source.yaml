@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.49.0
+  resourceVersion: "999"
+spec:
+  version: v1.49.0
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  transitionTime: "2019-10-17T15:32:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.50.0
+  resourceVersion: "1000"
+spec:
+  requirements:
+    migratedModules: enabled-module-not-found
+  version: v1.50.0
+status:
+  approved: false
+  message: migrated module "enabled-module-not-found" not found in any ModuleSource
+    registry
+  phase: Pending
+  transitionTime: "2019-10-17T15:33:00Z"

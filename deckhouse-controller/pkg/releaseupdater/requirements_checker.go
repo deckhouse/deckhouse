@@ -392,23 +392,42 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 
 	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
 
+	// Fetch ModuleConfigs and ModuleSources
+	mcList := &v1alpha1.ModuleConfigList{}
+	if err := c.k8sclient.List(ctx, mcList); err != nil {
+		return fmt.Errorf("failed to list ModuleConfigs: %w", err)
+	}
+
 	moduleSources := &v1alpha1.ModuleSourceList{}
 	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
 		return fmt.Errorf("failed to list ModuleSources: %w", err)
 	}
 
 	for _, moduleName := range modules {
-		found := false
+		foundMS := false
+		foundMC := false
+		// Check if module exists in ModuleConfig and is disabled
+		for _, mc := range mcList.Items {
+			if mc.Name == moduleName && !mc.IsEnabled() {
+				c.logger.Debug("migrated module is disabled in ModuleConfig", slog.String("module", moduleName))
+				foundMC = true
+			}
+		}
+		if foundMC {
+			continue
+		}
+
+		// If module is not in ModuleConfig or is enabled, check ModuleSource
 
 		for _, source := range moduleSources.Items {
 			if c.isModuleAvailableInSource(moduleName, &source) {
-				found = true
+				foundMS = true
 				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
 				break
 			}
 		}
 
-		if !found {
+		if !foundMS {
 			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
 
@@ -416,7 +435,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		}
 	}
 
-	c.logger.Debug("all migrated modules found in registries")
+	c.logger.Debug("all migrated modules validation passed")
 
 	return nil
 }
