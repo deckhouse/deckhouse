@@ -306,6 +306,21 @@ properties:
                       Настройка ограничений использования памяти (memory limits).
   dataPlane:
     properties:
+      accessLogging:
+        properties:
+          extensionProviders:
+            items:
+              properties:
+                name:
+                  description: Название поставщика расширения.
+                envoyFileAccessLog:
+                  properties:
+                    path:
+                      description: Путь к файлу журнала доступа.
+                    logFormat:
+                      properties:
+                        text:
+                          description: Текст шаблона формата журнала.
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.
