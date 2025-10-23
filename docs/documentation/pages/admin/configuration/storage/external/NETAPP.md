@@ -27,14 +27,16 @@ To start working with the NetApp storage system, follow the step-by-step instruc
 To work with snapshots, the [snapshot-controller](../../snapshot-controller/) module must be connected.
 {% endalert %}
 
-1. Execute the command to activate the `csi-netapp` module. After activation, the following will be deployed on all cluster nodes:
-
-   - CSI driver will be registered.
-   - Service pods of `csi-netapp` components will be deployed.
+1. Execute the command to activate the `csi-netapp` module. 
 
    ```shell
    d8 s module enable csi-netapp
    ```
+
+   After activation, the following will be deployed on all cluster nodes:
+
+   - CSI driver will be registered.
+   - Service pods of `csi-netapp` components will be deployed.
 
 1. Wait for the module to transition to the `Ready` state:
 
@@ -94,3 +96,5 @@ To work with snapshots, the [snapshot-controller](../../snapshot-controller/) mo
    ```shell
    d8 k get netappstorageclasses.storage.deckhouse.io <netappstorageclass name>
    ```
+
+The NetApp storage system is now ready for use. You can use the created StorageClass to create PersistentVolumeClaims in your applications.
