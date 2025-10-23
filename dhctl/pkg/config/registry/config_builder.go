@@ -34,7 +34,7 @@ type ConfigBuilder struct {
 }
 
 func (builder *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
-	rawSettings, err := json.Marshal(builder.registry.spec)
+	rawSettings, err := json.Marshal(builder.registry.Spec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal registry settings: %w", err)
 	}
@@ -49,8 +49,8 @@ func (builder *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
 
 func (builder *ConfigBuilder) InclusterData() (Data, error) {
 	switch {
-	case builder.registry.spec.Unmanaged != nil:
-		unmanaged := builder.registry.spec.Unmanaged
+	case builder.registry.Spec.Unmanaged != nil:
+		unmanaged := builder.registry.Spec.Unmanaged
 		return Data{
 			ImagesRepo: unmanaged.ImagesRepo,
 			Scheme:     unmanaged.Scheme,
@@ -58,9 +58,9 @@ func (builder *ConfigBuilder) InclusterData() (Data, error) {
 			Username:   unmanaged.Username,
 			Password:   unmanaged.Password,
 		}, nil
-	case builder.registry.spec.Direct != nil:
-		direct := builder.registry.spec.Direct
-		pki := builder.registry.pki
+	case builder.registry.Spec.Direct != nil:
+		direct := builder.registry.Spec.Direct
+		pki := builder.registry.PKI
 		return Data{
 			ImagesRepo: registry_const.HostWithPath,
 			Scheme:     SchemeHTTPS,
@@ -74,8 +74,8 @@ func (builder *ConfigBuilder) InclusterData() (Data, error) {
 }
 
 func (builder *ConfigBuilder) InclusterImagesRepo() string {
-	if builder.registry.spec.Unmanaged != nil {
-		return builder.registry.spec.Unmanaged.ImagesRepo
+	if builder.registry.Spec.Unmanaged != nil {
+		return builder.registry.Spec.Unmanaged.ImagesRepo
 	}
 	return registry_const.HostWithPath
 }
@@ -88,12 +88,12 @@ func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
 	)
 
 	switch {
-	case builder.registry.spec.Unmanaged != nil:
-		unmanaged := builder.registry.spec.Unmanaged
+	case builder.registry.Spec.Unmanaged != nil:
+		unmanaged := builder.registry.Spec.Unmanaged
 		imagesBase = unmanaged.ImagesRepo
 		mirrorHost, mirrors, _ = unmanagedHostMirrors(unmanaged)
-	case builder.registry.spec.Direct != nil:
-		direct := builder.registry.spec.Direct
+	case builder.registry.Spec.Direct != nil:
+		direct := builder.registry.Spec.Direct
 		imagesBase = registry_const.HostWithPath
 		mirrorHost, mirrors, _ = directHostMirrors(direct)
 	default:
@@ -102,7 +102,7 @@ func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
 
 	ret := bashible.Context{
 		RegistryModuleEnable: true,
-		Mode:                 builder.registry.spec.Mode,
+		Mode:                 builder.registry.Spec.Mode,
 		ImagesBase:           imagesBase,
 		Hosts: map[string]bashible.ContextHosts{
 			mirrorHost: {Mirrors: mirrors}},
@@ -187,12 +187,12 @@ func (builder *ConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]b
 	)
 
 	switch {
-	case builder.registry.spec.Unmanaged != nil:
-		unmanaged := builder.registry.spec.Unmanaged
+	case builder.registry.Spec.Unmanaged != nil:
+		unmanaged := builder.registry.Spec.Unmanaged
 		imagesBase = unmanaged.ImagesRepo
 		mirrorHost, _, mirrors = unmanagedHostMirrors(unmanaged)
-	case builder.registry.spec.Direct != nil:
-		direct := builder.registry.spec.Direct
+	case builder.registry.Spec.Direct != nil:
+		direct := builder.registry.Spec.Direct
 		imagesBase = registry_const.HostWithPath
 		mirrorHost, _, mirrors = directHostMirrors(direct)
 	default:
@@ -200,7 +200,7 @@ func (builder *ConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]b
 	}
 
 	ret := bashible.Config{
-		Mode:       builder.registry.spec.Mode,
+		Mode:       builder.registry.Spec.Mode,
 		ImagesBase: imagesBase,
 		Hosts: map[string]bashible.ConfigHosts{
 			mirrorHost: {Mirrors: mirrors}},
@@ -230,11 +230,11 @@ func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error
 	config, err := yaml.Marshal(
 		registry_init.Config{
 			CA: &registry_init.CertKey{
-				Cert: builder.registry.pki.CA.Cert,
-				Key:  builder.registry.pki.CA.Key,
+				Cert: builder.registry.PKI.CA.Cert,
+				Key:  builder.registry.PKI.CA.Key,
 			},
-			UserRW: &builder.registry.pki.UserRW,
-			UserRO: &builder.registry.pki.UserRO,
+			UserRW: &builder.registry.PKI.UserRW,
+			UserRO: &builder.registry.PKI.UserRO,
 		})
 	if err != nil {
 		return nil, err
