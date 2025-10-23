@@ -560,6 +560,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -661,6 +662,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1038,6 +1040,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1139,6 +1142,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1516,6 +1520,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1617,6 +1622,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1994,6 +2000,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2095,6 +2102,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2472,6 +2480,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2573,6 +2582,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2950,6 +2960,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3051,6 +3062,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3428,6 +3440,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3529,6 +3542,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3906,6 +3920,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4007,6 +4022,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4384,6 +4400,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4485,6 +4502,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4862,6 +4880,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4963,6 +4982,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -5340,6 +5360,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -5441,6 +5462,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -5818,6 +5840,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -5919,6 +5942,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -6296,6 +6320,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -6397,6 +6422,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -6774,6 +6800,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -6875,6 +6902,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
