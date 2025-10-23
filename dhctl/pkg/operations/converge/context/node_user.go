@@ -23,7 +23,7 @@ import (
 
 	"github.com/GehirnInc/crypt"
 	_ "github.com/GehirnInc/crypt/sha512_crypt"
-	gossh "golang.org/x/crypto/ssh"
+	gossh "github.com/deckhouse/lib-gossh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"

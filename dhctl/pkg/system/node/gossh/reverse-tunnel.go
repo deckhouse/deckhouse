@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
