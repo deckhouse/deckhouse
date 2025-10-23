@@ -74,6 +74,8 @@ The capabilities of the DKP monitoring system can be expanded by using the [Obse
 
 The Deckhouse monitoring includes event notifications. The standard edition includes a set of basic alerts covering the health of the cluster and its components. Also, you can add custom alerts.
 
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
+
 ### Sending alerts to external systems
 
 Deckhouse supports sending alerts using `Alertmanager`:
