@@ -144,8 +144,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 
 	// Create go registry client from credentials from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/version:$version
-	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "version")
-	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release")
+	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageVersion.Spec.PackageName, "version")
 	r.logger.Debug("registry path", slog.String("name", packageVersion.Name), slog.String("path", registryPath))
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
