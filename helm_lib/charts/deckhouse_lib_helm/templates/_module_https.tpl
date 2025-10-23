@@ -131,10 +131,24 @@ certManager:
     {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
     {{- $customCertificateData := $module_values.internal.customCertificateData -}}
     {{- if not $customCertificateData -}}
-      {{- fail "internal.customCertificateData is required when https.mode is CustomCertificate" -}}
+      {{- fail (printf "internal.customCertificateData is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
     {{- end -}}
     {{- if not (kindIs "map" $customCertificateData) -}}
-      {{- fail "internal.customCertificateData must be a map when https.mode is CustomCertificate" -}}
+      {{- fail (printf "internal.customCertificateData must be a map to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- $tlsCrt := index $customCertificateData "tls.crt" -}}
+    {{- $tlsKey := index $customCertificateData "tls.key" -}}
+    {{- if not $tlsCrt -}}
+      {{- fail (printf "internal.customCertificateData.tls.crt is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not $tlsKey -}}
+      {{- fail (printf "internal.customCertificateData.tls.key is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not (kindIs "string" $tlsCrt) -}}
+      {{- fail (printf "internal.customCertificateData.tls.crt must be a string to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not (kindIs "string" $tlsKey) -}}
+      {{- fail (printf "internal.customCertificateData.tls.key must be a string to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
     {{- end -}}
     {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
 ---
@@ -147,10 +161,13 @@ metadata:
 type: kubernetes.io/tls
 data:
 {{- if (hasKey $customCertificateData "ca.crt") }}
-  ca.crt: {{ index $customCertificateData "ca.crt" | b64enc }}
+  {{- $caCrt := index $customCertificateData "ca.crt" -}}
+  {{- if and $caCrt (kindIs "string" $caCrt) }}
+  ca.crt: {{ $caCrt | b64enc }}
+  {{- end }}
 {{- end }}
-  tls.crt: {{ index $customCertificateData "tls.crt" | b64enc }}
-  tls.key: {{ index $customCertificateData "tls.key" | b64enc }}
+  tls.crt: {{ $tlsCrt | b64enc }}
+  tls.key: {{ $tlsKey | b64enc }}
   {{- end -}}
 {{- end -}}
 
