@@ -39,8 +39,8 @@ const (
 	// logger and telemetry name
 	nelmTracer = "nelm"
 
-	// release label for storing checksum
-	labelPackageChecksum = "packageChecksum"
+	// LabelPackageChecksum release label for storing checksum
+	LabelPackageChecksum = "packageChecksum"
 )
 
 var (
@@ -48,8 +48,6 @@ var (
 	ErrReleaseNotFound = errors.New("release not found")
 	// ErrLabelNotFound is returned when a requested label is not present in the release
 	ErrLabelNotFound = errors.New("label not found")
-	// ErrValuesNotFound is returned when values are not found in a release
-	ErrValuesNotFound = errors.New("values not found")
 )
 
 // Options contains configuration for the nelm client
@@ -198,26 +196,8 @@ func (c *Client) LastStatus(ctx context.Context, releaseName string) (string, st
 	return strconv.FormatInt(int64(res.Release.Revision), 10), res.Release.Status.String(), nil
 }
 
-// GetLabel retrieves a specific label value from a release's storage labels
-func (c *Client) GetLabel(ctx context.Context, releaseName, labelName string) (string, error) {
-	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetLabel")
-	defer span.End()
-
-	res, err := c.getRelease(ctx, releaseName)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
-	}
-
-	if value, ok := res.Release.StorageLabels[labelName]; ok {
-		return value, nil
-	}
-
-	return "", ErrLabelNotFound
-}
-
 // GetChecksum retrieves the module checksum for a release
-// It checks two locations: first the storage label "packageChecksum", then the values key "_addonOperatorModuleChecksum"
+// It checks the storage label "packageChecksum"
 func (c *Client) GetChecksum(ctx context.Context, releaseName string) (string, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetChecksum")
 	defer span.End()
@@ -227,20 +207,13 @@ func (c *Client) GetChecksum(ctx context.Context, releaseName string) (string, e
 	res, err := c.getRelease(ctx, releaseName)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("get nelm release %q: %w", releaseName, err)
+		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
 	}
 
 	// Try to get checksum from storage labels first
 	if res.Release != nil {
-		if checksum, ok := res.Release.StorageLabels[labelPackageChecksum]; ok {
+		if checksum, ok := res.Release.StorageLabels[LabelPackageChecksum]; ok {
 			return checksum, nil
-		}
-	}
-
-	// Fallback to checking values for older releases
-	if recordedChecksum, hasKey := res.Values["_addonOperatorModuleChecksum"]; hasKey {
-		if recordedChecksumStr, ok := recordedChecksum.(string); ok {
-			return recordedChecksumStr, nil
 		}
 	}
 
@@ -265,26 +238,13 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
-	extraAnnotations := make(map[string]string)
-	if len(c.opts.Annotations) > 0 {
-		maps.Copy(extraAnnotations, c.opts.Annotations)
-	}
-
-	// Convert maintenance label to annotation for resources
-	if opts.ReleaseLabels != nil {
-		maintenanceLabel, ok := opts.ReleaseLabels["maintenance.deckhouse.io/no-resource-reconciliation"]
-		if ok && maintenanceLabel == "true" {
-			extraAnnotations["maintenance.deckhouse.io/no-resource-reconciliation"] = ""
-		}
-	}
-
 	if err := action.ReleaseInstall(ctx, releaseName, c.namespace, action.ReleaseInstallOptions{
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       extraAnnotations,
+		ExtraAnnotations:       c.opts.Annotations,
 		KubeContext:            c.kubeContext,
 		NoInstallCRDs:          true,
 		ReleaseHistoryLimit:    int(c.opts.HistoryMax),
