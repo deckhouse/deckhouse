@@ -122,7 +122,7 @@ func (r *Registry) InitWithGlobalCache() error {
 	return nil
 }
 
-func (r Registry) ConfigBuilder() *ConfigBuilder {
+func (r *Registry) ConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{registry: r}
 }
 
