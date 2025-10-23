@@ -12,6 +12,8 @@ spec:
     listKind: ApplicationPackageVersionList
     plural: applicationpackageversions
     singular: applicationpackageversion
+    shortNames:
+      - apv
   scope: Cluster
   versions:
   - name: v1alpha1
@@ -37,6 +39,15 @@ spec:
             type: string
           metadata:
             type: object
+          spec:
+            type: object
+            properties:
+              packageName:
+                type: string
+              version:
+                type: string
+              repository:
+                type: string
           status:
             description: Status of an ApplicationPackageVersion.
             properties:
@@ -126,3 +137,16 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+      - name: Package
+        type: string
+        jsonPath: .spec.packageName
+      - name: Version
+        type: string
+        jsonPath: .spec.version
+      - name: Repository
+        type: string
+        jsonPath: .spec.repository
+      - name: Age
+        type: date
+        jsonPath: .metadata.creationTimestamp
