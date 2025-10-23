@@ -1888,7 +1888,7 @@ alerts:
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector
         ```
       summary: |
         The log-shipper-agent pods can't send logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
