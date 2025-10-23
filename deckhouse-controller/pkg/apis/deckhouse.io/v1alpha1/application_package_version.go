@@ -60,24 +60,42 @@ type ApplicationPackageVersion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	Spec ApplicationPackageVersionSpec `json:"spec,omitempty"`
+
 	// Status of an ApplicationPackageVersion.
 	Status ApplicationPackageVersionStatus `json:"status,omitempty"`
 }
 
+type ApplicationPackageVersionSpec struct {
+	PackageName string `json:"packageName,omitempty"`
+	Version     string `json:"version,omitempty"`
+	Repository  string `json:"repository,omitempty"`
+}
+
 type ApplicationPackageVersionStatus struct {
+	Conditions  []metav1.Condition                       `json:"conditions,omitempty"`
 	PackageName string                                   `json:"packageName,omitempty"`
 	Version     string                                   `json:"version,omitempty"`
 	Metadata    *ApplicationPackageVersionStatusMetadata `json:"metadata,omitempty"`
 }
 
 type ApplicationPackageVersionStatusMetadata struct {
-	Description   map[string]string                 `json:"description,omitempty"`
+	Description   *PackageDescription               `json:"description,omitempty"`
 	Category      string                            `json:"category,omitempty"`
 	Stage         string                            `json:"stage,omitempty"`
 	Requirements  *PackageRequirements              `json:"requirements,omitempty"`
 	Licensing     *PackageLicensing                 `json:"licensing,omitempty"`
 	Changelog     *PackageChangelog                 `json:"changelog,omitempty"`
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
+}
+
+func (a *ApplicationPackageVersion) IsDraft() bool {
+	val, ok := a.Labels[ApplicationPackageVersionLabelDraft]
+	if ok && val == "true" {
+		return true
+	}
+
+	return false
 }
 
 // +kubebuilder:object:root=true

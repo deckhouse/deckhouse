@@ -98,6 +98,28 @@
 # </template: login_readonly_registry_step>
 {!{- end -}!}
 
+{!{ define "login_stage_registry_step" }!}
+# <template: login_stage_registry_step>
+- name: Check stage registry credentials
+  id: check_stage_registry
+  env:
+    HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to stage registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+    password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+    logout: false
+# </template: login_stage_registry_step>
+{!{- end -}!}
+
 {!{ define "login_rw_cse_registry_step" }!}
 # <template: login_rw_registry_step>
 - name: Check rw cse registry credentials

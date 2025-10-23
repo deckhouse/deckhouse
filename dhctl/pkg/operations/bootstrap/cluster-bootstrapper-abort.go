@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/name212/govalue"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
@@ -72,7 +74,9 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Session().SetAvailableHosts(mastersIPs)
+		if len(mastersIPs) > 0 {
+			sshClient.Session().SetAvailableHosts(mastersIPs)
+		}
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -83,10 +87,6 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 
 	if bastionHost != "" {
 		sshClient.Session().BastionHost = bastionHost
-	}
-
-	if err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
 	return nil
@@ -146,6 +146,24 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	// init ssh client is safe if master hosts not found (error in base infra)
+	if err := b.initSSHClient(); err != nil {
+		return err
+	}
+
+	staticSSHClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+		wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+		if !ok {
+			return nil, fmt.Errorf("destroy operations are not supported for local execution contexts")
+		}
+
+		client := wrapper.Client()
+		if err := client.Start(); err != nil {
+			return nil, err
+		}
+		return client, nil
+	})
+
 	var destroyer destroy.Destroyer
 
 	err = log.Process("common", "Choice abort type", func() error {
@@ -167,14 +185,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					},
 				)
 			} else {
-				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-				if !ok {
-					return fmt.Errorf("destroy operations are not supported for local execution contexts")
-				}
-				if err := b.initSSHClient(); err != nil {
-					return err
-				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{}, nil)
+				destroyer = destroy.NewStaticMastersDestroyer(staticSSHClientProvider, []destroy.NodeIP{})
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -185,10 +196,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			log.InfoLn(logMsg)
 
 			return nil
-		}
-
-		if err := b.initSSHClient(); err != nil {
-			return err
 		}
 
 		if !b.CommanderMode {
@@ -248,6 +255,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
 		}
 		bootstrapState := NewBootstrapState(stateCache)
+		// start client todo refactor it
+		if _, err = staticSSHClientProvider(); err != nil {
+			return err
+		}
+
 		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
 		if err := preflightChecker.StaticSudo(ctx); err != nil {
 			return err
