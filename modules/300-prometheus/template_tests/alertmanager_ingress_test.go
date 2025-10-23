@@ -103,7 +103,15 @@ internal:
   vpa: {}
   prometheusMain: {}
   grafana: {}
-  customCertificateData: {}
+  customCertificateData:
+    tls.crt: |
+      -----BEGIN CERTIFICATE-----
+      TEST
+      -----END CERTIFICATE-----
+    tls.key: |
+      -----BEGIN PRIVATE KEY-----
+      TEST
+      -----END PRIVATE KEY-----
   alertmanagers: {}
   prometheusAPIClientTLS: {}
   prometheusScraperIstioMTLS: {}
