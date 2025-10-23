@@ -1,7 +1,6 @@
 ---
 title: "NetApp data storage"
 permalink: en/admin/configuration/storage/external/netapp.html
-lang: en
 ---
 
 Deckhouse Kubernetes Platform (DKP) implements support for NetApp data storage systems for volume management in Kubernetes using CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for critical workloads. For working with NetApp storage systems, the [`csi-netapp` module](/modules/csi-netapp/) is used, which allows creating StorageClass in Kubernetes through creating a [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass) resource.
