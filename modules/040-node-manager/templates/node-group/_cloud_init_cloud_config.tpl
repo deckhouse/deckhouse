@@ -7,6 +7,7 @@
 mounts:
 - [ ephemeral0, /mnt/resource ]
   {{- end }}
+prefer_fqdn_over_hostname: false
 package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
