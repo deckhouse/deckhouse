@@ -37,7 +37,7 @@ var (
 )
 
 type Registry struct {
-	Spec Spec
+	Spec DeckhousModuleSpec
 	PKI  PKI
 }
 type Data struct {
@@ -60,19 +60,19 @@ type CertKey struct {
 }
 
 func FromDeckhouseSettings(rawJson string) (Registry, error) {
-	spec := Spec{}
+	spec := DeckhousModuleSpec{}
 	err := spec.fromDeckhouseSettings(rawJson)
 	return Registry{Spec: spec}, err
 }
 
 func FromDefault() (Registry, error) {
-	spec := Spec{}
+	spec := DeckhousModuleSpec{}
 	err := spec.fromDefault()
 	return Registry{Spec: spec}, err
 }
 
 func FromInitConfig(initConfig InitConfigSpec) (Registry, error) {
-	spec := Spec{}
+	spec := DeckhousModuleSpec{}
 	err := spec.fromInitConfig(initConfig)
 	return Registry{Spec: spec}, err
 }
@@ -130,21 +130,23 @@ func (r *Registry) UpstreamData() (Data, error) {
 	switch {
 	case r.Spec.Unmanaged != nil:
 		unmanaged := r.Spec.Unmanaged
+		username, password := unmanaged.UsernamePassword()
 		return Data{
 			ImagesRepo: unmanaged.ImagesRepo,
 			Scheme:     unmanaged.Scheme,
 			CA:         unmanaged.CA,
-			Username:   unmanaged.Username,
-			Password:   unmanaged.Password,
+			Username:   username,
+			Password:   password,
 		}, nil
 	case r.Spec.Direct != nil:
 		direct := r.Spec.Direct
+		username, password := direct.UsernamePassword()
 		return Data{
 			ImagesRepo: direct.ImagesRepo,
 			Scheme:     direct.Scheme,
 			CA:         direct.CA,
-			Username:   direct.Username,
-			Password:   direct.Password,
+			Username:   username,
+			Password:   password,
 		}, nil
 	default:
 		return Data{}, ErrorUnknownRegistryMode
