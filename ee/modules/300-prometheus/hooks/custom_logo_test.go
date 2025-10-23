@@ -12,25 +12,9 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const prometheusValues = `
-https:
-  mode: CustomCertificate
-internal:
-  customCertificateData:
-    tls.crt: |
-      -----BEGIN CERTIFICATE-----
-      TEST
-      -----END CERTIFICATE-----
-    tls.key: |
-      -----BEGIN PRIVATE KEY-----
-      TEST
-      -----END PRIVATE KEY-----
-`
-
 var _ = Describe("Global hooks :: set custom logo for grafana", func() {
 	f := HookExecutionConfigInit(`{"global": {"clusterIsBootstrapped": true}, "prometheus": {"internal": {"grafana": {"customLogo": {}}}}}`, `{}`)
 	Context("ConfigMap with logo in d8-system does not exist", func() {
-		f.ValuesSetFromYaml("prometheus", []byte(prometheusValues))
 		BeforeEach(func() {
 			f.KubeStateSet(``)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -44,7 +28,6 @@ var _ = Describe("Global hooks :: set custom logo for grafana", func() {
 	})
 
 	Context("ConfigMap with logo in d8-system exists", func() {
-		f.ValuesSetFromYaml("prometheus", []byte(prometheusValues))
 		BeforeEach(func() {
 			f.KubeStateSet(`
 apiVersion: v1
@@ -68,7 +51,6 @@ data:
 		})
 
 		Context("ConfigMap was deleted", func() {
-			f.ValuesSetFromYaml("prometheus", []byte(prometheusValues))
 			BeforeEach(func() {
 				f.KubeStateSet(``)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -84,7 +66,6 @@ data:
 	})
 
 	Context("ConfigMap with logo in d8-system exists but does not have grafanaLogo", func() {
-		f.ValuesSetFromYaml("prometheus", []byte(prometheusValues))
 		BeforeEach(func() {
 			f.KubeStateSet(`
 apiVersion: v1

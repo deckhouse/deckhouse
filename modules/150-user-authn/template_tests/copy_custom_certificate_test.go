@@ -70,7 +70,7 @@ discovery:
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring"}`)
-			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
 			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 			f.ValuesSet("userAuthn.publishAPI.enabled", true)
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
