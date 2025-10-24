@@ -1034,6 +1034,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h2 {
+  width: max-content;
+  max-width: 100%;
   font-size: 24px;
   font-weight: 600;
   font-style: normal;
@@ -1044,6 +1046,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
+  width: max-content;
+  max-width: 100%;
   font-size: 21px;
   font-weight: 600;
   font-style: normal;
@@ -1489,7 +1493,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .clickable-header {
-    width: max-content;
     cursor: pointer;
 }
 
