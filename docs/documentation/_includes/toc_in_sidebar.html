@@ -32,7 +32,7 @@
             const scrollOffset = targetElement.offset().top - headerHeight;
 
             $('html, body').animate({
-            scrollTop: scrollOffset - 10
+                scrollTop: scrollOffset - 10
             }, 300);
         });
 
@@ -70,14 +70,26 @@
 
         $(window).on('load', function() {
             const hash = window.location.hash;
+            
             if(hash) {
+                const hashParts = hash.split('-');
+                const navItem = $(`li a[href='${hashParts[0]}']`);
+                const navItemHref = navItem.attr('href');
+
+                if(hash !== navItemHref) {
+                    if(hashParts[0] === navItemHref) {
+                        navItem.addClass('active');
+                    }
+                }
+                
                 const target = decodeURIComponent(hash);
                 const targetElement = $(target);
 
                 if(targetElement.length && targetElement.offset()) {
                     const scrollOffset = targetElement.offset().top - headerHeight;
+
                     $('html, body').animate({
-                        scrollTop: scrollOffset - 10
+                        scrollTop: scrollOffse - 10
                     }, 0);
                 }
             }
