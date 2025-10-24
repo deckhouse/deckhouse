@@ -520,7 +520,7 @@ Adding custom settings through the `toml merge` mechanism causes the containerd 
 
 #### Adding authorization to an additional registry (deprecated method)
 
-Example of adding authorization to a additional registry when using the **deprecated** configuration method:
+Example of adding authorization to an additional registry when using the **deprecated** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
