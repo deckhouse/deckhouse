@@ -773,7 +773,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd.
+  # Шаг может быть любой, так как не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
