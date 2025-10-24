@@ -12,11 +12,11 @@
         Samples are discarded because of "{{ $labels.reason }}" at a rate of {{ .Value | humanize }} samples per second.
       summary: Loki is discarding samples during ingestion because they fail validation.
     expr: |
-      sum by(namespace, tenant, reason) (
-        irate(loki_discarded_samples_total[2m])
+      sum by(namespace, reason) (
+        rate(loki_discarded_samples_total[5m])
       )
       > 0
-    for: 15m
+    for: 5m
     labels:
       severity_level: "4"
       tier: cluster
