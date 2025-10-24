@@ -25,7 +25,13 @@
       plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
       summary: Agent `{{ $labels.namespace }}`/`{{ $labels.pod }}` can't reach some of the node health endpoints.
       description: |
-        For details, refer to the logs of the agent:
+        For details, query Cilium health status API:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} exec {{ $labels.pod }} -- cilium-health status
+        ```
+
+        You can also refer to the agent logs:
 
         ```bash
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
