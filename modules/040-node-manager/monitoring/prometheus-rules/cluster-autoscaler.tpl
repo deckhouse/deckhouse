@@ -150,6 +150,5 @@
         ```
 
 {{- else }}
-- name: empty
-  rules: []
+[]
 {{- end }}
