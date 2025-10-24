@@ -8,11 +8,11 @@
       plk_create_group_if_not_exists__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
-        Loki in namespace {{ $labels.namespace }} is discarding samples during ingestion.
+        Loki is discarding samples during ingestion because they fail validation.
         Samples are discarded because of "{{ $labels.reason }}" at a rate of {{ .Value | humanize }} samples per second.
       summary: Loki is discarding samples during ingestion because they fail validation.
     expr: |
-      sum by(namespace, reason) (
+      sum by(reason) (
         rate(loki_discarded_samples_total[5m])
       )
       > 0
