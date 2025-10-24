@@ -34,6 +34,8 @@ kind: Deployment
 metadata:
   name: cert-manager
   namespace: d8-cert-manager
+  annotations:
+    werf.io/weight: "-10"
   {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}

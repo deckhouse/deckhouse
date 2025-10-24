@@ -5,6 +5,8 @@ kind: ServiceAccount
 metadata:
   name: cainjector
   namespace: d8-cert-manager
+  annotations:
+    werf.io/weight: "-10"
   {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
@@ -12,6 +14,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:cainjector
+  annotations:
+    werf.io/weight: "-10"
   {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
 rules:
   - apiGroups: ["cert-manager.io"]
@@ -45,6 +49,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:cainjector
+  annotations:
+    werf.io/weight: "-10"
   {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
