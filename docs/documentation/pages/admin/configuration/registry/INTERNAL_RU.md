@@ -452,7 +452,7 @@ containerd v2 использует новую схему по умолчанию
    target_mode: Unmanaged
    ```
 
-## Миграрация обратно с модуля registry
+## Миграция обратно с модуля registry
 
 {% alert level="danger" %}
 - Это устаревший (deprecated) формат управления registry.
