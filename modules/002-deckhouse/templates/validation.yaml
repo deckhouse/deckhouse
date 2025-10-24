@@ -72,7 +72,63 @@ spec:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
 
+---
+{{- $policyName := "d8ms-prefix.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
+    # exclude SA from namespaces prefixed with `d8-managed-`
+    - name: 'exclude-managed-namespaces'
+      expression: '!(["system:serviceaccount:d8-managed-"].exists(e, (request.userInfo.username.startsWith(e))))'
+    # exclude SA from any namespace which name's starting with `d8ms-`
+    - name: 'exclude-managed-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:") && request.userInfo.username.contains(":d8ms-"))'
+    # allow users to delete managed services pods
+    - name: 'exclude-delete-pods-operations'
+      expression: '!(request.operation == "DELETE" && request.resource.resource == "pods")'
+  validations:
+    # deny all operations with any objects with `d8ms-` prefix, except for Pods deletions
+    - expression: |
+        !(
+          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-")) ||
+          (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8ms-"))
+        )
+      messageExpression: "'Creating, updating and deleting objects with an managed services prefix is forbidden'"
+      reason: Forbidden
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with a managed services prefix'"
+
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
+  - Audit
+
 {{- if ne .Values.global.deckhouseVersion "dev" }}
+
+{{- $policyName := "label-objects.deckhouse.io" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
