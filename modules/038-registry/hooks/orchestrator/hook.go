@@ -320,7 +320,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	newRegistrySecret := values.State.RegistrySecret.Config
 	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
 		input.PatchCollector.PatchWithMerge(
-			map[string]any{"data": newRegistrySecret.ToBase64SecretData()},
+			map[string]any{"data": newRegistrySecret.ToBase64Map()},
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 
