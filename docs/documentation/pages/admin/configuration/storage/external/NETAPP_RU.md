@@ -25,7 +25,7 @@ lang: ru
 Чтобы начать работу с СХД NetApp, следуйте пошаговым инструкциям ниже. Все команды выполняйте на машине с административным доступом к API Kubernetes.
 
 {% alert level="info" %}
-Для работы со снимками требуется подключенный модуль [snapshot-controller](../../snapshot-controller/).
+Для работы со снимками требуется подключенный модуль [snapshot-controller](/modules/snapshot-controller/).
 {% endalert %}
 
 1. Выполните команду для активации модуля `csi-netapp`:
