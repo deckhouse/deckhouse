@@ -826,7 +826,7 @@ spec:
 ```
 
 {% alert level="info" %}
-In addition to containerd, the certificate can be added into the OS.
+In addition to containerd, the certificate can be added to the OS.
 {% endalert %}
 
 #### Adding TLS skip verify (actual method)
