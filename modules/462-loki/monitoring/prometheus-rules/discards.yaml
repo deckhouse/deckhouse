@@ -1,29 +1,6 @@
 ---
 - name: d8.loki.discards
   rules:
-  - alert: LokiTenantRateLimit
-    annotations:
-      description: |-
-        {{ $labels.job }} {{ $labels.route }} is experiencing 429 errors.
-      summary: "At least 10% of requests are responded with the rate limit error code."
-      plk_markup_format: markdown
-      plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-    expr: |
-      sum(
-        job_namespace_route_statuscode:loki_request_duration_seconds_count:irate1m{status_code="429"}
-      ) by (job, namespace, route)
-      /
-      sum(
-        job_namespace_route_statuscode:loki_request_duration_seconds_count:irate1m
-      ) by (job, namespace, route)
-      * 100
-      > 10
-    for: 15m
-    labels:
-      tier: cluster 
-      severity_level: "4"
   - alert: LokiDiscardedSamplesWarning
     annotations:
       plk_markup_format: markdown
@@ -36,10 +13,7 @@
       summary: Loki is discarding samples during ingestion because they fail validation.
     expr: |
       sum by(namespace, tenant, reason) (
-        irate(loki_discarded_samples_total{
-          reason!="rate_limited",
-          reason!="per_stream_rate_limit",
-          reason!="stream_limit"}[2m])
+        irate(loki_discarded_samples_total[2m])
       )
       > 0
     for: 15m

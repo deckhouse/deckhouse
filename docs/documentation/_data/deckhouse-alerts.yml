@@ -4954,16 +4954,6 @@ alerts:
         Not enough disk space to retain logs for 168 hours
       severity: "4"
       markupFormat: markdown
-    - name: LokiTenantRateLimit
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/discards.yaml
-      moduleUrl: 462-loki
-      module: loki
-      edition: ce
-      description: '{{ $labels.job }} {{ $labels.route }} is experiencing 429 errors.'
-      summary: |
-        At least 10% of requests are responded with the rate limit error code.
-      severity: "4"
-      markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
