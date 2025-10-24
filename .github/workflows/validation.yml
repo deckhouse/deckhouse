@@ -754,9 +754,6 @@ jobs:
         continue-on-error: true
         with:
           scan_mode: "diff"
-          checkout_repo: ${{ github.event.pull_request.head.repo.full_name }}
-          checkout_ref: ${{ github.event.pull_request.head.sha }}
-          base_sha: ${{ github.event.pull_request.base.sha }}
 
 
 
