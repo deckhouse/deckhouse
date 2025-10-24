@@ -120,7 +120,7 @@ After completing these steps, the node will no longer be considered a master nod
 1. Ensure the DKP queue is empty:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):

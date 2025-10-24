@@ -341,7 +341,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Проверьте, чтобы очередь DKP была пустой и без ошибок:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:

@@ -71,7 +71,7 @@ spec:
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
@@ -138,7 +138,7 @@ spec:
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
@@ -224,7 +224,7 @@ spec:
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. Снимите следующие лейблы:
@@ -273,7 +273,7 @@ spec:
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):

@@ -28,7 +28,7 @@ master-2   Ready    control-plane,master   247d   v1.28.15
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. Снимите с узла метки `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.

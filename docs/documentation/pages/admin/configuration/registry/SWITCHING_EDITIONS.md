@@ -37,7 +37,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/exampl
 1. Ensure the Deckhouse queue is empty and error-free:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for temporary authorization in `registry.deckhouse.io`:
