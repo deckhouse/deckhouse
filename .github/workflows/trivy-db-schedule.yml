@@ -48,6 +48,9 @@ jobs:
     needs:
       - skip_tests_repos
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     steps:
 
       # <template: checkout_step>

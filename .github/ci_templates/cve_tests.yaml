@@ -3,7 +3,7 @@
 # <template: set_security_scan_requirement_status>
 set_security_scan_requirement_status:
   name: Set commit status after security scan run
-  runs-on: "regular"
+  runs-on: "ubuntu-latest"
   needs: test_cve_report_main
   if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   steps:

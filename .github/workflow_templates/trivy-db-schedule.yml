@@ -35,6 +35,9 @@ jobs:
     needs:
       - skip_tests_repos
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 {!{- $secrets := slice -}!}
