@@ -24,7 +24,7 @@ Before configuring work with the NetApp storage system, make sure that the follo
 To start working with the NetApp storage system, follow the step-by-step instructions below. Run all commands on a machine with administrative access to the Kubernetes API.
 
 {% alert level="info" %}
-To work with snapshots, the [snapshot-controller](../../snapshot-controller/) module must be connected.
+To work with snapshots, the [snapshot-controller](/modules/snapshot-controller/) module must be connected.
 {% endalert %}
 
 1. Execute the command to activate the `csi-netapp` module. 
