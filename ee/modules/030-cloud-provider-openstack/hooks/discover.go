@@ -131,6 +131,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
+	// workaround to pass OpenAPI schema validation in hybrid mode
 	hybridMode, ok := input.Values.GetOk("cloudProviderOpenstack.internal.hybridMode")
 	if ok && hybridMode.Bool() {
 		zones, ok := input.Values.GetOk("cloudProviderOpenstack.zones")
@@ -141,17 +142,6 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 			for _, zone := range zonesArray {
 				discoveryData.Zones = append(discoveryData.Zones, zone.String())
 			}
-		}
-
-		instances, ok := input.Values.GetOk("cloudProviderOpenstack.instances")
-		if ok {
-			discoveryData.DefaultImageName = instances.Map()["imageName"].String()
-			discoveryData.MainNetwork = instances.Map()["mainNetwork"].String()
-		}
-
-		discoveryDataJSON, err = json.Marshal(discoveryData)
-		if err != nil {
-			return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 		}
 	}
 
