@@ -39,6 +39,8 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Подготовьте переменные с токеном лицензии и создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry-cse.deckhouse.ru`:
 
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](../platform-scaling/node/node-customization.html#как-добавить-конфигурацию-для-дополнительного-registry).
+
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
