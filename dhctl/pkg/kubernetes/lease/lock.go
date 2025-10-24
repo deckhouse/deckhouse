@@ -330,7 +330,7 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
   user: %s@%s
   additionalInfo:
     %s
-If you sure that lock acquired not by auto-converger, for release lock use:
+If you sure that lock acquired not by auto-converger or another dhctl, for release lock use:
   dhctl lock release
 `
 	return fmt.Sprintf(format,
