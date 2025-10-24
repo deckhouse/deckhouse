@@ -623,7 +623,7 @@ spec:
 ```
 
 {% alert level="info" %}
-In addition to containerd, the certificate can be [added into the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
+In addition to containerd, the certificate can be [added to the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
 
 #### Adding TLS skip verify (deprecated method)
