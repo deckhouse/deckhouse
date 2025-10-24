@@ -45,6 +45,8 @@ kind: ClusterAuthorizationRule
 metadata:
   name: admin
 spec:
+  # [<ru>] Список учётных записей Kubernetes RBAC.
+  # [<en>] Kubernetes RBAC accounts list.
   subjects:
   - kind: User
     name: admin@deckhouse.io
