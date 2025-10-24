@@ -3,7 +3,7 @@ title: "Configuring request retries with Istio"
 permalink: en/user/network/retry_istio.html
 ---
 
-You can use the [`istio`](/modules/istio/) module to configure request retries.
+You can use the [istio](/modules/istio/) module to configure request retries.
 Before configuring retries, make sure the module is enabled in the cluster.
 
 To configure request retries, use the [VirtualService](#virtualservice-resource) resource from Istio.

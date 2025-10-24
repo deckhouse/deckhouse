@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-4967f958f1248545eec7a13485884e349b6110e4acb5fe1825953bd6a8abef98",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В рамках платформы не передаются скомпрессированные данные, эксплуатация невозможна.",
+      "timestamp": "2025-10-09T11:31:17.452121Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В рамках платформы не передаются скомпрессированные данные, эксплуатация невозможна.",
+      "timestamp": "2025-10-09T11:53:28.464352Z"
+    }
+  ],
+  "timestamp": "2025-10-09T11:54:36Z"
+}

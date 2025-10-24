@@ -23,3 +23,5 @@ final: false
 shell:
  setup:
    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

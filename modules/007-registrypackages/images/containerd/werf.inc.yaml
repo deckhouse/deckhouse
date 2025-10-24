@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.28" "2.1.4" }}
 {{- $runc_versions := list "1.3.0" }}
 {{- $containerd2runc := dict "1.7.28" "1.3.0" "2.1.4" "1.3.0" }}
-{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "6" }} # may be redefine in CSE
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "10" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -104,6 +104,11 @@ import:
   - uninstall
   - containerd.service
   before: setup
+{{- if and (eq $.Env "CSE") $is_v2 }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
+  add: /pidumount
+  before: setup
+{{- end }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
   to: /runc
@@ -192,4 +197,44 @@ shell:
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out
   - chmod 755 /out/*
+
+  {{- if and (eq $.Env "CSE") $is_v2 }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+  add: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache gcc musl-dev
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=1
+  - cd /src
+  - go mod download
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go`) | indent 4 }}
+  - strip /pidumount
+  - chmod 0700 /pidumount
+  {{- end }}
 {{- end }}

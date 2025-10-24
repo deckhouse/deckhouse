@@ -588,6 +588,51 @@ After setting up a new CRI for NodeGroup, the node-manager module drains nodes o
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
 node updates or requires manual confirmation.
 
+## Why might the CRI change not apply?
+
+When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
+
+The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
+
+- Kernel version is at least 5.8;
+- systemd version is at least 244;
+- cgroup v2 is enabled;
+- The EROFS filesystem is available.
+
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+
+If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
+
+If you cannot remove the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource that modifies the containerd configuration and is incompatible with containerd v2, use the universal template:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Script to modify the configuration for ContainerdV2>
+    {{- else }}
+  # <Script to modify the configuration for ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Additionally, to switch the CRI you may need to remove the custom label `node.deckhouse.io/containerd-config=custom`. You can do this with the following command:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Name of NodeGroup where CRI is changed>=); do kubectl label $node node.deckhouse.io/containerd-config-; done
+```
+
 ## How to change CRI for the whole cluster?
 
 {% alert level="warning" %}
@@ -934,6 +979,50 @@ After applying the configuration file, verify access to the registry from the no
 crictl pull private.registry.example/image/repo:tag
 ```
 
+##### How to set up a mirror for public image registries (deprecated method)?
+
+Example of configuring a mirror for public image registries when using the **deprecated** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    sed -i '/endpoint = \["https:\/\/registry-1.docker.io"\]/d' /var/lib/bashible/bundle_steps/032_configure_containerd.sh
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/mirror-to-harbor.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry.private.network/v2/dockerhub-proxy/"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+              endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
+    EOF
+```
+
 #### New Method
 
 {% alert level="info" %}
@@ -1128,6 +1217,52 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 
 # Via ctr for an HTTP registry.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+```
+
+##### How to set up a mirror for public image registries (actual method)?
+
+Example of configuring a mirror for public image registries when using the **actual** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY1_URL=docker.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY1_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY1_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
+    REGISTRY2_URL=gcr.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY2_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY2_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
 ```
 
 ## How to use NodeGroup's priority feature

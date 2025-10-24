@@ -34,6 +34,10 @@
   includePaths:
   - deckhouse-controller
   - caps-deckhouse-controller
+- image: libs/ncurses
+  add: /usr/share/terminfo/
+  to: /usr/share/terminfo/
+  before: install
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq

@@ -175,8 +175,8 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
 
    ```yaml
    settings:
-     route53AccessKeyID: AKIABROTAITAJMPASA4A
-     route53SecretAccessKey: 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
+     route53AccessKeyID: <ACCESS_KEY_ID>
+     route53SecretAccessKey: <SECRET_ACCESS_KEY>
    ```
 
    DVP will automatically create a ClusterIssuer and Secret for Route53 in the `d8-cert-manager` namespace.

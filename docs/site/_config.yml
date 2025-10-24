@@ -96,6 +96,8 @@ defaults:
       lang: en
       showPrevNextButton: true
       feedback: true
+      # Maximum number of related links to display
+      related_links_max: 6
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -104,6 +106,8 @@ defaults:
       searchable: false
       sitemap_include: false
       layout: none
+      # Maximum number of related links to display
+      related_links_max: 0
   - scope:
       path: "pages/guides"
       type: "pages"

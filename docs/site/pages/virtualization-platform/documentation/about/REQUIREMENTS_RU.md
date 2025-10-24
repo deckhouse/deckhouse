@@ -131,3 +131,4 @@ Container runtime будет установлен автоматически, п
 | TATLIN.UNIFIED (Yadro)                     | Внешнее хранилище          |
 | Huawei Dorado                              | Внешнее хранилище          |
 | HPE 3par                                   | Внешнее хранилище          |
+| NetApp                                     | Внешнее хранилище          |

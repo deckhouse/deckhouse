@@ -1,17 +1,24 @@
-{{ $version := "0.17.2" }}
+{{ $version := "0.17.4" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/k8s-device-plugin.git /src
-  - cd /src
+  - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/k8s-device-plugin.git /src/device-plugin
+  - cd /src/device-plugin
+  - git apply /patches/*.patch --verbose
   - echo $(git rev-parse --short HEAD) > .GIT_HASH
-  - rm -rf /src/.git
+  - rm -rf .git test vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -28,12 +35,12 @@ secrets:
 shell:
   beforeInstall:
   - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.25.3.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
   - export GIT_COMMIT=$(cat /src/.GIT_HASH)
-  - cd /src
+  - cd /src/device-plugin
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/ cmds

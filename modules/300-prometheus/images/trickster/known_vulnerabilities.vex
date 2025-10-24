@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-5d195d15939683637393fa45a68bff40324ab22e443c55904b61b51596efa3f5",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2025-10-23T15:35:52.818817+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "timestamp": "2025-10-23T15:35:52.818818+03:00",
+      "products": [
+        {
+          "@id": "pkg:go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Уязвимость CVE-2023-45142 невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах control-plane необходимо деплоить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Так как у пользователя нет возможности применять кастомные конфиги для control-plane компонентов, возможности включить openTelemetry нет."
+    }
+  ]
+}
