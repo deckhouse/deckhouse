@@ -193,6 +193,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	initConfigRaw, err := helpers.SnapshotToSingle[[]byte](input, initSnapName)
 	if err == nil {
+		input.Logger.Info("Init secret snapshot found, trying to load init state")
 		hasInitSecret = true
 		if err = yaml.Unmarshal(initConfigRaw, &initConfig); err != nil {
 			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
@@ -200,7 +201,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		input.Logger.Warn(
-			"Cannot get init secret, the state will be processed without it",
+			"Cannot get init state, the state will be processed without it",
 			"error", err,
 		)
 	}
@@ -319,13 +320,15 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Generate expected RegistrySecret. Apply patch to update
 	newRegistrySecret := values.State.RegistrySecret.Config
 	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
+		input.Logger.Info("Applying new registry configuration to deckhouse")
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"data": newRegistrySecret.ToBase64Map()},
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 
-	// Remove bootstrap secret if exist
+	// Remove init secret if exist
 	if hasInitSecret {
+		input.Logger.Debug("Removing init secret")
 		input.PatchCollector.Delete(
 			"v1", "Secret", "d8-system", "registry-init")
 	}
