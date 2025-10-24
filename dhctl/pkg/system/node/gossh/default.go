@@ -34,16 +34,7 @@ func NewClientFromFlags() (*Client, error) {
 		ExtraArgs:      app.SSHExtraArgs,
 	})
 
-	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
-	for _, key := range app.SSHPrivateKeys {
-		k, err := genssh.GetPrivateKeys(key, "")
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, *k)
-	}
-
-	return NewClient(settings, keys), nil
+	return NewClient(settings, genssh.CollectDHCTLPrivateKeysFromFlags()), nil
 }
 
 func NewClientFromFlagsWithHosts() (*Client, error) {

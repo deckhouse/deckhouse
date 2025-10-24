@@ -72,7 +72,16 @@ func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
 	return string(enteredPassword), nil
 }
 
-func GetPrivateKeys(keyPath string, passphrase string) (*session.AgentPrivateKey, error) {
+func CollectDHCTLPrivateKeysFromFlags() []session.AgentPrivateKey {
+	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
+	for _, key := range app.SSHPrivateKeys {
+		keys = append(keys, session.AgentPrivateKey{Key: key})
+	}
+
+	return keys
+}
+
+func GetSSHPrivateKey(keyPath string, passphrase string) (any, error) {
 	log.DebugF("Parsing private ssh key %s\n", keyPath)
 
 	keyData, err := os.ReadFile(keyPath)
@@ -82,7 +91,7 @@ func GetPrivateKeys(keyPath string, passphrase string) (*session.AgentPrivateKey
 
 	keyData = append(bytes.TrimSpace(keyData), '\n')
 
-	_, err = ssh.ParseRawPrivateKey(keyData)
+	sshKey, err := ssh.ParseRawPrivateKey(keyData)
 	if err != nil {
 		var passphraseMissingError *ssh.PassphraseMissingError
 		switch {
@@ -91,7 +100,7 @@ func GetPrivateKeys(keyPath string, passphrase string) (*session.AgentPrivateKey
 			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath); err != nil {
 				return nil, err
 			}
-			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
+			sshKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
 			if err != nil {
 				return nil, fmt.Errorf("Wrong passphrase for ssh key")
 			}
@@ -100,5 +109,5 @@ func GetPrivateKeys(keyPath string, passphrase string) (*session.AgentPrivateKey
 		}
 	}
 
-	return &session.AgentPrivateKey{Key: keyPath, Passphrase: passphrase}, nil
+	return sshKey, nil
 }

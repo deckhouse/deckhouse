@@ -54,13 +54,13 @@ func (a *Agent) Start() error {
 	log.DebugLn("agent: start ssh-agent")
 	err := a.Agent.Start()
 	if err != nil {
-		return fmt.Errorf("start ssh-agent: %v", err)
+		return fmt.Errorf("Start ssh-agent: %v", err)
 	}
 
 	log.DebugLn("agent: run ssh-add for keys")
 	err = a.AddKeys(a.AgentSettings.PrivateKeys)
 	if err != nil {
-		return fmt.Errorf("agent error: %v", err)
+		return fmt.Errorf("Agent error: %v", err)
 	}
 
 	return nil
@@ -70,7 +70,7 @@ func (a *Agent) Start() error {
 func (a *Agent) AddKeys(keys []session.AgentPrivateKey) error {
 	err := addKeys(a.AgentSettings.AuthSock, keys)
 	if err != nil {
-		return fmt.Errorf("add keys: %w", err)
+		return fmt.Errorf("Add keys: %w", err)
 	}
 
 	if app.IsDebug {
@@ -105,7 +105,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	agentClient := agent.NewClient(conn)
 
 	for _, key := range keys {
-		privateKey, err := genssh.GetPrivateKeys(key.Key, key.Passphrase)
+		privateKey, err := genssh.GetSSHPrivateKey(key.Key, key.Passphrase)
 		if err != nil {
 			return err
 		}
