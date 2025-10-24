@@ -1,38 +1,56 @@
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  # [<ru>] список учётных записей Kubernetes RBAC
-  # [<en>] Kubernetes RBAC accounts list
-  subjects:
-  - kind: User
-    name: admin@deckhouse.io
-  # [<ru>] предустановленный шаблон уровня доступа
-  # [<en>] pre-defined access template
-  accessLevel: SuperAdmin
-  # [<ru>] разрешить пользователю делать kubectl port-forward
-  # [<en>] allow user to do kubectl port-forward
-  portForwarding: true
+
 ---
-# [<en>] section containing the parameters of the static user
-# [<ru>] секция, описывающая параметры статического пользователя
-# [<en>] version of the Deckhouse API
-# [<ru>] используемая версия API Deckhouse
+# [<ru>] Данные статического пользователя.
+# [<en>] Static user data.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user
+# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
 spec:
-  # [<en>] user e-mail
-  # [<ru>] e-mail пользователя
+  # [<ru>] E-mail пользователя.
+  # [<en>] User e-mail.
   email: admin@deckhouse.io
-  # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
-  # [<en>] generate your own or use it at your own risk (for testing purposes)
-  # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас
-  # [<ru>] сгенерируйте свой или используйте этот, но только для тестирования
+  # [<ru>] Хэш пароля <GENERATED_PASSWORD>.
+  # [<ru>] Сгенерируйте свой пароль или используйте этот, но только для тестирования.
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<en>] you might consider changing this
-  # [<ru>] возможно, захотите изменить
+  # [<en>] Hash of the password <GENERATED_PASSWORD>.
+  # [<en>] Generate your own password or use it at your own risk (for testing purposes).
+  # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # [<ru>] Возможно, захотите изменить.
+  # [<en>] You might consider changing this.
   password: <GENERATED_PASSWORD_HASH>
+---
+# [<ru>] Группа пользователей.
+# [<en>] User group.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group
+# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#group
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+    - kind: User
+      name: admin
+---
+# [<ru>] Настройки RBAC и авторизации.
+# [<en>] RBAC and authorization settings.
+# [<ru>] https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  # [<ru>] Предустановленный шаблон уровня доступа.
+  # [<en>] Pre-defined access template.
+  accessLevel: SuperAdmin
+  # [<ru>] Разрешить пользователю делать kubectl port-forward.
+  # [<en>] Allow user to do kubectl port-forward.
+  portForwarding: true

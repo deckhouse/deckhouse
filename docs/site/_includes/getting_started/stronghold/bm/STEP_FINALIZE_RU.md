@@ -290,6 +290,8 @@ sudo -i d8 k create -f $PWD/user.yml
         <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
+<code example-hosts>stronghold.example.com
+api.example.com
 argocd.example.com
 dashboard.example.com
 documentation.example.com
