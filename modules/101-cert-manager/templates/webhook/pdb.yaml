@@ -2,7 +2,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  anotations:
+  annotations:
     werf.io/weight: -10
   name: webhook
   namespace: d8-cert-manager
