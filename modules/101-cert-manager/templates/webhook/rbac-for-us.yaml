@@ -2,6 +2,8 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  anotations:
+    werf.io/weight: -10
   name: webhook
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
