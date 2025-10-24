@@ -8,11 +8,11 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  annotations:
-    werf.io/weight: -10
   name: webhook
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+  annotations:
+    werf.io/weight: "-10"
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -33,11 +33,11 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    werf.io/weight: -10
   name: webhook
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+  annotations:
+    werf.io/weight: "-10"
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
@@ -46,19 +46,19 @@ spec:
       app: webhook
   template:
     metadata:
+      labels:
+        app: webhook
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
         checksum/certificate: {{ include (print .Template.BasePath "/webhook/secret-tls.yaml") . | sha256sum }}
-      labels:
-        app: webhook
     spec:
-      serviceAccountName: webhook
-      automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      serviceAccountName: webhook
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -91,8 +91,8 @@ spec:
         volumeMounts:
         - name: certs
           mountPath: /certs
-        - mountPath: /tmp
-          name: tmp
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
