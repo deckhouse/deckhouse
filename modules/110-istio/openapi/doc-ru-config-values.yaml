@@ -308,7 +308,7 @@ properties:
     properties:
       accessLog:
         properties:
-          format:
+          textFormat:
             description: Формат access-логов сайдкаров. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
       trafficRedirectionSetupMode:
         description: |

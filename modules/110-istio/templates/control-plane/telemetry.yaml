@@ -9,4 +9,4 @@ spec:
   accessLogging:
   - disabled: false
     providers:
-    - name: d8-main-access-log-format
+    - name: main-access-log-format
