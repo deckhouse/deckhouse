@@ -9,10 +9,14 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/operator
   to: /usr/local/bin/operator
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
+  owner: 1337
+  group: 1337
   after: setup
 imageSpec:
   config:
@@ -45,5 +49,6 @@ shell:
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
   - strip /src/istio/out/operator
   - chmod 0700 /src/istio/out/operator
+  - chown 1337:1337 /src/istio/out/operator
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
