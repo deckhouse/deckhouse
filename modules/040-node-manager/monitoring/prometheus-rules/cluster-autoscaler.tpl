@@ -150,5 +150,6 @@
         ```
 
 {{- else }}
-groups: []
+- name: empty
+  rules: []
 {{- end }}
