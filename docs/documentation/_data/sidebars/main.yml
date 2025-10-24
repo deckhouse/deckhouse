@@ -1025,8 +1025,8 @@ entries:
                 ru: Обзор
               url: /user/monitoring/
             - title:
-                en: Monitoring settings
-                ru: Настройки мониторинга
+                en: Configuring application monitoring
+                ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
         - title:
             en: Logging settings

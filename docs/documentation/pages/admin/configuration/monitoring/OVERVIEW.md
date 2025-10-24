@@ -5,115 +5,125 @@ description: "Configure comprehensive monitoring for Deckhouse Kubernetes Platfo
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.
-The module automatically configures metrics collection from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), and offers preset dashboards for analyzing CPU, memory, disk, and network usage.
+DKP automatically configures metrics collection in the cluster from nodes, pods, and key cluster components (etcd, kube-apiserver, CoreDNS), which enables preset dashboards for analyzing CPU, memory, disk, and network usage.
 
-All components operate in a fault-tolerant mode, including Prometheus and Alertmanager, and are adapted for both cloud and bare metal environments.
+Cluster monitoring is enabled by default in the `Default` and `Managed` [module bundles](../#module-bundles).
 
-The principles of operation and Prometheus configuration are covered in the [article](./prometheus.html).
+All components, including Prometheus and Alertmanager, operate in a fault-tolerant mode and can be used in cloud environments and on bare-metal servers.
 
-Several types of monitoring are implemented:
+The principles of Prometheus operation is covered in [Configuring a system for collecting and storing metrics](./prometheus.html).
 
-- [Hardware resource monitoring](#hardware-resource-monitoring);
-- [Kubernetes monitoring](#kubernetes-monitoring);
-- [Ingress monitoring](#ingress-monitoring);
-- [Network interaction monitoring](./configuring/network-and-nodes.html);
-- [Extended monitoring](#extended-monitoring-mode);
-- [Cluster SLA monitoring](#cluster-sla-monitoring).
+Several types of monitoring are implemented in DKP:
 
-[Extended monitoring mode](#extended-monitoring-mode) and [alerting](#alerts) are provided, including [sending alerts to external systems](#sending-alerts-to-external-systems). Dashboard monitoring is available, and there is cluster SLA monitoring.
+- [Hardware resource monitoring](#hardware-resource-monitoring)
+- [Kubernetes monitoring](#kubernetes-monitoring)
+- [Ingress monitoring](#ingress-monitoring)
+- [Control plane monitoring](#control-plane-monitoring)
+- [Network interaction monitoring](./configuring/network-and-nodes.html)
+- [Extended monitoring](#extended-monitoring-mode)
+- [Cluster SLA monitoring](#cluster-sla-monitoring)
+
+DKP includes an [alerting system](#alerts) that supports sending event notifications, including to [external systems](#sending-alerts-to-external-systems).
 
 ## Hardware resource monitoring
 
-Tracking of cluster hardware resource utilization is provided with graphs showing:
+Tracking of cluster hardware resource capacity is provided with graphs showing utilization of:
 
-- CPU utilization;
-- memory utilization;
-- disk utilization;
-- network utilization.
+- CPU
+- Memory
+- Disk
+- Network
 
 Graphs are available with aggregation by:
 
-- pods;
-- controllers;
-- namespaces;
-- nodes.
+- Pods
+- Controllers
+- Namespaces
+- Nodes
 
 ## Kubernetes monitoring
 
-The module [monitoring-kubernetes](/modules/monitoring-kubernetes/) is designed for basic cluster node monitoring.
+The module [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) is designed for basic cluster node monitoring.
 
 It provides secure metrics collection and offers a basic set of rules for monitoring:
-- current container runtime version (docker, containerd) on the node and its compliance with versions allowed for use;
-- overall cluster monitoring subsystem health (Dead man's switch);
-- available file descriptors, sockets, free space, and inodes;
-- operation of `kube-state-metrics`, `node-exporter`, `kube-dns`;
-- cluster node state (NotReady, drain, cordon);
-- time synchronization state on nodes;
-- cases of prolonged CPU steal exceeding;
-- Conntrack table state on nodes;
-- pods with incorrect state (as a possible consequence of kubelet issues) and more.
+
+- Current container runtime version (docker, containerd) on the node and its compliance with versions allowed for use.
+- Overall cluster monitoring subsystem health (Dead man's switch).
+- Available file descriptors, sockets, free space, and inodes.
+- Operation of `kube-state-metrics`, `node-exporter`, `kube-dns`.
+- Cluster node state (NotReady, drain, cordon).
+- Time synchronization state on nodes.
+- Cases of prolonged CPU steal exceeding.
+- Conntrack table state on nodes.
+- Pods with incorrect state (as a possible consequence of kubelet issues) and more.
 
 ## Ingress monitoring
 
-Statistics collection for ingress-nginx in Prometheus is implemented with detailed metrics (response time, codes, geography, etc.), available in different dimensions (namespace, vhost, ingress). Data is visualized in Grafana with interactive dashboards.
-Detailed description is in the [Ingress monitoring](../network/ingress/alb/nginx.html#monitoring-and-statistics) section.
+Statistics collection for [`ingress-nginx`](/modules/ingress-nginx/) in Prometheus is implemented with detailed metrics (response time, codes, geography, etc.), available in different dimensions (namespace, vhost, ingress). Data is visualized in Grafana with interactive dashboards.
+Detailed description is available in the section about [Ingress monitoring](../network/ingress/alb/nginx.html#monitoring-and-statistics).
+
+The module is enabled by default in the `Default` and `Managed` [module bundles](../#module-bundles).
+
+### Disabling collection of detailed statistics from Ingress resources
+
+By default, DKP collects detailed statistics from all Ingress resources in the cluster, which generates a high load on the monitoring system.
+
+To disable statistics collection, add the label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding namespace or Ingress resource.
+
+- Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
+
+  ```shell
+  d8 k label ns review-1 ingress.deckhouse.io/discard-metrics=true
+  ```
+
+- Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
+
+  ```shell
+  d8 k label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+  ```
 
 ## Control plane monitoring
 
 Control plane monitoring is performed using the [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module, which organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
-* kube-apiserver;
-* kube-controller-manager;
-* kube-scheduler;
-* kube-etcd.
 
-## Application monitoring
-
-This monitoring is designed for automatic metrics collection from user applications in the Kubernetes cluster via Prometheus. Simply enable the [`monitoring-custom`](/modules/monitoring-custom/) module, add the `prometheus.deckhouse.io/custom-target` label to a Service or Pod and specify the port (e.g., `http-metrics`), and metrics will start being collected without manual Prometheus configuration.
-
-The system supports flexible settings: HTTPS, custom paths, query parameters, Istio integration (mTLS), and overload protection (metrics limit).
-This allows integrating applications into the general cluster monitoring, tracking their state and performance.
+- kube-apiserver
+- kube-controller-manager
+- kube-scheduler
+- kube-etcd
 
 ## Cluster monitoring
 
 DKP securely collects monitoring metrics and configures rules.
 
 DKP monitoring capabilities:
-- monitoring current container runtime version (containerd) on the node and its compliance with versions allowed for use in DKP;
-- monitoring cluster monitoring subsystem health (Dead man's switch);
-- monitoring available file descriptors, sockets, free space, and inodes;
-- monitoring cluster node state (NotReady, drain, cordon);
-- operation of `kube-state-metrics`, `node-exporter`, `kube-dns`;
-- monitoring time synchronization state on nodes;
-- monitoring cases of prolonged CPU steal exceeding;
-- monitoring Conntrack table state on nodes;
-- monitoring pods with incorrect state (as a possible consequence of kubelet issues);
-- monitoring control plane components (implemented by the `monitoring-kubernetes-control-plane` module);
+
+- Monitoring current container runtime version (containerd) on the node and its compliance with versions allowed for use in DKP.
+- Monitoring cluster monitoring subsystem health ("Dead man's switch").
+- Monitoring available file descriptors, sockets, free space, and inodes.
+- Monitoring cluster node state (NotReady, drain, cordon).
+- Operation of `kube-state-metrics`, `node-exporter`, `kube-dns`.
+- Monitoring time synchronization state on nodes.
+- Monitoring cases of prolonged CPU steal exceeding.
+- Monitoring Conntrack table state on nodes.
+- Monitoring pods with incorrect state (as a possible consequence of kubelet issues).
+- Monitoring control plane components (implemented by the `monitoring-kubernetes-control-plane` module).
 
 ## Extended monitoring mode
 
-DKP supports the use of extended monitoring mode, which provides alerts for additional metrics:
+DKP supports an extended monitoring mode via the [`extended-monitoring`](/modules/extended-monitoring/) module, allowing you to configure:
 
-- free space and inodes on node disks,
-- node utilization,
-- pod and container image availability,
-- certificate expiration,
-- other cluster events.
+- Monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them.
+- Collecting Kubernetes cluster events as metrics.
+- Monitoring container image availability in registry used by controllers (Deployments, StatefulSets, DaemonSets, CronJobs).
+- Monitoring objects in namespaces that have the `extended-monitoring.deckhouse.io/enabled=""` label.
 
-It also allows you to configure:
+The module can send alerts based on the following metrics:
 
-- monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them (implemented by the `extended-monitoring` module);
-- collecting Kubernetes cluster events as metrics (implemented by the `extended-monitoring` module);
-- monitoring container image availability in registry used by controllers (Deployments, StatefulSets, DaemonSets, CronJobs) (implemented by the `extended-monitoring` module);
-- monitoring objects in namespaces that have the `extended-monitoring.deckhouse.io/enabled=""` label (implemented by the `extended-monitoring` module).
-
-### Alerting in extended monitoring mode
-
-DKP provides the ability to flexibly configure alerting for each namespace and specify different severity levels depending on thresholds. You can define multiple thresholds for sending warnings to different namespaces, for example, for the following parameters:
-
-- free space and inode values on disk;
-- CPU utilization of nodes and containers;
-- percentage of `5xx` errors on `nginx-ingress`;
-- number of potentially unavailable pods in `Deployment`, `StatefulSet`, `DaemonSet`.
+- Free space and inodes on node disks
+- Node utilization
+- Pod and container image availability
+- Certificate expiration
+- Other cluster events
 
 ## Alerts
 
@@ -121,14 +131,16 @@ Monitoring in DKP includes event notifications. The standard delivery includes a
 
 ### Sending alerts to external systems
 
-DKP supports sending alerts using `Alertmanager`:
+DKP supports sending alerts using Alertmanager:
 
-- via SMTP protocol;
-- to PagerDuty;
-- to Slack;
-- to Telegram;
-- via Webhook;
-- through any other channels supported in Alertmanager.
+- Via SMTP protocol
+- To PagerDuty
+- [To Slack](alerts-integrations.html#example-of-sending-alerts-to-slack-with-filter)
+- [To Telegram](alerts-integrations.html#sending-alerts-to-telegram)
+- Via Webhook
+- Through any other channels supported in Alertmanager
+
+Examples of DKP monitoring integration with external systems are available in [Configuring integrations](alerts-integrations.html).
 
 ## Cluster SLA monitoring
 
