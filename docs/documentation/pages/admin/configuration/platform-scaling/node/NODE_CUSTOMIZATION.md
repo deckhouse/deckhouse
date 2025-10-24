@@ -767,7 +767,7 @@ Configuration changes do not cause the containerd service to restart.
 
 #### Adding authorization to an additional registry (actual method)
 
-Example of adding authorization to a additional registry when using the **actual** configuration method:
+Example of adding authorization to an additional registry when using the **actual** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
