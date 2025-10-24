@@ -775,7 +775,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required7
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
