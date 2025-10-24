@@ -8,3 +8,8 @@ spec:
   match:
     - excludedNamespaces: ["d8-*", "kube-system"]
       processes: ["*"]
+  sync:
+    syncOnly:
+      - group: "deckhouse.io"
+        version: "v1alpha1"
+        kind: "SecurityPolicyException"

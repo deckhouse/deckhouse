@@ -1,0 +1,344 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: securitypolicyexceptions.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: securitypolicyexceptions
+    singular: securitypolicyexception
+    kind: SecurityPolicyException
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      additionalPrinterColumns:
+      - jsonPath: .status.deckhouse.synced
+        name: Synced
+        type: string
+        description: A status message that is shown if the current version of the security policy has been processed by the operator.
+      - name: Observed
+        jsonPath: .status.deckhouse.observed.lastTimestamp
+        type: string
+        description: A timestamp of when the resource was last observed by the operator.
+        priority: 1
+      - name: Processed
+        jsonPath: .status.deckhouse.processed.lastTimestamp
+        type: string
+        description: A timestamp of when the resource was last processed by the operator.
+        priority: 1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          description: |
+            Describes exceptions to security policies for a cluster.
+            Each `SecurityPolicyException` custom resource provides specific allowances.
+          properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last observed version of the resource was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: A timestamp of when the operator last noted a change to the resource.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed resource.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: A timestamp of when the resource was last applied in the cluster.
+                        checkSum:
+                          type: string
+                          description: The checksum of last applied resource.
+            spec:
+              type: object
+              properties:
+                securityContext:
+                  type: object
+                  description: Specifies exceptions for securityContext section parameters.
+                  properties:
+                    readOnlyRootFilesystem:
+                      type: object
+                      description: Allows exceptions for the read-only root filesystem.
+                      required: ["allowedValue"]
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: false
+                          description: The allowed value for readOnlyRootFilesystem.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                    allowPrivilegeEscalation:
+                      type: object
+                      description: Allows exceptions for privilege escalation.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: false
+                          description: The allowed value for allowPrivilegeEscalation.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                    capabilities:
+                      type: object
+                      description: Allows exceptions for Linux capabilities.
+                      properties:
+                        allowedValues:
+                          type: object
+                          description: Permitted values for adding or dropping capabilities.
+                          properties:
+                            drop:
+                              type: array
+                              description: List of capabilities to drop.
+                              default: ["all"]
+                              items:
+                                type: string
+                            add:
+                              type: array
+                              description: List of capabilities to add.
+                              default: []
+                              items:
+                                type: string
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    runAsUser:
+                      type: object
+                      description: Allows exceptions for the runAsUser setting.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed user IDs.
+                          items:
+                            type: integer
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    runAsNonRoot:
+                      type: object
+                      description: Allows exceptions for the runAsNonRoot setting.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: true
+                          description: The allowed value for runAsNonRoot.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                    seccompProfile:
+                      type: object
+                      description: Allows exceptions for seccomp profiles.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed seccomp profiles.
+                          items:
+                            type: string
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    appArmorProfile:
+                      type: object
+                      description: Allows exceptions for AppArmor profiles.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed AppArmor profiles.
+                          items:
+                            type: string
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    seLinuxOptions:
+                      type: object
+                      description: Allows exceptions for SELinux options.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed SELinux configurations.
+                          items:
+                            type: object
+                            properties:
+                              user:
+                                type: string
+                                description: The SELinux user label.
+                              role:
+                                type: string
+                                description: The SELinux role label.
+                              type:
+                                type: string
+                                description: The SELinux type label.
+                              level:
+                                type: string
+                                description: The SELinux level label.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    privileged:
+                      type: object
+                      description: Allows exceptions for privileged mode.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: false
+                          description: The allowed value for privileged.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                    procMount:
+                      type: object
+                      description: Allows exceptions for procMount types.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed procMount values.
+                          items:
+                            type: string
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    sysctls:
+                      type: object
+                      description: Allows exceptions for sysctls.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed sysctl settings.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                description: The name of the sysctl.
+                              value:
+                                type: string
+                                description: The allowed value for the sysctl.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                network:
+                  type: object
+                  description: Specifies the network-related exceptions.
+                  properties:
+                    hostPorts:
+                      type: array
+                      description: List of exceptions for host ports.
+                      items:
+                        type: object
+                        properties:
+                          port:
+                            type: integer
+                            description: The host port to allow.
+                          protocol:
+                            type: string
+                            description: The protocol for the host port.
+                            enum:
+                              - TCP
+                              - UDP
+                          metadata:
+                            type: object
+                            description: Metadata related to the exception.
+                      required: ["port", "protocol"]
+                    hostNetwork:
+                      type: object
+                      description: Allows exceptions for hostNetwork.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: false
+                          description: The allowed value for hostNetwork.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                    hostPID:
+                      type: object
+                      description: Allows exceptions for hostPID.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          default: false
+                          description: The allowed value for hostPID.
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                    hostIPC:
+                      type: object
+                      description: Allows exceptions for hostIPC.
+                      properties:
+                        allowedValue:
+                          type: boolean
+                          description: The allowed value for hostIPC.
+                        metadata:
+                          type: object
+                          default: false
+                          description: Metadata related to the exception.
+                      required: ["allowedValue"]
+                volumes:
+                  type: object
+                  description: Specifies the volume-related exceptions.
+                  properties:
+                    types:
+                      type: object
+                      description: Allows exceptions for volume types.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed volume types.
+                          items:
+                            type: string
+                        metadata:
+                          type: object
+                          description: Metadata related to the exception.
+                      required: ["allowedValues"]
+                    hostPath:
+                      type: object
+                      description: Allows exceptions for hostPath volumes.
+                      properties:
+                        allowedValues:
+                          type: array
+                          description: List of allowed hostPath configurations.
+                          items:
+                            type: object
+                            properties:
+                              path:
+                                type: string
+                                description: The allowed hostPath.
+                              metadata:
+                                type: object
+                                description: Metadata related to the exception.
+                      required: ["allowedValues"]

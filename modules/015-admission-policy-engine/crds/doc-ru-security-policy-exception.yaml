@@ -1,0 +1,166 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает исключения из политики безопасности для кластера.
+            Каждый ресурс `SecurityPolicyException` предоставляет конкретные разрешения.
+          properties:
+            spec:
+              properties:
+                securityContext:
+                  description: Исключения для параметра securityContext.
+                  properties:
+                    readOnlyRootFilesystem:
+                      description: Исключения для параметра readOnlyRootFilesystem.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для readOnlyRootFilesystem.
+                        metadata:
+                          description: Метаданные, связанные с исключением для readOnlyRootFilesystem.
+                    allowPrivilegeEscalation:
+                      description: Исключения для параметра allowPrivilegeEscalation.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для allowPrivilegeEscalation.
+                        metadata:
+                          description: Метаданные, связанные с исключением для allowPrivilegeEscalation.
+                    capabilities:
+                      description: Исключения для параметра capabilities.
+                      properties:
+                        allowedValues:
+                          description: Разрешенные значения для добавления или удаления способностей.
+                          properties:
+                            drop:
+                              description: Список способностей для удаления.
+                            add:
+                              description: Список способностей для добавления.
+                        metadata:
+                          description: Метаданные, связанные с исключением для capabilities.
+                    runAsUser:
+                      description: Исключения для параметра runAsUser.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных user ID для runAsUser.
+                        metadata:
+                          description: Метаданные, связанные с исключением для runAsUser.
+                    runAsNonRoot:
+                      description: Исключения для параметра runAsNonRoot.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для runAsNonRoot.
+                        metadata:
+                          description: Метаданные, связанные с исключением для runAsNonRoot.
+                    seccompProfile:
+                      description: Исключения для параметра seccompProfile.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных профилей seccomp.
+                        metadata:
+                          description: Метаданные, связанные с исключением для seccompProfile.
+                    appArmorProfile:
+                      description: Исключения для параметра appArmorProfile.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных профилей AppArmor.
+                        metadata:
+                          description: Метаданные, связанные с исключением для appArmorProfile.
+                    seLinuxOptions:
+                      description: Исключения для параметра seLinuxOptions.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных конфигураций SELinux.
+                          properties:
+                            user:
+                              description: SELinux user метка.
+                            role:
+                              description: SELinux role метка.
+                            type:
+                              description: SELinux type метка.
+                            level:
+                              description: SELinux level метка.
+                        metadata:
+                          description: Метаданные, связанные с исключением для seLinuxOptions.
+                    privileged:
+                      description: Исключения для параметра privileged.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для privileged.
+                        metadata:
+                          description: Метаданные, связанные с исключением для privileged.
+                    procMount:
+                      description: Исключения для параметра procMount.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных значений для procMount.
+                        metadata:
+                          description: Метаданные, связанные с исключением для procMount.
+                    sysctls:
+                      description: Исключения для параметра sysctls.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных настроек sysctl.
+                          properties:
+                            name:
+                              description: Имя sysctl.
+                            value:
+                              description: Допустимое значение для sysctl.
+                        metadata:
+                          description: Метаданные, связанные с исключением для sysctls.
+                network:
+                  description: Исключения для параметра network.
+                  properties:
+                    hostPorts:
+                      description: Исключения для параметра hostPorts.
+                      properties:
+                        port:
+                          description: Разрешенный хостовой порт.
+                        protocol:
+                          description: Протокол для хостового порта.
+                          enum:
+                            - TCP
+                            - UDP
+                        metadata:
+                          description: Метаданные, связанные с исключением для hostPorts.
+                    hostNetwork:
+                      description: Исключения для параметра hostNetwork.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для hostNetwork.
+                        metadata:
+                          description: Метаданные, связанные с исключением для hostNetwork.
+                    hostPID:
+                      description: Исключения для параметра hostPID.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для hostPID.
+                        metadata:
+                          description: Метаданные, связанные с исключением для hostPID.
+                    hostIPC:
+                      description: Исключения для параметра hostIPC.
+                      properties:
+                        allowedValue:
+                          description: Допустимое значение для hostIPC.
+                        metadata:
+                          description: Метаданные, связанные с исключением для hostIPC.
+                volumes:
+                  description: Исключения для параметра volumes.
+                  properties:
+                    types:
+                      description: Исключения для параметра types.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных типов томов.
+                        metadata:
+                          description: Метаданные, связанные с исключением для types.
+                    hostPath:
+                      description: Исключения для параметра hostPath.
+                      properties:
+                        allowedValues:
+                          description: Список разрешенных конфигураций hostPath.
+                          properties:
+                            path:
+                              description: Разрешенный hostPath.
+                            metadata:
+                              description: Метаданные, связанные с исключением для hostPath.
