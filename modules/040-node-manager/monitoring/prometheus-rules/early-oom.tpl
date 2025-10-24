@@ -30,4 +30,6 @@
         - Upgrade the Linux kernel to version 4.20 or higher.
         - Enable the [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
         - [Disable early OOM]({{ if .Values.global.modules.publicDomainTemplate }}{{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation")}}/en/platform/modules{{- else }}https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules{{- end }}/node-manager/configuration.html#parameters-earlyoomenabled).
+{{- else }}
+groups: []
 {{- end }}
