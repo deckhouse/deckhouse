@@ -7,7 +7,6 @@
 mounts:
 - [ ephemeral0, /mnt/resource ]
   {{- end }}
-prefer_fqdn_over_hostname: false
 package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
@@ -41,7 +40,9 @@ runcmd:
 
 ssh_authorized_keys:
 - {{ $context.Values.nodeManager.internal.cloudProvider.sshPublicKey| default "" | quote }}
+{{- if ($context.Values.global.enabledModules | has "cloud-provider-dvp") }}
 prefer_fqdn_over_hostname: false
+{{- end }}
 package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
