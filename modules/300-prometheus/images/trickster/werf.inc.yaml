@@ -100,3 +100,5 @@ shell:
   - go build -ldflags="-s -w" -o entrypoint
   - chown -R 64535:64535 /src
   - chmod 0700 /src/entrypoint
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

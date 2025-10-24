@@ -45,4 +45,5 @@ shell:
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
   - strip /src/istio/out/operator
   - chmod 0700 /src/istio/out/operator
-  - chown 1337:1337 /src/istio/out/operator
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

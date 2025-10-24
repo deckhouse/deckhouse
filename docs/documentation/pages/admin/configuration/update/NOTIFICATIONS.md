@@ -20,9 +20,9 @@ If an update requires making changes to the cluster (for example, updating the K
 DKP generates designated alerts.
 These alerts include:
 
-- **D8NodeHasDeprecatedOSVersion**: Nodes with an unsupported OS version have been detected in the cluster.
-- **HelmReleasesHasResourcesWithDeprecatedVersions**: Some Helm releases use deprecated resources.
-- **KubernetesVersionEndOfLife**: The installed Kubernetes version is no longer supported.
+- [`D8NodeHasDeprecatedOSVersion`](../../../reference/alerts.html#monitoring-deckhouse-d8nodehasdeprecatedosversion): Nodes with an unsupported OS version have been detected in the cluster.
+- [`HelmReleasesHasResourcesWithDeprecatedVersions`](../../../reference/alerts.html#monitoring-kubernetes-helmreleaseshasresourceswithdeprecatedversions): Some Helm releases use deprecated resources.
+- [`D8KubernetesVersionIsDeprecated`](../../../reference/alerts.html#control-plane-manager-d8kubernetesversionisdeprecated): The installed Kubernetes version is no longer supported.
 
 If any of these alerts appear, make sure to resolve them before updating.
 This helps avoid disruptions and ensures the cluster remains stable after the update.

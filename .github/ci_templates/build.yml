@@ -62,7 +62,6 @@ steps:
   {!{- end }!}
   {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" $ctx | strings.Indent 2 }!}
   {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
@@ -125,7 +124,7 @@ steps:
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 {!{- else }!}
-      COSIGN_VAULT_KEY: "dh-2025-aug"
+      COSIGN_VAULT_KEY: "dh-2025-aug-ec"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
       COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}

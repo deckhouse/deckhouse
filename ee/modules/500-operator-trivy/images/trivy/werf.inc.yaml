@@ -56,3 +56,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go`) | indent 6 }}
   - chown 64535:64535 /trivy
   - chmod 0700 /trivy
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

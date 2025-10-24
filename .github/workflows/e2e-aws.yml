@@ -182,8 +182,14 @@ jobs:
   block-until-image-is-not-ready:
     name: Block until the docker image is not ready
     runs-on: "regular"
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v3.5.2
+        with:
+          ref: "main"
       - name: Block until the docker image is not ready
         id: block-image-dont-ready
         uses: actions/github-script@v6.4.1
@@ -191,6 +197,7 @@ jobs:
           script: |
             const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
             const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+            const isTag = (branch) => branch.includes("/tags/")
 
             let branchName;
             let prNum;
@@ -198,38 +205,43 @@ jobs:
             if (context.eventName === 'pull_request') {
               branchName = context.payload.pull_request.head.ref;
               prNum = context.payload.pull_request.number;
-            } else {
-              return true;
+            } else if (context.eventName === 'workflow_dispatch') {
+              branchName = context.payload.inputs.ci_commit_ref_name;
+              prNum = context.payload.inputs.issue_number;
             }
 
             if (!branchName) {
               branchName = githubAction.GetBranchNameFromContext(context);
             }
 
-            if (branchName) {
-              let infoText = `Check build workflow is completed for branch: ${branchName}`;
-              if (prNum) {
-                infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
-              }
-              core.info(infoText);
-
-              const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
-              try {
-                let workflowName = 'Build and test for dev branches';
-                let jobName = 'Build FE';
-                if (isReleaseBranch(branchName)) {
-                  workflowName = 'Build and test for release branches';
-                }
-                if (branchName === 'main') {
-                  return true;
-                }
-                await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
-              } catch(error) {
-                core.setFailed(error);
-              }
-            } else {
-              core.setFailed("Branch name not found.");
+            if (!branchName) {
+              core.setFailed("Branch not found.");
+              return false;
             }
+
+            core.info(`${branchName} is main? ${branchName === 'main'}`)
+            core.info(`${branchName} is release? ${isReleaseBranch(branchName)}`)
+            core.info(`${branchName} is tag? ${isTag(branchName)}`)
+            if (branchName === 'main' || isReleaseBranch(branchName) || isTag(branchName)) {
+              core.info(`Skip a job because it's a tag, release or main branch: ${branchName}`);
+              return true;
+            }
+
+            let infoText = `Check build workflow is completed for branch: ${branchName}`;
+            if (prNum) {
+              infoText += ` | PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+            }
+            core.info(infoText);
+
+            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+            try {
+              let workflowName = 'Build and test for dev branches';
+              let jobName = 'Build FE';
+              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+            } catch(error) {
+              core.setFailed(error);
+            }
+
 
   # </template: block-until-image-is-not-ready>
 
@@ -561,6 +573,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -664,6 +677,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1044,6 +1058,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1147,6 +1162,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1527,6 +1543,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1630,6 +1647,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2010,6 +2028,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2113,6 +2132,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2493,6 +2513,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2596,6 +2617,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2976,6 +2998,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3079,6 +3102,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3459,6 +3483,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3562,6 +3587,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3942,6 +3968,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -4045,6 +4072,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -4425,6 +4453,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -4528,6 +4557,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -4908,6 +4938,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -5011,6 +5042,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -5391,6 +5423,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -5494,6 +5527,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -5874,6 +5908,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -5977,6 +6012,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -6357,6 +6393,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -6460,6 +6497,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -6840,6 +6878,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -6943,6 +6982,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
           LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}

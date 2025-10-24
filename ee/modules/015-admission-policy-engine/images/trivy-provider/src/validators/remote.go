@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/aquasecurity/trivy/pkg/types"
@@ -95,7 +97,23 @@ func (v *remoteValidator) scanImageReport(ctx context.Context, img string) exter
 		}
 	}
 
-	v.logger.Info("validate", "image", img, "vulnerabilities found", scanReport.Results.Failed())
+	if whitelistEnv := os.Getenv("ALLOWED_SEVERITIES"); whitelistEnv != "" {
+		allowedSeverities := strings.Split(whitelistEnv, ",")
+		for _, r := range scanReport.Results {
+			filteredVulnerabilities := make([]types.DetectedVulnerability, 0)
+
+			for _, v := range r.Vulnerabilities {
+				if !slices.Contains(allowedSeverities, v.Severity) {
+					filteredVulnerabilities = append(filteredVulnerabilities, v)
+				}
+			}
+
+			r.Vulnerabilities = filteredVulnerabilities
+		}
+
+	}
+
+	v.logger.Info("validate", "image", img, "important vulnerabilities found", scanReport.Results.Failed())
 	if scanReport.Results.Failed() {
 		vulnDescription := mutateResult(scanReport.Results)
 

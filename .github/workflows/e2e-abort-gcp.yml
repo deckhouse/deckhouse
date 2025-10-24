@@ -339,6 +339,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -658,6 +659,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -977,6 +979,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1296,6 +1299,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1615,6 +1619,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1934,6 +1939,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2253,6 +2259,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2572,6 +2579,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2891,6 +2899,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3210,6 +3219,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3529,6 +3539,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3848,6 +3859,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4167,6 +4179,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4486,6 +4499,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
