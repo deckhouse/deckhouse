@@ -53,13 +53,23 @@ func (cfg *Config) FromSecretData(data map[string][]byte) {
 	}
 }
 
-func (cfg *Config) ToBase64SecretData() map[string]string {
+func (cfg *Config) ToBase64Map() map[string]string {
 	return map[string]string{
 		"address":           base64.StdEncoding.EncodeToString([]byte(cfg.Address)),
 		"path":              base64.StdEncoding.EncodeToString([]byte(cfg.Path)),
 		"scheme":            base64.StdEncoding.EncodeToString([]byte(cfg.Scheme)),
 		"ca":                base64.StdEncoding.EncodeToString([]byte(cfg.CA)),
 		".dockerconfigjson": base64.StdEncoding.EncodeToString(cfg.DockerConfig),
+	}
+}
+
+func (cfg *Config) ToMap() map[string][]byte {
+	return map[string][]byte{
+		"address":           []byte(cfg.Address),
+		"path":              []byte(cfg.Path),
+		"scheme":            []byte(cfg.Scheme),
+		"ca":                []byte(cfg.CA),
+		".dockerconfigjson": cfg.DockerConfig,
 	}
 }
 

@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
@@ -122,21 +122,14 @@ func (b *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, error)
 		return nil, err
 	}
 
-	ret := map[string][]byte{
-		corev1.DockerConfigJsonKey: dockerCfg,
-		"address":                  []byte(address),
-		"scheme":                   []byte(strings.ToLower(string(data.Scheme))),
-		"imagesRegistry":           []byte(data.ImagesRepo),
+	ret := deckhouse_registry.Config{
+		Address:      address,
+		Path:         path,
+		Scheme:       strings.ToLower(string(data.Scheme)),
+		CA:           data.CA,
+		DockerConfig: dockerCfg,
 	}
-
-	if path != "" {
-		ret["path"] = []byte(path)
-	}
-
-	if data.CA != "" {
-		ret["ca"] = []byte(data.CA)
-	}
-	return ret, nil
+	return ret.ToMap(), nil
 }
 
 func (b *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
