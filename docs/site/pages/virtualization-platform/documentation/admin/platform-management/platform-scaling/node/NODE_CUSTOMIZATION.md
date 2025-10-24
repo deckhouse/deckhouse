@@ -508,7 +508,7 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
 
-#### Adding authorization to an additional registry (deprecated method)?
+#### Adding authorization to an additional registry (deprecated method)
 
 Example of adding authorization to a additional registry when using the **deprecated** configuration method:
 
