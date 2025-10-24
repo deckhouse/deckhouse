@@ -838,7 +838,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
+  # Шаг может быть любой, так как не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
