@@ -166,6 +166,7 @@ properties:
   ca:
     description: |
       Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов, в случае включения mTLS.
+      
       Для создания сертификата можно воспользоваться [примером](/products/kubernetes-platform/documentation/v1/user/security/tls.html#пример-создания-сертификата), в котором `basicConstraints = CA:FALSE` необходимо заменить на `basicConstraints = CA:TRUE`.
     properties:
       cert:
