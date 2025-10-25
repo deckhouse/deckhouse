@@ -29,7 +29,7 @@ check_changelog:
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-runs-on: [self-hosted, large]
+runs-on: [self-hosted, stage]
 {!{- else }!}
 runs-on: [self-hosted, large]
 {!{- end }!}
