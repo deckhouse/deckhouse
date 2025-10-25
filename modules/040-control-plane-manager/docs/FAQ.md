@@ -910,7 +910,7 @@ Follow these steps to restore a multi-master cluster:
 1. Wait for the deckhouse queue to complete:
 
    ```shell
-   d8 p queue main
+   d8 system queue main
    ```
 
 1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
