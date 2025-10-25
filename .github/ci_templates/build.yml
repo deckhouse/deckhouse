@@ -29,7 +29,7 @@ check_changelog:
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-runs-on: [self-hosted, large]
+runs-on: [self-hosted, stage]
 {!{- else }!}
 runs-on: [self-hosted, large]
 {!{- end }!}
@@ -89,7 +89,7 @@ steps:
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
       DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
 {!{- end }!}
 {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -127,8 +127,8 @@ steps:
       COSIGN_VAULT_KEY: "dh-2025-aug-ec"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
       COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -175,7 +175,7 @@ steps:
       mkdir -p "$TEMP_WORKDIR"
 
     {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      STAGE_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
       export WERF_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
