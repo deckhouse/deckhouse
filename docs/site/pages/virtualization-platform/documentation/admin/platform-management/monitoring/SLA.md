@@ -10,7 +10,7 @@ In addition, using the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.
 To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module [in the Deckhouse web interface](/modules/console/stable/) or using the following command:
 
 ```shell
-d8 platform module enable upmeter
+d8 system module enable upmeter
 ```
 
 ## Module Configuration

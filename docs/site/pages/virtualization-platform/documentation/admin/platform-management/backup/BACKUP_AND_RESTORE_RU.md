@@ -140,7 +140,7 @@ lang: ru
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Переведите кластер обратно в мультимастерный режим.
