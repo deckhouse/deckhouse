@@ -111,7 +111,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
    ```console
-   root@dev-master-0:~# d8 platform edit cluster-configuration
+   root@dev-master-0:~# d8 system edit cluster-configuration
    ```
 
    Output information:
