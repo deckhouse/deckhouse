@@ -274,7 +274,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -292,7 +292,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -599,7 +599,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -617,7 +617,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -924,7 +924,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -942,7 +942,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -1249,7 +1249,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -1267,7 +1267,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -1574,7 +1574,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -1592,7 +1592,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -1899,7 +1899,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -1917,7 +1917,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -2224,7 +2224,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -2242,7 +2242,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -2549,7 +2549,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -2567,7 +2567,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -2874,7 +2874,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -2892,7 +2892,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -3199,7 +3199,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -3217,7 +3217,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -3524,7 +3524,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -3542,7 +3542,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -3849,7 +3849,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -3867,7 +3867,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -4174,7 +4174,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -4192,7 +4192,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
@@ -4499,7 +4499,7 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -4517,7 +4517,7 @@ jobs:
 
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_DEV_REGISTRY_HOST}
+            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
           fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
