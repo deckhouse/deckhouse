@@ -179,7 +179,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, cfg *config.MetaConfig, setting
 
 	require.NotEmpty(t, cfg.ProviderClusterConfig)
 
-	cfg.Layout = "WithNATInstance"
+	cfg.Layout = "with-nat-instance"
 
 	if settings != "" {
 		cfg.ProviderClusterConfig["withNATInstance"] = json.RawMessage([]byte(settings))

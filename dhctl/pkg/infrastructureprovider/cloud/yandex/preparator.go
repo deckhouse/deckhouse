@@ -114,7 +114,8 @@ func (p *MetaConfigPreparator) validateNodeGroups(metaConfig *config.MetaConfig)
 }
 
 func (p *MetaConfigPreparator) validateWithNATInstanceLayout(metaConfig *config.MetaConfig) error {
-	if metaConfig.Layout != "WithNATInstance" {
+	// layout was prepared with strcase.ToKebab before calling preparator
+	if metaConfig.Layout != "with-nat-instance" {
 		p.logger.LogDebugF("Skip validate WithNATInstance layout. Got layout %v\n", metaConfig.Layout)
 		return nil
 	}
