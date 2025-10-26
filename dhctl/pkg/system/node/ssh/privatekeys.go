@@ -91,7 +91,14 @@ func GetSSHPrivateKey(keyPath string, passphrase string) (any, error) {
 
 	keyData = append(bytes.TrimSpace(keyData), '\n')
 
-	sshKey, err := ssh.ParseRawPrivateKey(keyData)
+	var sshKey any
+
+	if len(passphrase) > 0 {
+		sshKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
+	} else {
+		sshKey, err = ssh.ParseRawPrivateKey(keyData)
+	}
+
 	if err != nil {
 		var passphraseMissingError *ssh.PassphraseMissingError
 		switch {
