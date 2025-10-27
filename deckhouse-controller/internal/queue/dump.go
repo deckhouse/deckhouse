@@ -62,7 +62,7 @@ func (q *queue) dump() dumpQueue {
 }
 
 func (q *queue) getTasksDump() []dumpTask {
-	var tasks []dumpTask
+	var tasks []dumpTask // nolint:prealloc
 
 	index := 1
 	for wrapper := range q.deque.Iter() {
