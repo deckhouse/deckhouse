@@ -234,37 +234,13 @@ func TestService_Dump(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Get dump
-	dumpBytes := svc.Dump("test-queue")
+	dumpBytes := svc.Dump()
 	require.NotEmpty(t, dumpBytes, "dump should not be empty")
 
 	dumpStr := string(dumpBytes)
 	assert.Contains(t, dumpStr, "test-task", "dump should contain task name")
 
 	wg.Wait()
-}
-
-// TestService_DumpEmptyQueueName tests dump with empty queue name
-func TestService_DumpEmptyQueueName(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
-	defer svc.Stop()
-
-	dumpBytes := svc.Dump("")
-	assert.Empty(t, dumpBytes, "dump should be empty for empty queue name")
-}
-
-// TestService_DumpNonExistentQueue tests dump of non-existent queue
-func TestService_DumpNonExistentQueue(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
-	defer svc.Stop()
-
-	dumpBytes := svc.Dump("non-existent")
-	assert.Empty(t, dumpBytes, "dump should be empty for non-existent queue")
 }
 
 // TestService_ConcurrentEnqueueToSameQueue tests concurrent enqueues to same queue
