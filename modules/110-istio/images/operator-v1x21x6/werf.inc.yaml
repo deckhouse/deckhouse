@@ -9,6 +9,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/operator
   to: /usr/local/bin/operator
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/manifests
