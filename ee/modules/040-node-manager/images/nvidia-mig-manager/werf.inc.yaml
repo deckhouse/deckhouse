@@ -67,7 +67,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
 final: false
-from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
+fromImage: {{ $.ModuleName }}/builder-cuda
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -78,9 +78,6 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
-  beforeInstall:
-  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.25.3.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
