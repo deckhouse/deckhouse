@@ -75,7 +75,7 @@ spec:
 
         has_host_network_exception(obj) {
           label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
-          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"].[label]
+          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"][label]
 
           exception != null
           exception.spec.network.hostNetwork.allowedValue == input.parameters.allowHostNetwork
@@ -83,7 +83,7 @@ spec:
 
         has_host_ports_exception(obj) {
           label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
-          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"].[label]
+          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"][label]
 
           exception != null
           hostPorts := {port | port := input_containers[_].ports[_].hostPort}
