@@ -3,7 +3,6 @@
 
 package feature_gates
 
-// ComponentFeatures contains feature gates for different Kubernetes components
 type ComponentFeatures struct {
 	Deprecated            []string
 	Forbidden             []string
@@ -13,7 +12,6 @@ type ComponentFeatures struct {
 	KubeScheduler         []string
 }
 
-// FeatureGatesMap contains feature gates configuration for each Kubernetes version
 var FeatureGatesMap = map[string]ComponentFeatures{
 	"1.29": {
 		Kubelet: []string{
