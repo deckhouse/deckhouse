@@ -578,6 +578,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -603,6 +604,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -1204,6 +1206,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -1229,6 +1232,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -1830,6 +1834,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -1855,6 +1860,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -2456,6 +2462,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -2481,6 +2488,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -3082,6 +3090,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -3107,6 +3116,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -3708,6 +3718,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -3733,6 +3744,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -4334,6 +4346,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -4359,6 +4372,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -4960,6 +4974,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -4985,6 +5000,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -5586,6 +5602,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -5611,6 +5628,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -6212,6 +6230,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -6237,6 +6256,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -6838,6 +6858,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -6863,6 +6884,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -7464,6 +7486,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -7489,6 +7512,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -8090,6 +8114,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -8115,6 +8140,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -8716,6 +8742,7 @@ jobs:
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -8741,6 +8768,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}

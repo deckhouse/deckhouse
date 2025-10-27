@@ -314,13 +314,12 @@ function prepare_environment() {
     export VCD_ORG="$LAYOUT_VCD_ORG"
     export VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
     export VCD_URL="$LAYOUT_VCD_SERVER/api"
-    export TF_VAR_PREFIX="$PREFIX" 
-    export TF_VAR_VCD_ORG="$LAYOUT_VCD_ORG" 
+    export TF_VAR_PREFIX="$PREFIX"
+    export TF_VAR_VCD_ORG="$LAYOUT_VCD_ORG"
     export TF_VAR_VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
     ssh_user="ubuntu"
     ssh_bastion_ip="$LAYOUT_STATIC_BASTION_IP"
     ssh_bastion="-J ${ssh_user}@${ssh_bastion_ip}"
-    cluster_template_id="a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
     values="{
     \"vcdUsername\": \"${LAYOUT_VCD_USERNAME}\",
     \"vcdPassword\": \"${LAYOUT_VCD_PASSWORD}\",
