@@ -1,0 +1,74 @@
+# via go:generate - see /tools/generate_feature_gates.go
+
+"1.29":
+  deprecated: []
+  forbidden: []
+  kubelet:
+    - CPUManager
+    - MemoryManager
+  apiserver:
+    - APIServerIdentity
+    - StorageVersionAPI
+  kube-controller-manager:
+    - CronJobsScheduledAnnotation
+  kube-scheduler:
+    - SchedulerQueueingHints
+
+"1.30":
+  deprecated: []
+  forbidden: []
+  kubelet:
+    - CPUManager
+    - MemoryManager
+  apiserver:
+    - APIServerIdentity
+    - StorageVersionAPI
+  kube-controller-manager:
+    - CronJobsScheduledAnnotation
+  kube-scheduler:
+    - SchedulerQueueingHints
+
+"1.31":
+  deprecated: []
+  forbidden: []
+  kubelet:
+    - CPUManager
+    - MemoryManager
+  apiserver:
+    - APIServerIdentity
+    - StorageVersionAPI
+  kube-controller-manager:
+    - CronJobsScheduledAnnotation
+  kube-scheduler:
+    - SchedulerQueueingHints
+
+"1.32":
+  deprecated: []
+  forbidden: []
+  kubelet:
+    - CPUManager
+    - MemoryManager
+  apiserver:
+    - APIServerIdentity
+    - StorageVersionAPI
+  kube-controller-manager:
+    - CronJobsScheduledAnnotation
+  kube-scheduler:
+    - SchedulerQueueingHints
+
+"1.33":
+  deprecated:
+    - DynamicResourceAllocation
+  forbidden:
+    - SomeProblematicFeature
+  kubelet:
+    - CPUManager
+    - MemoryManager
+  apiserver:
+    - APIServerIdentity
+    - StorageVersionAPI
+  kube-controller-manager:
+    - CronJobsScheduledAnnotation
+  kube-scheduler:
+    - SchedulerQueueingHints
+
