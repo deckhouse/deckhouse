@@ -21,7 +21,6 @@ import (
 	"path"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -220,12 +219,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
 	// Patch the status
-	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
-		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-		Status:             corev1.ConditionTrue,
-		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
-	})
-	packageVersion.SetConditionTrue(v1alpha1.ApplicationPackageVersionConditionTypeEnriched, v1.NewTime(r.dc.GetClock().Now()))
+	packageVersion = packageVersion.SetConditionTrue(v1alpha1.ApplicationPackageVersionConditionTypeEnriched, v1.NewTime(r.dc.GetClock().Now()))
 
 	r.logger.Debug("patch package version status", slog.String("name", packageVersion.Name))
 	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))

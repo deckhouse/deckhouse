@@ -330,6 +330,39 @@ version: "1.0.0"
 		require.NoError(suite.T(), err)
 		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
+
+	suite.Run("err-to-success reconcile with golden file", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: func() (*crv1.Manifest, error) {
+				return &crv1.Manifest{
+					Layers: []crv1.Descriptor{},
+				}, nil
+			},
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+					"package.yaml": `name: test-package
+description:
+  en: Test package
+  ru: Ru Test package
+category: Test
+stage: Preview
+type: Application
+version: "1.0.0"
+`,
+					"version.json": `{"version": "1.0.0"}`,
+				}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("error-to-success.yaml", withDependencyContainer(dc))
+
+		apv := suite.getApplicationPackageVersion("test-apv")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: apv.Name},
+		})
+		require.NoError(suite.T(), err)
+	})
 }
 
 // nolint:unparam
