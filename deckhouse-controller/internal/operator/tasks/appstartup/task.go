@@ -20,8 +20,6 @@ import (
 	"log/slog"
 	"sync"
 
-	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/apprun"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/hooksync"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
@@ -38,7 +36,6 @@ const (
 type DependencyContainer interface {
 	PackageManager() *packagemanager.Manager
 	QueueService() *queue.Service
-	HelmResourcesManager() helmresourcesmanager.HelmResourcesManager
 }
 
 type task struct {
@@ -64,44 +61,48 @@ func (t *task) Name() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("startup package", slog.String("name", t.name))
 
-	infos, err := t.dc.PackageManager().EnableKubernetesHooks(ctx, t.name)
+	infos, err := t.dc.PackageManager().InitializeHooks(ctx, t.name)
 	if err != nil {
 		return fmt.Errorf("enable kubernetes hooks for '%s': %w", t.name, err)
 	}
 
-	waitTasks := make(map[string]queue.Task)
-	tasks := make(map[string]queue.Task)
+	waitTasks := make(map[string][]queue.Task)
+	tasks := make(map[string][]queue.Task)
 	for hook, info := range infos {
-		syncTask := hooksync.New(t.name, hook, info, t.dc, t.logger)
+		for _, hookInfo := range info {
+			syncTask := hooksync.New(t.name, hook, hookInfo, t.dc, t.logger)
 
-		queueName := info.KubernetesBinding.Queue
-		if queueName == "main" {
-			queueName = fmt.Sprintf("%s-%s", t.name, queueSync)
+			queueName := hookInfo.QueueName
+			if queueName == "main" {
+				queueName = fmt.Sprintf("%s-%s", t.name, queueSync)
+			}
+
+			if hookInfo.KubernetesBinding.WaitForSynchronization {
+				waitTasks[queueName] = append(waitTasks[queueName], syncTask)
+				continue
+			}
+
+			tasks[queueName] = append(tasks[queueName], syncTask)
 		}
-
-		if info.KubernetesBinding.WaitForSynchronization {
-			waitTasks[queueName] = syncTask
-			continue
-		}
-
-		tasks[queueName] = syncTask
 	}
 
 	t.logger.Debug("wait for sync tasks to finish", slog.String("name", t.name), slog.Int("tasks", len(waitTasks)))
 
 	wg := new(sync.WaitGroup)
-	for q, waitTask := range waitTasks {
-		t.dc.QueueService().Enqueue(ctx, q, waitTask, queue.WithWait(wg))
+	for q, toProcess := range waitTasks {
+		for _, waitTask := range toProcess {
+			t.dc.QueueService().Enqueue(ctx, q, waitTask, queue.WithWait(wg))
+		}
 	}
 	wg.Wait()
 
-	for q, syncTask := range tasks {
-		t.dc.QueueService().Enqueue(ctx, q, syncTask)
+	for q, toProcess := range tasks {
+		for _, syncTask := range toProcess {
+			t.dc.QueueService().Enqueue(ctx, q, syncTask)
+		}
 	}
 
-	if err = t.dc.PackageManager().EnableScheduleHooks(ctx, t.name); err != nil {
-		return fmt.Errorf("enable schedule hooks for '%s': %w", t.name, err)
-	}
+	t.logger.Debug("run package startup hooks", slog.String("name", t.name))
 
 	if err = t.dc.PackageManager().StartupPackage(ctx, t.name); err != nil {
 		return fmt.Errorf("startup package '%s': %w", t.name, err)

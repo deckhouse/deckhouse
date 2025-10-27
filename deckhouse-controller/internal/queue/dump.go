@@ -19,6 +19,10 @@ import (
 )
 
 type dump struct {
+	Queues map[string]dumpQueue `json:"queues" yaml:"queues"`
+}
+
+type dumpQueue struct {
 	Name  string     `json:"name" yaml:"name"`
 	Tasks []dumpTask `json:"tasks,omitempty" yaml:"tasks,omitempty"`
 }
@@ -29,17 +33,32 @@ type dumpTask struct {
 	Error *string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
-// Dump creates queue dump for debug
-func (q *queue) Dump() []byte {
+// Dump creates dump of all queues
+func (s *Service) Dump() []byte {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	d := &dump{
+		Queues: make(map[string]dumpQueue),
+	}
+
+	for name, q := range s.queues {
+		d.Queues[name] = q.dump()
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
+}
+
+// dump creates queue dump for debug
+func (q *queue) dump() dumpQueue {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	marshalled, _ := yaml.Marshal(dump{
+	return dumpQueue{
 		Name:  q.name,
 		Tasks: q.getTasksDump(),
-	})
-
-	return marshalled
+	}
 }
 
 func (q *queue) getTasksDump() []dumpTask {

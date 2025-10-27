@@ -68,13 +68,18 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 	return oldChecksum != app.GetValuesChecksum(), nil
 }
 
-// EnableKubernetesHooks enables all Kubernetes event hooks for a package and return info for sync tasks.
-// It starts monitoring for the resources configured in each hook's bindings.
-func (m *Manager) EnableKubernetesHooks(ctx context.Context, name string) (map[string]hookcontroller.BindingExecutionInfo, error) {
-	ctx, span := otel.Tracer(managerTracer).Start(ctx, "EnableKubernetesHooks")
+// InitializeHooks initializes hook controllers and returns info for sync tasks.
+//
+// This must be called after LoadApplication and before StartupPackage.
+// It performs:
+//  1. Creates hook controllers for each hook
+//  2. Initializes Kubernetes event bindings
+//  3. Initializes schedule bindings
+//  4. Enables kube hooks(starting monitoring for the resources configured in each hook's bindings)
+//  5. Enable schedule hooks(activating the cron schedules configured in each hook's bindings)
+func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string][]hookcontroller.BindingExecutionInfo, error) {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
-
-	span.SetAttributes(attribute.String("name", name))
 
 	app, err := m.getApp(name)
 	if err != nil {
@@ -82,41 +87,42 @@ func (m *Manager) EnableKubernetesHooks(ctx context.Context, name string) (map[s
 		return nil, err
 	}
 
-	res := make(map[string]hookcontroller.BindingExecutionInfo)
+	m.logger.Debug("initialize hooks", slog.String("name", name))
+
+	// Initialize hook controllers and bind them to Kubernetes events and schedules
+	for _, hook := range app.GetHooks() {
+		hookCtrl := hookcontroller.NewHookController()
+		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.dc.KubeEventsManager(), m.logger)
+		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, m.dc.ScheduleManager())
+
+		hook.WithHookController(hookCtrl)
+		hook.WithTmpDir(m.tmpDir)
+	}
+
+	m.logger.Debug("enable schedule hooks", slog.String("name", name))
+
+	schHooks := app.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		m.logger.Debug("enable schedule hook", slog.String("hook", hook.GetName()), slog.String("name", name))
+		hook.GetHookController().EnableScheduleBindings()
+	}
+
+	m.logger.Debug("enable kubernetes hooks", slog.String("name", name))
+
+	res := make(map[string][]hookcontroller.BindingExecutionInfo)
 	for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		m.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()), slog.String("name", name))
 		hookCtrl := hook.GetHookController()
-		if err = hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
-			res[name] = info
-		}); err != nil {
+		err = hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+			res[name] = append(res[name], info)
+		})
+		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return nil, fmt.Errorf("enable kubernetes bindings: %w", err)
 		}
 	}
 
-	return res, nil
-}
-
-// EnableScheduleHooks enables all schedule-based hooks for a package.
-// Schedule hooks run at specified intervals (cron-like scheduling).
-// This activates the cron schedules configured in each hook's bindings.
-func (m *Manager) EnableScheduleHooks(ctx context.Context, name string) error {
-	_, span := otel.Tracer(managerTracer).Start(ctx, "EnableScheduleHooks")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", name))
-
-	app, err := m.getApp(name)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	schHooks := app.GetHooksByBinding(shtypes.Schedule)
-	for _, hook := range schHooks {
-		hook.GetHookController().EnableScheduleBindings()
-	}
-
-	return nil
+	return nil, nil
 }
 
 // TaskBuilder used to create task from event to process
@@ -130,7 +136,7 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
 
-			// Handle module hooks
+			// Handle hooks
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
 				return nil
 			}
@@ -153,7 +159,7 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
 
-			// Handle module hooks
+			// Handle hooks
 			if !hookCtrl.CanHandleScheduleEvent(crontab) {
 				return nil
 			}

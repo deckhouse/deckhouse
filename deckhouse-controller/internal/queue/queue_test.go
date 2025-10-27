@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -161,7 +162,7 @@ func TestQueue_TaskRetryOnFailure(t *testing.T) {
 	defer q.Stop()
 
 	failCount := atomic.Int32{}
-	task := newMockTaskWithFunc("failing-task", func(ctx context.Context) error {
+	task := newMockTaskWithFunc("failing-task", func(_ context.Context) error {
 		count := failCount.Add(1)
 		if count < 3 {
 			return errors.New("temporary failure")
@@ -391,8 +392,11 @@ func TestQueue_Dump(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Get dump
-	dumpBytes := q.Dump()
-	require.NotEmpty(t, dumpBytes, "dump should not be empty")
+	d := q.dump()
+	require.NotEmpty(t, d, "dump should not be empty")
+
+	dumpBytes, err := yaml.Marshal(d)
+	require.NoError(t, err)
 
 	// Dump should contain task name
 	dumpStr := string(dumpBytes)
@@ -412,7 +416,7 @@ func TestQueue_DumpWithError(t *testing.T) {
 
 	// Create a task that fails then succeeds
 	attemptCount := atomic.Int32{}
-	task := newMockTaskWithFunc("failing-task", func(ctx context.Context) error {
+	task := newMockTaskWithFunc("failing-task", func(_ context.Context) error {
 		count := attemptCount.Add(1)
 		if count == 1 {
 			time.Sleep(100 * time.Millisecond) // Give time to dump
@@ -427,10 +431,14 @@ func TestQueue_DumpWithError(t *testing.T) {
 	// Wait for first failure and retry scheduling
 	time.Sleep(200 * time.Millisecond)
 
-	// Get dump - should show error
-	dumpBytes := q.Dump()
-	dumpStr := string(dumpBytes)
+	// Get dump
+	d := q.dump()
+	require.NotEmpty(t, d, "dump should not be empty")
 
+	dumpBytes, err := yaml.Marshal(d)
+	require.NoError(t, err)
+
+	dumpStr := string(dumpBytes)
 	assert.Contains(t, dumpStr, "test error message", "dump should contain error message")
 
 	wg.Wait()

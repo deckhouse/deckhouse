@@ -70,18 +70,6 @@ func (s *Service) Enqueue(ctx context.Context, queueName string, task Task, opts
 	s.queues[queueName].Enqueue(ctx, task, opts...)
 }
 
-func (s *Service) Dump(queueName string) []byte {
-	if len(queueName) == 0 {
-		return []byte{}
-	}
-
-	if _, ok := s.queues[queueName]; !ok {
-		return []byte{}
-	}
-
-	return s.queues[queueName].Dump()
-}
-
 // Remove stops and removes the named queue.
 // If the queue doesn’t exist, it’s a no-op.
 func (s *Service) Remove(name string) {

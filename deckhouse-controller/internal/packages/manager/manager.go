@@ -25,7 +25,6 @@ import (
 
 	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
@@ -105,14 +104,8 @@ func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationIn
 	return nil
 }
 
-// StartupPackage initializes hook controllers and runs OnStartup hooks for a package.
-//
-// This must be called after LoadApplication and before RunPackage.
-// It performs:
-//  1. Creates hook controllers for each hook
-//  2. Initializes Kubernetes event bindings
-//  3. Initializes schedule bindings
-//  4. Executes all OnStartup hooks in order
+// StartupPackage runs OnStartup hooks for a package.
+// This must be called after InitializeHooks and before RunPackage.
 func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "StartupPackage")
 	defer span.End()
@@ -120,20 +113,12 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("tmpDir", m.tmpDir))
 
+	m.logger.Debug("startup package", slog.String("name", name))
+
 	app, err := m.getApp(name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return err
-	}
-
-	// Initialize hook controllers and bind them to Kubernetes events and schedules
-	for _, hook := range app.GetHooks() {
-		hookCtrl := hookcontroller.NewHookController()
-		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.dc.KubeEventsManager(), m.logger)
-		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, m.dc.ScheduleManager())
-
-		hook.WithHookController(hookCtrl)
-		hook.WithTmpDir(m.tmpDir)
 	}
 
 	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m.dc); err != nil {

@@ -28,7 +28,6 @@ import (
 	"log/slog"
 	"sync"
 
-	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -46,7 +45,6 @@ type DependencyContainer interface {
 	KubeEventManager() kubeeventsmanager.KubeEventsManager
 	ScheduleEventManager() schedulemanager.ScheduleManager
 	PackageManager() *packagemanager.Manager
-	HelmResourcesManager() helmresourcesmanager.HelmResourcesManager
 }
 
 // Handler manages the event processing loop for Kubernetes and schedule events.
@@ -178,7 +176,12 @@ func (h *Handler) Stop() {
 // It receives a Kubernetes event and returns a map of queue names to tasks.
 // The returned map keys are queue names, and values are task lists to enqueue.
 func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEvent) map[string][]queue.Task {
-	builder := func(ctx context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
+	builder := func(_ context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
+		h.logger.Debug("create task by kube event",
+			slog.String("hook", hook),
+			slog.String("name", name),
+			slog.String("event", kubeEvent.String()))
+
 		queueName := info.QueueName
 		if queueName == "main" {
 			queueName = name
@@ -194,7 +197,12 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 // It receives the cron schedule string and returns a map of queue names to tasks.
 // The returned map keys are queue names, and values are task lists to enqueue.
 func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[string][]queue.Task {
-	builder := func(ctx context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
+	builder := func(_ context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
+		h.logger.Debug("create task by schedule event",
+			slog.String("hook", hook),
+			slog.String("name", name),
+			slog.String("event", crontab))
+
 		queueName := info.QueueName
 		if queueName == "main" {
 			queueName = name
