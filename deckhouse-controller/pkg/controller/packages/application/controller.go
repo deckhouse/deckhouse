@@ -20,6 +20,7 @@ import (
 	"log/slog"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -39,17 +41,20 @@ const (
 type reconciler struct {
 	client client.Client
 	dc     dependency.Container
+	exts   *extenders.ExtendersStack
 	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	dc dependency.Container,
+	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
 		dc:     dc,
+		exts:   exts,
 		logger: logger,
 	}
 
@@ -89,12 +94,30 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.handle(ctx, application)
 }
 
-func (r *reconciler) handle(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+func (r *reconciler) handle(ctx context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
 	r.logger.Info("handling Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
 
-	//
+	// from spec.packageName and spec.version find ApplicationPackageVersion
+	apvName := application.Spec.ApplicationPackageName + "-" + application.Spec.Version
+	var apv *v1alpha1.ApplicationPackageVersion
+	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
+	if err != nil || apv == nil {
+		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", application.Name, err)
+	}
+
+	// from ApplicationPackageVersion get requirements and check it
+	// if requirements exists
+	if apv.Status.Metadata != nil && apv.Status.Metadata.Requirements != nil {
+		// TODO: check validation
+		r.exts.KubernetesVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Kubernetes)
+		r.exts.DeckhouseVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Deckhouse)
+	}
+
+	// if requirements ok - get PackageRegistry from spec.repository to get registry client
+
+	// call PackageOperator method (maybe PackageAdder interface)
 
 	return res, nil
 }

@@ -354,7 +354,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = packageapplication.RegisterController(runtimeManager, dc, logger.Named("application-controller"))
+		err = packageapplication.RegisterController(runtimeManager, dc, exts, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
