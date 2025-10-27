@@ -1,0 +1,29 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 10a69b31..5ee6e5e9 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -931,6 +931,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
+ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	session, err := p.getAuthenticatedSession(rw, req)
+ 	if err != nil {
++		rw.Header().Set("Oauth2-Proxy", "Unauthorized")
+ 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+ 		return
+ 	}
+@@ -938,6 +939,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	// Unauthorized cases need to return 403 to prevent infinite redirects with
+ 	// subrequest architectures
+ 	if !authOnlyAuthorize(req, session) {
++		rw.Header().Set("Oauth2-Proxy", "Forbidden")
+ 		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+ 		return
+ 	}
+@@ -945,7 +947,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	// we are authenticated
+ 	p.addHeadersForProxying(rw, session)
+ 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+-		rw.WriteHeader(http.StatusAccepted)
++		rw.WriteHeader(http.StatusOK)
+ 	})).ServeHTTP(rw, req)
+ }
+ 
