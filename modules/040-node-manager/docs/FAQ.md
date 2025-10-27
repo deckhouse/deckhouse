@@ -1028,7 +1028,7 @@ spec:
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the [`registry` module](/modules/registry/) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [`registry` module](/modules/registry/) (for example, in [`Direct`](/modules/deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
