@@ -50,7 +50,7 @@ type task struct {
 }
 
 func (t *task) Name() string {
-	return "appdisable"
+	return fmt.Sprintf("App:%s:Disable", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {

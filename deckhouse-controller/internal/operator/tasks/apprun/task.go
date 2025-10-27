@@ -49,7 +49,7 @@ func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 }
 
 func (t *task) Name() string {
-	return "apprun"
+	return fmt.Sprintf("App:%s:Run", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {

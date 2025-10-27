@@ -16,6 +16,7 @@ package parallel
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -23,7 +24,7 @@ import (
 )
 
 type DependencyContainer interface {
-	GetQueueService() *queue.Service
+	QueueService() *queue.Service
 }
 
 type task struct {
@@ -46,14 +47,14 @@ func New(name string, subtasks map[string]queue.Task, dc DependencyContainer, lo
 }
 
 func (t *task) Name() string {
-	return "parallel-" + t.name
+	return fmt.Sprintf("Parallel:%s", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Info("run parallel")
 	wg := new(sync.WaitGroup)
 	for queueName, sub := range t.subtasks {
-		t.dc.GetQueueService().Enqueue(ctx, queueName, sub, queue.WithWait(wg))
+		t.dc.QueueService().Enqueue(ctx, queueName, sub, queue.WithWait(wg))
 	}
 
 	wg.Wait()

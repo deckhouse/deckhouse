@@ -53,7 +53,7 @@ func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 }
 
 func (t *task) Name() string {
-	return "appstartup"
+	return fmt.Sprintf("App:%s:Startup", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {

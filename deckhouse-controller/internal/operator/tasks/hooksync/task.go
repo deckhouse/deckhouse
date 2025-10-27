@@ -56,7 +56,7 @@ func New(name, hook string, info hookcontroller.BindingExecutionInfo, dc Depende
 }
 
 func (t *task) Name() string {
-	return "hooksync"
+	return fmt.Sprintf("App:%s:Hook:%s:Sync", t.name, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {

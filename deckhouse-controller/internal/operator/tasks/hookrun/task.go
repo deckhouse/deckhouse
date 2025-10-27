@@ -58,7 +58,7 @@ func New(name, hook string, bctx []bindingcontext.BindingContext, dc DependencyC
 }
 
 func (t *task) Name() string {
-	return "hookrun"
+	return fmt.Sprintf("App:%s:Hook:%s:Run", t.name, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {
