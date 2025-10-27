@@ -99,6 +99,7 @@
   LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- else if eq $provider "vcd" }!}
+  TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
   LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
   LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -661,6 +662,7 @@ check_e2e_labels:
         echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
         echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
 {!{- end }!}
+        echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
         echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
         echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
@@ -694,6 +696,7 @@ check_e2e_labels:
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
 {!{- end }!}

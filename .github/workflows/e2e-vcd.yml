@@ -553,6 +553,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -576,9 +577,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -690,6 +693,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1054,6 +1058,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1077,9 +1082,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1191,6 +1198,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1555,6 +1563,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1578,9 +1587,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1692,6 +1703,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2056,6 +2068,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2079,9 +2092,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2193,6 +2208,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2557,6 +2573,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2580,9 +2597,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2694,6 +2713,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3058,6 +3078,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3081,9 +3102,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3195,6 +3218,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3559,6 +3583,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3582,9 +3607,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3696,6 +3723,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4060,6 +4088,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4083,9 +4112,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4197,6 +4228,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4561,6 +4593,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4584,9 +4617,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4698,6 +4733,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5062,6 +5098,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5085,9 +5122,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5199,6 +5238,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5563,6 +5603,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5586,9 +5627,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5700,6 +5743,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6064,6 +6108,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -6087,9 +6132,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6201,6 +6248,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6565,6 +6613,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -6588,9 +6637,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6702,6 +6753,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -7066,6 +7118,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -7089,9 +7142,11 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -7203,6 +7258,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
