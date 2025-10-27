@@ -31,3 +31,4 @@ shell:
   - rm -rf /src/istio/samples
   - rm -rf /src/istio/security/samples
   - rm -rf /src/istio/security/tools/jwt/samples
+  - rm -rf /src/kiali/frontend
