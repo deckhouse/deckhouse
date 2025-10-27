@@ -302,10 +302,10 @@ spec:
                       properties:
                         allowedValue:
                           type: boolean
+                          default: false
                           description: The allowed value for hostIPC.
                         metadata:
                           type: object
-                          default: false
                           description: Metadata related to the exception.
                       required: ["allowedValue"]
                 volumes:
