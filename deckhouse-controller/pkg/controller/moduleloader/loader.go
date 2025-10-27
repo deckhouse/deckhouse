@@ -97,7 +97,6 @@ type Loader struct {
 
 	downloadedModulesDir string
 	symlinksDir          string
-	clusterUUID          string
 }
 
 func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
@@ -107,6 +106,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		installer:            installer.New(dc, logger),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),
@@ -119,8 +119,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 
 // Sync syncs fs and cluster, restores or deletes modules
 func (l *Loader) Sync(ctx context.Context) error {
-	l.clusterUUID = d8utils.GetClusterUUID(ctx, l.client)
-	l.installer = installer.New(l.clusterUUID, l.dependencyContainer, l.logger)
+	l.installer.SetClusterUUID(d8utils.GetClusterUUID(ctx, l.client))
 
 	l.logger.Debug("init module loader")
 

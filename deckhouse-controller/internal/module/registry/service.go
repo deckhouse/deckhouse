@@ -29,6 +29,7 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -50,12 +51,16 @@ type Service struct {
 	logger      *log.Logger
 }
 
-func NewService(clusterUUID string, dc dependency.Container, logger *log.Logger) *Service {
+func NewService(dc dependency.Container, logger *log.Logger) *Service {
 	return &Service{
-		clusterUUID: clusterUUID,
+		clusterUUID: uuid.New().String(),
 		dc:          dc,
 		logger:      logger.Named("registry-service"),
 	}
+}
+
+func (s *Service) SetClusterUUID(id string) {
+	s.clusterUUID = id
 }
 
 // GetImageReader downloads the module image and extracts it.

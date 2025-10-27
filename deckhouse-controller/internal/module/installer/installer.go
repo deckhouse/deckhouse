@@ -53,15 +53,19 @@ type Installer struct {
 	logger *log.Logger
 }
 
-func New(clusterUUID string, dc dependency.Container, logger *log.Logger) *Installer {
+func New(dc dependency.Container, logger *log.Logger) *Installer {
 	downloaded := d8env.GetDownloadedModulesDir()
 
 	return &Installer{
 		downloaded: downloaded,
 		mount:      filepath.Join(downloaded, "modules"),
-		registry:   registry.NewService(clusterUUID, dc, logger),
+		registry:   registry.NewService(dc, logger),
 		logger:     logger.Named("module-installer"),
 	}
+}
+
+func (i *Installer) SetClusterUUID(id string) {
+	i.registry.SetClusterUUID(id)
 }
 
 // GetDownloaded gets all downloaded modules from downloaded dir
