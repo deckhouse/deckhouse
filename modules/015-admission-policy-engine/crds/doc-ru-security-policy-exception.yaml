@@ -19,9 +19,6 @@ spec:
                           description: Допустимое значение для readOnlyRootFilesystem.
                         metadata:
                           description: Метаданные, связанные с исключением для readOnlyRootFilesystem.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     allowPrivilegeEscalation:
                       description: Исключения для параметра allowPrivilegeEscalation.
                       properties:
@@ -29,9 +26,6 @@ spec:
                           description: Допустимое значение для allowPrivilegeEscalation.
                         metadata:
                           description: Метаданные, связанные с исключением для allowPrivilegeEscalation.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     capabilities:
                       description: Исключения для параметра capabilities.
                       properties:
@@ -44,9 +38,6 @@ spec:
                               description: Список способностей для добавления.
                         metadata:
                           description: Метаданные, связанные с исключением для capabilities.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     runAsUser:
                       description: Исключения для параметра runAsUser.
                       properties:
@@ -61,9 +52,6 @@ spec:
                           description: Допустимое значение для runAsNonRoot.
                         metadata:
                           description: Метаданные, связанные с исключением для runAsNonRoot.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     seccompProfile:
                       description: Исключения для параметра seccompProfile.
                       properties:
@@ -71,9 +59,6 @@ spec:
                           description: Список разрешенных профилей seccomp.
                         metadata:
                           description: Метаданные, связанные с исключением для seccompProfile.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     appArmorProfile:
                       description: Исключения для параметра appArmorProfile.
                       properties:
@@ -81,9 +66,6 @@ spec:
                           description: Список разрешенных профилей AppArmor.
                         metadata:
                           description: Метаданные, связанные с исключением для appArmorProfile.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     seLinuxOptions:
                       description: Исключения для параметра seLinuxOptions.
                       properties:
@@ -100,9 +82,6 @@ spec:
                               description: SELinux level метка.
                         metadata:
                           description: Метаданные, связанные с исключением для seLinuxOptions.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     privileged:
                       description: Исключения для параметра privileged.
                       properties:
@@ -110,9 +89,6 @@ spec:
                           description: Допустимое значение для privileged.
                         metadata:
                           description: Метаданные, связанные с исключением для privileged.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     procMount:
                       description: Исключения для параметра procMount.
                       properties:
@@ -120,9 +96,6 @@ spec:
                           description: Список разрешенных значений для procMount.
                         metadata:
                           description: Метаданные, связанные с исключением для procMount.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     sysctls:
                       description: Исключения для параметра sysctls.
                       properties:
@@ -135,9 +108,6 @@ spec:
                               description: Допустимое значение для sysctl.
                         metadata:
                           description: Метаданные, связанные с исключением для sysctls.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                 network:
                   description: Исключения для параметра network.
                   properties:
@@ -153,9 +123,6 @@ spec:
                             - UDP
                         metadata:
                           description: Метаданные, связанные с исключением для hostPorts.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     hostNetwork:
                       description: Исключения для параметра hostNetwork.
                       properties:
@@ -163,9 +130,6 @@ spec:
                           description: Допустимое значение для hostNetwork.
                         metadata:
                           description: Метаданные, связанные с исключением для hostNetwork.
-                          properties:
-                            description:
-                              description: Описание исключения.
                     hostPID:
                       description: Исключения для параметра hostPID.
                       properties:
@@ -180,9 +144,6 @@ spec:
                           description: Допустимое значение для hostIPC.
                         metadata:
                           description: Метаданные, связанные с исключением для hostIPC.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                 volumes:
                   description: Исключения для параметра volumes.
                   properties:
@@ -193,9 +154,6 @@ spec:
                           description: Список разрешенных типов томов.
                         metadata:
                           description: Метаданные, связанные с исключением для types.
-                          properties:
-                            description:
-                              description: Описание исключения.                          
                     hostPath:
                       description: Исключения для параметра hostPath.
                       properties:
@@ -206,6 +164,3 @@ spec:
                               description: Разрешенный hostPath.
                             metadata:
                               description: Метаданные, связанные с исключением для hostPath.
-                              properties:
-                                description:
-                                  description: Описание исключения.                              

@@ -91,10 +91,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.
+                          additionalProperties: true
                     allowPrivilegeEscalation:
                       type: object
                       description: Allows exceptions for privilege escalation.
@@ -106,10 +103,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                     capabilities:
                       type: object
@@ -134,10 +128,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.
+                          additionalProperties: true
                       required: ["allowedValues"]
                     runAsUser:
                       type: object
@@ -151,10 +142,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     runAsNonRoot:
                       type: object
@@ -167,10 +155,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                     seccompProfile:
                       type: object
@@ -184,10 +169,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     appArmorProfile:
                       type: object
@@ -201,10 +183,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     seLinuxOptions:
                       type: object
@@ -231,10 +210,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     privileged:
                       type: object
@@ -247,10 +223,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                     procMount:
                       type: object
@@ -264,10 +237,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     sysctls:
                       type: object
@@ -288,10 +258,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                 network:
                   type: object
@@ -315,10 +282,7 @@ spec:
                           metadata:
                             type: object
                             description: Metadata related to the exception.
-                            properties:
-                              description:
-                                type: string
-                                description: The description of the exception.                            
+                            additionalProperties: true                           
                       required: ["port", "protocol"]
                     hostNetwork:
                       type: object
@@ -331,10 +295,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                     hostPID:
                       type: object
@@ -347,10 +308,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                     hostIPC:
                       type: object
@@ -363,10 +321,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValue"]
                 volumes:
                   type: object
@@ -384,10 +339,7 @@ spec:
                         metadata:
                           type: object
                           description: Metadata related to the exception.
-                          properties:
-                            description:
-                              type: string
-                              description: The description of the exception.                          
+                          additionalProperties: true                          
                       required: ["allowedValues"]
                     hostPath:
                       type: object
