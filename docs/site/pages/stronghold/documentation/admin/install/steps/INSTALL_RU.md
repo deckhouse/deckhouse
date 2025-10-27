@@ -320,7 +320,7 @@ EOF
 После создания ресурса ModuleConfig `stronghold` дождитесь выполнения заданий из очереди:
 
 ```shell
-d8 p queue main
+d8 system queue main
 
 # Queue 'main': length 0, status: 'waiting for task 1m1s'
 ```

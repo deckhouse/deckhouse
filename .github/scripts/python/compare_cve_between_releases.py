@@ -108,7 +108,7 @@ def get_defectdojo_findings(version_tag):
             "limit": limit,
             "offset": offset,
         }
-        response = requests.get(f"https://{DD_URL}/api/v2/findings/", headers=HEADERS, params=params)
+        response = requests.get(f"{DD_URL}/api/v2/findings/", headers=HEADERS, params=params)
         response.raise_for_status()
         data = response.json()
         results = data.get("results", [])

@@ -14,7 +14,7 @@ lang: ru
 - Сети с DHCP и интернетом;
 - Доступные shared datastore на всех ESXi.
 
-* Версия vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
+* Версия vSphere: `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
 * vCenter: доступен изнутри кластера с master-узлов.
 * Созданный Datacenter, в котором:
   1. VirtualMachine template.
@@ -27,7 +27,7 @@ lang: ru
      * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
   4. Cluster.
      * Добавлены используемые ESXi.
-     * **Необходимо** назначие тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
+     * **Необходимо** назначение тега из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию `k8s-zone`). Этот тег будет обозначать **зону**.
   5. Folder для создаваемых виртуальных машин.
      * Опциональный (по умолчанию используется root vm-каталог).
   6. Роль.

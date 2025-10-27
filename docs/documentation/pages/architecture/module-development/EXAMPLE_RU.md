@@ -258,7 +258,7 @@ lang: ru
 
 Если в кластере существует ModuleUpdatePolicy версии v1alpha1, то необходимо выполнить следующие шаги по миграции на версию v1alpha2:
 
-Если в кластере в каком-либо ModuleUpdatePolicy версии v1alpha1 определен `moduleReleaseSelector`, то для всех модулей, которые подходят под этот селектор, в системе мониторинга будут гореть алерты [ModuleHasDeprecatedUpdatePolicy](../../../reference/alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy). В этом случае выполните следующие шаги по миграции на версию v1alpha2 ModuleUpdatePolicy:
+Если в кластере в каком-либо ModuleUpdatePolicy версии v1alpha1 определен `moduleReleaseSelector`, то для всех модулей, которые подходят под этот селектор, в системе мониторинга будут гореть алерты [`ModuleHasDeprecatedUpdatePolicy`](../../../reference/alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy). В этом случае выполните следующие шаги по миграции на версию v1alpha2 ModuleUpdatePolicy:
 - Укажите политику обновления для соответствующих модулей в параметре `spec.updatePolicy` ModuleConfig.
 - Выполните следующую команду, указав необходимый ModuleUpdatePolicy:
 

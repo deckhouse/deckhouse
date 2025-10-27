@@ -334,6 +334,8 @@ A brief explanation of the alert's trigger appears at the bottom of the UI.
 
 ![Active alerts](../../images/console/active_alerts.png)
 
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](../../reference/alerts.html).
+
 ## Logging
 
 The "Logging" section is for configuring log sources and managing log exports.

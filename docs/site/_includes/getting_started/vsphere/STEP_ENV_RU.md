@@ -1,5 +1,7 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+Для установки Deckhouse Kubernetes Platform на VMware vSphere требуется версия vSphere `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
+
 ## Список необходимых ресурсов vSphere
 
 {% alert %}
@@ -82,7 +84,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Для получения детального списка привилегий, обратитесь [к документации](/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
+Для получения детального списка привилегий, обратитесь [к документации](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий).
 При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 

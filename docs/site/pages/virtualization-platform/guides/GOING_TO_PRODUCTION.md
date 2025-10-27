@@ -181,6 +181,8 @@ To receive alerts about incidents, configure the [built-in](/modules/prometheus/
 
 Using the [CustomAlertmanager](/modules/prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/modules/prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 
+For the list of all available alerts in the monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
+
 <!-- ## Logging
 
 {% alert %}

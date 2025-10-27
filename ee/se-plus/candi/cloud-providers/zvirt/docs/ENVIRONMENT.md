@@ -5,6 +5,14 @@ description: "Configuring zVirt for Deckhouse cloud provider operation."
 
 <!-- AUTHOR! Don't forget to update getting started if necessary -->
 
+## Environment requirements
+
+- A working zVirt installation with accessible API.
+- zVirt version `4.0`-`4.4`.
+- A user account with permissions to access the API and manage virtual machines.
+- A storage domain with an uploaded cloud OS image.
+- A prepared virtual machine template based on the cloud image.
+
 ### Prepare an operating system image
 
 Operating system vendors typically provide special cloud builds of their operating systems for use in virtualization environments. These builds typically contain virtual hardware drivers, cloud-init, virtualization guest agents, and are distributed as IMG or QCOW2 disk images. We recommend that you use these cloud images as the OS on the nodes in your clusters.

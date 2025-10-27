@@ -365,7 +365,9 @@ properties:
                       Configuring memory limits.
   ca:
     type: object
-    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    description: |
+      Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+      To create a certificate, you can use the [example](/products/kubernetes-platform/documentation/v1/user/security/tls.html#certificate-generation-example), in which `basicConstraints = CA:FALSE` needs to be replaced with `basicConstraints = CA:TRUE`.
     default: {}
     properties:
       cert:

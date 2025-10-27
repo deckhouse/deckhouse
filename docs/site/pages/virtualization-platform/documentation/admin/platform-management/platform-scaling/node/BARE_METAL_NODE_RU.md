@@ -136,7 +136,7 @@ lang: ru
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-d8 platform edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ## Перемещение статического узла между NodeGroup

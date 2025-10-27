@@ -141,7 +141,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    - no tasks to handle.
    ```
 
-1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for correct configuration.
+1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 

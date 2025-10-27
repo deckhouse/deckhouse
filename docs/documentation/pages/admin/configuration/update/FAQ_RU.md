@@ -34,12 +34,12 @@ metadata:
 
 Во время обновления:
 
-- отображается алерт `DeckhouseUpdating`;
+- отображается [алерт `DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating);
 - под `deckhouse` находится не в статусе `Ready`. Если под долго не переходит в статус `Ready`, это может говорить о наличии проблем в работе DKP. Необходима диагностика.
 
 ## Как понять, что обновление прошло успешно?
 
-Если алерт `DeckhouseUpdating` перестал отображаться, это означает, что обновление завершено.
+Если [алерт `DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.
 
 Также вы можете проверить состояние релизов DKP в кластере, используя следующую команду:
 
@@ -91,7 +91,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 Как только на установленном в кластере канале обновления появляется новая версия DKP:
 
-- Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
+- Загорается [алерт `DeckhouseReleaseIsWaitingManualApproval`](../../../reference/alerts.html#monitoring-deckhouse-deckhousereleaseiswaitingmanualapproval), если кластер использует [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
 - Появляется новый кастомный ресурс [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease). Используйте команду `d8 k get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
   - Установлен [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
   - Установлен автоматический режим обновлений и настроены [окна обновлений](configuration.html#окна-обновлений), интервал которых еще не наступил.
@@ -102,7 +102,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 Получать заранее информацию об обновлении минорных версий DKP на канале обновлений можно следующими способами:
 
-- Настроить [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval`, и в кластере появится новый [кастомный ресурс DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+- Настроить [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений). В этом случае при появлении новой версии на канале обновлений загорится [алерт `DeckhouseReleaseIsWaitingManualApproval`](../../../reference/alerts.html#monitoring-deckhouse-deckhousereleaseiswaitingmanualapproval), и в кластере появится новый [кастомный ресурс DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
 - Настроить [автоматический режим обновлений](configuration.html#автоматическое-обновление) и указать минимальное время в [параметре `minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый [кастомный ресурс DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease). Если указать URL в параметре [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook), через указанный вебхук будет отправлено уведомление об предстоящем обновлении.
 
 ## Как узнать версию DKP на каждом из каналов обновлений?

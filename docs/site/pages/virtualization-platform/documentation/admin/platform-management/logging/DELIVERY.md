@@ -33,7 +33,7 @@ To configure, follow these steps:
 1. Enable the `log-shipper` module using the following command:
 
    ```shell
-   d8 platform module enable log-shipper
+   d8 system module enable log-shipper
    ```
 
 1. Create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) resource that defines log collection rules.

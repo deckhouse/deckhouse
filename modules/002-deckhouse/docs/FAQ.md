@@ -41,7 +41,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 1. Collect all the necessary information by running the following command:
 
    ```sh
-   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 system collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.

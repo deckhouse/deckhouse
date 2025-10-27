@@ -44,7 +44,7 @@ spec:
 Чтобы включить мониторинг узлов кластера, необходимо включить модуль `monitoring-kubernetes`, если он не включен. Включить мониторинг кластера можно в [веб-интерфейсе Deckhouse](/modules/console/stable/), или с помощью следующей команды:
 
 ```shell
-d8 platform module enable monitoring-kubernetes
+d8 system module enable monitoring-kubernetes
 ```
 
 Аналогично можно включить модули [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) и [`extended-monitoring`](/modules/extended-monitoring/).

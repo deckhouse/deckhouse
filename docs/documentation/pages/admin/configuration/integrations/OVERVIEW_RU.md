@@ -30,14 +30,13 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 - VK Cloud;
 - OpenStack;
 - Huawei Cloud;
-- Dynamix;
-- Deckhouse Virtualization Platform (DVP).
+- Dynamix.
 
 Помимо облачных провайдеров поддерживается интеграция со следующими [системами виртуализации](./virtualization/overview.html):
 
-- VMware vSphere;
+- Deckhouse Virtualization Platform (DVP);
 - VMware Cloud Director;
-- РЭД виртуализация;
+- VMware vSphere;
 - zVirt.
 
 Также предусмотрена возможность настроить [гибридные кластеры](./hybrid/overview.html).

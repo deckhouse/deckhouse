@@ -18,7 +18,7 @@ steps:
 {!{- else }!}
       TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
-      IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+      IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
       DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
     run: |
       echo "⚓️ 🏎 Running default user validation on ${TAG}..."

@@ -119,6 +119,8 @@ DKP provides the ability to flexibly configure alerting for each namespace and s
 
 Monitoring in DKP includes event notifications. The standard delivery includes a set of basic warnings covering cluster state and its components. There is also the ability to add custom alerts.
 
+For the list of all available alerts in the DKP monitoring system, refer to the [corresponding documentation page](../../../reference/alerts.html).
+
 ### Sending alerts to external systems
 
 DKP supports sending alerts using `Alertmanager`:

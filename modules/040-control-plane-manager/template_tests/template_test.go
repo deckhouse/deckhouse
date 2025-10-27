@@ -843,4 +843,172 @@ resources:
 			})
 		})
 	})
+
+	Context("kubeadm config version selection", func() {
+		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
+			testValues := fmt.Sprintf(`
+internal:
+  effectiveKubernetesVersion: "%s"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+`, k8sVersion)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", testValues)
+				f.HelmRender()
+			})
+
+			It(fmt.Sprintf("should use %s for Kubernetes %s", expectedApiVersion, k8sVersion), func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
+
+				if expectedApiVersion == "v1beta3" {
+					var config ClusterConfigurationV3
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				} else {
+					var config ClusterConfigurationV4
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				}
+			})
+		}
+
+		Context("Kubernetes 1.30", func() {
+			testKubeadmVersion("1.30", "v1beta3")
+		})
+
+		Context("Kubernetes 1.31", func() {
+			testKubeadmVersion("1.31", "v1beta4")
+		})
+
+		Context("Kubernetes 1.32", func() {
+			testKubeadmVersion("1.32", "v1beta4")
+		})
+	})
+
+	Context("webhook configuration in v1beta4", func() {
+		const webhookTestValues = `
+internal:
+  effectiveKubernetesVersion: "1.31"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit:
+    webhookURL: "https://audit.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+  authn:
+    webhookURL: "https://authn.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+    webhookCacheTTL: "5m"
+`
+
+		const v1beta3TestValues = `
+internal:
+  effectiveKubernetesVersion: "1.30"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit:
+    webhookURL: "https://audit.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+  authn:
+    webhookURL: "https://authn.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+    webhookCacheTTL: "5m"
+`
+
+		Context("v1beta4 with webhook parameters", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValues)
+				f.HelmRender()
+			})
+
+			It("should include webhook parameters in v1beta4 configuration using array syntax", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				configYaml := string(kubeadmConfigData)
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
+
+				// v1beta4 uses array syntax with name/value pairs
+				Expect(configYaml).To(ContainSubstring("- name: authorization-mode"))
+				Expect(configYaml).To(ContainSubstring("value: Node,Webhook,RBAC"))
+				Expect(configYaml).To(ContainSubstring("- name: authorization-webhook-config-file"))
+
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
+				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
+
+				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
+
+				// v1beta4 should NOT have the map syntax
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+			})
+		})
+
+		Context("v1beta3 uses map syntax for webhook parameters", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", v1beta3TestValues)
+				f.HelmRender()
+			})
+
+			It("should include webhook parameters using map syntax in v1beta3", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				configYaml := string(kubeadmConfigData)
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
+
+				// v1beta3 uses map syntax (key: value) instead of array syntax
+				Expect(configYaml).To(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+				Expect(configYaml).To(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
+				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml"))
+				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-cache-ttl: \"5m\""))
+				Expect(configYaml).To(ContainSubstring("audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml"))
+
+				// v1beta3 should NOT have the array syntax with name/value pairs
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
+			})
+		})
+	})
 })

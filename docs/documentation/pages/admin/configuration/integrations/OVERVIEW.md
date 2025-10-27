@@ -31,12 +31,12 @@ Integration is also possible with [private clouds](./private/overview.html) base
 - VK Cloud
 - OpenStack
 - Huawei Cloud
-- Deckhouse Virtualization Platform (DVP)
 
 In addition to cloud providers, integration is supported with the following [virtualization systems](./virtualization/overview.html):
 
-- VMware vSphere
+- Deckhouse Virtualization Platform (DVP)
 - VMware Cloud Director
+- VMware vSphere
 - zVirt
 
 It is also possible to configure [hybrid clusters](./hybrid/overview.html).

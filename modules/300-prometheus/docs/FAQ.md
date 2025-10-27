@@ -471,7 +471,7 @@ route:
       receiver: some-other-receiver
 ```
 
-Receive all alerts except for `DeadMansSwitch`:
+Receive all alerts except for [`DeadMansSwitch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#monitoring-kubernetes-deadmansswitch):
 
 ```yaml
 receivers:
@@ -673,6 +673,8 @@ status:
 {% alert level="info" %}
 The presence of a special alert `MissingDeadMansSwitch` in the cluster indicates problems in the performance of the monitoring components.
 {% endalert %}
+
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
 
 {% raw %}
 

@@ -8,8 +8,9 @@ search: virtualization integration, virtualization systems, hypervisor integrati
 
 В Deckhouse Kubernetes Platform (DKP) поддерживаются следующие системы виртуализации:
 
-* [VMware vSphere](./vsphere/authorization.html);
+* [Deckhouse Virtualization Platform (DVP)](./dvp/services.html);
 * [VMware Cloud Director](./vcd/connection-and-authorization.html);
+* [VMware vSphere](./vsphere/authorization.html);
 * [zVirt](./zvirt/authorization.html).
 
 В следующих разделах описано, как настроить интеграцию с различными системами виртуализации.

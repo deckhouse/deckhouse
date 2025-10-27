@@ -257,7 +257,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
 If there is a ModuleUpdatePolicy of version v1alpha1 in the cluster, the following migration steps to version v1alpha2 must be performed:
 
-If any ModuleUpdatePolicy of version v1alpha1 in the cluster defines `moduleReleaseSelector`, alerts [ModuleHasDeprecatedUpdatePolicy](../../../reference/alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy) will be triggered in the monitoring system for all modules that match this selector. In this case, follow these steps to migrate to version v1alpha2 of ModuleUpdatePolicy:
+If any ModuleUpdatePolicy of version v1alpha1 in the cluster defines `moduleReleaseSelector`, alerts [`ModuleHasDeprecatedUpdatePolicy`](../../../reference/alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy) will be triggered in the monitoring system for all modules that match this selector. In this case, follow these steps to migrate to version v1alpha2 of ModuleUpdatePolicy:
 - Specify the update policy for the corresponding modules in the ModuleConfig `spec.updatePolicy` parameter.
 - Execute the following command, specifying the required ModuleUpdatePolicy:
 
