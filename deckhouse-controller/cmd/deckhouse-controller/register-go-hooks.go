@@ -11,6 +11,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/015-admission-policy-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-dynamix/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-huaweicloud/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-huaweicloud/hooks/conversion"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
