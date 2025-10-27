@@ -1,5 +1,3 @@
-# via go:generate - see /tools/generate_feature_gates.go
-
 "1.29":
   deprecated: []
   forbidden: []
@@ -13,7 +11,6 @@
     - CronJobsScheduledAnnotation
   kube-scheduler:
     - SchedulerQueueingHints
-
 "1.30":
   deprecated: []
   forbidden: []
@@ -27,7 +24,6 @@
     - CronJobsScheduledAnnotation
   kube-scheduler:
     - SchedulerQueueingHints
-
 "1.31":
   deprecated: []
   forbidden: []
@@ -41,7 +37,6 @@
     - CronJobsScheduledAnnotation
   kube-scheduler:
     - SchedulerQueueingHints
-
 "1.32":
   deprecated: []
   forbidden: []
@@ -55,7 +50,6 @@
     - CronJobsScheduledAnnotation
   kube-scheduler:
     - SchedulerQueueingHints
-
 "1.33":
   deprecated:
     - DynamicResourceAllocation
