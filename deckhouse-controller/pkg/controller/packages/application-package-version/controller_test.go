@@ -273,10 +273,11 @@ version: "1.0.0"
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("test-apv")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.Error(suite.T(), err)
+		require.NoError(suite.T(), err)
+		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 
 	suite.Run("metadata parsing error reconcile with golden file", func() {
@@ -299,11 +300,11 @@ version: "1.0.0"
 		suite.setupController("metadata-parsing-error-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("test-apv")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.Error(suite.T(), err)
-		require.Contains(suite.T(), err.Error(), "failed to fetch package metadata")
+		require.NoError(suite.T(), err)
+		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 
 	suite.Run("non-draft resource skip", func() {
@@ -323,10 +324,11 @@ version: "1.0.0"
 		suite.setupController("two-errors-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("test-apv")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.Error(suite.T(), err)
+		require.NoError(suite.T(), err)
+		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 }
 
