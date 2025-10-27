@@ -3,12 +3,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-      - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -16,7 +10,6 @@ shell:
   install:
     - git clone --verbose --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus/pushgateway.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
     - rm -r .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
