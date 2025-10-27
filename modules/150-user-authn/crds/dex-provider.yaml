@@ -500,8 +500,8 @@ spec:
                           description: Optional realm to require (case-insensitive).
                         usernameFromPrincipal:
                           type: string
-                          enum: ["localpart", "sAMAccountName", "userPrincipalName"]
-                          default: "localpart"
+                          enum: ["Localpart", "SAMAccountName", "UserPrincipalName"]
+                          default: "Localpart"
                           description: How to map Kerberos principal to LDAP username.
                         fallbackToPassword:
                           type: boolean
