@@ -1,0 +1,32 @@
+# Use default Gitleaks rules
+[extend]
+useDefault = true
+
+# Global allowlists
+[allowlist]
+
+# === Safe files/directories ===
+# NOTE: Use exact paths, NOT glob patterns like **/go.mod
+
+paths = [
+    # Go dependencies - public hashes
+    "go.mod",
+    "go.sum",
+    
+    # Specific files with known false positives
+    # "modules/101-cert-manager/docs/USAGE.md",
+    # "modules/101-cert-manager/docs/USAGE_RU.md",
+]
+
+# === Safe patterns ===
+regexes = [
+    # Go module checksums - always public
+    '''h1:[A-Za-z0-9+/=]{40,}''',
+    
+    # Public certificates (only ca.crt, NOT private keys!)
+    '''data:\s*\n\s*ca\.crt:\s*[A-Za-z0-9+/=\s]+''',
+    
+    # AWS Example values from official documentation - exact match
+    '''AKIAIOSFODNN7EXAMPLE''',
+    '''wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY''',
+]

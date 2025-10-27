@@ -108,7 +108,7 @@ Some updates — for example, upgrading `containerd` or kubelet across multiple 
 The application mode for such updates is configured via the [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter:
 
 - `Manual`: Manual approval mode for disruptive updates.  
-  When a disruptive update is available, a special alert is triggered.
+  When a disruptive update is available, the [`NodeRequiresDisruptionApprovalForUpdate`](../../../../reference/alerts.html#node-manager-noderequiresdisruptionapprovalforupdate) alert is triggered.
 
   To approve the update, add the annotation `update.node.deckhouse.io/disruption-approved=` to each node in the group. Example:
 
