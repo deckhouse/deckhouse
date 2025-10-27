@@ -646,7 +646,6 @@ spec:
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
 
 ```bash
-# Через cri-интерфейс
 crictl pull private.registry.example/image/repo:tag
 ```
 

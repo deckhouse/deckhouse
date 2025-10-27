@@ -175,7 +175,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Пример вывода:
