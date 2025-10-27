@@ -454,21 +454,27 @@ spec:
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+```
 
-# Пример вывода:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+Пример вывода:
+
+```console
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
 Для проверки наличия **актуального** способа конфигурации выполните на узлах кластера следующую команду:
 
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+```
 
-# Пример вывода:
-# config_path = "/etc/containerd/registry.d"
+Пример вывода:
+
+```console
+config_path = "/etc/containerd/registry.d"
 ```
 
 ### Устаревший способ добавления конфигурации для дополнительного registry
@@ -871,16 +877,23 @@ spec:
 
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
 
-```bash
-# Через cri интерфейс.
-crictl pull private.registry.example/image/repo:tag
+- Через cri интерфейс:
 
-# Через ctr с указанием директории с конфигурациями.
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+  ```bash
+  crictl pull private.registry.example/image/repo:tag
+  ```
 
-# Через ctr для http репозитория.
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
-```
+- Через ctr с указанием директории с конфигурациями:
+
+  ```bash
+  ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+  ```
+
+- Через ctr для http репозитория:
+
+  ```bash
+  ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+  ```
 
 #### Настройка зеркала для доступа к публичным registries (актуальный способ)
 

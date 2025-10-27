@@ -464,12 +464,15 @@ To check for the presence of the **deprecated** configuration method, run the fo
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+```
 
-# Example output:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+Example output:
+
+```console
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
 To check for the presence of the **actual** configuration method, run the following command on the cluster nodes:

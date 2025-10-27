@@ -463,12 +463,15 @@ spec:
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+```
 
-# Пример вывода:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+Пример вывода:
+
+```console
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
 Для проверки наличия **актуального** способа конфигурации выполните на узлах кластера следующую команду:

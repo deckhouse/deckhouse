@@ -454,21 +454,27 @@ To check for the presence of the **deprecated** configuration method, run the fo
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+```
 
-# Example output:
-# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
-# [plugins."io.containerd.grpc.v1.cri".registry.configs]
-#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+Example output:
+
+```console
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+[plugins."io.containerd.grpc.v1.cri".registry.configs]
+  [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
 To check for the presence of the **actual** configuration method, run the following command on the cluster nodes:
 
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+```
 
-# Example output:
-# config_path = "/etc/containerd/registry.d"
+Example output:
+
+```console
+config_path = "/etc/containerd/registry.d"
 ```
 
 ### Old Method
@@ -873,16 +879,23 @@ spec:
 
 After applying the configuration file, check access to the registry from the nodes using the following commands:
 
-```bash
-# Via the CRI interface.
-crictl pull private.registry.example/image/repo:tag
+- Via the CRI interface:
 
-# Via ctr with the configuration directory specified.
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+  ```bash
+  crictl pull private.registry.example/image/repo:tag
+  ```
 
-# Via ctr for an HTTP registry.
-ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
-```
+- Via ctr with the configuration directory specified:
+
+  ```bash
+  ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+  ```
+
+- Via ctr for an HTTP registry:
+
+  ```bash
+  ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+  ```
 
 #### Configuring a mirror for access to public registries (actual method)
 
