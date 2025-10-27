@@ -6,3 +6,7 @@ global:
       rules:
         license:
           impact: warn
+    templates:
+      rules:
+        grafana-dashboards:
+          impact: warn
