@@ -142,6 +142,11 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 			for _, zone := range zonesArray {
 				discoveryData.Zones = append(discoveryData.Zones, zone.String())
 			}
+
+			discoveryDataJSON, err = json.Marshal(discoveryData)
+			if err != nil {
+				return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+			}
 		}
 	}
 
