@@ -212,27 +212,61 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 		}
 	}
 
+	// Transition stage + nodes have final version -> skip (transition stage not needed)
+	// This check is required to handle cases when the cluster is already configured in its final state, for example:
+	// * State was lost and restored — if the cluster is already in final state, there's no need to repeat the transition stage.
+	// * Cluster bootstrap — the initial state already matches the final one, so the transition stage can be skipped.
+	if isTransitionStage && s.Config.Version == "" {
+		config, err := s.finalConfig(params, inputs)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		isFinalVersionApplied := true
+		for _, node := range inputs.NodeStatus {
+			if config.Version != node.Version {
+				isFinalVersionApplied = false
+				break
+			}
+		}
+		if isFinalVersionApplied {
+			return successResult, nil
+		}
+	}
+
+	if isTransitionStage {
+		config, err := s.transitionConfig(params, inputs)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		s.Config = config
+	} else {
+		config, err := s.finalConfig(params, inputs)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		s.Config = config
+		// Update actual params for final stage
+		s.ActualParams = &params.ModeParams
+	}
+
+	return buildResult(inputs, false, s.Config.Version), nil
+}
+
+func (s *State) transitionConfig(params Params, inputs Inputs) (*Config, error) {
+	builder := ConfigBuilder{
+		ModeParams:     params.ModeParams,
+		MasterNodesIPs: inputs.MasterNodesIPs,
+		ActualParams:   []ModeParams{*s.ActualParams},
+	}
+	return builder.build()
+}
+
+func (s *State) finalConfig(params Params, inputs Inputs) (*Config, error) {
 	builder := ConfigBuilder{
 		ModeParams:     params.ModeParams,
 		MasterNodesIPs: inputs.MasterNodesIPs,
 	}
-	actualParams := &params.ModeParams
-
-	// In transition stage, use actual params
-	if isTransitionStage {
-		builder.ActualParams = []ModeParams{*s.ActualParams}
-		actualParams = s.ActualParams
-	}
-
-	config, err := builder.build()
-	if err != nil {
-		return failedResult, fmt.Errorf("failed to build config: %w", err)
-	}
-
-	s.ActualParams = actualParams
-	s.Config = config
-
-	return buildResult(inputs, false, config.Version), nil
+	return builder.build()
 }
 
 func (b *ConfigBuilder) build() (*Config, error) {
