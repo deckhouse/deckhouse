@@ -59,6 +59,12 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/application"
+	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/application-package-version"
+	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/cluster-application"
+	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/cluster-application-package-version"
+	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/package-repository"
+	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -175,15 +181,24 @@ func NewDeckhouseController(
 					},
 				},
 				// for deckhouse.io apis
-				&v1alpha1.Module{}:              {},
-				&v1alpha1.ModuleConfig{}:        {},
-				&v1alpha1.ModuleDocumentation{}: {},
-				&v1alpha1.ModuleRelease{}:       {},
-				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
-				&v1alpha2.ModulePullOverride{}:  {},
-				&v1alpha1.DeckhouseRelease{}:    {},
+				&v1alpha1.Module{}:                               {},
+				&v1alpha1.ModuleConfig{}:                         {},
+				&v1alpha1.ModuleDocumentation{}:                  {},
+				&v1alpha1.ModuleRelease{}:                        {},
+				&v1alpha1.ModuleSource{}:                         {},
+				&v1alpha2.ModuleUpdatePolicy{}:                   {},
+				&v1alpha1.ModulePullOverride{}:                   {},
+				&v1alpha2.ModulePullOverride{}:                   {},
+				&v1alpha1.DeckhouseRelease{}:                     {},
+				// for package system apis
+				&v1alpha1.PackageRepository{}:                    {},
+				&v1alpha1.PackageRepositoryOperation{}:           {},
+				&v1alpha1.ClusterApplicationPackageVersion{}:     {},
+				&v1alpha1.ClusterApplicationPackage{}:            {},
+				&v1alpha1.ClusterApplication{}:                   {},
+				&v1alpha1.ApplicationPackageVersion{}:            {},
+				&v1alpha1.ApplicationPackage{}:                   {},
+				&v1alpha1.Application{}:                          {},
 			},
 		},
 	})
@@ -303,6 +318,41 @@ func NewDeckhouseController(
 	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
+	}
+
+	// Package system controllers (feature flag)
+	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+		logger.Info("Package system controllers are enabled")
+
+		err = packagerepository.RegisterController(runtimeManager, logger.Named("package-repository-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository controller: %w", err)
+		}
+
+		err = packagerepositoryoperation.RegisterController(runtimeManager, logger.Named("package-repository-operation-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository operation controller: %w", err)
+		}
+
+		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, logger.Named("cluster-application-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
+		}
+
+		err = packageclusterapplication.RegisterController(runtimeManager, logger.Named("cluster-application-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register cluster application controller: %w", err)
+		}
+
+		err = packageapplicationpackageversion.RegisterController(runtimeManager, logger.Named("application-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application package version controller: %w", err)
+		}
+
+		err = packageapplication.RegisterController(runtimeManager, logger.Named("application-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application controller: %w", err)
+		}
 	}
 
 	validation.RegisterAdmissionHandlers(
