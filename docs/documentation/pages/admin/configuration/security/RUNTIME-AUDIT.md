@@ -307,6 +307,7 @@ kind: ModuleConfig
 metadata:
   name: runtime-audit-engine
 spec:
+  version: 1
   enabled: true
   settings:
     debugLogging: true
