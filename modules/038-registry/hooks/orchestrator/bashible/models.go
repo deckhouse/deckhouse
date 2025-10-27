@@ -208,7 +208,7 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 	// This check is required to handle cases when the cluster is already configured in its final state, for example:
 	// * State was lost and restored — if the cluster is already in final state, there's no need to repeat the transition stage.
 	// * Cluster bootstrap — the initial state already matches the final one, so the transition stage can be skipped.
-	if isTransitionStage && s.Config.Version == "" {
+	if isTransitionStage && s.Config == nil {
 		config, err := s.finalConfig(params, inputs)
 		if err != nil {
 			return failedResult, fmt.Errorf("failed to build config: %w", err)
