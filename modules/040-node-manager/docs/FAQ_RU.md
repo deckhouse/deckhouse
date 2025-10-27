@@ -1038,7 +1038,7 @@ spec:
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1122,7 +1122,7 @@ spec:
 
 ##### Как настроить сертификат для дополнительного registry (актуальный способ)?
 
-Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
+Пример настройки сертификата для дополнительного registry при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
