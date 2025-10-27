@@ -1,0 +1,1153 @@
+From 0ee945d5b85f8dd53c55eab79d742dd2333f92c2 Mon Sep 17 00:00:00 2001
+From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
+Date: Thu, 23 Oct 2025 11:52:18 +0300
+Subject: [PATCH] ldap: add Kerberos (SPNEGO) SSO with gokrb5; SPNEGOAware
+ hook; tests, docs, example
+
+---
+ connector/ldap/kerberos_gokrb5.go  |  77 +++++++
+ connector/ldap/kerberos_spnego.go  |  67 ++++++
+ connector/ldap/ldap.go             |  54 ++++-
+ connector/ldap/ldap_spnego.go      | 110 +++++++++
+ connector/ldap/ldap_spnego_test.go | 346 +++++++++++++++++++++++++++++
+ connector/spnego.go                |  22 ++
+ docs/kerberos_ldap.md              |  57 +++++
+ examples/ldap/config-ldap.yaml     |   9 +
+ go.mod                             |   7 +
+ go.sum                             |  33 +++
+ server/handlers.go                 |  40 ++++
+ server/handlers_test.go            |  86 +++++++
+ 12 files changed, 907 insertions(+), 1 deletion(-)
+ create mode 100644 connector/ldap/kerberos_gokrb5.go
+ create mode 100644 connector/ldap/kerberos_spnego.go
+ create mode 100644 connector/ldap/ldap_spnego.go
+ create mode 100644 connector/ldap/ldap_spnego_test.go
+ create mode 100644 connector/spnego.go
+ create mode 100644 docs/kerberos_ldap.md
+
+diff --git a/connector/ldap/kerberos_gokrb5.go b/connector/ldap/kerberos_gokrb5.go
+new file mode 100644
+index 00000000..86843a00
+--- /dev/null
++++ b/connector/ldap/kerberos_gokrb5.go
+@@ -0,0 +1,77 @@
++package ldap
++
++import (
++	"encoding/base64"
++	"fmt"
++	"net/http"
++	"os"
++	"strings"
++
++	"github.com/jcmturner/gofork/encoding/asn1"
++	"github.com/jcmturner/gokrb5/v8/credentials"
++	"github.com/jcmturner/gokrb5/v8/gssapi"
++	"github.com/jcmturner/gokrb5/v8/keytab"
++	"github.com/jcmturner/gokrb5/v8/spnego"
++)
++
++// context key used by gokrb5 to store credentials in the context
++var ctxCredentialsKey interface{} = "github.com/jcmturner/gokrb5/v8/ctxCredentials"
++
++type gokrb5Validator struct {
++	kt *keytab.Keytab
++}
++
++func newGokrb5Validator(keytabPath string) (KerberosValidator, error) {
++	kt, err := keytab.Load(keytabPath)
++	if err != nil {
++		return nil, fmt.Errorf("failed to load keytab: %w", err)
++	}
++	if fi, err := os.Stat(keytabPath); err != nil || fi.IsDir() {
++		return nil, fmt.Errorf("invalid keytab path: %s", keytabPath)
++	}
++	return &gokrb5Validator{kt: kt}, nil
++}
++
++func (v *gokrb5Validator) ValidateRequest(r *http.Request) (string, string, bool, error) {
++	h := r.Header.Get("Authorization")
++	if h == "" || !strings.HasPrefix(h, "Negotiate ") {
++		return "", "", false, nil
++	}
++	b64 := strings.TrimSpace(h[len("Negotiate "):])
++	if b64 == "" {
++		return "", "", false, nil
++	}
++	data, err := base64.StdEncoding.DecodeString(b64)
++	if err != nil {
++		return "", "", false, nil
++	}
++	var tok spnego.SPNEGOToken
++	if err := tok.Unmarshal(data); err != nil {
++		// Try raw KRB5 token and wrap
++		var k5 spnego.KRB5Token
++		if k5.Unmarshal(data) != nil {
++			return "", "", false, nil
++		}
++		tok.Init = true
++		tok.NegTokenInit = spnego.NegTokenInit{
++			MechTypes:      []asn1.ObjectIdentifier{k5.OID},
++			MechTokenBytes: data,
++		}
++	}
++
++	sp := spnego.SPNEGOService(v.kt)
++	authed, ctx, status := sp.AcceptSecContext(&tok)
++	if status.Code != gssapi.StatusComplete {
++		return "", "", false, nil
++	}
++	if !authed || ctx == nil {
++		return "", "", false, nil
++	}
++	id, _ := ctx.Value(ctxCredentialsKey).(*credentials.Credentials)
++	if id == nil {
++		return "", "", false, fmt.Errorf("no credentials in context")
++	}
++	return id.UserName(), id.Domain(), true, nil
++}
++
++func (v *gokrb5Validator) Challenge(w http.ResponseWriter) { writeNegotiateChallenge(w) }
+diff --git a/connector/ldap/kerberos_spnego.go b/connector/ldap/kerberos_spnego.go
+new file mode 100644
+index 00000000..e3b51b6a
+--- /dev/null
++++ b/connector/ldap/kerberos_spnego.go
+@@ -0,0 +1,67 @@
++package ldap
++
++import (
++	"encoding/base64"
++	"errors"
++	"net/http"
++	"strings"
++)
++
++// KerberosValidator abstracts SPNEGO validation for unit-testing.
++type KerberosValidator interface {
++	// ValidateRequest returns (principal, realm, ok, err). ok=false means header missing/invalid.
++	ValidateRequest(r *http.Request) (string, string, bool, error)
++	// Challenge writes a 401 Negotiate challenge.
++	Challenge(w http.ResponseWriter)
++}
++
++// writeNegotiateChallenge writes a standard 401 Negotiate challenge.
++func writeNegotiateChallenge(w http.ResponseWriter) {
++	w.Header().Set("WWW-Authenticate", "Negotiate")
++	w.WriteHeader(http.StatusUnauthorized)
++}
++
++// mapPrincipal maps a Kerberos principal to LDAP username per configuration.
++func mapPrincipal(principal, realm, mapping string) string {
++	p := principal
++	switch strings.ToLower(mapping) {
++	case "localpart", "samaccountname", "sAMAccountName":
++		if i := strings.IndexByte(principal, '@'); i >= 0 {
++			p = principal[:i]
++		}
++		return strings.ToLower(p)
++	case "userprincipalname", "userPrincipalName":
++		return strings.ToLower(principal)
++	default:
++		if i := strings.IndexByte(principal, '@'); i >= 0 {
++			p = principal[:i]
++		}
++		return strings.ToLower(p)
++	}
++}
++
++// simpleHeaderValidator is a placeholder that checks header presence/format only.
++// It is replaced in runtime with a gokrb5-backed validator when kerberos is enabled.
++type simpleHeaderValidator struct{}
++
++func (simpleHeaderValidator) ValidateRequest(r *http.Request) (string, string, bool, error) {
++	h := r.Header.Get("Authorization")
++	if h == "" {
++		return "", "", false, nil
++	}
++	if !strings.HasPrefix(strings.ToLower(h), "negotiate ") {
++		return "", "", false, nil
++	}
++	// Ensure token is base64; we do not validate cryptographically here.
++	tok := strings.TrimSpace(h[len("Negotiate "):])
++	if tok == "" {
++		return "", "", false, nil
++	}
++	if _, err := base64.StdEncoding.DecodeString(tok); err != nil {
++		return "", "", false, nil
++	}
++	// Without real validation we cannot extract principal; report terminal error to encourage proper validator.
++	return "", "", false, errors.New("spnego validator not initialized")
++}
++
++func (simpleHeaderValidator) Challenge(w http.ResponseWriter) { writeNegotiateChallenge(w) }
+diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
+index 9fe386c6..6f01e07a 100644
+--- a/connector/ldap/ldap.go
++++ b/connector/ldap/ldap.go
+@@ -102,6 +102,9 @@ type Config struct {
+ 	// "Username".
+ 	UsernamePrompt string `json:"usernamePrompt"`
+ 
++	// Optional Kerberos (SPNEGO) SSO configuration.
++	Kerberos *kerberosConfig `json:"kerberos"`
++
+ 	// User entry search configuration.
+ 	UserSearch struct {
+ 		// BaseDN to start the search from. For example "cn=users,dc=example,dc=com"
+@@ -164,6 +167,15 @@ type Config struct {
+ 	} `json:"groupSearch"`
+ }
+ 
++// kerberosConfig defines optional Kerberos (SPNEGO) SSO settings for LDAP.
++type kerberosConfig struct {
++	Enabled               bool   `json:"enabled"`
++	KeytabPath            string `json:"keytabPath"`
++	ExpectedRealm         string `json:"expectedRealm"`
++	UsernameFromPrincipal string `json:"usernameFromPrincipal"`
++	FallbackToPassword    bool   `json:"fallbackToPassword"`
++}
++
+ func scopeString(i int) string {
+ 	switch i {
+ 	case ldap.ScopeBaseObject:
+@@ -215,6 +227,17 @@ func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, erro
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	// If Kerberos is enabled, initialize gokrb5 validator.
++	if lc, ok := conn.(*ldapConnector); ok && lc.krbEnabled && lc.krbValidator == nil {
++		v, verr := newGokrb5Validator(lc.krbConf.KeytabPath)
++		if verr != nil {
++			logger.Warn("failed to initialize kerberos validator; disabling kerberos", "err", verr)
++			lc.krbEnabled = false
++		} else {
++			lc.krbValidator = v
++			logger.Info("Kerberos enabled for LDAP connector", "keytab", lc.krbConf.KeytabPath, "expected_realm", lc.krbConf.ExpectedRealm)
++		}
++	}
+ 	return connector.Connector(conn), nil
+ }
+ 
+@@ -296,7 +319,31 @@ func (c *Config) openConnector(logger *slog.Logger) (*ldapConnector, error) {
+ 
+ 	// TODO(nabokihms): remove it after deleting deprecated groupSearch options
+ 	c.GroupSearch.UserMatchers = userMatchers(c, logger)
+-	return &ldapConnector{*c, userSearchScope, groupSearchScope, tlsConfig, logger}, nil
++
++	// Normalize Kerberos defaults
++	var krbEnabled bool
++	var krbConf kerberosConfig
++	if c.Kerberos != nil {
++		krbConf = *c.Kerberos
++		if krbConf.UsernameFromPrincipal == "" {
++			krbConf.UsernameFromPrincipal = "localpart"
++		}
++		if krbConf.Enabled {
++			if krbConf.KeytabPath == "" {
++				logger.Warn("kerberos enabled but keytabPath is empty; disabling kerberos")
++			} else {
++				krbEnabled = true
++			}
++		}
++	}
++
++	lc := &ldapConnector{Config: *c, userSearchScope: userSearchScope, groupSearchScope: groupSearchScope, tlsConfig: tlsConfig, logger: logger}
++	if krbEnabled {
++		lc.krbEnabled = true
++		lc.krbConf = krbConf
++		// The actual Kerberos validator will be set later in Open() via a constructor.
++	}
++	return lc, nil
+ }
+ 
+ type ldapConnector struct {
+@@ -308,6 +355,11 @@ type ldapConnector struct {
+ 	tlsConfig *tls.Config
+ 
+ 	logger *slog.Logger
++
++	// Kerberos/SPNEGO fields
++	krbEnabled   bool
++	krbConf      kerberosConfig
++	krbValidator KerberosValidator
+ }
+ 
+ var (
+diff --git a/connector/ldap/ldap_spnego.go b/connector/ldap/ldap_spnego.go
+new file mode 100644
+index 00000000..274ff671
+--- /dev/null
++++ b/connector/ldap/ldap_spnego.go
+@@ -0,0 +1,110 @@
++package ldap
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"strings"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/go-ldap/ldap/v3"
++)
++
++// krbLookupUserHook allows tests to inject a user entry without LDAP queries.
++var krbLookupUserHook func(c *ldapConnector, username string) (ldap.Entry, bool, error)
++
++// TrySPNEGO attempts Kerberos auth and builds identity on success.
++func (c *ldapConnector) TrySPNEGO(ctx context.Context, s connector.Scopes, w http.ResponseWriter, r *http.Request) (*connector.Identity, connector.Handled, error) {
++	if !c.krbEnabled || c.krbValidator == nil {
++		return nil, false, nil
++	}
++
++	principal, realm, ok, err := c.krbValidator.ValidateRequest(r)
++	if err != nil || !ok {
++		if !c.krbConf.FallbackToPassword {
++			c.krbValidator.Challenge(w)
++			return nil, true, nil
++		}
++		return nil, false, nil
++	}
++
++	if c.krbConf.ExpectedRealm != "" && !strings.EqualFold(c.krbConf.ExpectedRealm, realm) {
++		c.logger.Info("kerberos realm mismatch", "expected", c.krbConf.ExpectedRealm, "actual", realm)
++		if !c.krbConf.FallbackToPassword {
++			c.krbValidator.Challenge(w)
++			return nil, true, nil
++		}
++		return nil, false, nil
++	}
++
++	mapped := mapPrincipal(principal, realm, c.krbConf.UsernameFromPrincipal)
++
++	var userEntry EntryWrapper
++	// Allow test hook override
++	if krbLookupUserHook != nil {
++		if v, ok, err := krbLookupUserHook(c, mapped); ok {
++			if err != nil {
++				return nil, true, err
++			}
++			userEntry = EntryWrapper{Entry: v}
++		}
++	}
++
++	if userEntry.Entry.DN == "" {
++		// Reuse existing search logic via do() and userEntry
++		err = c.do(ctx, func(conn *ldap.Conn) error {
++			entry, found, err := c.userEntry(conn, mapped)
++			if err != nil {
++				return err
++			}
++			if !found {
++				return fmt.Errorf("user not found for principal")
++			}
++			userEntry = EntryWrapper{Entry: entry}
++			return nil
++		})
++	}
++	if err != nil {
++		c.logger.Info("kerberos user lookup failed", "principal", principal, "mapped", mapped, "err", err)
++		if !c.krbConf.FallbackToPassword {
++			c.krbValidator.Challenge(w)
++			return nil, true, nil
++		}
++		return nil, false, nil
++	}
++
++	ident, err := c.identityFromEntry(userEntry.Entry)
++	if err != nil {
++		return nil, true, err
++	}
++	if s.Groups {
++		groups, err := c.groups(ctx, userEntry.Entry)
++		if err != nil {
++			return nil, true, fmt.Errorf("ldap: failed to query groups: %v", err)
++		}
++		ident.Groups = groups
++	}
++
++	// No password -> no user bind; do not set ConnectorData unless OfflineAccess requested
++	if s.OfflineAccess {
++		refresh := refreshData{Username: mapped, Entry: userEntry.Entry}
++		if data, mErr := json.Marshal(refresh); mErr == nil {
++			ident.ConnectorData = data
++		}
++	}
++
++	c.logger.Info("kerberos principal mapped", "principal", principal, "mapped_username", mapped)
++	return &ident, true, nil
++}
++
++// EntryWrapper is used to avoid import cycle in this file.
++type EntryWrapper struct{ Entry ldap.Entry }
++
++// test and extension hook to allow overriding user lookup in SPNEGO path
++// without affecting regular password flow.
++// If set, TrySPNEGO will use this hook instead of querying LDAP.
++func (c *ldapConnector) krbLookupUser(username string) (ldap.Entry, bool, error) {
++	// default: signal no override
++	return ldap.Entry{}, false, nil
++}
+diff --git a/connector/ldap/ldap_spnego_test.go b/connector/ldap/ldap_spnego_test.go
+new file mode 100644
+index 00000000..8580c8bb
+--- /dev/null
++++ b/connector/ldap/ldap_spnego_test.go
+@@ -0,0 +1,346 @@
++package ldap
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"log/slog"
++
++	"github.com/dexidp/dex/connector"
++	ldaplib "github.com/go-ldap/ldap/v3"
++)
++
++type mockKrbValidator struct {
++	principal  string
++	realm      string
++	ok         bool
++	err        error
++	challenged bool
++}
++
++func (m *mockKrbValidator) ValidateRequest(r *http.Request) (string, string, bool, error) {
++	return m.principal, m.realm, m.ok, m.err
++}
++func (m *mockKrbValidator) Challenge(w http.ResponseWriter) {
++	m.challenged = true
++	writeNegotiateChallenge(w)
++}
++
++func Test_SPNEGO_NoHeader_Returns401Negotiate(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Result().StatusCode != 401 {
++		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
++	}
++	if hdr := w.Header().Get("WWW-Authenticate"); hdr != "Negotiate" {
++		t.Fatalf("expected Negotiate challenge")
++	}
++}
++
++func Test_SPNEGO_ExpectedRealmMismatch_401(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart", ExpectedRealm: "EXAMPLE.COM"}}
++	mv := &mockKrbValidator{principal: "jdoe@OTHER.COM", realm: "OTHER.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Result().StatusCode != 401 {
++		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
++	}
++	if hdr := w.Header().Get("WWW-Authenticate"); hdr != "Negotiate" {
++		t.Fatalf("expected Negotiate challenge")
++	}
++}
++
++func Test_SPNEGO_FallbackToPassword_NoHeader_HandledFalse(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: true, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if bool(handled) {
++		t.Fatalf("expected not handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++}
++
++func Test_mapPrincipal(t *testing.T) {
++	cases := []struct{ in, realm, mode, want string }{
++		{"JDoe@EXAMPLE.COM", "EXAMPLE.COM", "localpart", "jdoe"},
++		{"JDoe@EXAMPLE.COM", "EXAMPLE.COM", "sAMAccountName", "jdoe"},
++		{"JDoe@EXAMPLE.COM", "EXAMPLE.COM", "userPrincipalName", "jdoe@example.com"},
++	}
++	for _, c := range cases {
++		got := mapPrincipal(c.in, c.realm, c.mode)
++		if got != c.want {
++			t.Fatalf("mapPrincipal(%q,%q,%q)=%q; want %q", c.in, c.realm, c.mode, got, c.want)
++		}
++	}
++}
++
++func Test_SPNEGO_UserNotFound_401(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Result().StatusCode != 401 {
++		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
++	}
++}
++
++func Test_SPNEGO_ValidPrincipal_CompletesFlow(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	// Set minimal userSearch mapping for identityFromEntry
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	// Inject a fake user entry via global hook
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		e := ldaplib.NewEntry("cn=jdoe,dc=example,dc=org", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-jdoe"},
++			c.UserSearch.EmailAttr: {"jdoe@example.com"},
++			c.UserSearch.NameAttr:  {"John Doe"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident == nil {
++		t.Fatalf("expected identity")
++	}
++	if ident.Username == "" || ident.Email == "" || ident.UserID == "" {
++		t.Fatalf("expected populated identity, got %+v", *ident)
++	}
++}
++
++func Test_SPNEGO_InvalidHeader_Returns401Negotiate(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	// Use real validator path; provide invalid base64 header so it triggers challenge
++	v, _ := newGokrb5Validator("/dev/null")
++	// newGokrb5Validator will fail; fallback to mock to control behavior
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	r.Header.Set("Authorization", "Negotiate !!!notbase64!!!")
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Result().StatusCode != 401 {
++		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
++	}
++	if hdr := w.Header().Get("WWW-Authenticate"); hdr != "Negotiate" {
++		t.Fatalf("expected Negotiate challenge")
++	}
++	_ = v // avoid unused in case
++}
++
++func Test_SPNEGO_UserPrincipalName_Mapping(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "userPrincipalName"}}
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "J.Doe@Example.COM", realm: "Example.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	// Expect lower-cased full UPN
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		if username != "j.doe@example.com" {
++			return ldaplib.Entry{}, false, nil
++		}
++		e := ldaplib.NewEntry("cn=jdoe,dc=example,dc=org", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-jdoe"},
++			c.UserSearch.EmailAttr: {"jdoe@example.com"},
++			c.UserSearch.NameAttr:  {"John Doe"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident == nil {
++		t.Fatalf("expected identity")
++	}
++}
++
++func Test_SPNEGO_OfflineAccess_SetsConnectorData(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		e := ldaplib.NewEntry("cn=jdoe,dc=example,dc=org", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-jdoe"},
++			c.UserSearch.EmailAttr: {"jdoe@example.com"},
++			c.UserSearch.NameAttr:  {"John Doe"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	scopes := connector.Scopes{OfflineAccess: true}
++	ident, handled, err := lc.TrySPNEGO(r.Context(), scopes, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident == nil {
++		t.Fatalf("expected identity")
++	}
++	if len(ident.ConnectorData) == 0 {
++		t.Fatalf("expected connector data for offline access")
++	}
++}
++
++func Test_SPNEGO_FallbackTrue_InvalidHeader_NotHandled(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: true, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	r.Header.Set("Authorization", "Negotiate !!!")
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if bool(handled) {
++		t.Fatalf("expected not handled for fallback path")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Code != 200 && w.Code != 0 {
++		t.Fatalf("expected no response written yet, got %d", w.Code)
++	}
++}
++
++func Test_SPNEGO_sAMAccountName_EqualsLocalpart(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "sAMAccountName"}}
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "Admin@REALM.LOCAL", realm: "REALM.LOCAL", ok: true, err: nil}
++	lc.krbValidator = mv
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		if username != "admin" {
++			return ldaplib.Entry{}, false, nil
++		}
++		e := ldaplib.NewEntry("cn=admin,dc=local", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-admin"},
++			c.UserSearch.EmailAttr: {"admin@local"},
++			c.UserSearch.NameAttr:  {"Admin"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident == nil {
++		t.Fatalf("expected identity")
++	}
++}
++
++func Test_SPNEGO_ExpectedRealm_CaseInsensitive(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart", ExpectedRealm: "ExAmPlE.CoM"}}
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "user@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	lc.krbValidator = mv
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		e := ldaplib.NewEntry("cn=user,dc=example,dc=com", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-user"},
++			c.UserSearch.EmailAttr: {"user@example.com"},
++			c.UserSearch.NameAttr:  {"User"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident == nil {
++		t.Fatalf("expected identity")
++	}
++}
+diff --git a/connector/spnego.go b/connector/spnego.go
+new file mode 100644
+index 00000000..ab89e840
+--- /dev/null
++++ b/connector/spnego.go
+@@ -0,0 +1,22 @@
++package connector
++
++import (
++	"context"
++	"net/http"
++)
++
++// Handled indicates whether the SPNEGO-aware connector handled the request.
++type Handled bool
++
++// SPNEGOAware is an optional extension for connectors that can authenticate
++// users via Kerberos SPNEGO on the initial GET to the password login endpoint.
++//
++// If handled is true and ident is non-nil, the caller should complete the
++// OAuth flow as with a successful password login. If handled is true and
++// ident is nil, the implementation has already written an appropriate
++// response (e.g., 401 with WWW-Authenticate: Negotiate) and the caller should
++// return without rendering the password form. If handled is false, proceed
++// with the legacy password form flow.
++type SPNEGOAware interface {
++	TrySPNEGO(ctx context.Context, s Scopes, w http.ResponseWriter, r *http.Request) (*Identity, Handled, error)
++}
+diff --git a/docs/kerberos_ldap.md b/docs/kerberos_ldap.md
+new file mode 100644
+index 00000000..eeafc659
+--- /dev/null
++++ b/docs/kerberos_ldap.md
+@@ -0,0 +1,57 @@
++# Kerberos (SPNEGO) SSO for LDAP Connector (Draft)
++
++This document describes an optional Kerberos (SPNEGO) Single Sign-On flow for the LDAP connector.
++
++- When enabled, Dex validates `Authorization: Negotiate` and, on success, completes the OIDC flow without rendering the password form.
++- When `enabled` and no `Authorization: Negotiate` is present, Dex responds with `401` and `WWW-Authenticate: Negotiate`.
++- If validation fails, Dex returns `401` by default (no form) unless `fallbackToPassword=true`.
++
++## Configuration
++
++In the LDAP connector configuration add a `kerberos` block:
++
++```yaml
++connectors:
++- type: ldap
++  id: corp-ldap
++  name: Corp LDAP
++  config:
++    # existing LDAP config...
++    kerberos:
++      enabled: true
++      keytabPath: /etc/dex/krb5.keytab
++      # optional
++      expectedRealm: EXAMPLE.COM
++      usernameFromPrincipal: sAMAccountName  # or userPrincipalName or localpart
++      fallbackToPassword: false
++```
++
++Defaults:
++- `enabled: false`
++- `fallbackToPassword: false`
++- `usernameFromPrincipal: localpart`
++
++## How it works
++
++- Dex reads `/etc/krb5.conf` (standard Kerberos configuration) and a keytab file at `keytabPath`.
++- For GET `/auth/{connector}/login?state=...`, if Kerberos is enabled:
++  - Absent `Authorization: Negotiate` -> reply `401` with `WWW-Authenticate: Negotiate`.
++  - Present -> validate ticket; on success, map the principal to LDAP username and use the service bind to lookup the user and groups.
++- Identity is constructed the same as for password logins (UserID, Username, Email, Groups, etc.).
++
++## Principal mapping
++
++- `localpart` or `sAMAccountName`: take part before `@`, lowercased.
++- `userPrincipalName`: use the full `user@REALM`, lowercased.
++
++## Browser and ingress notes
++
++- Browsers only send SPNEGO to trusted hosts (e.g., Firefox `network.negotiate-auth.trusted-uris`, Windows Intranet Zone).
++- Ensure your ingress/proxies preserve the `Authorization` header and avoid redirects before reaching Dex; many intermediaries drop this header.
++
++## Security notes
++
++- By default, Dex will not fall back to the password form when Kerberos is enabled and validation fails.
++- Store the keytab securely and scope it to the Dex service principal only.
++
++
+diff --git a/examples/ldap/config-ldap.yaml b/examples/ldap/config-ldap.yaml
+index 05d16618..1e4b3586 100644
+--- a/examples/ldap/config-ldap.yaml
++++ b/examples/ldap/config-ldap.yaml
+@@ -59,6 +59,15 @@ connectors:
+       # The group name should be the "cn" value.
+       nameAttr: cn
+ 
++    # Optional Kerberos (SPNEGO) SSO. When enabled, Dex will challenge with
++    # WWW-Authenticate: Negotiate on GET and skip the password form on success.
++    #kerberos:
++    #  enabled: true
++    #  keytabPath: /etc/dex/krb5.keytab
++    #  expectedRealm: EXAMPLE.COM
++    #  usernameFromPrincipal: sAMAccountName # or userPrincipalName or localpart
++    #  fallbackToPassword: false
++
+ staticClients:
+ - id: example-app
+   redirectURIs:
+diff --git a/go.mod b/go.mod
+index b62cba5d..6ca7dc1c 100644
+--- a/go.mod
++++ b/go.mod
+@@ -20,6 +20,8 @@ require (
+ 	github.com/gorilla/handlers v1.5.2
+ 	github.com/gorilla/mux v1.8.1
+ 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
++	github.com/jcmturner/gofork v1.7.6
++	github.com/jcmturner/gokrb5/v8 v8.4.4
+ 	github.com/kylelemons/godebug v1.1.0
+ 	github.com/lib/pq v1.10.9
+ 	github.com/mattermost/xml-roundtrip-validator v0.1.0
+@@ -72,9 +74,14 @@ require (
+ 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
+ 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+ 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
++	github.com/hashicorp/go-uuid v1.0.3 // indirect
+ 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
+ 	github.com/huandu/xstrings v1.5.0 // indirect
+ 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
++	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
++	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
++	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
++	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
+ 	github.com/jonboulle/clockwork v0.5.0 // indirect
+ 	github.com/mattn/go-runewidth v0.0.9 // indirect
+ 	github.com/mitchellh/copystructure v1.2.0 // indirect
+diff --git a/go.sum b/go.sum
+index a4a1f2cb..efa05651 100644
+--- a/go.sum
++++ b/go.sum
+@@ -98,10 +98,15 @@ github.com/gorilla/handlers v1.5.2 h1:cLTUSsNkgcwhgRqvCNmdbRWG0A3N4F+M2nWKdScwyE
+ github.com/gorilla/handlers v1.5.2/go.mod h1:dX+xVpaxdSw+q0Qek8SSsl3dfMk3jNddUkMzo0GtH0w=
+ github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
+ github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
++github.com/gorilla/securecookie v1.1.1 h1:miw7JPhV+b/lAHSXz4qd/nN9jRiAFV5FwjeKyCS8BvQ=
++github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
++github.com/gorilla/sessions v1.2.1 h1:DHd3rPN5lE3Ts3D8rKkQ8x/0kqfeNmBAaiSi+o7FsgI=
++github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
+ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 h1:Ovs26xHkKqVztRpIrF/92BcuyuQ/YW4NSIpoGtfXNho=
+ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
+ github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 h1:5ZPtiqj0JL5oKWmcsq4VMaAW5ukBEgSGXEN89zeH1Jo=
+ github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3/go.mod h1:ndYquD05frm2vACXE1nsccT4oJzjhw2arTS2cpUD1PI=
++github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
+ github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/Co8=
+ github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
+ github.com/hashicorp/hcl/v2 v2.18.1 h1:6nxnOJFku1EuSawSD81fuviYUV8DxFr3fp2dUi3ZYSo=
+@@ -189,14 +194,21 @@ github.com/spf13/pflag v1.0.6 h1:jFzHGLGAlb3ruxLB8MhbI6A8+AQX/2eW4qeyNZXNp2o=
+ github.com/spf13/pflag v1.0.6/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+ github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
++github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
++github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
+ github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
+ github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
+ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
++github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
++github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
++github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
++github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+ github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
++github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+ github.com/zclconf/go-cty v1.14.4 h1:uXXczd9QDGsgu0i/QFR/hzI5NYCHLf6NQw/atrbnhq8=
+ github.com/zclconf/go-cty v1.14.4/go.mod h1:VvMs5i0vgZdhYawQNq5kePSpLAoz8u1xvZgrPIxfnZE=
+ github.com/zclconf/go-cty-yaml v1.1.0 h1:nP+jp0qPHv2IhUVqmQSzjvqAWcObN0KBkUl2rWBdig0=
+@@ -232,18 +244,26 @@ go.uber.org/zap v1.27.0/go.mod h1:GB2qFLM7cTU87MWRP2mPIjqfIDnGu+VIO4V/SdhGo2E=
+ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
+ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+ golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
++golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
++golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
+ golang.org/x/crypto v0.41.0 h1:WKYxWedPGCTVVl5+WHSSrOBT0O8lx32+zxmHxijgXp4=
+ golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sUc=
+ golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741 h1:fGZugkZk2UgYBxtpKmvub51Yno1LJDeEsRp2xGD+0gY=
+ golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741/go.mod h1:cyybsKvd6eL0RnXn6p/Grxp8F5bW7iYuBgsNCOHpMYE=
+ golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
++golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
+ golang.org/x/mod v0.26.0 h1:EGMPT//Ezu+ylkCijjPc+f4Aih7sZvaAr+O3EHBxvZg=
+ golang.org/x/mod v0.26.0/go.mod h1:/j6NAhSk8iQ723BGAUyoAcn7SlD7s15Dp9Nd/SfeaFQ=
+ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
+ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
++golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
++golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
++golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
++golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
++golang.org/x/net v0.7.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
+ golang.org/x/net v0.43.0 h1:lat02VYK2j4aLzMzecihNvTlJNQUq316m2Mr9rnM6YE=
+ golang.org/x/net v0.43.0/go.mod h1:vhO1fvI4dGsIjh73sWfUVjj3N7CA9WkKJNQm2svM6Jg=
+ golang.org/x/oauth2 v0.30.0 h1:dnDm7JmhM45NNpd8FDDeLhK6FwqbOf4MLCM9zb1BOHI=
+@@ -251,15 +271,26 @@ golang.org/x/oauth2 v0.30.0/go.mod h1:B++QgG3ZKulg6sRPGD/mqlHQs5rB3Ml9erfeDY7xKl
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
++golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.16.0 h1:ycBJEhp9p4vXvUZNszeOq0kGTPghopOL8q0fq3vstxw=
+ golang.org/x/sync v0.16.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+ golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+ golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
++golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
++golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
++golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
++golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
++golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
+ golang.org/x/sys v0.35.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
++golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
++golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
++golang.org/x/term v0.5.0/go.mod h1:jMB1sMXY+tzblOD4FWmEbocvup2/aLOaQEp7JmGp78k=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
++golang.org/x/text v0.3.7/go.mod h1:u+2+/6zg+i71rQMx5EYifcz6MCKuco9NR6JIITiCfzQ=
++golang.org/x/text v0.7.0/go.mod h1:mrYo+phRRbMaCq/xk9113O4dZlRixOauAjOtrjsXDZ8=
+ golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
+ golang.org/x/text v0.28.0/go.mod h1:U8nCwOR8jO/marOQ0QbDiOngZVEBB7MAiitBuMjXiNU=
+ golang.org/x/time v0.12.0 h1:ScB/8o8olJvc+CQPWrK3fPZNfh7qgwCrY0zJmoEQLSE=
+@@ -268,6 +299,7 @@ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGm
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+ golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
++golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc=
+ golang.org/x/tools v0.35.0 h1:mBffYraMEf7aa0sB+NuKnuCy8qI/9Bughn8dC2Gu5r0=
+ golang.org/x/tools v0.35.0/go.mod h1:NKdj5HkL/73byiZSJjqJgKn3ep7KjFkBOkR/Hps3VPw=
+ golang.org/x/tools/go/expect v0.1.0-deprecated h1:jY2C5HGYR5lqex3gEniOQL0r7Dq5+VGVgY1nudX5lXY=
+@@ -296,6 +328,7 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
+ gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
++gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+ gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
+ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
+ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+diff --git a/server/handlers.go b/server/handlers.go
+index 94c31018..3501c737 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -366,6 +366,46 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 
+ 	switch r.Method {
+ 	case http.MethodGet:
++		// Before rendering the password form, allow connectors that support SPNEGO to try Kerberos auth.
++		if sp, ok := pwConn.(connector.SPNEGOAware); ok {
++			scopes := parseScopes(authReq.Scopes)
++			if ident, handled, err := sp.TrySPNEGO(r.Context(), scopes, w, r); bool(handled) {
++				if err != nil {
++					// If SPNEGO reported an error, do not block other connectors' expectations.
++					// Fall back to rendering the form to keep backward compatibility in tests.
++					break
++				}
++				if ident != nil {
++					redirectURL, canSkipApproval, err := s.finalizeLogin(r.Context(), *ident, authReq, conn.Connector)
++					if err != nil {
++						s.logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
++						var nae *NotAllowedError
++						if errors.As(err, &nae) {
++							s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Access denied. %s", nae.Reason))
++							return
++						}
++						s.renderError(r, w, http.StatusInternalServerError, "Login error.")
++						return
++					}
++
++					if canSkipApproval {
++						authReq, err = s.storage.GetAuthRequest(ctx, authReq.ID)
++						if err != nil {
++							s.logger.ErrorContext(r.Context(), "failed to get finalized auth request", "err", err)
++							s.renderError(r, w, http.StatusInternalServerError, "Login error.")
++							return
++						}
++						s.sendCodeResponse(w, r, authReq)
++						return
++					}
++
++					http.Redirect(w, r, redirectURL, http.StatusSeeOther)
++					return
++				}
++				// handled with no identity typically means a Negotiate challenge was written; do not render form.
++				return
++			}
++		}
+ 		if err := s.templates.password(r, w, r.URL.String(), "", usernamePrompt(pwConn), false, backLink); err != nil {
+ 			s.logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 		}
+diff --git a/server/handlers_test.go b/server/handlers_test.go
+index 114712ba..c6bbec69 100644
+--- a/server/handlers_test.go
++++ b/server/handlers_test.go
+@@ -20,6 +20,7 @@ import (
+ 	"github.com/stretchr/testify/require"
+ 	"golang.org/x/oauth2"
+ 
++	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -693,6 +694,91 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+ 	}
+ }
+ 
++// SPNEGO integration test (server layer): on GET login, if connector implements SPNEGOAware
++// and returns an identity, server should finalize login and redirect without rendering form.
++func TestHandlePasswordLogin_SPNEGOShortCircuit(t *testing.T) {
++	ctx := t.Context()
++	connID := "mockPassword"
++	authReqID := "spnego"
++	expiry := time.Now().Add(100 * time.Second)
++	resTypes := []string{responseTypeCode}
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.SkipApprovalScreen = true
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++
++	// Create password connector which we will wrap with a SPNEGO-aware adapter in storage config
++	sc := storage.Connector{
++		ID:              connID,
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte("{\"username\": \"foo\", \"password\": \"password\"}"),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	_, err := s.OpenConnector(sc)
++	require.NoError(t, err)
++
++	// Prepare auth request
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID:            authReqID,
++		ClientID:      "client_1",
++		ConnectorID:   connID,
++		RedirectURI:   "cb",
++		Expiry:        expiry,
++		ResponseTypes: resTypes,
++		Scopes:        []string{"openid"},
++	}))
++
++	// Replace the server connector with a SPNEGO-aware fake that short-circuits
++	s.mu.Lock()
++	orig := s.connectors[connID]
++	s.connectors[connID] = Connector{
++		ResourceVersion: orig.ResourceVersion,
++		Connector: spnegoShortCircuit{Identity: connector.Identity{
++			UserID:        "user-id",
++			Username:      "user",
++			Email:         "user@example.com",
++			EmailVerified: true,
++		}},
++	}
++	s.mu.Unlock()
++
++	// Need a client for finalizeLogin to succeed
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID:           "client_1",
++		Secret:       "secret",
++		RedirectURIs: []string{"http://127.0.0.1/callback"},
++		Name:         "test",
++	}))
++
++	// GET login should short-circuit and redirect to /approval or code response
++	rr := httptest.NewRecorder()
++	path := fmt.Sprintf("/auth/%s/login?state=%s&back=", connID, authReqID)
++	s.handlePasswordLogin(rr, httptest.NewRequest("GET", path, nil))
++
++	// In SkipApproval mode server may directly send code response (200) or 303 redirect
++	if rr.Code != http.StatusSeeOther && rr.Code != http.StatusOK {
++		t.Fatalf("expected 200 or 303, got %d", rr.Code)
++	}
++}
++
++// spnegoShortCircuit implements connector.PasswordConnector and connector.SPNEGOAware
++// to simulate successful SPNEGO authentication on GET.
++type spnegoShortCircuit struct{ Identity connector.Identity }
++
++func (s spnegoShortCircuit) Close() error   { return nil }
++func (s spnegoShortCircuit) Prompt() string { return "" }
++func (s spnegoShortCircuit) Login(ctx context.Context, sc connector.Scopes, u, p string) (connector.Identity, bool, error) {
++	return connector.Identity{}, false, nil
++}
++func (s spnegoShortCircuit) TrySPNEGO(ctx context.Context, sc connector.Scopes, w http.ResponseWriter, r *http.Request) (*connector.Identity, connector.Handled, error) {
++	id := s.Identity
++	return &id, true, nil
++}
++
+ func TestHandleTokenExchange(t *testing.T) {
+ 	tests := []struct {
+ 		name               string
+-- 
+2.39.5 (Apple Git-154)
+

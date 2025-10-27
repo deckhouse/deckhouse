@@ -134,6 +134,21 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
 The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
 {% endraw %}
 
+## How to enable Kerberos (SPNEGO) SSO for LDAP?
+
+If clients run in a corporate SSO environment (browser trusts the Dex host), Dex can accept Kerberos tickets via `Authorization: Negotiate` and log in without the password form.
+
+Steps:
+
+1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+2. In the cluster, create a Secret in `d8-user-authn` with the `krb5.keytab` data key.
+3. In the LDAP `DexProvider` enable `spec.ldap.kerberos`:
+   - `enabled: true`
+   - `keytabSecretName: <secret name>`
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+
+Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
+
 ### Configuring kube-apiserver
 
 With the functional of the [control-plane-manager](../../modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.

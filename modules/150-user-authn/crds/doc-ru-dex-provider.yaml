@@ -313,6 +313,31 @@ spec:
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
 
                         Полученные от IdP данные аутентификации и групп сохраняются в кеш на 10 секунд.
+                    kerberos:
+                      description: |
+                        Опциональные настройки Kerberos (SPNEGO) SSO для LDAP.
+                      properties:
+                        enabled:
+                          description: |
+                            Включить поток аутентификации Kerberos SPNEGO для данного LDAP‑провайдера.
+                        expectedRealm:
+                          description: |
+                            Необязательный требуемый realm (без учета регистра). Если указан и не совпадает с realm билета — вход отклоняется.
+                        usernameFromPrincipal:
+                          description: |
+                            Способ сопоставления Kerberos principal с именем пользователя в LDAP: `localpart`, `sAMAccountName` или `userPrincipalName`.
+                        fallbackToPassword:
+                          description: |
+                            Если `true`, при отсутствии/некорректном заголовке `Authorization: Negotiate` будет показана форма пароля вместо ответа 401 с `WWW-Authenticate: Negotiate`.
+                        keytabSecretName:
+                          description: |
+                            Имя Secret в namespace `d8-user-authn`, содержащего ключ `krb5.keytab`, который монтируется в Pod Dex.
+                        krb5ConfConfigMapName:
+                          description: |
+                            Необязательное имя ConfigMap с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
+                        krb5ConfSecretName:
+                          description: |
+                            Необязательное имя Secret с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
     - name: v1
       schema:
         openAPIV3Schema:
