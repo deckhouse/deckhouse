@@ -31,6 +31,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -287,6 +288,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
+		dependency.TestDC.CRClient.GetMock.Optional().Set(func(_ context.Context, tag string) (*remote.Descriptor, error) {
+			if tag == "alpha" {
+				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
+			}
+
+			return &remote.Descriptor{
+				Descriptor: crv1.Descriptor{
+					Digest: crv1.Hash{
+						Algorithm: "sha256",
+						Hex:       "0000000000000000000000000000000000000000000000000000000000000000",
+					},
+				},
+			}, nil
+		})
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
@@ -592,7 +607,18 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
 
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.
+			GetMock.Optional().Set(func(_ context.Context, _ string) (*remote.Descriptor, error) {
+			return &remote.Descriptor{
+				Descriptor: crv1.Descriptor{
+					Digest: crv1.Hash{
+						Algorithm: "sha256",
+						Hex:       "0000000000000000000000000000000000000000000000000000000000000000",
+					},
+				},
+			}, nil
+		}).
+			ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel
@@ -639,6 +665,15 @@ accessibility:
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
+
+	dc.CRClient.GetMock.Optional().Return(&remote.Descriptor{
+		Descriptor: crv1.Descriptor{
+			Digest: crv1.Hash{
+				Algorithm: "sha256",
+				Hex:       "0000000000000000000000000000000000000000000000000000000000000000",
+			},
+		},
+	}, nil)
 
 	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
 		ManifestStub: manifestStub,
