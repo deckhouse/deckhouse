@@ -29,8 +29,6 @@ import (
 
 const (
 	taskTracer = "appstartup"
-
-	queueSync = "sync"
 )
 
 type DependencyContainer interface {
@@ -63,44 +61,35 @@ func (t *task) Execute(ctx context.Context) error {
 
 	infos, err := t.dc.PackageManager().InitializeHooks(ctx, t.name)
 	if err != nil {
-		return fmt.Errorf("enable kubernetes hooks for '%s': %w", t.name, err)
+		return fmt.Errorf("initialize hooks for '%s': %w", t.name, err)
 	}
 
-	waitTasks := make(map[string][]queue.Task)
-	tasks := make(map[string][]queue.Task)
+	t.logger.Debug("wait for sync tasks to finish", slog.String("name", t.name))
+
+	wg := new(sync.WaitGroup)
 	for hook, info := range infos {
 		for _, hookInfo := range info {
 			syncTask := hooksync.New(t.name, hook, hookInfo, t.dc, t.logger)
 
 			queueName := hookInfo.QueueName
 			if queueName == "main" {
-				queueName = fmt.Sprintf("%s-%s", t.name, queueSync)
+				queueName = t.name
+
+				// place wait tasks in different sync queue to not block their execution
+				if hookInfo.KubernetesBinding.WaitForSynchronization {
+					queueName = fmt.Sprintf("%s-sync", t.name)
+				}
 			}
 
 			if hookInfo.KubernetesBinding.WaitForSynchronization {
-				waitTasks[queueName] = append(waitTasks[queueName], syncTask)
+				t.dc.QueueService().Enqueue(ctx, queueName, syncTask, queue.WithWait(wg))
 				continue
 			}
 
-			tasks[queueName] = append(tasks[queueName], syncTask)
-		}
-	}
-
-	t.logger.Debug("wait for sync tasks to finish", slog.String("name", t.name), slog.Int("tasks", len(waitTasks)))
-
-	wg := new(sync.WaitGroup)
-	for q, toProcess := range waitTasks {
-		for _, waitTask := range toProcess {
-			t.dc.QueueService().Enqueue(ctx, q, waitTask, queue.WithWait(wg))
+			t.dc.QueueService().Enqueue(ctx, queueName, syncTask)
 		}
 	}
 	wg.Wait()
-
-	for q, toProcess := range tasks {
-		for _, syncTask := range toProcess {
-			t.dc.QueueService().Enqueue(ctx, q, syncTask)
-		}
-	}
 
 	t.logger.Debug("run package startup hooks", slog.String("name", t.name))
 
