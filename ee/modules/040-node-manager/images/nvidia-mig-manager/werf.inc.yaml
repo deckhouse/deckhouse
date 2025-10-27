@@ -15,6 +15,11 @@ import:
     - nvidia-mig-manager
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+  add: /usr/lib64
+  includePaths:
+    - ld-linux-x86-64.so.2
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/lib/x86_64-linux-gnu
   includePaths:
     - ld-linux-x86-64.so.2
