@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +40,7 @@ const (
 	controllerName = "d8-application-package-version-controller"
 
 	maxConcurrentReconciles = 1
+	requeueTime             = 30 * time.Second
 )
 
 type reconciler struct {
@@ -108,9 +110,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		r.logger.Warn("failed to handle application package version", slog.String("name", req.Name), log.Err(err))
 
-		res.Requeue = true
-
-		return res, err
+		res.RequeueAfter = requeueTime
+		return res, nil
 	}
 
 	return res, nil
@@ -132,14 +133,14 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 			fmt.Sprintf("failed to get packageRepository %s: %s", packageVersion.Spec.Repository, err.Error()),
 		)
 
-		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
-		if err2 != nil {
-			// TODO: is return needed?
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
 		}
 
 		return fmt.Errorf("get packageRepository %s: %w", packageVersion.Spec.Repository, err)
 	}
+
 	r.logger.Debug("got package repository",
 		slog.String("package_version", packageVersion.Name),
 		slog.String("repo", packageRepo.Spec.Registry.Repo))
@@ -165,10 +166,9 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 			fmt.Sprintf("failed to get registry client: %s", err.Error()),
 		)
 
-		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
-		if err2 != nil {
-			// TODO: is return needed?
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
 		}
 
 		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
@@ -185,9 +185,9 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 			fmt.Sprintf("failed to get image: %s", err.Error()),
 		)
 
-		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
-		if err2 != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
 		}
 
 		return fmt.Errorf("get image for %s: %w", packageVersion.Name+":"+packageVersion.Spec.Version, err)
@@ -203,9 +203,9 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
 		)
 
-		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
-		if err2 != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
 		}
 
 		return fmt.Errorf("failed to fetch package metadata %s: %w", packageVersion.Name, err)
