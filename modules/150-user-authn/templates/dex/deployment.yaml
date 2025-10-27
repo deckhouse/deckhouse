@@ -82,7 +82,7 @@ spec:
         secret:
           secretName: {{ $p.ldap.kerberos.keytabSecretName | quote }}
       {{- end }}
-      {{- /* krb5.conf не требуется для офлайн-проверки AP-REQ */}}
+      {{- /* krb5.conf is not required for offline AP-REQ validation */}}
       {{- end }}
       {{- end }}
       {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
@@ -146,7 +146,7 @@ spec:
           mountPath: {{ printf "/etc/dex/kerberos/%s" $p.id | quote }}
           readOnly: true
         {{- end }}
-        {{- /* krb5.conf не требуется для офлайн-проверки AP-REQ */}}
+        {{- /* krb5.conf is not required for offline AP-REQ validation */}}
         {{- end }}
         {{- end }}
         {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
