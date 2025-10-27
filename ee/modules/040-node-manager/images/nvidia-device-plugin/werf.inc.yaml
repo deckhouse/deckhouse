@@ -61,6 +61,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /usr/lib/x86_64-linux-gnu
   includePaths:
+    - ld-linux-x86-64.so.2
     - libc.so.6
     - libresolv.so.2
     - libpthread.so.0
