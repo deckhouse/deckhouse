@@ -124,13 +124,17 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	err := r.client.Get(ctx, types.NamespacedName{Name: packageVersion.Spec.Repository}, &packageRepo)
 	if err != nil {
 		original := packageVersion.DeepCopy()
-		packageVersion := r.setConditionEnrichFalse(
-			packageVersion,
+
+		packageVersion.SetConditionFalse(
+			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", packageVersion.Spec.Repository, err.Error()))
+			fmt.Sprintf("failed to get packageRepository %s: %s", packageVersion.Spec.Repository, err.Error()),
+		)
 
 		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 		if err2 != nil {
+			// TODO: is return needed?
 			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
 		}
 
@@ -154,10 +158,12 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
 	if err != nil {
 		original := packageVersion.DeepCopy()
-		packageVersion := r.setConditionEnrichFalse(
-			packageVersion,
+		packageVersion.SetConditionFalse(
+			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
-			fmt.Sprintf("failed to get registry client: %s", err.Error()))
+			fmt.Sprintf("failed to get registry client: %s", err.Error()),
+		)
 
 		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 		if err2 != nil {
@@ -172,10 +178,13 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	img, err := registryClient.Image(ctx, packageVersion.Spec.Version)
 	if err != nil {
 		original := packageVersion.DeepCopy()
-		packageVersion = r.setConditionEnrichFalse(
-			packageVersion,
+		packageVersion.SetConditionFalse(
+			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
-			fmt.Sprintf("failed to get image: %s", err.Error()))
+			fmt.Sprintf("failed to get image: %s", err.Error()),
+		)
+
 		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 		if err2 != nil {
 			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
@@ -187,10 +196,13 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
 		original := packageVersion.DeepCopy()
-		packageVersion = r.setConditionEnrichFalse(
-			packageVersion,
+		packageVersion.SetConditionFalse(
+			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()))
+			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
+		)
+
 		err2 := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 		if err2 != nil {
 			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
@@ -213,6 +225,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 		Status:             corev1.ConditionTrue,
 		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
 	})
+	packageVersion.SetConditionTrue(v1alpha1.ApplicationPackageVersionConditionTypeEnriched, v1.NewTime(r.dc.GetClock().Now()))
 
 	r.logger.Debug("patch package version status", slog.String("name", packageVersion.Name))
 	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
@@ -237,18 +250,6 @@ func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.Applicat
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
 	return res, nil
-}
-
-func (r *reconciler) setConditionEnrichFalse(packageVersion *v1alpha1.ApplicationPackageVersion, reason string, message string) *v1alpha1.ApplicationPackageVersion {
-	packageVersion.Status.Conditions = append(packageVersion.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
-		Type:               v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: v1.NewTime(r.dc.GetClock().Now()),
-	})
-
-	return packageVersion
 }
 
 func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {

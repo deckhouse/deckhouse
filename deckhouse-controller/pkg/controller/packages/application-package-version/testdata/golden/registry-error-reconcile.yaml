@@ -15,7 +15,7 @@ spec:
   version: 1.0.0
 status:
   conditions:
-  - lastProbeTime: null
+  - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'failed to get image: registry error'
     reason: GetImageError
