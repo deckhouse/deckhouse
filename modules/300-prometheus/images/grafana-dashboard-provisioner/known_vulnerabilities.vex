@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-7d25c2c773a48cfa3c9c0cf8377df39b47924e19f2ddd98b95a8060b032a8c7f",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2025-10-27T18:15:55.959023+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-8869"
+      },
+      "timestamp": "2025-10-27T18:15:55.959024+03:00",
+      "products": [
+        {
+          "@id": "pkg:pypi/pip"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Для эксплуатации CVE-2025-8869 необходима установка вредоносного Python-пакета. В Deckhouse все зависимости фиксируются в requirements.txt под контролем Git с обязательным code review. Атакующий не может внедрить вредоносный пакет в процесс сборки без прохождения проверки и одобрения мейнтейнеров. Используется строгий контроль версий зависимостей с dependency pinning, исключающий непредвиденные обновления. Динамическая установка пакетов из внешних источников во время сборки отсутствует."
+    }
+  ]
+}
