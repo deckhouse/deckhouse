@@ -1,3 +1,4 @@
+{{- $version := "2.5.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -24,7 +25,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --branch=v2.4.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/ebpf_exporter.git ebpf-exporter
+  - git clone --branch=v{{ $version }} --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/ebpf_exporter.git ebpf-exporter
   - cd ebpf-exporter
   - git apply /patches/*.patch --verbose
   - mkdir -p libbpf
