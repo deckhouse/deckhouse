@@ -23,14 +23,14 @@ import (
 type Installer struct {
 }
 
-func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
+func (i *Installer) Install(_ context.Context, _, _, _ string) error {
 	return nil
 }
 
-func (i *Installer) Uninstall(ctx context.Context, module string) error {
+func (i *Installer) Uninstall(_ context.Context, _ string) error {
 	return nil
 }
 
-func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName string, moduleVersion string) (string, error) {
+func (i *Installer) Download(_ context.Context, _ *v1alpha1.ModuleSource, _ string, _ string) (string, error) {
 	return "testdata//validation/module", nil
 }

@@ -1089,7 +1089,7 @@ func (suite *ModuleLoaderTestSuite) cleanupPaths(paths []string) { //nolint:revi
 	}
 }
 
-type moduleSuite struct {
+type moduleSuite struct { //nolint:revive,unused
 	name           string
 	version        string
 	weight         int
