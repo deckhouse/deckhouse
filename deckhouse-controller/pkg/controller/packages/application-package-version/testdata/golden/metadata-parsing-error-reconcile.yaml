@@ -4,10 +4,11 @@ kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
+    draft: "true"
     package: test-package
     repository: test-repo
   name: test-apv
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test-package
   repository: test-repo

@@ -314,6 +314,20 @@ version: "1.0.0"
 		})
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("two errors reconcile with golden file", func() {
+		// Override with invalid package.yaml
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))
+
+		suite.setupController("two-errors-reconcile.yaml", withDependencyContainer(dc))
+
+		apv := suite.getApplicationPackageVersion("test-apv")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: apv.Name},
+		})
+		require.Error(suite.T(), err)
+	})
 }
 
 // nolint:unparam
