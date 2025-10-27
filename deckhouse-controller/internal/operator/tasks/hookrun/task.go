@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/apprun"
@@ -35,7 +34,6 @@ const (
 type DependencyContainer interface {
 	QueueService() *queue.Service
 	PackageManager() *packagemanager.Manager
-	HelmResourcesManager() helmresourcesmanager.HelmResourcesManager
 }
 
 type task struct {
@@ -65,10 +63,6 @@ func (t *task) Name() string {
 
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("run package hook", slog.String("hook", t.hook), slog.String("name", t.name))
-
-	// TODO(ipaqsa): how to work with parallel hooks?
-	// t.dc.HelmResourcesManager().PauseMonitor(t.name)
-	// defer t.dc.HelmResourcesManager().ResumeMonitor(t.name)
 
 	valuesChanged, err := t.dc.PackageManager().RunPackageHook(ctx, t.name, t.hook, t.bctx)
 	if err != nil {

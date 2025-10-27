@@ -76,16 +76,6 @@ type Handler struct {
 	logger *log.Logger
 }
 
-// ScheduleTasks is a function that converts a cron schedule trigger into queue tasks.
-// It receives the cron schedule string and returns a map of queue names to tasks.
-// The returned map keys are queue names, and values are task lists to enqueue.
-type ScheduleTasks func(ctx context.Context, crontab string) map[string][]queue.Task
-
-// KubeTasks is a function that converts a Kubernetes event into queue tasks.
-// It receives a Kubernetes event and returns a map of queue names to tasks.
-// The returned map keys are queue names, and values are task lists to enqueue.
-type KubeTasks func(ctx context.Context, kubeEvent kemtypes.KubeEvent) map[string][]queue.Task
-
 // New creates a new Handler with the given configuration.
 // The returned Handler is ready to be started with Start().
 //
@@ -184,6 +174,9 @@ func (h *Handler) Stop() {
 	}
 }
 
+// kubeTaskBuilder converts a Kubernetes event into queue tasks.
+// It receives a Kubernetes event and returns a map of queue names to tasks.
+// The returned map keys are queue names, and values are task lists to enqueue.
 func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEvent) map[string][]queue.Task {
 	builder := func(ctx context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
 		queueName := info.QueueName
@@ -197,6 +190,9 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 	return h.dc.PackageManager().BuildKubeTasks(ctx, kubeEvent, builder)
 }
 
+// scheduleTaskBuilder converts a cron schedule trigger into queue tasks.
+// It receives the cron schedule string and returns a map of queue names to tasks.
+// The returned map keys are queue names, and values are task lists to enqueue.
 func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[string][]queue.Task {
 	builder := func(ctx context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task) {
 		queueName := info.QueueName

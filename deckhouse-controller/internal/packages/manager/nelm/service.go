@@ -348,7 +348,7 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 		return true, nil
 	}
 
-	s.logger.Warn("no helm chart found in path", path)
+	s.logger.Warn("no helm chart found in path", slog.String("path", path))
 
 	return false, nil
 }

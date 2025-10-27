@@ -55,7 +55,7 @@ func (m *mockTask) ExecutionCount() int {
 func newMockTask(name string) *mockTask {
 	return &mockTask{
 		name: name,
-		execFunc: func(ctx context.Context) error {
+		execFunc: func(_ context.Context) error {
 			return nil
 		},
 	}
@@ -73,7 +73,7 @@ func newMockTaskWithFunc(name string, execFunc func(ctx context.Context) error) 
 func newFailingTask(name string, err error) *mockTask {
 	return &mockTask{
 		name: name,
-		execFunc: func(ctx context.Context) error {
+		execFunc: func(_ context.Context) error {
 			return err
 		},
 	}
@@ -129,7 +129,7 @@ func TestQueue_MultipleTasksExecuteSequentially(t *testing.T) {
 	var mu sync.Mutex
 
 	createTask := func(name string) *mockTask {
-		return newMockTaskWithFunc(name, func(ctx context.Context) error {
+		return newMockTaskWithFunc(name, func(_ context.Context) error {
 			mu.Lock()
 			executionOrder = append(executionOrder, name)
 			mu.Unlock()
@@ -312,7 +312,7 @@ func TestQueue_EmptyQueue(t *testing.T) {
 }
 
 // TestQueue_ConcurrentEnqueue tests multiple concurrent enqueues
-func TestQueue_ConcurrentEnqueue(t *testing.T) {
+func TestQueue_ConcurrentEnqueue(_ *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -327,7 +327,7 @@ func TestQueue_ConcurrentEnqueue(t *testing.T) {
 
 	// Enqueue many tasks concurrently
 	for i := 0; i < numTasks; i++ {
-		go func(n int) {
+		go func(_ int) {
 			defer startWg.Done()
 			task := newMockTask("task")
 			q.Enqueue(ctx, task, WithWait(&wg))

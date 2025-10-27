@@ -48,6 +48,10 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 
 	m.logger.Debug("run package hook", slog.String("hook", hook), slog.String("name", name))
 
+	// TODO(ipaqsa): how to work with parallel hooks?
+	// t.dc.HelmResourcesManager().PauseMonitor(t.name)
+	// defer t.dc.HelmResourcesManager().ResumeMonitor(t.name)
+
 	app, err := m.getApp(name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

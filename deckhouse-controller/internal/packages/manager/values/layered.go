@@ -15,8 +15,9 @@
 package values
 
 import (
-	"github.com/deckhouse/module-sdk/pkg/utils"
 	addonvalues "github.com/flant/addon-operator/pkg/utils"
+
+	"github.com/deckhouse/module-sdk/pkg/utils"
 )
 
 // valuesTransform is a function type that transforms values based on current values.

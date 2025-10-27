@@ -67,10 +67,6 @@ func (t *task) Execute(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO(ipaqsa): how to work with parallel hooks?
-	// t.dc.HelmResourcesManager().PauseMonitor(t.name)
-	// defer t.dc.HelmResourcesManager().ResumeMonitor(t.name)
-
 	if _, err := t.dc.PackageManager().RunPackageHook(ctx, t.name, t.hook, t.info.BindingContext); err != nil {
 		if !t.info.AllowFailure {
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)

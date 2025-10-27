@@ -118,7 +118,7 @@ func TestService_RemoveQueue(t *testing.T) {
 }
 
 // TestService_RemoveNonExistentQueue tests removing a queue that doesn't exist
-func TestService_RemoveNonExistentQueue(t *testing.T) {
+func TestService_RemoveNonExistentQueue(_ *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
