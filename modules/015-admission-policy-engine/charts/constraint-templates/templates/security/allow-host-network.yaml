@@ -50,34 +50,58 @@ spec:
       rego: |
         package d8.security_policies
 
+
         violation[{"msg": msg, "details": {}}] {
-          input_share_hostnetwork(input.review.object)
-          msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+          check_host_network_violation
+          msg := sprintf("Host network usage is not allowed for pod %v.", [input.review.object.metadata.name])
         }
 
-        input_share_hostnetwork(o) {
+        violation[{"msg": msg, "details": {}}] {
+          check_host_ports_violation
+          msg := sprintf("Host ports are not allowed for pod %v.", [input.review.object.metadata.name])
+        }
+
+        check_host_network_violation {
+          not has_host_network_exception(input.review.object)
+          input.spec.hostNetwork
           not input.parameters.allowHostNetwork
-          o.spec.hostNetwork
         }
 
-        input_share_hostnetwork(o) {
+        check_host_ports_violation {
+          not has_host_ports_exception(input.review.object)
           hostPort := input_containers[_].ports[_].hostPort
           not in_range(input.parameters.ranges, hostPort)
         }
 
-        in_range(ranges, port) {
-          matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
-          count(matching) > 0
+        has_host_network_exception(obj) {
+          label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
+          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"].[label]
+
+          exception != null
+          exception.spec.network.hostNetwork.allowedValue == input.parameters.allowHostNetwork
+        }
+
+        has_host_ports_exception(obj) {
+          label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
+          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"].[label]
+
+          exception != null
+          hostPorts := {port | port := input_containers[_].ports[_].hostPort}
+          {port | port := hostPorts} <= {p | p := exception.spec.network.hostPorts.allowedValues[_].port}
         }
 
         input_containers[c] {
           c := input.review.object.spec.containers[_]
         }
-
         input_containers[c] {
           c := input.review.object.spec.initContainers[_]
         }
-
         input_containers[c] {
           c := input.review.object.spec.ephemeralContainers[_]
+        }
+
+        in_range(ranges, port) {
+          some r
+          ranges[r].min <= port
+          ranges[r].max >= port
         }
