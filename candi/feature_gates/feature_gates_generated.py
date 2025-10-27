@@ -89,3 +89,43 @@ versions = {
         ],
     },
 }
+
+class FeatureGateInfo:
+    
+    def __init__(
+        self,
+        exists: bool = False,
+        is_deprecated: bool = False,
+        is_forbidden: bool = False,
+    ):
+        self.exists = exists
+        self.is_deprecated = is_deprecated
+        self.is_forbidden = is_forbidden
+    
+    def __repr__(self):
+        return (
+            f"FeatureGateInfo(exists={self.exists}, "
+            f"is_deprecated={self.is_deprecated}, is_forbidden={self.is_forbidden})"
+        )
+
+def get_feature_gate_info(version: str, component: str, feature_name: str) -> FeatureGateInfo:
+    info = FeatureGateInfo()
+    
+    if version not in versions:
+        return info
+    
+    features = versions[version]
+    
+    if "deprecated" in features and feature_name in features["deprecated"]:
+        info.is_deprecated = True
+    
+    if "forbidden" in features and feature_name in features["forbidden"]:
+        info.is_forbidden = True
+    
+    if component not in ["kubelet", "apiserver", "kube-controller-manager", "kube-scheduler"]:
+        return info
+    
+    if component in features and feature_name in features[component]:
+        info.exists = True
+    
+    return info

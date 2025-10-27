@@ -12,6 +12,12 @@ type ComponentFeatures struct {
 	KubeScheduler         []string
 }
 
+type FeatureGateInfo struct {
+	Exists bool
+	IsDeprecated bool
+	IsForbidden bool
+}
+
 var FeatureGatesMap = map[string]ComponentFeatures{
 	"1.29": {
 		Kubelet: []string{
@@ -99,4 +105,50 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"SchedulerQueueingHints",
 		},
 	},
+}
+
+func GetFeatureGateInfo(version, component, featureName string) FeatureGateInfo {
+	info := FeatureGateInfo{}
+	
+	features, ok := FeatureGatesMap[version]
+	if !ok {
+		return info
+	}
+	
+	for _, name := range features.Deprecated {
+		if name == featureName {
+			info.IsDeprecated = true
+			break
+		}
+	}
+	
+	for _, name := range features.Forbidden {
+		if name == featureName {
+			info.IsForbidden = true
+			break
+		}
+	}
+	
+	var featureList []string
+	switch component {
+	case "kubelet":
+		featureList = features.Kubelet
+	case "apiserver":
+		featureList = features.APIServer
+	case "kube-controller-manager":
+		featureList = features.KubeControllerManager
+	case "kube-scheduler":
+		featureList = features.KubeScheduler
+	default:
+		return info
+	}
+	
+	for _, name := range featureList {
+		if name == featureName {
+			info.Exists = true
+			return info
+		}
+	}
+	
+	return info
 }
