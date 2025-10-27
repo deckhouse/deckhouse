@@ -47,3 +47,7 @@ Upstream PR: https://github.com/dexidp/dex/pull/4363
 ### 008-insecure-skip-email-verified.patch
 
 This patch fixes the behavior of `insecureSkipEmailVerified` flag in OIDC connector to completely remove the `email_verified` claim from identity when the flag is enabled.
+
+### 009-kerberos-ldap-spnego.patch
+
+Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
