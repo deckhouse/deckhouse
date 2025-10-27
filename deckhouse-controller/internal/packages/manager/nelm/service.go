@@ -169,12 +169,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		return ErrPackageNotHelm
 	}
 
-	// Prepare values with package key as top-level key
-	chartValues := map[string]interface{}{
-		app.GetValuesKey(): app.GetValues(),
-	}
-
-	valuesPath, err := s.createTmpValuesFile(app.GetValuesKey(), chartValues)
+	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetHelmValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create values file: %w", err)

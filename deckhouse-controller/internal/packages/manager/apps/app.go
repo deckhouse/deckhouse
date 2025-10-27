@@ -138,12 +138,11 @@ func (a *Application) GetValuesChecksum() string {
 	return a.values.GetValues().Checksum()
 }
 
-func (a *Application) GetValues() addonutils.Values {
-	return a.values.GetValues()
-}
-
-func (a *Application) GetValuesKey() string {
-	return a.packageName
+// GetHelmValues returns values for rendering
+func (a *Application) GetHelmValues() addonutils.Values {
+	return addonutils.Values{
+		a.packageName: a.values.GetValues(),
+	}
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.
