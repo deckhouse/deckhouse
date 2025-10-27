@@ -13,7 +13,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
         }
       ],
       "status": "not_affected",
