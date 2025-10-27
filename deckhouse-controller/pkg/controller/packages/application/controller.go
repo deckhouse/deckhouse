@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -37,15 +38,18 @@ const (
 
 type reconciler struct {
 	client client.Client
+	dc     dependency.Container
 	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
+	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
+		dc:     dc,
 		logger: logger,
 	}
 
@@ -86,9 +90,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handle(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
-	// TODO: implement application reconciliation logic
+	res := ctrl.Result{}
+
 	r.logger.Info("handling Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
-	return ctrl.Result{}, nil
+
+	//
+
+	return res, nil
 }
 
 func (r *reconciler) delete(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
