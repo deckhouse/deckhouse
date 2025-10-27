@@ -13,22 +13,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --branch=v2.5.1 --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/ebpf_exporter.git ebpf-exporter
+  - git clone --branch=v2.5.1 --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/ebpf_exporter.git ebpf-exporter --verbose
   - cd ebpf-exporter
-  - git apply /patches/*.patch --verbose
   - mkdir -p libbpf
-  - git clone --branch v1.5.0 --depth=1 $(cat /run/secrets/SOURCE_REPO)/libbpf/libbpf.git libbpf
+  - git clone --branch v1.5.0 --depth=1 $(cat /run/secrets/SOURCE_REPO)/libbpf/libbpf.git libbpf --verbose
   - rm -rf libbpf/.git .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
