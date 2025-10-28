@@ -46,7 +46,7 @@ func New(name string, subtasks map[string]queue.Task, dc DependencyContainer, lo
 	}
 }
 
-func (t *task) Name() string {
+func (t *task) String() string {
 	return fmt.Sprintf("Parallel:%s", t.name)
 }
 
