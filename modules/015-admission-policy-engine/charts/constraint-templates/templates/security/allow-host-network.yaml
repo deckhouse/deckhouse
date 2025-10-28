@@ -66,7 +66,7 @@ spec:
         allowed_by_securitypolicyexeption(obj) {
             label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
             exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-            exception.spec.network.hostNetwork.allowedValue != input.parameters.allowHostNetwork
+            exception.spec.network.hostNetwork.allowedValue == input.parameters.allowHostNetwork
         }
 
         allowed_by_securitypolicy(obj) {
