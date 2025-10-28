@@ -11,6 +11,7 @@ import:
   - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/libc.so
+  excludePaths:
   - usr/lib/python3.12/site-packages/pip-25*
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
