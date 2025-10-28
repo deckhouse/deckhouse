@@ -19,11 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -453,4 +456,115 @@ func TestHTTPEndpoints(t *testing.T) {
 			assert.Equal(t, tc.expected, statusCode)
 		})
 	}
+}
+
+// TestMetricsEndpointExcludesGoMetrics tests that metrics endpoint doesn't expose golang built-in metrics
+func TestMetricsEndpointExcludesGoMetrics(t *testing.T) {
+	// Create fake Kubernetes client
+	clientset := fake.NewSimpleClientset()
+
+	// Create collector
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	assert.NoError(t, err)
+
+	// Add test data
+	testNodeGroup := &k8s.NodeGroupWrapper{
+		NodeGroup: &k8s.NodeGroup{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "deckhouse.io/v1",
+				Kind:       "NodeGroup",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-worker",
+				Namespace: "default",
+			},
+			Spec: k8s.NodeGroupSpec{
+				NodeType: "Cloud",
+				CloudInstances: &k8s.CloudInstancesSpec{
+					MaxPerZone: 3,
+					Zones:      []string{"zone-a"},
+				},
+			},
+		},
+	}
+
+	testNode := &k8s.Node{
+		Node: &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-node-1",
+				Labels: map[string]string{
+					"node.deckhouse.io/group": "test-worker",
+				},
+			},
+			Status: v1.NodeStatus{
+				Conditions: []v1.NodeCondition{
+					{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionTrue,
+					},
+				},
+			},
+		},
+		NodeGroup: "test-worker",
+	}
+
+	nodeGroupCollector.OnNodeGroupAdd(testNodeGroup)
+	nodeGroupCollector.OnNodeAdd(testNode)
+
+	// Create custom registry (like in main.go after fix)
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(nodeGroupCollector)
+
+	// Start HTTP server on random port
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	server := &http.Server{
+		Handler: mux,
+	}
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.NoError(t, err)
+	server.Addr = listener.Addr().String()
+
+	serverDone := make(chan error, 1)
+	go func() {
+		serverDone <- http.Serve(listener, server.Handler)
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+
+	url := "http://" + server.Addr + "/metrics"
+	resp, err := http.Get(url)
+	if err != nil {
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		server.Shutdown(ctx)
+		listener.Close()
+		t.Fatalf("Failed to get metrics: %v", err)
+	}
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	metricsContent := string(body)
+
+	assert.Contains(t, metricsContent, "node_group_count_nodes_total")
+	assert.Contains(t, metricsContent, "node_group_count_ready_total")
+	assert.Contains(t, metricsContent, "node_group_count_max_total")
+	assert.Contains(t, metricsContent, "node_group_node")
+	assert.NotContains(t, metricsContent, "go_info")
+	assert.NotContains(t, metricsContent, "go_gc_")
+	assert.NotContains(t, metricsContent, "go_memstats")
+	assert.NotContains(t, metricsContent, "go_threads")
+	assert.NotContains(t, metricsContent, "go_goroutines")
+
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	server.Shutdown(ctx)
+	listener.Close()
 }

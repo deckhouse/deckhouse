@@ -75,12 +75,13 @@ func main() {
 		log.Fatalf("Failed to start collector: %v", err)
 	}
 
-	// Register collector with Prometheus
-	prometheus.MustRegister(nodegroupCollector)
+	// Create custom registry to exclude golang metrics
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(nodegroupCollector)
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
