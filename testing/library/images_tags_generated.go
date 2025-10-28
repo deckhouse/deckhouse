@@ -392,6 +392,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"capiControllerManager":           "imageHash-nodeManager-capiControllerManager",
 		"capsControllerManager":           "imageHash-nodeManager-capsControllerManager",
 		"clusterAutoscaler129":            "imageHash-nodeManager-clusterAutoscaler129",
+		"nodeGroupExporter":               "imageHash-nodeManager-nodeGroupExporter",
 		"clusterAutoscaler129VexArtifact": "imageHash-nodeManager-clusterAutoscaler129VexArtifact",
 		"clusterAutoscaler130":            "imageHash-nodeManager-clusterAutoscaler130",
 		"clusterAutoscaler130VexArtifact": "imageHash-nodeManager-clusterAutoscaler130VexArtifact",
