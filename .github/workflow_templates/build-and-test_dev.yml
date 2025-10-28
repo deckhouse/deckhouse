@@ -23,6 +23,7 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 env:
 {!{ tmpl.Exec "werf_envs" (slice "dev") | strings.Indent 2 }!}
 

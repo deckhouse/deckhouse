@@ -24,6 +24,7 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 env:
   # <template: werf_envs>
   WERF_VERSION: "v2.51.0"
