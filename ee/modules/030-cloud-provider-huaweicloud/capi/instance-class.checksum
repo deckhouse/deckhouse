@@ -35,11 +35,6 @@
   {{- $serverGroupID = .nodeGroup.instanceClass.serverGroupID }}
 {{- end }}
 
-{{- $vipAddress := .nil }}
-{{- if .nodeGroup.instanceClass.vipAddress }}
-  {{- $vipAddress = .nodeGroup.instanceClass.vipAddress }}
-{{- end }}
-
 {{- $_ := set $options "imageName" .nodeGroup.instanceClass.imageName -}}
 {{- $_ := set $options "flavorName" .nodeGroup.instanceClass.flavorName -}}
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
