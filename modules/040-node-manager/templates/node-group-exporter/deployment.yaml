@@ -66,16 +66,6 @@ spec:
         args:
         - --server.exporter-address=127.0.0.1:9000
         - --server.log-level=info
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            scheme: HTTP
-            port: 9000
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            scheme: HTTP
-            port: 9000
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -99,11 +89,19 @@ spec:
             path: /livez
             port: 9001
             scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /livez
             port: 9001
             scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
