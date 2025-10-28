@@ -88,14 +88,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		r.logger.Warn("failed to get application package version", slog.String("name", req.Name), log.Err(err))
 
-		//return err
 		return res, err
 	}
 
 	// handle delete event
 	if !apv.DeletionTimestamp.IsZero() {
-		r.logger.Debug("deleting application package version", slog.String("name", req.Name))
-
 		return r.delete(ctx, apv)
 	}
 
@@ -137,7 +134,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
+			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
 		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.Repository, err)
@@ -169,7 +166,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
+			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
 		return fmt.Errorf("get registry client for %s: %w", apv.Name, err)
@@ -187,7 +184,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
+			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
 		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.Version, err)
@@ -204,7 +201,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
+			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
 		return fmt.Errorf("failed to fetch package metadata %s: %w", apv.Name, err)
@@ -214,7 +211,6 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 		logger.Debug("got metadata from package.yaml", slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
-	// Start changing the packageVersion object
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
 	// Patch the status
@@ -223,20 +219,24 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 	logger.Debug("patch package version status")
 	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, err)
+		return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, err)
 	}
 
 	// Delete label "draft" and patch the main object
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("patch packageVersion %s: %w", apv.Name, err)
+		return fmt.Errorf("patch ApplicationPackageVersion %s: %w", apv.Name, err)
 	}
 
 	return nil
 }
 
-func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) delete(_ context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+	logger := r.logger.With(slog.String("name", apv.Name))
+	logger.Debug("deleting ApplicationPackageVersion")
+	defer logger.Debug("delete ApplicationPackageVersion complete")
+
 	res := ctrl.Result{}
 
 	return res, nil
