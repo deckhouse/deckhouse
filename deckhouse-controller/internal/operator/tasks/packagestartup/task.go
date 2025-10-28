@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package appstartup
+package packagestartup
 
 import (
 	"context"
@@ -20,15 +20,15 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/apprun"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/hooksync"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/packagerun"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "appstartup"
+	taskTracer = "packageStartup"
 )
 
 type DependencyContainer interface {
@@ -52,8 +52,8 @@ func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 	}
 }
 
-func (t *task) Name() string {
-	return fmt.Sprintf("App:%s:Startup", t.name)
+func (t *task) String() string {
+	return fmt.Sprintf("Package:%s:Startup", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {
@@ -97,7 +97,7 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("startup package '%s': %w", t.name, err)
 	}
 
-	t.dc.QueueService().Enqueue(ctx, t.name, apprun.New(t.name, t.dc, t.logger))
+	t.dc.QueueService().Enqueue(ctx, t.name, packagerun.New(t.name, t.dc, t.logger))
 
 	return nil
 }

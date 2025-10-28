@@ -122,7 +122,7 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 		}
 	}
 
-	return nil, nil
+	return res, nil
 }
 
 // TaskBuilder used to create task from event to process
@@ -156,7 +156,7 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 	res := make(map[string][]queue.Task)
 
 	for _, app := range m.apps {
-		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
 			hookCtrl := hook.GetHookController()
 
 			// Handle hooks

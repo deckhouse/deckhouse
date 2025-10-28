@@ -22,10 +22,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -139,6 +141,8 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 	conf := apps.ApplicationConfig{
 		Namespace: inst.Namespace,
 
+		PackageName: inst.Package,
+
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
@@ -153,4 +157,24 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 	}
 
 	return app, nil
+}
+
+// loadDefinition reads and parses the package.yaml file from the package directory.
+// It validates YAML structure but doesn't validate content.
+//
+// Returns the parsed Definition or an error if reading or parsing fails.
+func loadDefinition(packageDir string) (*dto.Definition, error) {
+	path := filepath.Join(packageDir, dto.DefinitionFile)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	def := new(dto.Definition)
+	if err = yaml.Unmarshal(content, def); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	return def, nil
 }

@@ -79,7 +79,7 @@ func (s *Storage) GetHooksByBinding(binding shtypes.BindingType) []*hooks.Module
 		return nil
 	}
 
-	res := make([]*hooks.ModuleHook, 0, len(stored))
+	res := make([]*hooks.ModuleHook, len(stored))
 	copy(res, stored)
 
 	sort.Slice(res, func(i, j int) bool {

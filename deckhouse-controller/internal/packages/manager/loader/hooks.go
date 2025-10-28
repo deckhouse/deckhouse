@@ -63,8 +63,6 @@ var (
 
 // hookLoader handles discovery and loading of package hooks from the filesystem.
 // It supports both shell hooks (.sh, .py) and batch hooks (executables).
-//
-// WARNING: Has a CRITICAL bug in isExecutable() that inverts the logic (hooks.go:316-322).
 // This causes executable hooks to be rejected and non-executable files to be accepted.
 type hookLoader struct {
 	packageName string // Package name for hook context

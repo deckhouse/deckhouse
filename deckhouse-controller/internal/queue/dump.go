@@ -23,8 +23,9 @@ type dump struct {
 }
 
 type dumpQueue struct {
-	Name  string     `json:"name" yaml:"name"`
-	Tasks []dumpTask `json:"tasks,omitempty" yaml:"tasks,omitempty"`
+	Name   string     `json:"name" yaml:"name"`
+	Number int        `json:"number" yaml:"number"`
+	Tasks  []dumpTask `json:"tasks,omitempty" yaml:"tasks,omitempty"`
 }
 
 type dumpTask struct {
@@ -55,9 +56,12 @@ func (q *queue) dump() dumpQueue {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
+	tasks := q.getTasksDump()
+
 	return dumpQueue{
-		Name:  q.name,
-		Tasks: q.getTasksDump(),
+		Name:   q.name,
+		Number: len(tasks),
+		Tasks:  tasks,
 	}
 }
 
@@ -74,7 +78,7 @@ func (q *queue) getTasksDump() []dumpTask {
 
 		tasks = append(tasks, dumpTask{
 			Index: index,
-			Name:  wrapper.task.Name(),
+			Name:  wrapper.task.String(),
 			Error: errStr,
 		})
 

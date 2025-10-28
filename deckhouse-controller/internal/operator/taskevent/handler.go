@@ -136,19 +136,19 @@ func (h *Handler) Start(ctx context.Context) {
 				case crontab := <-h.dc.ScheduleEventManager().Ch():
 					// Convert schedule event to tasks using handler's context
 					h.logger.Info("creates schedule tasks", slog.String("crontab", crontab))
-					res = h.scheduleTaskBuilder(ctx, crontab)
+					res = h.scheduleTaskBuilder(h.ctx, crontab)
 
 				case kubeEvent := <-h.dc.KubeEventManager().Ch():
 					// Convert Kubernetes event to tasks using handler's context
 					h.logger.Info("creates kube events", slog.String("kubeEvent", kubeEvent.String()))
-					res = h.kubeTaskBuilder(ctx, kubeEvent)
+					res = h.kubeTaskBuilder(h.ctx, kubeEvent)
 				}
 
 				// Enqueue all tasks from the event handlers
 				// Uses handler's context for task lifecycle management
 				for queueName, tasks := range res {
 					for _, task := range tasks {
-						h.logger.Info("enqueue task", slog.String("task", task.Name()), slog.String("queue", queueName))
+						h.logger.Info("enqueue task", slog.String("task", task.String()), slog.String("queue", queueName))
 						h.dc.QueueService().Enqueue(h.ctx, queueName, task)
 					}
 				}

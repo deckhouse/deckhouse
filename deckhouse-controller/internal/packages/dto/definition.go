@@ -12,19 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loader
-
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"gopkg.in/yaml.v3"
-)
+package dto
 
 const (
-	// definitionFile is the filename for package metadata
-	definitionFile = "package.yaml"
+	// DefinitionFile is the filename for package metadata
+	DefinitionFile = "package.yaml"
 )
 
 // Definition represents package metadata loaded from package.yaml.
@@ -55,24 +47,4 @@ type Requirements struct {
 type DisableOptions struct {
 	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
-}
-
-// loadDefinition reads and parses the package.yaml file from the package directory.
-// It validates YAML structure but doesn't validate content.
-//
-// Returns the parsed Definition or an error if reading or parsing fails.
-func loadDefinition(packageDir string) (*Definition, error) {
-	path := filepath.Join(packageDir, definitionFile)
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read file '%s': %w", path, err)
-	}
-
-	def := new(Definition)
-	if err = yaml.Unmarshal(content, def); err != nil {
-		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
-	}
-
-	return def, nil
 }

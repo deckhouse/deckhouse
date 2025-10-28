@@ -49,7 +49,7 @@ type queue struct {
 
 // Task defines the interface for executable tasks.
 type Task interface {
-	Name() string
+	String() string
 	Execute(ctx context.Context) error // Executes the task, returning an error if it fails
 }
 
@@ -97,7 +97,7 @@ func WithWait(wg *sync.WaitGroup) EnqueueOption {
 	}
 }
 
-// WithUnique ensures that the task will not be enqueued if there are more than 2 same tasks(by name) in the queue.
+// WithUnique ensures that the task will not be enqueued if there are more than 1 same task(by string) in the queue.
 func WithUnique() EnqueueOption {
 	return func(o *EnqueueOptions) {
 		o.unique = true
@@ -125,9 +125,9 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 		nextRetry: time.Now(),
 	}
 
-	q.logger.Debug("enqueue task", slog.String("id", wrapper.id), slog.String("name", wrapper.task.Name()))
+	q.logger.Debug("enqueue task", slog.String("id", wrapper.id), slog.String("name", wrapper.task.String()))
 
-	if opt.unique && q.hasSeveral(task.Name()) {
+	if opt.unique && q.hasSeveral(task.String()) {
 		if opt.wg != nil {
 			opt.wg.Done()
 		}
@@ -218,7 +218,7 @@ func (q *queue) processOne() bool {
 	// Check for parent context cancellation
 	select {
 	case <-t.ctx.Done():
-		q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.Name()))
+		q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
 		if t.wg != nil {
 			t.wg.Done()
 		}
@@ -232,16 +232,16 @@ func (q *queue) processOne() bool {
 	default:
 	}
 
-	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.Name()))
+	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
 
 	// Execute the task
 	if err := t.task.Execute(t.ctx); err != nil {
-		q.logger.Warn("task failed", slog.String("id", t.id), slog.String("name", t.task.Name()))
+		q.logger.Warn("task failed", slog.String("id", t.id), slog.String("name", t.task.String()))
 
 		// Check context again before retrying
 		select {
 		case <-t.ctx.Done():
-			q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.Name()))
+			q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
 			if t.wg != nil {
 				t.wg.Done()
 			}
@@ -303,7 +303,7 @@ func (q *queue) hasSeveral(name string) bool {
 
 	firstFound := false
 	for wrapper := range q.deque.Iter() {
-		if wrapper.task.Name() == name {
+		if wrapper.task.String() == name {
 			if firstFound {
 				return true
 			}

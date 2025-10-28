@@ -21,14 +21,14 @@ import (
 
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/apprun"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/packagerun"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "hookrun"
+	taskTracer = "hookRun"
 )
 
 type DependencyContainer interface {
@@ -57,12 +57,12 @@ func New(name, hook string, bctx []bindingcontext.BindingContext, dc DependencyC
 	}
 }
 
-func (t *task) Name() string {
-	return fmt.Sprintf("App:%s:Hook:%s:Run", t.name, t.hook)
+func (t *task) String() string {
+	return fmt.Sprintf("Package:%s:Hook:%s:Run", t.name, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("run package hook", slog.String("hook", t.hook), slog.String("name", t.name))
+	t.logger.Debug("run hook", slog.String("hook", t.hook), slog.String("name", t.name))
 
 	valuesChanged, err := t.dc.PackageManager().RunPackageHook(ctx, t.name, t.hook, t.bctx)
 	if err != nil {
@@ -70,7 +70,7 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 
 	if valuesChanged {
-		t.dc.QueueService().Enqueue(ctx, t.name, apprun.New(t.name, t.dc, t.logger), queue.WithUnique())
+		t.dc.QueueService().Enqueue(ctx, t.name, packagerun.New(t.name, t.dc, t.logger), queue.WithUnique())
 	}
 
 	return nil

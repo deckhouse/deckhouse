@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package appdisable
+package packagedisable
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	taskTracer = "appdisable"
+	taskTracer = "packageDisable"
 )
 
 type DependencyContainer interface {
@@ -49,12 +49,12 @@ type task struct {
 	logger *log.Logger
 }
 
-func (t *task) Name() string {
-	return fmt.Sprintf("App:%s:Disable", t.name)
+func (t *task) String() string {
+	return fmt.Sprintf("Package:%s:Disable", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("delete package", slog.String("name", t.name))
+	t.logger.Debug("disable package", slog.String("name", t.name))
 
 	// delete nelm release, stop kube monitors and schedules
 	if err := t.dc.PackageManager().DisablePackage(ctx, t.name); err != nil {

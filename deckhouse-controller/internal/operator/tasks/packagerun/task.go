@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apprun
+package packagerun
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	taskTracer = "apprun"
+	taskTracer = "packageRun"
 )
 
 type DependencyContainer interface {
@@ -48,8 +48,8 @@ func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 	}
 }
 
-func (t *task) Name() string {
-	return fmt.Sprintf("App:%s:Run", t.name)
+func (t *task) String() string {
+	return fmt.Sprintf("Package:%s:Run", t.name)
 }
 
 func (t *task) Execute(ctx context.Context) error {

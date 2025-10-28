@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	taskTracer = "hooksync"
+	taskTracer = "hookSync"
 )
 
 type DependencyContainer interface {
@@ -55,8 +55,8 @@ func New(name, hook string, info hookcontroller.BindingExecutionInfo, dc Depende
 	}
 }
 
-func (t *task) Name() string {
-	return fmt.Sprintf("App:%s:Hook:%s:Sync", t.name, t.hook)
+func (t *task) String() string {
+	return fmt.Sprintf("Package:%s:Hook:%s:Sync", t.name, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {

@@ -159,7 +159,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 		return fmt.Errorf("run before helm hooks: %w", err)
 	}
 
-	if err = m.nelm.Upgrade(ctx, app); err != nil && errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err = m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("upgrade nelm package: %w", err)
 	}
@@ -172,7 +172,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err = m.nelm.Upgrade(ctx, app); err != nil && errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err = m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("install nelm package: %w", err)
 		}
