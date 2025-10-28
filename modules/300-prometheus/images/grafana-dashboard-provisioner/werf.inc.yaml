@@ -1,3 +1,4 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
@@ -10,11 +11,11 @@ import:
   - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/libc.so
+  - usr/lib/python3.12/site-packages/pip-25*
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
 {{- include "image mount points" . }}  
----
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
