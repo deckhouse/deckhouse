@@ -27,7 +27,7 @@ To start working with the NetApp storage system, follow the step-by-step instruc
 To work with snapshots, the [snapshot-controller](/modules/snapshot-controller/) module must be connected.
 {% endalert %}
 
-1. Execute the command to activate the `csi-netapp` module. 
+1. Execute the command to activate the `csi-netapp` module.
 
    ```shell
    d8 s module enable csi-netapp
