@@ -23,16 +23,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/kube-client/manifest"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm/monitor"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -45,32 +45,35 @@ const (
 
 var ErrPackageNotHelm = errors.New("package not helm")
 
-// DependencyContainer provides access to Helm resource monitoring.
-type DependencyContainer interface {
-	HelmResourcesManager() helmresourcesmanager.HelmResourcesManager
-}
-
 // Service manages Helm release lifecycle via nelm client.
 // It provides upgrade, deletion, and rendering operations.
 type Service struct {
-	namespace string // Kubernetes namespace for releases
-	tmpDir    string // Temporary directory for values files
+	tmpDir string // Temporary directory for values files
 
-	client *nelm.Client        // nelm client for Helm operations
-	dc     DependencyContainer // Access to resource monitoring
+	client         *nelm.Client // nelm client for Helm operations
+	monitorManager *monitor.Manager
 
 	logger *log.Logger
 }
 
 // New creates a new nelm service for managing Helm releases.
-func New(namespace, tmpDir string, dc DependencyContainer, logger *log.Logger) *Service {
+func New(namespace, tmpDir string, cache runtimecache.Cache, logger *log.Logger) *Service {
+	nelmClient := nelm.New(namespace, logger)
+
 	return &Service{
-		namespace: namespace,
-		tmpDir:    tmpDir,
-		client:    nelm.New(namespace, logger),
-		dc:        dc,
-		logger:    logger.Named(nelmServiceTracer),
+		tmpDir:         tmpDir,
+		client:         nelmClient,
+		monitorManager: monitor.New(cache, nelmClient, logger),
+		logger:         logger.Named(nelmServiceTracer),
 	}
+}
+
+func (s *Service) PauseMonitor(name string) {
+	s.monitorManager.PauseMonitor(name)
+}
+
+func (s *Service) ResumeMonitor(name string) {
+	s.monitorManager.ResumeMonitor(name)
 }
 
 // Render renders a Helm chart with the provided values and returns the manifests.
@@ -128,6 +131,8 @@ func (s *Service) Delete(ctx context.Context, name string) error {
 	span.SetAttributes(attribute.String("name", name))
 
 	s.logger.Debug("delete nelm release", slog.String("name", name))
+
+	defer s.monitorManager.RemoveMonitor(name)
 
 	return s.client.Delete(ctx, name)
 }
@@ -189,30 +194,17 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	// Calculate checksum to detect changes in rendered manifests
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
 
-	manifests, err := manifest.ListFromYamlDocs(renderedManifests)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
 	// Determine if upgrade is actually needed (optimization)
-	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetName(), checksum, manifests)
+	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return err
-	}
-
-	lastStatus := func(releaseName string) (string, string, error) {
-		return s.client.LastStatus(ctx, releaseName)
 	}
 
 	if !shouldUpgrade {
 		s.logger.Debug("no need to upgrade", slog.String("name", app.GetName()))
 
-		// No upgrade needed - ensure monitoring is active
-		if !s.dc.HelmResourcesManager().HasMonitor(app.GetName()) {
-			s.dc.HelmResourcesManager().StartMonitor(app.GetName(), manifests, s.namespace, lastStatus)
-		}
+		s.monitorManager.AddMonitor(ctx, app.GetName(), renderedManifests)
 
 		return nil
 	}
@@ -230,8 +222,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		return fmt.Errorf("install nelm release: %w", err)
 	}
 
-	// Start monitoring resources after successful install/upgrade
-	s.dc.HelmResourcesManager().StartMonitor(app.GetName(), manifests, s.namespace, lastStatus)
+	s.monitorManager.AddMonitor(ctx, app.GetName(), renderedManifests)
 
 	return nil
 }
@@ -249,7 +240,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 // Returns:
 //   - bool: true if upgrade is needed
 //   - error: if checking conditions fails
-func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, checksum string, manifests []manifest.Manifest) (bool, error) {
+func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, checksum string) (bool, error) {
 	revision, status, err := s.client.LastStatus(ctx, releaseName)
 	if err != nil {
 		return false, err
@@ -276,15 +267,12 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, 
 		return true, nil
 	}
 
-	// Check if any resources are missing from the cluster
-	absent, err := s.dc.HelmResourcesManager().GetAbsentResources(manifests, s.namespace)
-	if err != nil {
-		return false, err
-	}
+	if err = s.monitorManager.CheckResources(ctx, releaseName); err != nil {
+		if errors.Is(monitor.ErrAbsentManifest, err) {
+			return true, nil
+		}
 
-	// Resources missing - need upgrade to recreate them
-	if len(absent) > 0 {
-		return true, nil
+		return false, err
 	}
 
 	// All conditions passed - upgrade not needed
