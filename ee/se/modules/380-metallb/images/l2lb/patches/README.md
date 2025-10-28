@@ -22,4 +22,4 @@ Add the ability to use only IPAddressPool with the annotation 'heritage=deckhous
 
 ## 004-l2lb-disable-bgp.patch
 
-Prohibit initializing the BGP controller.
+Prohibit initializing BGP controller.
