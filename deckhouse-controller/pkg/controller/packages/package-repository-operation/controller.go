@@ -331,7 +331,6 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	}
 
 	// Remove processed package from queue
-	var queueEmpty bool
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
 		if len(operation.Status.PackagesToProcess) > 0 {
 			operation.Status.PackagesToProcess = operation.Status.PackagesToProcess[1:]
@@ -339,29 +338,14 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 		if operation.Status.Packages != nil {
 			operation.Status.Packages.Processed++
 		}
-
-		// Check if queue is empty after removal
-		queueEmpty = len(operation.Status.PackagesToProcess) == 0
-
-		if queueEmpty {
-			operation.Status.Message = fmt.Sprintf("All %d packages processed, completing operation", operation.Status.Packages.Total)
-		} else {
-			operation.Status.Message = fmt.Sprintf("Processed %d/%d packages",
-				operation.Status.Packages.Processed,
-				operation.Status.Packages.Total)
-		}
+		operation.Status.Message = fmt.Sprintf("Processed %d/%d packages",
+			operation.Status.Packages.Processed,
+			operation.Status.Packages.Total)
 		return nil
 	})
 	if err != nil {
 		r.logger.Error("failed to update operation status", log.Err(err))
 		return ctrl.Result{}, err
-	}
-
-	// If queue is empty, mark as completed immediately
-	if queueEmpty {
-		r.logger.Info("all packages processed, marking as completed",
-			slog.Int("total", operation.Status.Packages.Total))
-		return r.markAsCompleted(ctx, operation)
 	}
 
 	// Requeue to process next package
@@ -521,6 +505,11 @@ func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, pack
 							v1alpha1.ApplicationPackageVersionLabelDraft:      "true",
 						},
 					},
+					Spec: v1alpha1.ApplicationPackageVersionSpec{
+						PackageName: packageName,
+						Version:     version,
+						Repository:  repositoryName,
+					},
 				}
 
 				// Add owner reference to PackageRepository
@@ -672,7 +661,8 @@ func (r *reconciler) listTagsFromVersion(ctx context.Context, registryClient cr.
 
 	// List tags starting from the last version
 	// Note: This requires registry client support for the "last" parameter
-	// For now, we'll do a full list and filter
+	// For now, we'll do a full list and filter (not true incremental scan)
+	// TODO: Implement true incremental scan
 	allTags, err := registryClient.ListTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)

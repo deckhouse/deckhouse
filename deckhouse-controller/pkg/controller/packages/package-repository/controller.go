@@ -149,6 +149,15 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 			Labels: map[string]string{
 				operationLabelRepository: packageRepository.Name,
 			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+					Kind:       v1alpha1.PackageRepositoryGVK.Kind,
+					Name:       packageRepository.Name,
+					UID:        packageRepository.UID,
+					Controller: &[]bool{true}[0],
+				},
+			},
 		},
 		Spec: v1alpha1.PackageRepositoryOperationSpec{
 			PackageRepository: packageRepository.Name,
