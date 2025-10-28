@@ -50,58 +50,26 @@ spec:
       rego: |
         package d8.security_policies
 
-
         violation[{"msg": msg, "details": {}}] {
-          check_host_network_violation
-          msg := sprintf("Host network usage is not allowed for pod %v.", [input.review.object.metadata.name])
+            not allowed_by_any(input.review.object)
+            msg := sprintf("Host network usage is not allowed for pod %v.", [input.review.object.metadata.name])
         }
 
-        violation[{"msg": msg, "details": {}}] {
-          check_host_ports_violation
-          msg := sprintf("Host ports are not allowed for pod %v.", [input.review.object.metadata.name])
+        allowed_by_any(obj){
+          allowed_by_securitypolicyexeption(obj)
+        }
+        # or
+        allowed_by_any(obj){
+          allowed_by_securitypolicy(obj)
         }
 
-        check_host_network_violation {
-          not has_host_network_exception(input.review.object)
-          input.spec.hostNetwork
-          not input.parameters.allowHostNetwork
+        allowed_by_securitypolicyexeption(obj) {
+            label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
+            exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+            exception.spec.network.hostNetwork.allowedValue != input.parameters.allowHostNetwork
         }
 
-        check_host_ports_violation {
-          not has_host_ports_exception(input.review.object)
-          hostPort := input_containers[_].ports[_].hostPort
-          not in_range(input.parameters.ranges, hostPort)
-        }
-
-        has_host_network_exception(obj) {
-          label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
-          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"][label]
-
-          exception != null
-          exception.spec.network.hostNetwork.allowedValue == input.parameters.allowHostNetwork
-        }
-
-        has_host_ports_exception(obj) {
-          label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
-          exception := data.inventory.cluster["securityPolicyException.inventory.deckhouse.io/v1alpha1"][label]
-
-          exception != null
-          hostPorts := {port | port := input_containers[_].ports[_].hostPort}
-          {port | port := hostPorts} <= {p | p := exception.spec.network.hostPorts.allowedValues[_].port}
-        }
-
-        input_containers[c] {
-          c := input.review.object.spec.containers[_]
-        }
-        input_containers[c] {
-          c := input.review.object.spec.initContainers[_]
-        }
-        input_containers[c] {
-          c := input.review.object.spec.ephemeralContainers[_]
-        }
-
-        in_range(ranges, port) {
-          some r
-          ranges[r].min <= port
-          ranges[r].max >= port
+        allowed_by_securitypolicy(obj) {
+            input.parameters.allowHostNetwork 
+            not obj.spec.hostNetwork
         }
