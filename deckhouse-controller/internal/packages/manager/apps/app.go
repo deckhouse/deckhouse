@@ -188,7 +188,7 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 
 		if err := a.runHook(ctx, hook, []bindingcontext.BindingContext{bc}, dc); err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("run hook '%s': %v", hook.GetName(), err)
+			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
 	}
 

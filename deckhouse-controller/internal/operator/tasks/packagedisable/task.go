@@ -35,14 +35,14 @@ type DependencyContainer interface {
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 	return &task{
-		name:   name,
-		dc:     dc,
-		logger: logger.Named(taskTracer),
+		packageName: name,
+		dc:          dc,
+		logger:      logger.Named(taskTracer),
 	}
 }
 
 type task struct {
-	name string
+	packageName string
 
 	dc DependencyContainer
 
@@ -50,26 +50,26 @@ type task struct {
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Disable", t.name)
+	return fmt.Sprintf("Package:%s:Disable", t.packageName)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("disable package", slog.String("name", t.name))
+	t.logger.Debug("disable package", slog.String("name", t.packageName))
 
 	// delete nelm release, stop kube monitors and schedules
-	if err := t.dc.PackageManager().DisablePackage(ctx, t.name); err != nil {
-		return fmt.Errorf("disable package '%s': %w", t.name, err)
+	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName); err != nil {
+		return fmt.Errorf("disable package '%s': %w", t.packageName, err)
 	}
 
-	t.logger.Debug("remove package queues", slog.String("name", t.name))
+	t.logger.Debug("remove package queues", slog.String("name", t.packageName))
 
 	// remove package hooks queues
-	for _, q := range t.dc.PackageManager().GetPackageQueues(t.name) {
+	for _, q := range t.dc.PackageManager().GetPackageQueues(t.packageName) {
 		t.dc.QueueService().Remove(q)
 	}
 
 	// remove package queue
-	t.dc.QueueService().Remove(t.name)
+	t.dc.QueueService().Remove(t.packageName)
 
 	return nil
 }

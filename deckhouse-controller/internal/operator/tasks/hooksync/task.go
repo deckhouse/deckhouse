@@ -35,8 +35,8 @@ type DependencyContainer interface {
 }
 
 type task struct {
-	name string
-	hook string
+	packageName string
+	hook        string
 
 	info hookcontroller.BindingExecutionInfo
 
@@ -47,34 +47,34 @@ type task struct {
 
 func New(name, hook string, info hookcontroller.BindingExecutionInfo, dc DependencyContainer, logger *log.Logger) queue.Task {
 	return &task{
-		name:   name,
-		hook:   hook,
-		info:   info,
-		dc:     dc,
-		logger: logger.Named(taskTracer),
+		packageName: name,
+		hook:        hook,
+		info:        info,
+		dc:          dc,
+		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Hook:%s:Sync", t.name, t.hook)
+	return fmt.Sprintf("Package:%s:Hook:%s:Sync", t.packageName, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("run sync hook", slog.String("hook", t.hook), slog.String("name", t.name))
+	t.logger.Debug("run sync hook", slog.String("hook", t.hook), slog.String("name", t.packageName))
 	if !t.info.KubernetesBinding.ExecuteHookOnSynchronization {
-		t.dc.PackageManager().UnlockKubernetesMonitors(t.name, t.hook)
+		t.dc.PackageManager().UnlockKubernetesMonitors(t.packageName, t.hook)
 
 		return nil
 	}
 
-	if _, err := t.dc.PackageManager().RunPackageHook(ctx, t.name, t.hook, t.info.BindingContext); err != nil {
+	if _, err := t.dc.PackageManager().RunPackageHook(ctx, t.packageName, t.hook, t.info.BindingContext); err != nil {
 		if !t.info.AllowFailure {
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)
 		}
-		t.logger.Warn("hook failed", slog.String("name", t.name), slog.String("hook", t.hook), log.Err(err))
+		t.logger.Warn("hook failed", slog.String("name", t.packageName), slog.String("hook", t.hook), log.Err(err))
 	}
 
-	t.dc.PackageManager().UnlockKubernetesMonitors(t.name, t.hook)
+	t.dc.PackageManager().UnlockKubernetesMonitors(t.packageName, t.hook)
 
 	return nil
 }

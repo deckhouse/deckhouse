@@ -33,7 +33,7 @@ type DependencyContainer interface {
 }
 
 type task struct {
-	name string
+	packageName string
 
 	dc DependencyContainer
 
@@ -42,21 +42,21 @@ type task struct {
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 	return &task{
-		name:   name,
-		dc:     dc,
-		logger: logger.Named(taskTracer),
+		packageName: name,
+		dc:          dc,
+		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Run", t.name)
+	return fmt.Sprintf("Package:%s:Run", t.packageName)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("run package", slog.String("name", t.name))
+	t.logger.Debug("run package", slog.String("name", t.packageName))
 
-	if err := t.dc.PackageManager().RunPackage(ctx, t.name); err != nil {
-		return fmt.Errorf("run package '%s': %w", t.name, err)
+	if err := t.dc.PackageManager().RunPackage(ctx, t.packageName); err != nil {
+		return fmt.Errorf("run package '%s': %w", t.packageName, err)
 	}
 
 	return nil

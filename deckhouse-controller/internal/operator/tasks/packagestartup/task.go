@@ -37,7 +37,7 @@ type DependencyContainer interface {
 }
 
 type task struct {
-	name string
+	packageName string
 
 	dc DependencyContainer
 
@@ -46,38 +46,38 @@ type task struct {
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
 	return &task{
-		name:   name,
-		dc:     dc,
-		logger: logger.Named(taskTracer),
+		packageName: name,
+		dc:          dc,
+		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Startup", t.name)
+	return fmt.Sprintf("Package:%s:Startup", t.packageName)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("startup package", slog.String("name", t.name))
+	t.logger.Debug("startup package", slog.String("name", t.packageName))
 
-	infos, err := t.dc.PackageManager().InitializeHooks(ctx, t.name)
+	infos, err := t.dc.PackageManager().InitializeHooks(ctx, t.packageName)
 	if err != nil {
-		return fmt.Errorf("initialize hooks for '%s': %w", t.name, err)
+		return fmt.Errorf("initialize hooks for '%s': %w", t.packageName, err)
 	}
 
-	t.logger.Debug("wait for sync tasks to finish", slog.String("name", t.name))
+	t.logger.Debug("wait for sync tasks to finish", slog.String("name", t.packageName))
 
 	wg := new(sync.WaitGroup)
 	for hook, info := range infos {
 		for _, hookInfo := range info {
-			syncTask := hooksync.New(t.name, hook, hookInfo, t.dc, t.logger)
+			syncTask := hooksync.New(t.packageName, hook, hookInfo, t.dc, t.logger)
 
 			queueName := hookInfo.QueueName
 			if queueName == "main" {
-				queueName = t.name
+				queueName = t.packageName
 
 				// place wait tasks in different sync queue to not block their execution
 				if hookInfo.KubernetesBinding.WaitForSynchronization {
-					queueName = fmt.Sprintf("%s-sync", t.name)
+					queueName = fmt.Sprintf("%s-sync", t.packageName)
 				}
 			}
 
@@ -91,13 +91,13 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 	wg.Wait()
 
-	t.logger.Debug("run package startup hooks", slog.String("name", t.name))
+	t.logger.Debug("run package startup hooks", slog.String("name", t.packageName))
 
-	if err = t.dc.PackageManager().StartupPackage(ctx, t.name); err != nil {
-		return fmt.Errorf("startup package '%s': %w", t.name, err)
+	if err = t.dc.PackageManager().StartupPackage(ctx, t.packageName); err != nil {
+		return fmt.Errorf("startup package '%s': %w", t.packageName, err)
 	}
 
-	t.dc.QueueService().Enqueue(ctx, t.name, packagerun.New(t.name, t.dc, t.logger))
+	t.dc.QueueService().Enqueue(ctx, t.packageName, packagerun.New(t.packageName, t.dc, t.logger))
 
 	return nil
 }

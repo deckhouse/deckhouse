@@ -37,8 +37,8 @@ type DependencyContainer interface {
 }
 
 type task struct {
-	name string
-	hook string
+	packageName string
+	hook        string
 
 	bctx []bindingcontext.BindingContext
 
@@ -49,28 +49,28 @@ type task struct {
 
 func New(name, hook string, bctx []bindingcontext.BindingContext, dc DependencyContainer, logger *log.Logger) queue.Task {
 	return &task{
-		name:   name,
-		hook:   hook,
-		bctx:   bctx,
-		dc:     dc,
-		logger: logger.Named(taskTracer),
+		packageName: name,
+		hook:        hook,
+		bctx:        bctx,
+		dc:          dc,
+		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Hook:%s:Run", t.name, t.hook)
+	return fmt.Sprintf("Package:%s:Hook:%s:Run", t.packageName, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("run hook", slog.String("hook", t.hook), slog.String("name", t.name))
+	t.logger.Debug("run hook", slog.String("hook", t.hook), slog.String("name", t.packageName))
 
-	valuesChanged, err := t.dc.PackageManager().RunPackageHook(ctx, t.name, t.hook, t.bctx)
+	valuesChanged, err := t.dc.PackageManager().RunPackageHook(ctx, t.packageName, t.hook, t.bctx)
 	if err != nil {
 		return fmt.Errorf("run hook '%s': %w", t.hook, err)
 	}
 
 	if valuesChanged {
-		t.dc.QueueService().Enqueue(ctx, t.name, packagerun.New(t.name, t.dc, t.logger), queue.WithUnique())
+		t.dc.QueueService().Enqueue(ctx, t.packageName, packagerun.New(t.packageName, t.dc, t.logger), queue.WithUnique())
 	}
 
 	return nil
