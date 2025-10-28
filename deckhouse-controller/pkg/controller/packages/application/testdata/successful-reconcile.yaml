@@ -7,9 +7,6 @@ spec:
   applicationPackageName: test-package
   repository: test-repo
   version: v1.0.0
-  settings:
-    maxmemory: "256mb"
-    persistence: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

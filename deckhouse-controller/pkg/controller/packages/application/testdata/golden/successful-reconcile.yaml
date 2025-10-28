@@ -9,9 +9,6 @@ metadata:
 spec:
   applicationPackageName: test-package
   repository: test-repo
-  settings:
-    maxmemory: 256mb
-    persistence: true
   version: v1.0.0
 status:
   conditions:

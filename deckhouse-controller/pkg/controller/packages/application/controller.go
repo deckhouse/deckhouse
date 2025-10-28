@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +39,8 @@ const (
 	controllerName = "d8-application-controller"
 
 	maxConcurrentReconciles = 1
+
+	requeueTime = 30 * time.Second
 )
 
 type reconciler struct {
@@ -94,12 +97,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	return r.handle(ctx, application)
+	err := r.handle(ctx, application)
+	if err != nil {
+		r.logger.Warn("failed to handle application", slog.String("name", application.Name), log.Err(err))
+		return ctrl.Result{RequeueAfter: requeueTime}, nil
+	}
+
+	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
+func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) error {
 	original := app.DeepCopy()
 
 	logger := r.logger.With(slog.String("name", app.Name))
@@ -110,27 +117,27 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) (ctr
 	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil && apierrors.IsNotFound(err) {
 		r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionNotFound, err.Error())
 		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 		if err != nil {
-			return res, fmt.Errorf("failed to patch application status: %w", err)
+			return fmt.Errorf("failed to patch application status: %w", err)
 		}
 
-		return res, fmt.Errorf("applicationPackageVersion %s not found: %w", apvName, err)
+		return fmt.Errorf("applicationPackageVersion %s not found: %w", apvName, err)
 	}
 	if err != nil {
-		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
+		return fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
 	}
 	if apv.IsDraft() {
 		message := "ApplicationPackageVersion " + apvName + " is draft"
 		app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionIsDraft, message)
 		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 		if err != nil {
-			return res, fmt.Errorf("failed to patch application status: %w", err)
+			return fmt.Errorf("failed to patch application status: %w", err)
 		}
 
-		return res, fmt.Errorf("applicationPackageVersion %s is draft", apvName)
+		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
 	// call PackageOperator method (maybe PackageAdder interface)
@@ -139,10 +146,10 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) (ctr
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
-		return res, fmt.Errorf("failed to patch application status: %w", err)
+		return fmt.Errorf("failed to patch application status: %w", err)
 	}
 
-	return res, nil
+	return nil
 }
 
 func (r *reconciler) delete(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {

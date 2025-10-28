@@ -271,6 +271,26 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("version not found", func() {
+		suite.setupController("version-not-found.yaml")
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+		app = suite.getApplication("test-app", "foobar")
+		require.NotEmpty(suite.T(), app.Status.Conditions)
+		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.Conditions[0].Reason)
+	})
+
+	suite.Run("version is draft", func() {
+		suite.setupController("version-is-draft.yaml")
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+	})
 }
 
 // nolint:unparam
