@@ -1,9 +1,9 @@
 diff --git a/connector/ldap/kerberos_gokrb5.go b/connector/ldap/kerberos_gokrb5.go
 new file mode 100644
-index 00000000..6864ef27
+index 00000000..1acaab4c
 --- /dev/null
 +++ b/connector/ldap/kerberos_gokrb5.go
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,134 @@
 +package ldap
 +
 +import (
@@ -17,7 +17,9 @@ index 00000000..6864ef27
 +	"github.com/jcmturner/gokrb5/v8/credentials"
 +	"github.com/jcmturner/gokrb5/v8/gssapi"
 +	"github.com/jcmturner/gokrb5/v8/keytab"
++	"github.com/jcmturner/gokrb5/v8/service"
 +	"github.com/jcmturner/gokrb5/v8/spnego"
++	"github.com/jcmturner/gokrb5/v8/types"
 +)
 +
 +// context key used by gokrb5 to store credentials in the context
@@ -29,6 +31,10 @@ index 00000000..6864ef27
 +type gokrb5Validator struct {
 +	kt *keytab.Keytab
 +}
++
++// SPNEGO NegTokenResp (AcceptIncomplete + KRB5 mech) base64 payload used by gokrb5's HTTP server
++// to prompt the client to continue the handshake.
++const spnegoIncompleteKRB5B64 = "oRQwEqADCgEBoQsGCSqGSIb3EgECAg=="
 +
 +func newGokrb5Validator(keytabPath string) (KerberosValidator, error) {
 +	kt, err := keytab.Load(keytabPath)
@@ -68,7 +74,13 @@ index 00000000..6864ef27
 +		}
 +	}
 +
-+	sp := spnego.SPNEGOService(v.kt)
++	// Pass client address when available (improves AP-REQ validation with address-bound tickets)
++	var sp *spnego.SPNEGO
++	if ha, err := types.GetHostAddress(r.RemoteAddr); err == nil {
++		sp = spnego.SPNEGOService(v.kt, service.ClientAddress(ha))
++	} else {
++		sp = spnego.SPNEGOService(v.kt)
++	}
 +	authed, ctx, status := sp.AcceptSecContext(&tok)
 +	if status.Code != gssapi.StatusComplete {
 +		return "", "", false, nil
@@ -95,10 +107,19 @@ index 00000000..6864ef27
 +	b64 := strings.TrimSpace(h[len("Negotiate "):])
 +	data, err := base64.StdEncoding.DecodeString(b64)
 +	if err != nil {
++		// Malformed header: ask client to continue with KRB5 mech
++		if tok, e := base64.StdEncoding.DecodeString(spnegoIncompleteKRB5B64); e == nil {
++			return tok, true
++		}
 +		return nil, false
 +	}
 +	var tok spnego.SPNEGOToken
 +	if err := tok.Unmarshal(data); err != nil {
++		// Not a full SPNEGO token; still ask client to continue
++		if tokb, e := base64.StdEncoding.DecodeString(spnegoIncompleteKRB5B64); e == nil {
++			return tokb, true
++		}
++		// As a fallback, try wrapping as raw KRB5
 +		var k5 spnego.KRB5Token
 +		if k5.Unmarshal(data) != nil {
 +			return nil, false
@@ -111,9 +132,9 @@ index 00000000..6864ef27
 +	if status.Code != gssapi.StatusContinueNeeded || ctx == nil {
 +		return nil, false
 +	}
-+	// best-effort: retrieve response token from context
-+	if resp, ok := ctx.Value(ctxRespTokenKey).([]byte); ok && len(resp) > 0 {
-+		return resp, true
++	// Ask client to continue using standard NegTokenResp (KRB5, incomplete)
++	if tokb, e := base64.StdEncoding.DecodeString(spnegoIncompleteKRB5B64); e == nil {
++		return tokb, true
 +	}
 +	return nil, false
 +}
@@ -1265,4 +1286,3 @@ index 114712ba..c6bbec69 100644
  func TestHandleTokenExchange(t *testing.T) {
  	tests := []struct {
  		name               string
-
