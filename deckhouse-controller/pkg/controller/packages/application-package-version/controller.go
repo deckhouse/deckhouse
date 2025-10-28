@@ -21,8 +21,9 @@ import (
 	"path"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,8 +78,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.logger.Debug("reconciling ApplicationPackageVersion", slog.String("name", req.Name))
 
-	packageVersion := new(v1alpha1.ApplicationPackageVersion)
-	if err := r.client.Get(ctx, req.NamespacedName, packageVersion); err != nil {
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	if err := r.client.Get(ctx, req.NamespacedName, apv); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("application package version not found", slog.String("name", req.Name))
 
@@ -91,63 +92,64 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle delete event
-	if !packageVersion.DeletionTimestamp.IsZero() {
+	if !apv.DeletionTimestamp.IsZero() {
 		r.logger.Debug("deleting application package version", slog.String("name", req.Name))
 
-		return r.delete(ctx, packageVersion)
+		return r.delete(ctx, apv)
 	}
 
 	// skip handle for non drafted resources
-	if !packageVersion.IsDraft() {
-		r.logger.Debug("package is not draft", slog.String("package_name", packageVersion.Name))
+	if !apv.IsDraft() {
+		r.logger.Debug("package is not draft", slog.String("package_name", apv.Name))
 
 		return res, nil
 	}
 
 	// handle create/update events
-	err := r.handle(ctx, packageVersion)
+	err := r.handle(ctx, apv)
 	if err != nil {
 		r.logger.Warn("failed to handle application package version", slog.String("name", req.Name), log.Err(err))
 
-		res.RequeueAfter = requeueTime
-		return res, nil
+		return ctrl.Result{RequeueAfter: requeueTime}, nil
 	}
 
 	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) error {
-	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", packageVersion.Name))
+func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
+	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", apv.Name))
+
+	original := apv.DeepCopy()
 
 	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: packageVersion.Spec.Repository}, &packageRepo)
+	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.Repository}, &packageRepo)
 	if err != nil {
-		original := packageVersion.DeepCopy()
-
-		packageVersion.SetConditionFalse(
+		r.SetConditionFalse(
+			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", packageVersion.Spec.Repository, err.Error()),
+			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.Repository, err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
+			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", packageVersion.Spec.Repository, err)
+		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.Repository, err)
 	}
 
 	r.logger.Debug("got package repository",
-		slog.String("package_version", packageVersion.Name),
+		slog.String("package_version", apv.Name),
 		slog.String("repo", packageRepo.Spec.Registry.Repo))
 
 	// Create go registry client from credentials from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/version:$version
-	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageVersion.Spec.PackageName, "version")
-	r.logger.Debug("registry path", slog.String("name", packageVersion.Name), slog.String("path", registryPath))
+	registryPath := path.Join(packageRepo.Spec.Registry.Repo, apv.Spec.PackageName, "version")
+
+	r.logger.Debug("registry path", slog.String("name", apv.Name), slog.String("path", registryPath))
+
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
 		CA:           packageRepo.Spec.Registry.CA,
@@ -157,84 +159,81 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
 	if err != nil {
-		original := packageVersion.DeepCopy()
-		packageVersion.SetConditionFalse(
+		r.SetConditionFalse(
+			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
 			fmt.Sprintf("failed to get registry client: %s", err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
+			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("get registry client for %s: %w", apv.Name, err)
 	}
 
 	// Get package.yaml from image
-	img, err := registryClient.Image(ctx, packageVersion.Spec.Version)
+	img, err := registryClient.Image(ctx, apv.Spec.Version)
 	if err != nil {
-		original := packageVersion.DeepCopy()
-		packageVersion.SetConditionFalse(
+		r.SetConditionFalse(
+			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("failed to get image: %s", err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
+			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get image for %s: %w", packageVersion.Name+":"+packageVersion.Spec.Version, err)
+		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.Version, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
-		original := packageVersion.DeepCopy()
-		packageVersion.SetConditionFalse(
+		r.SetConditionFalse(
+			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
-			v1.NewTime(r.dc.GetClock().Now()),
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 		if patchErr != nil {
-			return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, patchErr)
+			return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("failed to fetch package metadata %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("failed to fetch package metadata %s: %w", apv.Name, err)
 	}
+
 	if packageMeta.PackageDefinition != nil {
-		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
+		r.logger.Debug("got metadata from package.yaml", slog.String("name", apv.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
 	// Start changing the packageVersion object
-	original := packageVersion.DeepCopy()
-
-	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
+	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
 	// Patch the status
-	packageVersion = packageVersion.SetConditionTrue(v1alpha1.ApplicationPackageVersionConditionTypeEnriched, v1.NewTime(r.dc.GetClock().Now()))
+	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeEnriched)
 
-	r.logger.Debug("patch package version status", slog.String("name", packageVersion.Name))
-	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+	r.logger.Debug("patch package version status", slog.String("name", apv.Name))
+	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, err)
 	}
 
 	// Delete label "draft" and patch the main object
-	delete(packageVersion.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
-	err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
+	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+		return fmt.Errorf("patch packageVersion %s: %w", apv.Name, err)
 	}
 
-	r.logger.Info("handle ApplicationPackageVersion complete", slog.String("name", packageVersion.Name))
+	r.logger.Info("handle ApplicationPackageVersion complete", slog.String("name", apv.Name))
+
 	return nil
 }
 
@@ -244,6 +243,64 @@ func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.Applicat
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
 	return res, nil
+}
+
+func (r *reconciler) SetConditionTrue(apv *v1alpha1.ApplicationPackageVersion, condType string) *v1alpha1.ApplicationPackageVersion {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range apv.Status.Conditions {
+		if cond.Type == condType {
+			apv.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionTrue {
+				apv.Status.Conditions[idx].LastTransitionTime = time
+				apv.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+
+			apv.Status.Conditions[idx].Reason = ""
+			apv.Status.Conditions[idx].Message = ""
+
+			return apv
+		}
+	}
+
+	apv.Status.Conditions = append(apv.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
+		Type:               condType,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return apv
+}
+
+func (r *reconciler) SetConditionFalse(apv *v1alpha1.ApplicationPackageVersion, condType string, reason string, message string) *v1alpha1.ApplicationPackageVersion {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range apv.Status.Conditions {
+		if cond.Type == condType {
+			apv.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionFalse {
+				apv.Status.Conditions[idx].LastTransitionTime = time
+				apv.Status.Conditions[idx].Status = corev1.ConditionFalse
+			}
+
+			apv.Status.Conditions[idx].Reason = reason
+			apv.Status.Conditions[idx].Message = message
+
+			return apv
+		}
+	}
+
+	apv.Status.Conditions = append(apv.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
+		Type:               condType,
+		Status:             corev1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return apv
 }
 
 func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
