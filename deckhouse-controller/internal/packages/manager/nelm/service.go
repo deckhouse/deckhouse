@@ -268,7 +268,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, 
 	}
 
 	if err = s.monitorManager.CheckResources(ctx, releaseName); err != nil {
-		if errors.Is(monitor.ErrAbsentManifest, err) {
+		if errors.Is(err, monitor.ErrAbsentManifest) {
 			return true, nil
 		}
 
