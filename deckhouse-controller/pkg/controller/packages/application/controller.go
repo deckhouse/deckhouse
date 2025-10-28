@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"log/slog"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,21 +74,22 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	r.logger.Debug("reconciling Application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 
 	application := new(v1alpha1.Application)
 	if err := r.client.Get(ctx, req.NamespacedName, application); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
-			return ctrl.Result{}, nil
+			return res, nil
 		}
 		r.logger.Error("failed to get application", slog.String("name", req.Name), slog.String("namespace", req.Namespace), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return res, err
 	}
 
 	// handle delete event
 	if !application.DeletionTimestamp.IsZero() {
-		r.logger.Debug("deleting application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 		return r.delete(ctx, application)
 	}
 
@@ -94,25 +97,53 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.handle(ctx, application)
 }
 
-func (r *reconciler) handle(ctx context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	r.logger.Info("handling Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
+	original := app.DeepCopy()
 
-	// from spec.packageName and spec.version find ApplicationPackageVersion
-	apvName := application.Spec.ApplicationPackageName + "-" + application.Spec.Version
-	var apv *v1alpha1.ApplicationPackageVersion
+	logger := r.logger.With(slog.String("name", app.Name))
+	logger.Debug("handling Application")
+	defer logger.Debug("handle Application complete")
+
+	// find ApplicationPackageVersion by spec.ApplicationPackageName and spec.version
+	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
+	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
-	if err != nil || apv == nil {
-		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", application.Name, err)
+	if err != nil {
+		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
 	}
 
-	// from ApplicationPackageVersion get requirements and check it
-	// if requirements exists
+	// get requirements from ApplicationPackageVersion and check it
 	if apv.Status.Metadata != nil && apv.Status.Metadata.Requirements != nil {
-		// TODO: check validation
-		r.exts.KubernetesVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Kubernetes)
-		r.exts.DeckhouseVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Deckhouse)
+		// TODO: check correct work of validation
+		// checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, []string{}, r.exts, nil, releaseUpdater.WithLogger(r.logger.Named("requirements_checker")))
+		// if err != nil {
+		// 	return res, fmt.Errorf("failed to create requirements checker: %w", err)
+		// }
+
+		_, err = r.exts.KubernetesVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Kubernetes)
+		if err != nil {
+			app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionRequirementsMet, "KubernetesVersionInvalid", err.Error())
+
+			err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+			if err != nil {
+				return res, fmt.Errorf("failed to patch application status: %w", err)
+			}
+
+			return res, fmt.Errorf("failed to validate Kubernetes version %s: %w", app.Name, err)
+		}
+		_, err = r.exts.DeckhouseVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Deckhouse)
+		if err != nil {
+			app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionRequirementsMet, "DeckhouseVersionInvalid", err.Error())
+
+			err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+			if err != nil {
+				return res, fmt.Errorf("failed to patch application status: %w", err)
+			}
+
+			return res, fmt.Errorf("failed to validate Deckhouse version %s: %w", app.Name, err)
+		}
 	}
 
 	// if requirements ok - get PackageRegistry from spec.repository to get registry client
@@ -123,7 +154,70 @@ func (r *reconciler) handle(ctx context.Context, application *v1alpha1.Applicati
 }
 
 func (r *reconciler) delete(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", application.Name))
+	logger.Debug("deleting Application")
+	defer logger.Debug("delete Application complete")
+
 	// TODO: implement application deletion logic
-	r.logger.Info("deleting Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
-	return ctrl.Result{}, nil
+	return res, nil
+}
+
+func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range app.Status.Conditions {
+		if cond.Type == condType {
+			app.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionTrue {
+				app.Status.Conditions[idx].LastTransitionTime = time
+				app.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+
+			app.Status.Conditions[idx].Reason = ""
+			app.Status.Conditions[idx].Message = ""
+
+			return app
+		}
+	}
+
+	app.Status.Conditions = append(app.Status.Conditions, v1alpha1.ApplicationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return app
+}
+
+func (r *reconciler) SetConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) *v1alpha1.Application {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range app.Status.Conditions {
+		if cond.Type == condType {
+			app.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionFalse {
+				app.Status.Conditions[idx].LastTransitionTime = time
+				app.Status.Conditions[idx].Status = corev1.ConditionFalse
+			}
+
+			app.Status.Conditions[idx].Reason = reason
+			app.Status.Conditions[idx].Message = message
+
+			return app
+		}
+	}
+
+	app.Status.Conditions = append(app.Status.Conditions, v1alpha1.ApplicationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return app
 }
