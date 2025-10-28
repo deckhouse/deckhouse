@@ -1,14 +1,40 @@
-Subject: [PATCH] Fix some issues with the disable API call cache feature
----
-Index: pkg/provider/azure_vmss.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+index 6dec5d582..efd1b92e8 100644
+--- a/pkg/provider/azure.go
++++ b/pkg/provider/azure.go
+@@ -344,7 +344,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *config.C
+ 	az.Config = *config
+ 	az.Environment = env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
+index 239e95a81..43312c02d 100644
+--- a/pkg/provider/azure_instance_metadata.go
++++ b/pkg/provider/azure_instance_metadata.go
+@@ -109,12 +109,12 @@ type InstanceMetadataService struct {
+ }
+ 
+ // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
+-func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
++func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
+ 	ims := &InstanceMetadataService{
+ 		imdsServer: imdsServer,
+ 	}
+ 
+-	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
++	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
+ 	if err != nil {
+ 		return nil, err
+ 	}
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
---- a/pkg/provider/azure_vmss.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
-+++ b/pkg/provider/azure_vmss.go	(date 1742473658056)
-@@ -448,6 +448,25 @@
+index d618b1b31..582f9a3d8 100644
+--- a/pkg/provider/azure_vmss.go
++++ b/pkg/provider/azure_vmss.go
+@@ -448,6 +448,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
  	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
  	if err != nil {
  		klog.Errorf("Failed to check VM management type: %v", err)
@@ -32,45 +58,4 @@ diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
 +		}
 +
  		return "", err
- 	}
- 
-Index: pkg/provider/azure_instance_metadata.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
---- a/pkg/provider/azure_instance_metadata.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
-+++ b/pkg/provider/azure_instance_metadata.go	(date 1742471800406)
-@@ -108,12 +108,12 @@
- }
- 
- // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
--func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
-+func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
- 	ims := &InstanceMetadataService{
- 		imdsServer: imdsServer,
- 	}
- 
--	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
-+	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
- 	if err != nil {
- 		return nil, err
- 	}
-Index: pkg/provider/azure.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
---- a/pkg/provider/azure.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
-+++ b/pkg/provider/azure.go	(date 1742471800412)
-@@ -338,7 +338,7 @@
- 	az.Config = *config
- 	az.Environment = env
- 	az.ResourceRequestBackoff = resourceRequestBackoff
--	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
-+	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
- 	if err != nil {
- 		return err
  	}
