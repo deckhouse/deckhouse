@@ -36,7 +36,7 @@ type mockTask struct {
 	execCount atomic.Int32
 }
 
-func (m *mockTask) Name() string {
+func (m *mockTask) String() string {
 	return m.name
 }
 
