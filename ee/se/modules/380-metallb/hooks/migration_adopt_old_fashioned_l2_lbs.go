@@ -109,8 +109,8 @@ func discoveryServicesForMigrate(_ context.Context, input *go_hook.HookInput, dc
 			"network.deckhouse.io/load-balancer-ips": stringIPs,
 		}
 		annotationKeys := []string{
-			"metallb.universe.tf/ip-allocated-from-pool",
-			"metallb.universe.tf/address-pool",
+			"metallb.io/ip-allocated-from-pool",
+			"metallb.io/address-pool",
 		}
 		for _, key := range annotationKeys {
 			if poolName, ok := service.Annotations[key]; ok {

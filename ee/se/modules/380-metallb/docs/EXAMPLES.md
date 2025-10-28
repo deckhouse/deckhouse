@@ -123,7 +123,33 @@ Configure BGP peering on the network equipment.
 
 {% raw %}
 
-To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-shared-ip-key` to them:
+To create a Service with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+  type: LoadBalancer
+```
+
+To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-shared-ip-key`. The value of the annotation is a "sharing key". Services can share an IP address under the following conditions:
+
+- They have the same sharing key.
+- They request the use of different ports (e.g. tcp/80 for one and tcp/443 for the other).
+- They use the Cluster external traffic policy, or they both point to the exact same set of pods (i.e. the pod selectors are identical).
+
+If these conditions are satisfied, MetalLB may colocate the two services on the same IP, but **does not have to**! If you want to ensure that they share a specific address, use the `network.deckhouse.io/load-balancer-ips` annotation described above.
+
+Here is an example configuration of two services that share the same ip address:
 
 ```yaml
 apiVersion: v1
@@ -161,7 +187,7 @@ spec:
     app: dns
 ```
 
-To create a Service with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
+Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.io/address-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 
 ```yaml
 apiVersion: v1
@@ -169,25 +195,7 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    network.deckhouse.io/load-balancer-ips: 192.168.217.217
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-  type: LoadBalancer
-```
-
-Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf/address-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  annotations:
-    metallb.universe.tf/address-pool: production-public-ips
+    metallb.io/address-pool: production-public-ips
 spec:
   ports:
   - port: 80
