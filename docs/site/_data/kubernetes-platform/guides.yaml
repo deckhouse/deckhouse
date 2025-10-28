@@ -30,8 +30,7 @@
     ru: Руководство по обновлению Deckhouse Kubernetes Platform в закрытом окружении.
     en: A guide for updating Deckhouse Kubernetes Platform in an air-gapped environment.
   tags:
-    - baremetal
-    - production
+    - storage
 - name:
     ru: "Разметка и объем дисков"
     en: "Disk layout and size"
