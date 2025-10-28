@@ -141,7 +141,7 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) erro
 	}
 
 	// call PackageOperator method (maybe PackageAdder interface)
-	r.packageOperator.AddApplication(ctx, apv.Status.Metadata)
+	r.packageOperator.AddApplication(ctx, &apv.Status)
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))

@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -181,9 +182,10 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		Build()
 
 	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		dc:     dependency.NewMockedContainer(),
+		client:          kubeClient,
+		logger:          log.NewNop(),
+		packageOperator: applicationpackage.NewPackageOperator(kubeClient, log.NewNop()),
+		dc:              dependency.NewMockedContainer(),
 		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
