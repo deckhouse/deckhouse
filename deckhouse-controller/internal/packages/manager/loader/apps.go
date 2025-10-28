@@ -22,13 +22,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
