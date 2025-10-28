@@ -1,36 +1,9 @@
-From 0ee945d5b85f8dd53c55eab79d742dd2333f92c2 Mon Sep 17 00:00:00 2001
-From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
-Date: Thu, 23 Oct 2025 11:52:18 +0300
-Subject: [PATCH] ldap: add Kerberos (SPNEGO) SSO with gokrb5; SPNEGOAware
- hook; tests, docs, example
-
----
- connector/ldap/kerberos_gokrb5.go  |  77 +++++++
- connector/ldap/kerberos_spnego.go  |  67 ++++++
- connector/ldap/ldap.go             |  54 ++++-
- connector/ldap/ldap_spnego.go      | 110 +++++++++
- connector/ldap/ldap_spnego_test.go | 346 +++++++++++++++++++++++++++++
- connector/spnego.go                |  22 ++
- docs/kerberos_ldap.md              |  57 +++++
- examples/ldap/config-ldap.yaml     |   9 +
- go.mod                             |   7 +
- go.sum                             |  33 +++
- server/handlers.go                 |  40 ++++
- server/handlers_test.go            |  86 +++++++
- 12 files changed, 907 insertions(+), 1 deletion(-)
- create mode 100644 connector/ldap/kerberos_gokrb5.go
- create mode 100644 connector/ldap/kerberos_spnego.go
- create mode 100644 connector/ldap/ldap_spnego.go
- create mode 100644 connector/ldap/ldap_spnego_test.go
- create mode 100644 connector/spnego.go
- create mode 100644 docs/kerberos_ldap.md
-
 diff --git a/connector/ldap/kerberos_gokrb5.go b/connector/ldap/kerberos_gokrb5.go
 new file mode 100644
-index 00000000..86843a00
+index 00000000..6864ef27
 --- /dev/null
 +++ b/connector/ldap/kerberos_gokrb5.go
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,113 @@
 +package ldap
 +
 +import (
@@ -49,6 +22,9 @@ index 00000000..86843a00
 +
 +// context key used by gokrb5 to store credentials in the context
 +var ctxCredentialsKey interface{} = "github.com/jcmturner/gokrb5/v8/ctxCredentials"
++
++// best-effort key used by gokrb5 to store response token for SPNEGO continuation
++var ctxRespTokenKey interface{} = "github.com/jcmturner/gokrb5/v8/ctxRespToken"
 +
 +type gokrb5Validator struct {
 +	kt *keytab.Keytab
@@ -108,17 +84,48 @@ index 00000000..86843a00
 +}
 +
 +func (v *gokrb5Validator) Challenge(w http.ResponseWriter) { writeNegotiateChallenge(w) }
++
++// ContinueToken attempts to continue the SPNEGO handshake and returns a response token
++// (to be placed into WWW-Authenticate: Negotiate <b64>) if available.
++func (v *gokrb5Validator) ContinueToken(r *http.Request) ([]byte, bool) {
++	h := r.Header.Get("Authorization")
++	if h == "" || !strings.HasPrefix(h, "Negotiate ") {
++		return nil, false
++	}
++	b64 := strings.TrimSpace(h[len("Negotiate "):])
++	data, err := base64.StdEncoding.DecodeString(b64)
++	if err != nil {
++		return nil, false
++	}
++	var tok spnego.SPNEGOToken
++	if err := tok.Unmarshal(data); err != nil {
++		var k5 spnego.KRB5Token
++		if k5.Unmarshal(data) != nil {
++			return nil, false
++		}
++		tok.Init = true
++		tok.NegTokenInit = spnego.NegTokenInit{MechTypes: []asn1.ObjectIdentifier{k5.OID}, MechTokenBytes: data}
++	}
++	sp := spnego.SPNEGOService(v.kt)
++	_, ctx, status := sp.AcceptSecContext(&tok)
++	if status.Code != gssapi.StatusContinueNeeded || ctx == nil {
++		return nil, false
++	}
++	// best-effort: retrieve response token from context
++	if resp, ok := ctx.Value(ctxRespTokenKey).([]byte); ok && len(resp) > 0 {
++		return resp, true
++	}
++	return nil, false
++}
 diff --git a/connector/ldap/kerberos_spnego.go b/connector/ldap/kerberos_spnego.go
 new file mode 100644
-index 00000000..e3b51b6a
+index 00000000..209e563c
 --- /dev/null
 +++ b/connector/ldap/kerberos_spnego.go
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,44 @@
 +package ldap
 +
 +import (
-+	"encoding/base64"
-+	"errors"
 +	"net/http"
 +	"strings"
 +)
@@ -129,6 +136,9 @@ index 00000000..e3b51b6a
 +	ValidateRequest(r *http.Request) (string, string, bool, error)
 +	// Challenge writes a 401 Negotiate challenge.
 +	Challenge(w http.ResponseWriter)
++	// ContinueToken tries to advance SPNEGO handshake and returns a response token to include
++	// in WWW-Authenticate: Negotiate <token>. Returns (nil, false) if no continuation is needed/possible.
++	ContinueToken(r *http.Request) ([]byte, bool)
 +}
 +
 +// writeNegotiateChallenge writes a standard 401 Negotiate challenge.
@@ -156,31 +166,7 @@ index 00000000..e3b51b6a
 +	}
 +}
 +
-+// simpleHeaderValidator is a placeholder that checks header presence/format only.
-+// It is replaced in runtime with a gokrb5-backed validator when kerberos is enabled.
-+type simpleHeaderValidator struct{}
-+
-+func (simpleHeaderValidator) ValidateRequest(r *http.Request) (string, string, bool, error) {
-+	h := r.Header.Get("Authorization")
-+	if h == "" {
-+		return "", "", false, nil
-+	}
-+	if !strings.HasPrefix(strings.ToLower(h), "negotiate ") {
-+		return "", "", false, nil
-+	}
-+	// Ensure token is base64; we do not validate cryptographically here.
-+	tok := strings.TrimSpace(h[len("Negotiate "):])
-+	if tok == "" {
-+		return "", "", false, nil
-+	}
-+	if _, err := base64.StdEncoding.DecodeString(tok); err != nil {
-+		return "", "", false, nil
-+	}
-+	// Without real validation we cannot extract principal; report terminal error to encourage proper validator.
-+	return "", "", false, errors.New("spnego validator not initialized")
-+}
-+
-+func (simpleHeaderValidator) Challenge(w http.ResponseWriter) { writeNegotiateChallenge(w) }
++// (intentionally no default/simple validator; gokrb5-backed validator is used at runtime)
 diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
 index 9fe386c6..6f01e07a 100644
 --- a/connector/ldap/ldap.go
@@ -276,14 +262,15 @@ index 9fe386c6..6f01e07a 100644
  var (
 diff --git a/connector/ldap/ldap_spnego.go b/connector/ldap/ldap_spnego.go
 new file mode 100644
-index 00000000..274ff671
+index 00000000..2bcb73b4
 --- /dev/null
 +++ b/connector/ldap/ldap_spnego.go
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,129 @@
 +package ldap
 +
 +import (
 +	"context"
++	"encoding/base64"
 +	"encoding/json"
 +	"fmt"
 +	"net/http"
@@ -305,9 +292,22 @@ index 00000000..274ff671
 +	principal, realm, ok, err := c.krbValidator.ValidateRequest(r)
 +	if err != nil || !ok {
 +		if !c.krbConf.FallbackToPassword {
++			// Try to get a continuation token to advance SPNEGO handshake
++			if tok, ok2 := c.krbValidator.ContinueToken(r); ok2 && len(tok) > 0 {
++				c.logger.Info("kerberos SPNEGO continuation required; sending response token")
++				w.Header().Set("WWW-Authenticate", "Negotiate "+base64.StdEncoding.EncodeToString(tok))
++				w.WriteHeader(http.StatusUnauthorized)
++				return nil, true, nil
++			}
++			if err != nil {
++				c.logger.Info("kerberos SPNEGO validation error; sending Negotiate challenge", "err", err)
++			} else {
++				c.logger.Info("kerberos SPNEGO not completed or header missing; sending Negotiate challenge")
++			}
 +			c.krbValidator.Challenge(w)
 +			return nil, true, nil
 +		}
++		c.logger.Info("kerberos SPNEGO fallback to password enabled; rendering login form")
 +		return nil, false, nil
 +	}
 +
@@ -317,10 +317,12 @@ index 00000000..274ff671
 +			c.krbValidator.Challenge(w)
 +			return nil, true, nil
 +		}
++		c.logger.Info("kerberos realm mismatch but fallback enabled; rendering login form")
 +		return nil, false, nil
 +	}
 +
 +	mapped := mapPrincipal(principal, realm, c.krbConf.UsernameFromPrincipal)
++	c.logger.Info("kerberos principal mapped", "principal", principal, "realm", realm, "mapped_username", mapped)
 +
 +	var userEntry EntryWrapper
 +	// Allow test hook override
@@ -355,14 +357,17 @@ index 00000000..274ff671
 +		}
 +		return nil, false, nil
 +	}
++	c.logger.Info("kerberos user lookup succeeded", "dn", userEntry.Entry.DN)
 +
 +	ident, err := c.identityFromEntry(userEntry.Entry)
 +	if err != nil {
++		c.logger.Info("failed to build identity from LDAP entry after kerberos SPNEGO", "err", err)
 +		return nil, true, err
 +	}
 +	if s.Groups {
 +		groups, err := c.groups(ctx, userEntry.Entry)
 +		if err != nil {
++			c.logger.Info("failed to query groups after kerberos SPNEGO", "err", err)
 +			return nil, true, fmt.Errorf("ldap: failed to query groups: %v", err)
 +		}
 +		ident.Groups = groups
@@ -376,7 +381,7 @@ index 00000000..274ff671
 +		}
 +	}
 +
-+	c.logger.Info("kerberos principal mapped", "principal", principal, "mapped_username", mapped)
++	c.logger.Info("kerberos SPNEGO authentication succeeded", "username", ident.Username, "email", ident.Email, "groups_count", len(ident.Groups))
 +	return &ident, true, nil
 +}
 +
@@ -392,15 +397,17 @@ index 00000000..274ff671
 +}
 diff --git a/connector/ldap/ldap_spnego_test.go b/connector/ldap/ldap_spnego_test.go
 new file mode 100644
-index 00000000..8580c8bb
+index 00000000..3f0a8090
 --- /dev/null
 +++ b/connector/ldap/ldap_spnego_test.go
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,458 @@
 +package ldap
 +
 +import (
++	"encoding/base64"
 +	"net/http"
 +	"net/http/httptest"
++	"strings"
 +	"testing"
 +
 +	"log/slog"
@@ -415,19 +422,40 @@ index 00000000..8580c8bb
 +	ok         bool
 +	err        error
 +	challenged bool
++	contToken  []byte
++	step       int // -1 means disabled; 0->continue, then success
 +}
 +
 +func (m *mockKrbValidator) ValidateRequest(r *http.Request) (string, string, bool, error) {
++	if m.step >= 0 {
++		if m.step == 0 {
++			return "", "", false, nil
++		}
++		return m.principal, m.realm, true, nil
++	}
 +	return m.principal, m.realm, m.ok, m.err
 +}
 +func (m *mockKrbValidator) Challenge(w http.ResponseWriter) {
 +	m.challenged = true
 +	writeNegotiateChallenge(w)
 +}
++func (m *mockKrbValidator) ContinueToken(r *http.Request) ([]byte, bool) {
++	if m.step >= 0 {
++		if m.step == 0 && len(m.contToken) > 0 {
++			m.step++
++			return m.contToken, true
++		}
++		return nil, false
++	}
++	if len(m.contToken) > 0 {
++		return m.contToken, true
++	}
++	return nil, false
++}
 +
 +func Test_SPNEGO_NoHeader_Returns401Negotiate(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
-+	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	w := httptest.NewRecorder()
@@ -451,7 +479,7 @@ index 00000000..8580c8bb
 +
 +func Test_SPNEGO_ExpectedRealmMismatch_401(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart", ExpectedRealm: "EXAMPLE.COM"}}
-+	mv := &mockKrbValidator{principal: "jdoe@OTHER.COM", realm: "OTHER.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "jdoe@OTHER.COM", realm: "OTHER.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	w := httptest.NewRecorder()
@@ -475,7 +503,7 @@ index 00000000..8580c8bb
 +
 +func Test_SPNEGO_FallbackToPassword_NoHeader_HandledFalse(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: true, UsernameFromPrincipal: "localpart"}}
-+	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	w := httptest.NewRecorder()
@@ -488,6 +516,95 @@ index 00000000..8580c8bb
 +	}
 +	if ident != nil {
 +		t.Fatalf("expected no identity")
++	}
++}
++
++func Test_SPNEGO_ContinueNeeded_SendsResponseToken(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil, contToken: []byte{0x01, 0x02, 0x03}}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	r.Header.Set("Authorization", "Negotiate Zm9v")
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if !bool(handled) {
++		t.Fatalf("expected handled")
++	}
++	if ident != nil {
++		t.Fatalf("expected no identity")
++	}
++	if w.Code != 401 {
++		t.Fatalf("expected 401, got %d", w.Code)
++	}
++	hdr := w.Header().Get("WWW-Authenticate")
++	if !strings.HasPrefix(hdr, "Negotiate ") {
++		t.Fatalf("expected Negotiate header, got %q", hdr)
++	}
++	want := "Negotiate " + base64.StdEncoding.EncodeToString([]byte{0x01, 0x02, 0x03})
++	if hdr != want {
++		t.Fatalf("unexpected negotiate header, got %q want %q", hdr, want)
++	}
++}
++
++func Test_SPNEGO_ContinueThenSuccess_ShortCircuitIdentity(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
++	lc.Config.UserSearch.IDAttr = "uid"
++	lc.Config.UserSearch.EmailAttr = "mail"
++	lc.Config.UserSearch.NameAttr = "cn"
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", contToken: []byte{0xAA, 0xBB}, step: 0}
++	lc.krbValidator = mv
++
++	// First request -> 401 with continue token
++	r1 := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w1 := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r1.Context(), connector.Scopes{}, w1, r1)
++	if err != nil || !bool(handled) || ident != nil || w1.Code != 401 {
++		t.Fatalf("unexpected first step result: ident=%v handled=%v code=%d err=%v", ident, handled, w1.Code, err)
++	}
++	hdr := w1.Header().Get("WWW-Authenticate")
++	if hdr == "" || !strings.HasPrefix(hdr, "Negotiate ") {
++		t.Fatalf("expected Negotiate header on first step, got %q", hdr)
++	}
++
++	// Second request -> validator now returns ok=true (due to step increment)
++	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
++		e := ldaplib.NewEntry("cn=jdoe,dc=example,dc=org", map[string][]string{
++			c.UserSearch.IDAttr:    {"uid-jdoe"},
++			c.UserSearch.EmailAttr: {"jdoe@example.com"},
++			c.UserSearch.NameAttr:  {"John Doe"},
++		})
++		return *e, true, nil
++	}
++	defer func() { krbLookupUserHook = nil }()
++	r2 := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w2 := httptest.NewRecorder()
++	ident2, handled2, err2 := lc.TrySPNEGO(r2.Context(), connector.Scopes{}, w2, r2)
++	if err2 != nil {
++		t.Fatalf("unexpected err: %v", err2)
++	}
++	if !bool(handled2) || ident2 == nil {
++		t.Fatalf("expected handled with identity on second step")
++	}
++}
++
++func Test_SPNEGO_ContinueNeeded_FallbackTrue_NotHandled(t *testing.T) {
++	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: true, UsernameFromPrincipal: "localpart"}}
++	mv := &mockKrbValidator{contToken: []byte{0x10}, step: 0}
++	lc.krbValidator = mv
++	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
++	w := httptest.NewRecorder()
++	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
++	if err != nil {
++		t.Fatalf("unexpected err: %v", err)
++	}
++	if bool(handled) || ident != nil {
++		t.Fatalf("expected not handled with fallback=true when continue is needed")
++	}
++	if w.Code != 200 && w.Code != 0 {
++		t.Fatalf("expected no response written yet, got %d", w.Code)
 +	}
 +}
 +
@@ -507,7 +624,7 @@ index 00000000..8580c8bb
 +
 +func Test_SPNEGO_UserNotFound_401(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
-+	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	w := httptest.NewRecorder()
@@ -532,7 +649,7 @@ index 00000000..8580c8bb
 +	lc.Config.UserSearch.IDAttr = "uid"
 +	lc.Config.UserSearch.EmailAttr = "mail"
 +	lc.Config.UserSearch.NameAttr = "cn"
-+	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	// Inject a fake user entry via global hook
 +	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
@@ -566,7 +683,7 @@ index 00000000..8580c8bb
 +	// Use real validator path; provide invalid base64 header so it triggers challenge
 +	v, _ := newGokrb5Validator("/dev/null")
 +	// newGokrb5Validator will fail; fallback to mock to control behavior
-+	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	r.Header.Set("Authorization", "Negotiate !!!notbase64!!!")
@@ -595,7 +712,7 @@ index 00000000..8580c8bb
 +	lc.Config.UserSearch.IDAttr = "uid"
 +	lc.Config.UserSearch.EmailAttr = "mail"
 +	lc.Config.UserSearch.NameAttr = "cn"
-+	mv := &mockKrbValidator{principal: "J.Doe@Example.COM", realm: "Example.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "J.Doe@Example.COM", realm: "Example.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	// Expect lower-cased full UPN
 +	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
@@ -629,7 +746,7 @@ index 00000000..8580c8bb
 +	lc.Config.UserSearch.IDAttr = "uid"
 +	lc.Config.UserSearch.EmailAttr = "mail"
 +	lc.Config.UserSearch.NameAttr = "cn"
-+	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
 +		e := ldaplib.NewEntry("cn=jdoe,dc=example,dc=org", map[string][]string{
@@ -660,7 +777,7 @@ index 00000000..8580c8bb
 +
 +func Test_SPNEGO_FallbackTrue_InvalidHeader_NotHandled(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: true, UsernameFromPrincipal: "localpart"}}
-+	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil}
++	mv := &mockKrbValidator{principal: "", realm: "", ok: false, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	r.Header.Set("Authorization", "Negotiate !!!")
@@ -685,7 +802,7 @@ index 00000000..8580c8bb
 +	lc.Config.UserSearch.IDAttr = "uid"
 +	lc.Config.UserSearch.EmailAttr = "mail"
 +	lc.Config.UserSearch.NameAttr = "cn"
-+	mv := &mockKrbValidator{principal: "Admin@REALM.LOCAL", realm: "REALM.LOCAL", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "Admin@REALM.LOCAL", realm: "REALM.LOCAL", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
 +		if username != "admin" {
@@ -718,7 +835,7 @@ index 00000000..8580c8bb
 +	lc.Config.UserSearch.IDAttr = "uid"
 +	lc.Config.UserSearch.EmailAttr = "mail"
 +	lc.Config.UserSearch.NameAttr = "cn"
-+	mv := &mockKrbValidator{principal: "user@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil}
++	mv := &mockKrbValidator{principal: "user@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	krbLookupUserHook = func(c *ldapConnector, username string) (ldaplib.Entry, bool, error) {
 +		e := ldaplib.NewEntry("cn=user,dc=example,dc=com", map[string][]string{
@@ -1148,6 +1265,4 @@ index 114712ba..c6bbec69 100644
  func TestHandleTokenExchange(t *testing.T) {
  	tests := []struct {
  		name               string
--- 
-2.39.5 (Apple Git-154)
 
