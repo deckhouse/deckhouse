@@ -29,6 +29,18 @@ spec:
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: node-group-exporter
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-group-exporter")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: node-group-exporter
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,7 +50,10 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -66,6 +81,16 @@ spec:
         args:
         - --server.exporter-address=127.0.0.1:9000
         - --server.log-level=info
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9001
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
