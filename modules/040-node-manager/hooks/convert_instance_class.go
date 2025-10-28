@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -58,8 +59,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleHuaweiCloudInstanceClassConversion)
 
-func handleHuaweiCloudInstanceClassConversion(input *go_hook.HookInput) error {
-	for ic, err := range sdkobjectpatch.SnapshotIter[instanceClass](input.NewSnapshots.Get("huaweicloud_instance_classes")) {
+func handleHuaweiCloudInstanceClassConversion(_ context.Context, input *go_hook.HookInput) error {
+	for ic, err := range sdkobjectpatch.SnapshotIter[instanceClass](input.Snapshots.Get("huaweicloud_instance_classes")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over HuaweiCloudInstanceClass snapshots: %w", err)
 		}
