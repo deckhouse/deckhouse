@@ -166,6 +166,8 @@ func (h *Handler) Start(ctx context.Context) {
 //
 // Blocks until the event processing goroutine exits.
 func (h *Handler) Stop() {
+	h.logger.Info("stop loop")
+
 	if h.cancel != nil {
 		h.cancel()
 		h.wg.Wait()
