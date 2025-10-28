@@ -1,6 +1,6 @@
 {% assign lang = page.lang | default: 'en' %}
 {% for group in site.data.deckhouse-ports.groups %}
-  <h2>{{ group.description[lang] }}</h2>
+  <h3>{{ group.description[lang] }}</h3>
 
   <table class="deckhouse-ports" markdown="0">
     <thead>
@@ -19,6 +19,6 @@
         </tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table><br>
 {% endfor %}
 

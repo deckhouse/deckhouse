@@ -692,9 +692,10 @@ module JSONSchemaRenderer
                      return nil
                  end
 
+                 headerLevel = @page['layout'] == "pdf" ? 3 : 2
                  resourceName = input["spec"]["names"]["kind"]
                  resourceGroup = get_hash_value(input,'metadata','name')
-                 result.push("<h2>#{resourceName}</h2>")
+                 result.push("<h#{headerLevel}>#{resourceName}</h#{headerLevel}>")
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
@@ -948,7 +949,8 @@ module JSONSchemaRenderer
         end
 
         result.push('<div markdown="0">')
-        result.push(convert(%Q(<h2>#{input["kind"]}</h2>)))
+        headerLevel = @page['layout'] == "pdf" ? 3 : 2
+        result.push(%Q(<h#{headerLevel}>#{input["kind"]}</h#{headerLevel}>))
 
         for i in 0..(input["apiVersions"].length-1)
           result.push("<p><font size='-1'>Version: #{input["apiVersions"][i]["apiVersion"]}</font></p>")
