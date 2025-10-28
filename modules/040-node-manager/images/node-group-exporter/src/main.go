@@ -97,16 +97,22 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting server on %s", *serverAddress)
+		log.Printf("Starting HTTP server on %s", *serverAddress)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed to start: %v", err)
+			log.Fatalf("HTTP server failed: %v", err)
 		}
+		log.Println("HTTP server stopped")
 	}()
+
+	log.Println("Node group exporter is ready")
+	log.Printf("Metrics available at %s", *serverAddress)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	log.Println("Received shutdown signal")
 
 	log.Println("Shutting down server...")
 
