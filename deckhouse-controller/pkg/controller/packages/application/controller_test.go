@@ -27,7 +27,6 @@ import (
 	"regexp"
 	"testing"
 
-	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -186,7 +184,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		client: kubeClient,
 		logger: log.NewNop(),
 		dc:     dependency.NewMockedContainer(),
-		exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
+		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	// Load test data from file

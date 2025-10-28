@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -41,23 +41,23 @@ const (
 )
 
 type reconciler struct {
-	client client.Client
-	dc     dependency.Container
-	exts   *extenders.ExtendersStack
-	logger *log.Logger
+	client          client.Client
+	dc              dependency.Container
+	packageOperator *applicationpackage.PackageOperator
+	logger          *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	dc dependency.Container,
-	exts *extenders.ExtendersStack,
+	packageOperator *applicationpackage.PackageOperator,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		dc:     dc,
-		exts:   exts,
-		logger: logger,
+		client:          runtimeManager.GetClient(),
+		dc:              dc,
+		packageOperator: packageOperator,
+		logger:          logger,
 	}
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -110,45 +110,37 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) (ctr
 	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
+	if err != nil && !apierrors.IsNotFound(err) {
+		r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionNotFound, err.Error())
+		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+		if err != nil {
+			return res, fmt.Errorf("failed to patch application status: %w", err)
+		}
+
+		return res, fmt.Errorf("applicationPackageVersion %s not found: %w", apvName, err)
+	}
 	if err != nil {
 		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
 	}
-
-	// get requirements from ApplicationPackageVersion and check it
-	if apv.Status.Metadata != nil && apv.Status.Metadata.Requirements != nil {
-		// TODO: check correct work of validation
-		// checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, []string{}, r.exts, nil, releaseUpdater.WithLogger(r.logger.Named("requirements_checker")))
-		// if err != nil {
-		// 	return res, fmt.Errorf("failed to create requirements checker: %w", err)
-		// }
-
-		_, err = r.exts.KubernetesVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Kubernetes)
+	if apv.IsDraft() {
+		message := "ApplicationPackageVersion " + apvName + " is draft"
+		app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionIsDraft, message)
+		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 		if err != nil {
-			app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionRequirementsMet, "KubernetesVersionInvalid", err.Error())
-
-			err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
-			if err != nil {
-				return res, fmt.Errorf("failed to patch application status: %w", err)
-			}
-
-			return res, fmt.Errorf("failed to validate Kubernetes version %s: %w", app.Name, err)
+			return res, fmt.Errorf("failed to patch application status: %w", err)
 		}
-		_, err = r.exts.DeckhouseVersion.ValidateBaseVersion(apv.Status.Metadata.Requirements.Deckhouse)
-		if err != nil {
-			app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionRequirementsMet, "DeckhouseVersionInvalid", err.Error())
 
-			err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
-			if err != nil {
-				return res, fmt.Errorf("failed to patch application status: %w", err)
-			}
-
-			return res, fmt.Errorf("failed to validate Deckhouse version %s: %w", app.Name, err)
-		}
+		return res, fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	// if requirements ok - get PackageRegistry from spec.repository to get registry client
-
 	// call PackageOperator method (maybe PackageAdder interface)
+	r.packageOperator.AddApplication(ctx, apv.Status.Metadata)
+
+	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
+	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+	if err != nil {
+		return res, fmt.Errorf("failed to patch application status: %w", err)
+	}
 
 	return res, nil
 }

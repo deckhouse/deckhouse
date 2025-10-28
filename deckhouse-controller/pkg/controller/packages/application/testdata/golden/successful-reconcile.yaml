@@ -17,11 +17,8 @@ status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'requirements cannot be checked: kubernetes version is invalid: Invalid
-      Semantic Version'
-    reason: KubernetesVersionInvalid
-    status: "False"
-    type: RequirementsMet
+    status: "True"
+    type: Processed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

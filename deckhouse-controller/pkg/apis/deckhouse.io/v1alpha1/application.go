@@ -35,6 +35,12 @@ const (
 	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
 	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
 	ApplicationConditionReplicasAvailable      = "ReplicasAvailable"
+
+	// ApplicationConditionTypeProcessed changes only by application controller
+	ApplicationConditionTypeProcessed                = "Processed"
+	ApplicationConditionReasonVersionNotFound        = "VersionNotFound"
+	ApplicationConditionReasonVersionIsDraft         = "VersionIsDraft"
+	ApplicationConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
 )
 
 var (

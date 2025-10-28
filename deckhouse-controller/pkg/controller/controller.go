@@ -61,6 +61,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
 	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
@@ -354,7 +355,8 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = packageapplication.RegisterController(runtimeManager, dc, exts, logger.Named("application-controller"))
+		packageOperator := applicationpackage.NewPackageOperator(runtimeManager.GetClient(), logger.Named("package-operator"))
+		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
