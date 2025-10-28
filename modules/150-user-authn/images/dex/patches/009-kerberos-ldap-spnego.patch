@@ -1,9 +1,35 @@
+From 24317060bb75a14e9d371c2e92a8997e8f8f5bf7 Mon Sep 17 00:00:00 2001
+From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
+Date: Tue, 28 Oct 2025 20:13:10 +0300
+Subject: [PATCH] update
+
+---
+ connector/ldap/kerberos_gokrb5.go  | 191 ++++++++++++
+ connector/ldap/kerberos_spnego.go  |  44 +++
+ connector/ldap/ldap.go             |  54 +++-
+ connector/ldap/ldap_spnego.go      | 129 ++++++++
+ connector/ldap/ldap_spnego_test.go | 458 +++++++++++++++++++++++++++++
+ connector/spnego.go                |  22 ++
+ docs/kerberos_ldap.md              |  57 ++++
+ examples/ldap/config-ldap.yaml     |   9 +
+ go.mod                             |   7 +
+ go.sum                             |  33 +++
+ server/handlers.go                 |  40 +++
+ server/handlers_test.go            |  86 ++++++
+ 12 files changed, 1129 insertions(+), 1 deletion(-)
+ create mode 100644 connector/ldap/kerberos_gokrb5.go
+ create mode 100644 connector/ldap/kerberos_spnego.go
+ create mode 100644 connector/ldap/ldap_spnego.go
+ create mode 100644 connector/ldap/ldap_spnego_test.go
+ create mode 100644 connector/spnego.go
+ create mode 100644 docs/kerberos_ldap.md
+
 diff --git a/connector/ldap/kerberos_gokrb5.go b/connector/ldap/kerberos_gokrb5.go
 new file mode 100644
-index 00000000..3b910235
+index 00000000..9c9e9595
 --- /dev/null
 +++ b/connector/ldap/kerberos_gokrb5.go
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,191 @@
 +package ldap
 +
 +import (
@@ -27,8 +53,7 @@ index 00000000..3b910235
 +// context key used by gokrb5 to store credentials in the context
 +var ctxCredentialsKey interface{} = "github.com/jcmturner/gokrb5/v8/ctxCredentials"
 +
-+// best-effort key used by gokrb5 to store response token for SPNEGO continuation
-+var ctxRespTokenKey interface{} = "github.com/jcmturner/gokrb5/v8/ctxRespToken"
++// (no response token read from context; server responds with standard NegTokenResp when continue is needed)
 +
 +type gokrb5Validator struct {
 +	kt     *keytab.Keytab
@@ -99,12 +124,12 @@ index 00000000..3b910235
 +	// Pass client address when available (improves AP-REQ validation with address-bound tickets)
 +	var sp *spnego.SPNEGO
 +	if ha, err := types.GetHostAddress(r.RemoteAddr); err == nil {
-+		sp = spnego.SPNEGOService(v.kt, service.ClientAddress(ha))
++		sp = spnego.SPNEGOService(v.kt, service.ClientAddress(ha), service.DecodePAC(false))
 +	} else {
 +		if v.logger != nil {
 +			v.logger.Info("kerberos: cannot parse client address", "remote", r.RemoteAddr, "err", err)
 +		}
-+		sp = spnego.SPNEGOService(v.kt)
++		sp = spnego.SPNEGOService(v.kt, service.DecodePAC(false))
 +	}
 +	authed, ctx, status := sp.AcceptSecContext(&tok)
 +	if status.Code != gssapi.StatusComplete {
@@ -173,7 +198,13 @@ index 00000000..3b910235
 +		tok.Init = true
 +		tok.NegTokenInit = spnego.NegTokenInit{MechTypes: []asn1.ObjectIdentifier{k5.OID}, MechTokenBytes: data}
 +	}
-+	sp := spnego.SPNEGOService(v.kt)
++	// Try continue with same options as in ValidateRequest
++	var sp *spnego.SPNEGO
++	if ha, err := types.GetHostAddress(r.RemoteAddr); err == nil {
++		sp = spnego.SPNEGOService(v.kt, service.ClientAddress(ha), service.DecodePAC(false))
++	} else {
++		sp = spnego.SPNEGOService(v.kt, service.DecodePAC(false))
++	}
 +	_, ctx, status := sp.AcceptSecContext(&tok)
 +	if status.Code != gssapi.StatusContinueNeeded || ctx == nil {
 +		if v.logger != nil {
@@ -1338,3 +1369,6 @@ index 114712ba..c6bbec69 100644
  func TestHandleTokenExchange(t *testing.T) {
  	tests := []struct {
  		name               string
+-- 
+2.51.0
+
