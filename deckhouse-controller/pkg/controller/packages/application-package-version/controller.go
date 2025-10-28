@@ -88,7 +88,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		r.logger.Warn("failed to get application package version", slog.String("name", req.Name), log.Err(err))
 
-		return ctrl.Result{Requeue: true}, nil
+		//return err
+		return res, err
 	}
 
 	// handle delete event
@@ -117,9 +118,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
-	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", apv.Name))
-
 	original := apv.DeepCopy()
+	logger := r.logger.With(slog.String("name", apv.Name))
+
+	logger.Debug("handling ApplicationPackageVersion")
+	defer logger.Debug("handle ApplicationPackageVersion complete")
 
 	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
@@ -140,15 +143,13 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.Repository, err)
 	}
 
-	r.logger.Debug("got package repository",
-		slog.String("package_version", apv.Name),
-		slog.String("repo", packageRepo.Spec.Registry.Repo))
+	logger.Debug("got package repository", slog.String("repo", packageRepo.Spec.Registry.Repo))
 
 	// Create go registry client from credentials from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/version:$version
 	registryPath := path.Join(packageRepo.Spec.Registry.Repo, apv.Spec.PackageName, "version")
 
-	r.logger.Debug("registry path", slog.String("name", apv.Name), slog.String("path", registryPath))
+	logger.Debug("registry path", slog.String("path", registryPath))
 
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
@@ -210,7 +211,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 	}
 
 	if packageMeta.PackageDefinition != nil {
-		r.logger.Debug("got metadata from package.yaml", slog.String("name", apv.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
+		logger.Debug("got metadata from package.yaml", slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
 	// Start changing the packageVersion object
@@ -219,7 +220,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 	// Patch the status
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeEnriched)
 
-	r.logger.Debug("patch package version status", slog.String("name", apv.Name))
+	logger.Debug("patch package version status")
 	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status packageVersion %s: %w", apv.Name, err)
@@ -232,15 +233,11 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 		return fmt.Errorf("patch packageVersion %s: %w", apv.Name, err)
 	}
 
-	r.logger.Info("handle ApplicationPackageVersion complete", slog.String("name", apv.Name))
-
 	return nil
 }
 
 func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	res := ctrl.Result{}
-
-	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
 	return res, nil
 }
