@@ -27,7 +27,9 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  WERF_VERSION: "v2.51.0"
+  WERF_SIGN_MANIFEST: "1"
+  WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
