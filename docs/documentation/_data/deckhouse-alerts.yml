@@ -4935,7 +4935,7 @@ alerts:
       module: loki
       edition: ce
       description: |-
-        Loki in namespace {{ $labels.namespace }} is discarding samples during ingestion.
+        Loki is discarding samples during ingestion because they fail validation.
         Samples are discarded because of "{{ $labels.reason }}" at a rate of {{ .Value | humanize }} samples per second.
       summary: |
         Loki is discarding samples during ingestion because they fail validation.
