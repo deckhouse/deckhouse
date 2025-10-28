@@ -68,6 +68,10 @@ func New(namespace, tmpDir string, cache runtimecache.Cache, logger *log.Logger)
 	}
 }
 
+func (s *Service) HasMonitor(name string) bool {
+	return s.monitorManager.HasMonitor(name)
+}
+
 func (s *Service) PauseMonitor(name string) {
 	s.monitorManager.PauseMonitor(name)
 }
@@ -203,9 +207,6 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 
 	if !shouldUpgrade {
 		s.logger.Debug("no need to upgrade", slog.String("name", app.GetName()))
-
-		s.monitorManager.AddMonitor(ctx, app.GetName(), renderedManifests)
-
 		return nil
 	}
 

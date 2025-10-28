@@ -104,6 +104,15 @@ func (m *Manager) RemoveMonitor(name string) {
 	delete(m.monitors, name)
 }
 
+// HasMonitor checks if the monitor exists
+func (m *Manager) HasMonitor(name string) bool {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	_, ok := m.monitors[name]
+	return ok
+}
+
 // PauseMonitor increments the pause counter for a release monitor.
 // The monitor will skip resource checks while paused.
 // Safe to call from multiple goroutines; requires equal Resume calls to unpause.
