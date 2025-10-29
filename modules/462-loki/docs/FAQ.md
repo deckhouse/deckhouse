@@ -39,9 +39,8 @@ A detailed description of each reason can be found in the [official Loki documen
 
   This field indicates which limit Loki hit (`reason`).
 
-2. **Find and adjust the corresponding limit in the ModuleConfig**
-  - Go to **MC** and edit the limit by its name (`reason`) in Loki’s configuration. The list of tunable parameters is available in the [Loki module configuration documentation](configuration.html#parameters-lokiconfig).
-
+1. **Find and adjust the corresponding limit in the ModuleConfig**
+- Go to **MC** and edit the limit by its name (`reason`) in Loki’s configuration. The list of tunable parameters is available in the [Loki module configuration documentation](configuration.html#parameters-lokiconfig).
 - For example:
   - `rate_limited` → increase `ingestionRateMB`, or `ingestionBurstSizeMB` if short ingestion spikes are expected. Alternatively, consider limiting the amount of logs sent on the application side.
 
