@@ -253,6 +253,10 @@ func (c *NodeGroupCollector) updateMetrics() {
 		readyNodes := int(nodeGroup.Status.Ready)
 		maxNodes := int(nodeGroup.Status.Max)
 
+		if maxNodes == 0 {
+			maxNodes = totalNodes
+		}
+
 		// Get nodes from index for node_group_node metric only
 		indexedNodes := c.nodesByGroup[nodeGroup.Name]
 		var nodeCount int
