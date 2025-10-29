@@ -46,14 +46,14 @@ const (
 type reconciler struct {
 	client          client.Client
 	dc              dependency.Container
-	packageOperator *applicationpackage.PackageOperator
+	packageOperator applicationpackage.PackageAdder
 	logger          *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	dc dependency.Container,
-	packageOperator *applicationpackage.PackageOperator,
+	packageOperator applicationpackage.PackageAdder,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
