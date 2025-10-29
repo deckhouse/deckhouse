@@ -184,7 +184,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 	ctr := &reconciler{
 		client: kubeClient,
 		logger: log.NewNop(),
-		pm:     applicationpackage.NewMockedPackageOperator(kubeClient, log.NewNop()),
+		pm:     applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop()),
 		dc:     dependency.NewMockedContainer(),
 		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}

@@ -20,8 +20,6 @@ import (
 	"context"
 	"log/slog"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -44,13 +42,11 @@ type PackageRemover interface {
 }
 
 type PackageOperator struct {
-	client client.Client
 	logger *log.Logger
 }
 
-func NewPackageOperator(client client.Client, logger *log.Logger) *PackageOperator {
+func NewPackageOperator(logger *log.Logger) *PackageOperator {
 	return &PackageOperator{
-		client: client,
 		logger: logger,
 	}
 }

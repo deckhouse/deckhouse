@@ -85,7 +85,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	app := new(v1alpha1.Application)
 	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
+			r.logger.Debug("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 
 			return res, nil
 		}
@@ -97,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !app.DeletionTimestamp.IsZero() {
-		res, err := r.delete(ctx, app)
+		err := r.handleDelete(ctx, app)
 		if err != nil {
 			r.logger.Warn("delete application", slog.String("name", app.Name), log.Err(err))
 
@@ -108,7 +108,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	err := r.handle(ctx, app)
+	err := r.handleCreateOrUpdate(ctx, app)
 	if err != nil {
 		r.logger.Warn("failed to handle application", slog.String("name", app.Name), log.Err(err))
 
@@ -118,12 +118,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) error {
-	original := app.DeepCopy()
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name))
 
 	logger.Debug("handling Application")
-	defer logger.Debug("handle Application complete")
+
+	original := app.DeepCopy()
 
 	// find ApplicationPackageVersion by spec.ApplicationPackageName and spec.version
 	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
@@ -182,30 +182,33 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) erro
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
+	logger.Debug("handle Application complete")
+
 	return nil
 }
 
-func (r *reconciler) delete(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
-	res := ctrl.Result{}
+func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name))
 
 	logger.Debug("deleting Application")
-	defer logger.Debug("delete Application complete")
 
 	r.pm.RemoveApplication(ctx, app)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
 		logger.Debug("remove finalizer")
+
 		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizer)
 
 		err := r.client.Update(ctx, app)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: requeueTime}, fmt.Errorf("remove finalizer for %s: %w", app.Name, err)
+			return fmt.Errorf("remove finalizer for %s: %w", app.Name, err)
 		}
 	}
 
-	return res, nil
+	logger.Debug("delete Application complete")
+
+	return nil
 }
 
 func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {

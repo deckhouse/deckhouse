@@ -26,38 +26,38 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-type PackageOperatorMock struct {
+type PackageOperatorStub struct {
 	client client.Client
 	logger *log.Logger
 }
 
-func NewMockedPackageOperator(client client.Client, logger *log.Logger) *PackageOperatorMock {
-	return &PackageOperatorMock{
+func NewStubPackageOperator(client client.Client, logger *log.Logger) *PackageOperatorStub {
+	return &PackageOperatorStub{
 		client: client,
 		logger: logger,
 	}
 }
 
-func (m *PackageOperatorMock) AddApplication(_ context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
+func (m *PackageOperatorStub) AddApplication(_ context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
 	m.logger.Debug("adding application", slog.String("name", apvStatus.PackageName), slog.String("version", apvStatus.Version))
 }
 
-func (m *PackageOperatorMock) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
+func (m *PackageOperatorStub) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
 	m.logger.Debug("adding cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
 }
 
-func (m *PackageOperatorMock) AddModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
+func (m *PackageOperatorStub) AddModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	m.logger.Debug("adding module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
 
-func (m *PackageOperatorMock) RemoveApplication(_ context.Context, app *v1alpha1.Application) {
+func (m *PackageOperatorStub) RemoveApplication(_ context.Context, app *v1alpha1.Application) {
 	m.logger.Debug("removing application", slog.String("name", app.Name))
 }
 
-func (m *PackageOperatorMock) RemoveClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
+func (m *PackageOperatorStub) RemoveClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
 	m.logger.Debug("removing cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
 }
 
-func (m *PackageOperatorMock) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
+func (m *PackageOperatorStub) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	m.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
