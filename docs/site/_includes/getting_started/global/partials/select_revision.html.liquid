@@ -118,7 +118,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {%- if revision =='se' and page.ee_only == true %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
 
 
-  {% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+  {% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 <div class="dimmer-block-content">
 {% endif %}
 
@@ -134,7 +134,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {%- include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {%- endif %}
 </div>
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 </div>
 {%- endif %}
 
