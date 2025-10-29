@@ -24,7 +24,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -48,9 +47,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:             huaweiInstanceClassAPIVersion,
 			Kind:                   "HuaweiCloudInstanceClass",
 			WaitForSynchronization: ptr.To(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
-			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				spec, _ := obj.Object["spec"].(map[string]interface{})
 				return instanceClass{Name: obj.GetName(), Spec: spec}, nil
