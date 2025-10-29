@@ -173,13 +173,31 @@ spec:
                       required: ["allowedValues"]
                     appArmorProfile:
                       type: object
-                      description: Allows exceptions for AppArmor profiles.
+                      description: |
+                        The list of allowed profile values for appArmorProfile on Pods/containers.
+                            Both formats are supported:
+                            - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                              `localhost/*` allows any local profile.
+                            - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+
+                            Profile types:
+                            - `Unconfined` — no restrictions (not recommended for security reasons).
+                            - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
+                            - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
+
+                            Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
                       properties:
                         allowedValues:
                           type: array
-                          description: List of allowed AppArmor profiles.
+                          description: | 
+                            Allowed values:
+                              - runtime/default
+                              - unconfined
+                              - localhost/* (where `*` may be a profile name or a wildcard)
                           items:
                             type: string
+                            pattern: '^(runtime\/default|unconfined|localhost\/.+)$'
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -354,6 +372,10 @@ spec:
                               path:
                                 type: string
                                 description: The allowed hostPath.
+                              readOnly: 
+                                type: boolean
+                                default: false
+                                description: The read-only value for the hostPath.
                               metadata:
                                 type: object
                                 description: Metadata related to the exception.
