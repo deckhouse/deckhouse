@@ -1,0 +1,38 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    draft: "true"
+    package: test-package
+    repository: test-repo
+  name: test-apv
+  resourceVersion: "2"
+spec:
+  packageName: test-package
+  repository: test-repo
+  version: 1.0.0
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'failed to get image: registry error'
+    reason: GetImageError
+    status: "False"
+    type: IsEnriched
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: test-repo
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status:
+  syncTime: null
