@@ -1,4 +1,4 @@
-# version=v0.5.35
+# version=v0.5.36
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:a6e0220edd70c87368869f45a66c10c684709fe2ffdbaf8471d3d055f698de91" # fromImage: builder/scratch
@@ -30,10 +30,10 @@ builder/debian-svace-12.11-slim: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38
 builder/debian-svace-trixie-slim: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38d5dbf1ee9f7961f156de88a50" # fromImage: builder/debian
 builder/debian-trixie-slim: "sha256:0ed78087f23de3d6a9e3bb75bc6df7e2d17373cf7f4d45568a8d265cfd0ca0e2" # from: debian:trixie-slim
 builder/golang-alpine: "sha256:d14b0360933645410bd44d00f940411cb0ba64024ba39e40d53fcc24152f2423" # fromImage: builder/alpine
-builder/golang-alpine-1.24: "sha256:d14b0360933645410bd44d00f940411cb0ba64024ba39e40d53fcc24152f2423" # fromImage: builder/alpine
+builder/golang-alpine-1.24: "sha256:d7a2c6933c9530816beffe005dbf63096270029997fe5afc9b09b486024160d2" # fromImage: builder/alpine
 builder/golang-alpine-1.25: "sha256:d14b0360933645410bd44d00f940411cb0ba64024ba39e40d53fcc24152f2423" # fromImage: builder/alpine
 builder/golang-alpine-svace: "sha256:c98ca806c2a578d3ce57cc4dfd26e950219eaa535f95ea67595fc888694a3e14" # fromImage: builder/golang-alpine-1.25
-builder/golang-alpine-svace-1.24: "sha256:c98ca806c2a578d3ce57cc4dfd26e950219eaa535f95ea67595fc888694a3e14" # fromImage: builder/golang-alpine-1.24
+builder/golang-alpine-svace-1.24: "sha256:7e4f0ba1bf70fba40b103de1f9f3ee64b149b7648575a5b4294a39c7454e7e2e" # fromImage: builder/golang-alpine-1.24
 builder/golang-alpine-svace-1.25: "sha256:c98ca806c2a578d3ce57cc4dfd26e950219eaa535f95ea67595fc888694a3e14" # fromImage: builder/golang-alpine-1.25
 builder/golang-alt: "sha256:4554086aedf3692b9ab70a47cf4f5929569888bbdaa0de400554674706a7c544" # fromImage: builder/alt
 builder/golang-alt-1.24.9: "sha256:b77245d9a1506813c494491612bad34aa4fd0fd5c122527536ea9f6bf8621b37" # fromImage: builder/alt
