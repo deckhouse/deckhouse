@@ -156,7 +156,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the `D8DeckhouseModuleValidationError` alert will appear, and the module will not be successfully activated.
+If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
 
 To get more details, use the following command:
 

@@ -44,6 +44,10 @@
   # Shell comfort: add bashrc for deckhouse
   rm -f /.bashrc
   ln -s /etc/bashrc /.bashrc
+  # Shell comfort: add bashrc for deckhouse root user
+  mkdir -p /root
+  rm -f /root/.bashrc
+  ln -s /etc/bashrc /root/.bashrc
   # Shell comfort: create /etc/vim
   mkdir -p /etc/vim/
   # Shell comfort: vimrc.local
@@ -94,6 +98,14 @@ import:
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
+  before: install
+- image: tools/bash-completion
+  add: /
+  to: /
+  includePaths:
+  - etc/bash_completion
+  - etc/bash_completion.d
+  - usr/share/bash-completion
   before: install
 - image: tools/jq
   add: /usr/bin/jq

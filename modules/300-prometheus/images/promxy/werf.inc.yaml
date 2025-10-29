@@ -46,3 +46,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/app/promxy"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

@@ -1,19 +1,43 @@
+{{ $requiredCoreUtilsBinaries := list "base64" "basename" "cat" "cut" "coreutils" "echo" "env" "expand" "expr" "head" "ls" "md5sum" "numfmt" "paste" "printf" "readlink" "sha1sum" "sha256sum" "sort" "split" "stat" "tail" "tee" "test" "uname" "uniq" "wc"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /node-collector
-    to: /usr/local/bin/node-collector
-    before: setup
-  - image: tools/procps
-    add: /bin/pgrep
-    to: /usr/bin/pgrep
-    before: setup
-  - image: tools/procps
-    add: /bin/ps
-    to: /usr/bin/ps
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /node-collector
+  to: /usr/local/bin/node-collector
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
+  before: setup
+- image: tools/procps
+  add: /bin/ps
+  to: /usr/bin/ps
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/sh
+  before: setup
+- image: tools/gawk
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+- image: tools/coreutils
+  add: /
+  to: /
+  before: setup
+  includePaths:
+{{- range $binary := $requiredCoreUtilsBinaries }}
+  - usr/bin/{{ $binary }}
+{{ end }}
 git:
 {{- include "image mount points" . }}
 imageSpec:

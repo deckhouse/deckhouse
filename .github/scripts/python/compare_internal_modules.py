@@ -20,6 +20,7 @@ import sys
 import re
 
 whitelist = [
+    ".*-vex-artifact",
     "base-for-go",
     "common-base",
     "common/shell-operator",
@@ -61,7 +62,7 @@ for edition in editions:
         unique_images.update(reports[edition].keys())
 
 # Find which images have more than one unique digest
-found = False
+found = []
 for image in unique_images:
     digests = set()
     for edition in editions:
@@ -69,13 +70,15 @@ for image in unique_images:
             digests.add(reports[edition][image]['DockerImageDigest'])
     if len(digests) > 1:
         if not [image for pattern in whitelist if re.fullmatch(pattern, image)]:
-            found = True
+            found.append(image)
             print(f'Found differing image digests for image {image}:')
         else:
             print(f'Found differing image digests for image {image} (allowed to differ):')
         for edition in editions:
             if image in reports[edition]:
                 print(f'\t{edition} digest: {reports[edition][image]['DockerImageDigest']}')
-
-if found:
+if len(found) > 0:
+    print("Found possibly dangerous differing images:")
+    for image in found:
+        print(image)
     sys.exit(1)

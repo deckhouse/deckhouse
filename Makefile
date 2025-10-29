@@ -217,7 +217,7 @@ generate: generate-kubernetes generate-tools
 
 .PHONY: generate-tools
 generate-tools:
-	cd tools; go generate -v; cd ..
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -331,9 +331,9 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm.
+update-lib-helm: yq ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i -y '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
 .PHONY: update-base-images-versions
 update-base-images-versions:
@@ -468,11 +468,13 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
+YQ = $(LOCALBIN)/yq
 
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.7
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.30.11
+YQ_VERSION ?= v4.47.2
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -541,6 +543,11 @@ $(INFORMER_GEN): $(LOCALBIN)
 controller-gen: $(CONTROLLER_GEN)
 $(CONTROLLER_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+$(YQ): $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

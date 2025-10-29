@@ -291,10 +291,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -342,24 +348,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -592,10 +587,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -643,24 +644,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -893,10 +883,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -944,24 +940,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1194,10 +1179,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1245,24 +1236,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1495,10 +1475,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1546,24 +1532,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -1796,10 +1771,16 @@ jobs:
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1847,24 +1828,13 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
-
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
@@ -2165,6 +2135,7 @@ jobs:
           WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
@@ -2739,7 +2710,7 @@ jobs:
       - name: Running default user validation on ${{env.TAG}}
         env:
           TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
@@ -3183,6 +3154,7 @@ jobs:
           WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url=${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_PROD }}"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
       # </template: deploy_site_template>
 
@@ -3345,7 +3317,7 @@ jobs:
       - name: List changed modules from latest released version
         id: list_changed_modules
         env:
-          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |
