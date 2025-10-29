@@ -3,7 +3,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: node-group-exporter:prometheus-metrics-access
+  name: access-to-node-group-exporter-prometheus-metrics
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-group-exporter")) | nindent 2 }}
 rules:
@@ -15,13 +15,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: node-group-exporter:prometheus-metrics-access
+  name: access-to-node-group-exporter-prometheus-metrics
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-group-exporter")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: node-group-exporter:prometheus-metrics-access
+  name: access-to-node-group-exporter-prometheus-metrics
 subjects:
 - kind: User
   name: d8-monitoring:scraper
