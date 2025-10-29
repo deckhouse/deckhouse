@@ -96,6 +96,7 @@ shell:
   - apk add --no-cache make bash rsync
 {{- end }}
   install:
+  - export GOLANG_VERSION=$(go version | grep -oP 'go\K[0-9.]+') GOTOOLCHAIN=local GOPATH=/go
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version

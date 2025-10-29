@@ -1,8 +1,0 @@
-diff --git c/.go-version w/.go-version
-index fa994bd7..5bb76b57 100644
---- c/.go-version
-+++ w/.go-version
-@@ -1 +1 @@
--1.23.6
-\ No newline at end of file
-+1.25.3
