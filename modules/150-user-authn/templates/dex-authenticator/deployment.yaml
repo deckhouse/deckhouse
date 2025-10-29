@@ -232,9 +232,11 @@ spec:
           {{- else if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" . | nindent 12 }}
           {{- end }}
-          {{- with $crd.spec.resources.limits }}
+          {{- with $crd.spec.resources }}
+            {{- with .limits }}
           limits:
             {{ toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
         ports:
         - name: dex-https
