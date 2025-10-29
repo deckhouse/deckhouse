@@ -1039,7 +1039,7 @@ Configuration is specified by creating subdirectories named after the registry a
 ├── private.registry.example:5001
 │   ├── ca.crt
 │   └── hosts.toml
-└── registry.deckhouse.ru
+└── registry.deckhouse.io
     ├── ca.crt
     └── hosts.toml
 ```

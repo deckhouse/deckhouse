@@ -162,7 +162,7 @@ Example output:
 ```yaml
 conditions:
   - lastTransitionTime: "2025-07-15T12:52:46Z"
-    message: 'registry.deckhouse.ru: all 157 items are checked'
+    message: 'registry.deckhouse.io: all 157 items are checked'
     reason: Ready
     status: "True"
     type: RegistryContainsRequiredImages
