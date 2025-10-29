@@ -67,7 +67,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go cmd/cloud-controller-manager/gkenetworkparamsetcontroller.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go cmd/cloud-controller-manager/gkenetworkparamsetcontroller.go cmd/cloud-controller-manager/gkeservicecontroller.go
   - chown 64535:64535 /src/gcp-cloud-controller-manager
   - chmod 0755 /src/gcp-cloud-controller-manager
   {{- end }}
