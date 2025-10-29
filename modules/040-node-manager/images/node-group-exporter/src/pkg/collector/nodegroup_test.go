@@ -412,21 +412,117 @@ func TestEventHandler(t *testing.T) {
 	collector.OnNodeAdd(node)
 	assert.Contains(t, collector.nodes, "test-node")
 
-	// Test OnNodeUpdate
+	// Test OnNodeUpdate with same NodeGroup (nodes cannot change NodeGroup)
 	updatedNode := &k8s.Node{
 		Node: &v1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-node",
 			},
 		},
-		NodeGroup: "updated-group",
+		NodeGroup: "test-group", // Same NodeGroup
 	}
 
 	collector.OnNodeUpdate(node, updatedNode)
 	assert.Equal(t, updatedNode, collector.nodes["test-node"])
+	assert.Equal(t, "test-group", updatedNode.NodeGroup) // Should remain the same
+
+	// Test OnNodeUpdate with status change (Ready status) - critical test
+	notReadyNode := &k8s.Node{
+		Node: &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-node-status",
+			},
+			Status: v1.NodeStatus{
+				Conditions: []v1.NodeCondition{
+					{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionFalse,
+					},
+				},
+			},
+		},
+		NodeGroup: "test-group",
+	}
+
+	// Add NodeGroup first
+	testGroup := &k8s.NodeGroupWrapper{
+		NodeGroup: &k8s.NodeGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-group",
+			},
+			Spec: k8s.NodeGroupSpec{
+				NodeType: "Cloud",
+			},
+		},
+	}
+	collector.OnNodeGroupAdd(testGroup)
+	collector.OnNodeAdd(notReadyNode)
+
+	// Check initial metrics - should show 0 ready
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collector)
+	metrics, _ := registry.Gather()
+
+	var readyCount float64
+	for _, mf := range metrics {
+		if mf.GetName() == "node_group_count_ready_total" {
+			for _, m := range mf.GetMetric() {
+				readyCount = m.GetGauge().GetValue()
+			}
+		}
+	}
+	assert.Equal(t, 0.0, readyCount, "Node should not be ready initially")
+
+	// Update node to Ready - this is the critical test
+	readyNode := &k8s.Node{
+		Node: &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-node-status",
+			},
+			Status: v1.NodeStatus{
+				Conditions: []v1.NodeCondition{
+					{
+						Type:   v1.NodeReady,
+						Status: v1.ConditionTrue,
+					},
+				},
+			},
+		},
+		NodeGroup: "test-group",
+	}
+
+	collector.OnNodeUpdate(notReadyNode, readyNode)
+
+	// Check metrics again - should show 1 ready now
+	metrics, _ = registry.Gather()
+	readyCount = 0
+	for _, mf := range metrics {
+		if mf.GetName() == "node_group_count_ready_total" {
+			for _, m := range mf.GetMetric() {
+				readyCount = m.GetGauge().GetValue()
+			}
+		}
+	}
+	assert.Equal(t, 1.0, readyCount, "Node should be ready after update - this test verifies the bug fix")
+
+	// Check node_group_node metric
+	var nodeMetricValue float64
+	for _, mf := range metrics {
+		if mf.GetName() == "node_group_node" {
+			for _, m := range mf.GetMetric() {
+				for _, l := range m.GetLabel() {
+					if l.GetName() == "node" && l.GetValue() == "test-node-status" {
+						nodeMetricValue = m.GetGauge().GetValue()
+						break
+					}
+				}
+			}
+		}
+	}
+	assert.Equal(t, 1.0, nodeMetricValue, "node_group_node metric should be 1 for ready node")
 
 	// Test OnNodeDelete
-	collector.OnNodeDelete(node)
+	collector.OnNodeDelete(updatedNode)
 	assert.NotContains(t, collector.nodes, "test-node")
 }
 

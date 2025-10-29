@@ -225,6 +225,25 @@ func (c *NodeGroupCollector) removeNodeFromIndex(node *k8s.Node) {
 	}
 }
 
+func (c *NodeGroupCollector) ensureNodeInIndex(node *k8s.Node) {
+	if node.NodeGroup == "" {
+		return
+	}
+
+	// Check if node is already in index and update reference
+	nodes := c.nodesByGroup[node.NodeGroup]
+	for i, n := range nodes {
+		if n.Name == node.Name {
+			// Update the reference to point to latest node
+			c.nodesByGroup[node.NodeGroup][i] = node
+			return
+		}
+	}
+
+	// Node not in index, add it
+	c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
+}
+
 // updateMetrics updates all metrics based on current state
 // Uses cached nodesByGroup index for O(M) complexity where M is number of NodeGroups
 func (c *NodeGroupCollector) updateMetrics() {
@@ -248,9 +267,18 @@ func (c *NodeGroupCollector) updateMetrics() {
 
 	for _, nodeGroup := range c.nodeGroups {
 		nodeType := nodeGroup.Spec.NodeType
-		nodes := c.nodesByGroup[nodeGroup.Name]
+		// Get nodes from index to know which nodes belong to this group
+		nodeNames := c.nodesByGroup[nodeGroup.Name]
 
-		log.Printf("Processing NodeGroup '%s': type=%s, nodes=%d", nodeGroup.Name, nodeType, len(nodes))
+		// But use fresh nodes from c.nodes map to ensure we have latest status
+		var nodes []*k8s.Node
+		for _, indexedNode := range nodeNames {
+			if freshNode, exists := c.nodes[indexedNode.Name]; exists {
+				nodes = append(nodes, freshNode)
+			}
+		}
+
+		log.Printf("Processing NodeGroup '%s': type=%s, nodes=%d (index size: %d)", nodeGroup.Name, nodeType, len(nodes), len(nodeNames))
 
 		// Count total and ready nodes in this node group
 		totalNodes := len(nodes)
@@ -259,6 +287,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 		for _, node := range nodes {
 			// Check node readiness and set metric - 1 if Ready, 0 if NotReady
 			isReady := c.isNodeReady(node.Node)
+			log.Printf("  Node '%s': ready=%v, conditions=%d", node.Name, isReady, len(node.Node.Status.Conditions))
 			var nodeStatus float64
 			if isReady {
 				readyNodes++
@@ -310,8 +339,8 @@ func (c *NodeGroupCollector) calculateMaxNodes(nodeGroup *k8s.NodeGroupWrapper, 
 
 func (c *NodeGroupCollector) isNodeReady(node *v1.Node) bool {
 	for _, condition := range node.Status.Conditions {
-		if condition.Type == v1.NodeReady {
-			return condition.Status == v1.ConditionTrue
+		if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
+			return true
 		}
 	}
 	return false
@@ -360,15 +389,18 @@ func (c *NodeGroupCollector) OnNodeUpdate(old, new *k8s.Node) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// If NodeGroup changed, need to update index
-	if old != nil && old.NodeGroup != new.NodeGroup {
-		c.removeNodeFromIndex(old)
-		c.addNodeToIndex(new)
-	}
-
+	// Always update the node in map
 	c.nodes[new.Name] = new
+
+	// Ensure node is in index with latest reference
+	// Note: Nodes cannot change their NodeGroup, so we just update the reference
+	c.ensureNodeInIndex(new)
+
 	c.updateMetrics()
-	log.Printf("Updated Node: %s (NodeGroup: %s)", new.Name, new.NodeGroup)
+
+	// Log node readiness for debugging
+	isReady := c.isNodeReady(new.Node)
+	log.Printf("Updated Node: %s (NodeGroup: %s, Ready: %v)", new.Name, new.NodeGroup, isReady)
 }
 
 func (c *NodeGroupCollector) OnNodeDelete(node *k8s.Node) {
