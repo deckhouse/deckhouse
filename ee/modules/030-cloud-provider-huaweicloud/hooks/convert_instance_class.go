@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -82,22 +81,22 @@ func handleHuaweiCloudInstanceClassConversion(_ context.Context, input *go_hook.
 
 		additionalNetworks := interfaceToStringsSlice(ic.Spec["additionalNetworks"])
 		allWithoutMain := append(additionalNetworks, subnets[1:]...)
-		ic.Spec["additionalNetworks"] = removeDuplicates(allWithoutMain)
+		ic.Spec["additionalNetworks"] = removeDuplicatesWithOrder(allWithoutMain)
 
 		delete(ic.Spec, "subnets")
 
-		patch := map[string]interface{}{"spec": ic.Spec}
-		patchBytes, err := json.Marshal(patch)
-		if err != nil {
-			return fmt.Errorf("marshal patch for %s: %w", ic.Name, err)
-		}
+		patch := map[string]interface{}{"spec": map[string]interface{}{
+			"mainNetwork":        ic.Spec["mainNetwork"],
+			"additionalNetworks": ic.Spec["additionalNetworks"],
+			"subnets":            nil,
+		}}
 
 		input.Logger.Info("migrating HuaweiCloudInstanceClass",
 			slog.String("instanceClass", ic.Name),
 		)
 
 		input.PatchCollector.PatchWithMerge(
-			patchBytes,
+			patch,
 			huaweiInstanceClassAPIVersion,
 			"HuaweiCloudInstanceClass",
 			"",
@@ -124,13 +123,17 @@ func interfaceToStringsSlice(v interface{}) []string {
 	return res
 }
 
-func removeDuplicates(subnets []string) []string {
+func removeDuplicatesWithOrder(subnets []string) []string {
 	seen := make(map[string]struct{})
 	for _, subnet := range subnets {
 		seen[subnet] = struct{}{}
 	}
 	res := make([]string, 0, len(seen))
-	for subnet := range seen {
+	for _, subnet := range subnets {
+		if _, ok := seen[subnet]; ok {
+			continue
+		}
+		seen[subnet] = struct{}{}
 		res = append(res, subnet)
 	}
 	return res
