@@ -75,7 +75,7 @@ shell:
   - rm -r .git vendor hack/tools/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.25" "builder/golang-alpine-svace-1.25" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
