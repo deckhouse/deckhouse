@@ -33,6 +33,10 @@ EOF
 
 cp -f containerd containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
 
+if test -f pidumount; then
+    cp -f pidumount /opt/deckhouse/bin
+fi
+
 mkdir -p /lib/systemd/system/
 cp -f containerd.service /lib/systemd/system/containerd-deckhouse.service
 systemctl daemon-reload

@@ -3,6 +3,8 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
+{{ $allowedSeverityLevels := dig "denyVulnerableImages" "allowedSeverityLevels" nil .Values.admissionPolicyEngine }}
+
 {{- if include "trivy.provider.enabled" $ }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -66,6 +68,11 @@ spec:
           - --client-ca-file=/client-cert/ca.crt
           - --timeout=25
         env:
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+       {{ if $allowedSeverityLevels }}
+        - name: ALLOWED_SEVERITIES
+          value: {{ $allowedSeverityLevels | join "," }}
+       {{ end }}
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
         - name: TRIVY_JAVA_DB_IMAGE

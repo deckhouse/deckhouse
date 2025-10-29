@@ -1,15 +1,15 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin
+  name: dvp-admin
 subjects:
 - kind: User
   name: admin@deckhouse.io # для users.deckhouse.io параметр .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: ClusterRoleBinding
+  kind: ClusterRole
   # Роль пользователя
-  name: d8:manage:all:admin
+  name: cluster-admin
   apiGroup: rbac.authorization.k8s.io
 ---
 # [<en>] section containing the parameters of the static user

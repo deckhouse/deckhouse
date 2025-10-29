@@ -173,7 +173,7 @@ import:
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
-git:  
+git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -181,3 +181,5 @@ imageSpec:
     workingDir: "/usr/share/grafana"
     env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "{{ $gfPathPlugins }}", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "{{ $gfPathPlugins }}" }
     expose: ["3000"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
