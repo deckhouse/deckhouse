@@ -20,6 +20,7 @@ fromImage: builder/alpine-3.22
 final: false
 shell:
   setup:
+  - set -x
   - mkdir -p /data
   - echo "Getting data from the API server..."
   - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
