@@ -276,7 +276,6 @@ sudo -i d8 k create -f $PWD/user.yml
             href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add A or CNAME records containing the public IP, you've discovered previously, for the following Deckhouse service DNS names:
           <div class="highlight">
 <pre class="highlight">
-<code example-hosts>api.example.com
 <code example-hosts>stronghold.example.com
 api.example.com
 argocd.example.com

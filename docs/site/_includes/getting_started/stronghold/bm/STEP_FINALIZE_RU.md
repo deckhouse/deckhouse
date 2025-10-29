@@ -289,7 +289,6 @@ sudo -i d8 k create -f $PWD/user.yml
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>api.example.com
 <code example-hosts>stronghold.example.com
 api.example.com
 argocd.example.com
