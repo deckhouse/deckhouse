@@ -26,7 +26,7 @@
       "timestamp": "2025-10-10T20:22:36.568608+03:00",
       "products": [
         {
-          "@id": "pkg:golang/github.com/grafana/grafana@v10.4.19"
+          "@id": "pkg:golang/github.com/grafana/grafana@10.4.19"
         }
       ],
       "status": "not_affected",
