@@ -97,3 +97,13 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+      - jsonPath: .status.conditions[?(@.type=='Processed')].lastTransitionTime
+        name: TransitionTime
+        type: date
+      - jsonPath: .status.conditions[?(@.type=='Processed')].status
+        name: Processed
+        type: string
+      - jsonPath: .status.conditions[?(@.type=='Processed')].message
+        name: Message
+        type: string

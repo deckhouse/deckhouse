@@ -159,15 +159,12 @@ spec:
     subresources:
       status: {}
     additionalPrinterColumns:
-      - name: Package
-        type: string
-        jsonPath: .spec.packageName
-      - name: Version
-        type: string
-        jsonPath: .spec.version
-      - name: Repository
-        type: string
-        jsonPath: .spec.repository
-      - name: Age
+      - jsonPath: .status.conditions[?(@.type=='IsEnriched')].lastTransitionTime
+        name: TransitionTime
         type: date
-        jsonPath: .metadata.creationTimestamp
+      - jsonPath: .status.conditions[?(@.type=='IsEnriched')].status
+        name: Enriched
+        type: string
+      - jsonPath: .status.conditions[?(@.type=='IsEnriched')].message
+        name: Message
+        type: string
