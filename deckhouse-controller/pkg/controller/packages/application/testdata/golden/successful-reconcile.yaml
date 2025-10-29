@@ -3,9 +3,11 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
   creationTimestamp: null
+  finalizers:
+  - application.deckhouse.io/finalizer
   name: test-app
   namespace: foobar
-  resourceVersion: "2"
+  resourceVersion: "3"
 spec:
   applicationPackageName: test-package
   repository: test-repo

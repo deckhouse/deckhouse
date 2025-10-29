@@ -49,3 +49,15 @@ func (m *PackageOperatorMock) AddClusterApplication(_ context.Context, capvStatu
 func (m *PackageOperatorMock) AddModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	m.logger.Debug("adding module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
+
+func (m *PackageOperatorMock) RemoveApplication(_ context.Context, app *v1alpha1.Application) {
+	m.logger.Debug("removing application", slog.String("name", app.Name))
+}
+
+func (m *PackageOperatorMock) RemoveClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
+	m.logger.Debug("removing cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
+}
+
+func (m *PackageOperatorMock) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
+	m.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
+}

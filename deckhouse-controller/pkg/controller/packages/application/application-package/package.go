@@ -26,10 +26,21 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+type PackageManager interface {
+	PackageAdder
+	PackageRemover
+}
+
 type PackageAdder interface {
 	AddApplication(ctx context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus)
 	AddClusterApplication(ctx context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus)
 	AddModule(ctx context.Context, metadata *v1alpha1.ModuleReleaseSpec)
+}
+
+type PackageRemover interface {
+	RemoveApplication(ctx context.Context, app *v1alpha1.Application)
+	RemoveClusterApplication(ctx context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus)
+	RemoveModule(ctx context.Context, metadata *v1alpha1.ModuleReleaseSpec)
 }
 
 type PackageOperator struct {
@@ -54,4 +65,16 @@ func (o *PackageOperator) AddClusterApplication(_ context.Context, capvStatus *v
 
 func (o *PackageOperator) AddModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	o.logger.Debug("adding module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
+}
+
+func (o *PackageOperator) RemoveApplication(_ context.Context, app *v1alpha1.Application) {
+	o.logger.Debug("removing application", slog.String("name", app.Name))
+}
+
+func (o *PackageOperator) RemoveClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
+	o.logger.Debug("removing cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
+}
+
+func (o *PackageOperator) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
+	o.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }

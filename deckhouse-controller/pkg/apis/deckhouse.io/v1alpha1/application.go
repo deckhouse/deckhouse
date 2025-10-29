@@ -27,6 +27,8 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
+	ApplicationFinalizer = "application.deckhouse.io/finalizer"
+
 	ApplicationStatusHealthy  = "Healthy"
 	ApplicationStatusDegraded = "Degraded"
 	ApplicationStatusError    = "Error"

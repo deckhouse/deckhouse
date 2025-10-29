@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -44,23 +45,23 @@ const (
 )
 
 type reconciler struct {
-	client          client.Client
-	dc              dependency.Container
-	packageOperator applicationpackage.PackageAdder
-	logger          *log.Logger
+	client client.Client
+	dc     dependency.Container
+	pm     applicationpackage.PackageManager
+	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	dc dependency.Container,
-	packageOperator applicationpackage.PackageAdder,
+	pm applicationpackage.PackageManager,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		client:          runtimeManager.GetClient(),
-		dc:              dc,
-		packageOperator: packageOperator,
-		logger:          logger,
+		client: runtimeManager.GetClient(),
+		dc:     dc,
+		pm:     pm,
+		logger: logger,
 	}
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -96,7 +97,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !app.DeletionTimestamp.IsZero() {
-		return r.delete(ctx, app)
+		res, err := r.delete(ctx, app)
+		if err != nil {
+			r.logger.Warn("delete application", slog.String("name", app.Name), log.Err(err))
+
+			return res, err
+		}
+
+		return res, nil
 	}
 
 	// handle create/update events
@@ -154,25 +162,49 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) erro
 	}
 
 	// call PackageOperator method (maybe PackageAdder interface)
-	r.packageOperator.AddApplication(ctx, &apv.Status)
+	r.pm.AddApplication(ctx, &apv.Status)
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
+
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("failed to patch application status: %w", err)
+		return fmt.Errorf("patch status application %s: %w", app.Name, err)
+	}
+
+	// add finalizer
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+		logger.Debug("add finalizer")
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizer)
+	}
+
+	err = r.client.Patch(ctx, app, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
 	return nil
 }
 
-func (r *reconciler) delete(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+func (r *reconciler) delete(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
 	res := ctrl.Result{}
+	logger := r.logger.With(slog.String("name", app.Name))
 
-	logger := r.logger.With(slog.String("name", application.Name))
 	logger.Debug("deleting Application")
 	defer logger.Debug("delete Application complete")
 
-	// TODO: implement application deletion logic
+	r.pm.RemoveApplication(ctx, app)
+
+	// remove finalizer
+	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+		logger.Debug("remove finalizer")
+		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizer)
+
+		err := r.client.Update(ctx, app)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: requeueTime}, fmt.Errorf("remove finalizer for %s: %w", app.Name, err)
+		}
+	}
+
 	return res, nil
 }
 
