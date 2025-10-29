@@ -16,7 +16,7 @@
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-fromImage: builder/alpine
+fromImage: builder/alpine-3.22
 final: false
 shell:
   setup:
