@@ -20,11 +20,9 @@ fromImage: builder/alpine-3.22
 final: false
 shell:
   setup:
-  - set -x
   - mkdir -p /data
   - echo "Getting data from the API server..."
-  - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
-  - cat /tmp/menus.json
+  - curl  --fail --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
   - |
     jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
   - |
