@@ -27,7 +27,7 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	ApplicationFinalizer = "application.deckhouse.io/finalizer"
+	ApplicationProcessedFinalizer = "application.deckhouse.io/processed"
 
 	ApplicationStatusHealthy  = "Healthy"
 	ApplicationStatusDegraded = "Degraded"

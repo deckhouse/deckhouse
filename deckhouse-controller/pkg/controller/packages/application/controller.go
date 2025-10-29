@@ -172,9 +172,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	}
 
 	// add finalizer
-	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
 		logger.Debug("add finalizer")
-		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizer)
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationProcessedFinalizer)
 	}
 
 	err = r.client.Patch(ctx, app, client.MergeFrom(original))
@@ -195,10 +195,10 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	r.pm.RemoveApplication(ctx, app)
 
 	// remove finalizer
-	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
 		logger.Debug("remove finalizer")
 
-		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizer)
+		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationProcessedFinalizer)
 
 		err := r.client.Update(ctx, app)
 		if err != nil {
