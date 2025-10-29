@@ -43,10 +43,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cloud-provider-huaweicloud/convert_instance_class_subnets",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "huaweicloud_instance_classes",
-			ApiVersion:             huaweiInstanceClassAPIVersion,
-			Kind:                   "HuaweiCloudInstanceClass",
-			WaitForSynchronization: ptr.To(false),
+			Name:                         "huaweicloud_instance_classes",
+			ApiVersion:                   huaweiInstanceClassAPIVersion,
+			Kind:                         "HuaweiCloudInstanceClass",
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				spec, _ := obj.Object["spec"].(map[string]interface{})
 				return instanceClass{Name: obj.GetName(), Spec: spec}, nil
