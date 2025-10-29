@@ -81,25 +81,29 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.logger.Debug("reconciling Application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 
-	application := new(v1alpha1.Application)
-	if err := r.client.Get(ctx, req.NamespacedName, application); err != nil {
+	app := new(v1alpha1.Application)
+	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
+
 			return res, nil
 		}
-		r.logger.Error("failed to get application", slog.String("name", req.Name), slog.String("namespace", req.Namespace), log.Err(err))
+
+		r.logger.Warn("failed to get application", slog.String("name", req.Name), slog.String("namespace", req.Namespace), log.Err(err))
+
 		return res, err
 	}
 
 	// handle delete event
-	if !application.DeletionTimestamp.IsZero() {
-		return r.delete(ctx, application)
+	if !app.DeletionTimestamp.IsZero() {
+		return r.delete(ctx, app)
 	}
 
 	// handle create/update events
-	err := r.handle(ctx, application)
+	err := r.handle(ctx, app)
 	if err != nil {
-		r.logger.Warn("failed to handle application", slog.String("name", application.Name), log.Err(err))
+		r.logger.Warn("failed to handle application", slog.String("name", app.Name), log.Err(err))
+
 		return ctrl.Result{RequeueAfter: requeueTime}, nil
 	}
 
@@ -108,8 +112,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) error {
 	original := app.DeepCopy()
-
 	logger := r.logger.With(slog.String("name", app.Name))
+
 	logger.Debug("handling Application")
 	defer logger.Debug("handle Application complete")
 
@@ -117,24 +121,33 @@ func (r *reconciler) handle(ctx context.Context, app *v1alpha1.Application) erro
 	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
-	if err != nil && apierrors.IsNotFound(err) {
-		r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionNotFound, err.Error())
-		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
-		if err != nil {
-			return fmt.Errorf("failed to patch application status: %w", err)
+	if err != nil {
+		r.SetConditionFalse(
+			app,
+			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionReasonVersionNotFound,
+			fmt.Sprintf("get ApplicationPackageVersion for %s not found: %s", app.Name, err.Error()),
+		)
+
+		patchErr := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status application %s: %w", app.Name, patchErr)
 		}
 
-		return fmt.Errorf("applicationPackageVersion %s not found: %w", apvName, err)
-	}
-	if err != nil {
 		return fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
 	}
+
 	if apv.IsDraft() {
-		message := "ApplicationPackageVersion " + apvName + " is draft"
-		app = r.SetConditionFalse(app, v1alpha1.ApplicationConditionTypeProcessed, v1alpha1.ApplicationConditionReasonVersionIsDraft, message)
-		err := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
-		if err != nil {
-			return fmt.Errorf("failed to patch application status: %w", err)
+		app = r.SetConditionFalse(
+			app,
+			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionReasonVersionIsDraft,
+			"ApplicationPackageVersion "+apvName+" is draft",
+		)
+
+		patchErr := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status application %s: %w", app.Name, patchErr)
 		}
 
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
