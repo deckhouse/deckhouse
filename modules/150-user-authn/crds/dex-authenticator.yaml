@@ -187,6 +187,31 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Defines CPU/Memory requests and limits for the `dex-authenticator` container.
+
+                    If specified, these values will be applied to the container and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Limits describes the maximum amount of compute resources allowed.'
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Requests describes the minimum amount of compute resources required.'
                 additionalApplications:
                   type: array
                   description: |
@@ -373,6 +398,31 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Defines CPU/Memory requests and limits for the `dex-authenticator` container.
+
+                    If specified, these values will be applied to the container and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Limits describes the maximum amount of compute resources allowed.'
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Requests describes the minimum amount of compute resources required.'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

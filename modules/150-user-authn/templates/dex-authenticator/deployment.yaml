@@ -17,7 +17,7 @@ memory: 25Mi
   {{- $truncated := (index $info "truncated") }}
   {{- $hash := (index $info "hash") }}
   {{- $secretName := (default (printf "dex-authenticator-%s" $crd.name) (index $info "secretName")) }}
-  {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
+  {{- if and ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") (not $crd.spec.resources) }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -225,9 +225,17 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if $crd.spec.resources }}
+            {{- with $crd.spec.resources.requests }}
+            {{ toYaml . | nindent 12 }}
+            {{- end }}
+          {{- else if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" . | nindent 12 }}
-  {{- end }}
+          {{- end }}
+          {{- with $crd.spec.resources.limits }}
+          limits:
+            {{ toYaml . | nindent 12 }}
+          {{- end }}
         ports:
         - name: dex-https
           containerPort: 8443
