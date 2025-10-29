@@ -10,6 +10,7 @@
       description: |-
         Loki is discarding samples during ingestion because they fail validation.
         Samples are discarded because of "{{ $labels.reason }}" at a rate of {{ .Value | humanize }} samples per second.
+        For more information, see the [Loki FAQ](https://deckhouse.ru/modules/loki/faq.html).
       summary: Loki is discarding samples during ingestion because they fail validation.
     expr: |
       sum by(reason) (
