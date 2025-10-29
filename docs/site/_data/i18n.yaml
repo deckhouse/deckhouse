@@ -294,6 +294,12 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  show_details:
+    en: Show details...
+    ru: Показать подробности...
+  hide_details:
+    en: Hide details
+    ru: Скрыть подробности
   guides_description:
     en: Helping you achieve a goal or solve a problem with Deckhouse.
     ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
