@@ -10,6 +10,8 @@
   * VMware vCloud Director.
 
   Поддерживаются **все редакции** от CE до EE, включая Deckhouse Certified Security Edition (bare metal).
+
+  **Внимание.** Установка Deckhouse Certified Security Edition с помощью графического установщика не сертифицирована и  допускается **только** для целей тестирования.
   {% endalert %}
   <div class="installer_two-columns">
     <div>
@@ -29,10 +31,19 @@
               <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
             </div>
             <div id="tab-mac-content-container" class="tab-content active">
+{% alert level="info" %}
+Если у вас компьютер на базе Apple Silicon, то перед запуском контейнера убедитесь, что в настройках Docker Desktop включена Rosetta.
+{% offtopic title="Как включить Rosetta..." %}
+1. Перейдите в настройки Docker Desktop, нажав на значок шестерёнки в правом верхнем углу главного окна программы.
+1. На вкладке «General» найдите раздел «Virtual Machine Options».
+1. Включите пункт «Use Rosetta for x86_64/amd64 emulation on Apple Silicon».
+   <img src="/images/gs/installer/enable-rosetta.png" alt="Включение Rosetta в настройках Docker Desktop">
+{% endofftopic %}
+{% endalert %}
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -72,7 +83,7 @@ xattr -c d8install-darwin-arm64
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -99,10 +110,20 @@ chmod +x d8install-linux-amd64
             </div>
           </div>
           <div id="tab-windows" class="tab-content">
-            <p>Выполните команду:</p>
+{% alert level="info" %}
+Перед запуском контейнера убедитесь, что у вас установлен Docker Desktop и [включена подсистема WSL2](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
+{% endalert %}
+            <p>Выполните команду. Если вы работаете в командной строке:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/c/Users/%USERNAME%/.d8installer
+docker run --rm --pull always -v /mnt/host/c/Users/%USERNAME%/.d8installer:/mnt/host/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/%USERNAME%/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            <p>Если вы работаете в Power Shell:</p>
+{% capture command %}
+```bash
+docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/mnt/host/c/Users/$env:USERNAME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/$env:USERNAME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
