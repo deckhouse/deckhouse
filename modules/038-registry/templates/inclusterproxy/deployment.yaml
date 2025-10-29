@@ -169,6 +169,10 @@ spec:
               {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
       {{- end }}
+{{- if not .Values.global.clusterIsBootstrapped }}
+      hostNetwork: true
+      dnsPolicy: Default
+{{- end}}
       volumes:
         - name: registry-incluster-proxy-config
           secret:
