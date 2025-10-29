@@ -46,7 +46,7 @@ type NodeGroupCollector struct {
 	nodeGroupNode            *prometheus.GaugeVec
 }
 
-func NewNodeGroupCollector(clientset kubernetes.Interface) (*NodeGroupCollector, error) {
+func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config) (*NodeGroupCollector, error) {
 	collector := &NodeGroupCollector{
 		clientset:    clientset,
 		nodeGroups:   make(map[string]*k8s.NodeGroupWrapper),
@@ -84,7 +84,7 @@ func NewNodeGroupCollector(clientset kubernetes.Interface) (*NodeGroupCollector,
 		[]string{"node_group", "node_type", "node"},
 	)
 
-	watcher, err := k8s.NewWatcher(clientset, &rest.Config{}, collector)
+	watcher, err := k8s.NewWatcher(clientset, restConfig, collector)
 	if err != nil {
 		return nil, err
 	}
@@ -234,9 +234,23 @@ func (c *NodeGroupCollector) updateMetrics() {
 	c.nodeGroupCountMaxTotal.Reset()
 	c.nodeGroupNode.Reset()
 
+	log.Printf("updateMetrics called: NodeGroups=%d, TotalNodes=%d, nodesByGroup=%d", len(c.nodeGroups), len(c.nodes), len(c.nodesByGroup))
+
+	// Log available node groups
+	for name := range c.nodeGroups {
+		log.Printf("NodeGroup in cache: %s", name)
+	}
+
+	// Log nodes by group
+	for groupName, nodes := range c.nodesByGroup {
+		log.Printf("nodesByGroup[%s] = %d nodes", groupName, len(nodes))
+	}
+
 	for _, nodeGroup := range c.nodeGroups {
 		nodeType := nodeGroup.Spec.NodeType
 		nodes := c.nodesByGroup[nodeGroup.Name]
+
+		log.Printf("Processing NodeGroup '%s': type=%s, nodes=%d", nodeGroup.Name, nodeType, len(nodes))
 
 		// Count total and ready nodes in this node group
 		totalNodes := len(nodes)
@@ -262,6 +276,12 @@ func (c *NodeGroupCollector) updateMetrics() {
 		// Set node_group_count_max_total
 		maxNodes := c.calculateMaxNodes(nodeGroup, totalNodes)
 		c.nodeGroupCountMaxTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(maxNodes))
+
+		log.Printf("Metrics set for '%s': total=%d, ready=%d, max=%d", nodeGroup.Name, totalNodes, readyNodes, maxNodes)
+	}
+
+	if len(c.nodeGroups) == 0 {
+		log.Printf("WARNING: updateMetrics called but no NodeGroups in cache!")
 	}
 }
 
@@ -304,8 +324,8 @@ func (c *NodeGroupCollector) OnNodeGroupAdd(nodegroup *k8s.NodeGroupWrapper) {
 	defer c.mutex.Unlock()
 
 	c.nodeGroups[nodegroup.Name] = nodegroup
+	log.Printf("Added NodeGroup: %s (type: %s), total nodegroups: %d", nodegroup.Name, nodegroup.Spec.NodeType, len(c.nodeGroups))
 	c.updateMetrics()
-	log.Printf("Added NodeGroup: %s", nodegroup.Name)
 }
 
 func (c *NodeGroupCollector) OnNodeGroupUpdate(_, new *k8s.NodeGroupWrapper) {
@@ -332,8 +352,8 @@ func (c *NodeGroupCollector) OnNodeAdd(node *k8s.Node) {
 
 	c.nodes[node.Name] = node
 	c.addNodeToIndex(node)
+	log.Printf("Added Node: %s (NodeGroup: %s), total nodes: %d, nodeGroups: %d", node.Name, node.NodeGroup, len(c.nodes), len(c.nodeGroups))
 	c.updateMetrics()
-	log.Printf("Added Node: %s (NodeGroup: %s)", node.Name, node.NodeGroup)
 }
 
 func (c *NodeGroupCollector) OnNodeUpdate(old, new *k8s.Node) {

@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Create nodegroup collector
-	nodegroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodegroupCollector, err := collector.NewNodeGroupCollector(clientset, config)
 	if err != nil {
 		log.Fatalf("Failed to create nodegroup collector: %v", err)
 	}
@@ -75,13 +75,12 @@ func main() {
 		log.Fatalf("Failed to start collector: %v", err)
 	}
 
-	// Create custom registry to exclude golang metrics
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(nodegroupCollector)
+	// Register collector with Prometheus
+	prometheus.MustRegister(nodegroupCollector)
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))

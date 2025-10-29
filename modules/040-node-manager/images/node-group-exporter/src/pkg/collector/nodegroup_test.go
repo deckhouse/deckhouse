@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	k8s "node-group-exporter/pkg/kubernetes"
 )
@@ -62,7 +63,7 @@ func TestNodeGroupCollector(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Test that collector implements prometheus.Collector
@@ -81,7 +82,7 @@ func TestNodeGroupCollectorMetrics(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add test node group
@@ -166,7 +167,7 @@ func TestStaticNodeGroup(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add Static node group
@@ -235,7 +236,7 @@ func TestStaticNodeGroup(t *testing.T) {
 func TestCalculateMaxNodes(t *testing.T) {
 	// Create fake Kubernetes client
 	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Test Cloud node group with zones
@@ -318,7 +319,7 @@ func TestNodeTypeExtraction(t *testing.T) {
 // TestIsNodeReady tests the isNodeReady function
 func TestIsNodeReady(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Test ready node
@@ -362,7 +363,7 @@ func TestIsNodeReady(t *testing.T) {
 // TestEventHandler tests the EventHandler implementation
 func TestEventHandler(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Test OnNodeGroupAdd
@@ -435,7 +436,7 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add node WITHOUT creating corresponding NodeGroup first
@@ -529,7 +530,7 @@ func TestCollectorIntegration(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	collector, err := NewNodeGroupCollector(clientset)
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add test data directly using event handlers

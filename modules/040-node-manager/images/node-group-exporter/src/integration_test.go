@@ -31,6 +31,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	"node-group-exporter/pkg/collector"
 	k8s "node-group-exporter/pkg/kubernetes"
@@ -100,7 +101,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Start collector
@@ -142,7 +143,7 @@ func TestMetricsExposure(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add test data
@@ -227,7 +228,7 @@ func TestStaticNodeGroupIntegration(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add Static node group
@@ -297,7 +298,7 @@ func TestCloudNodeGroupIntegration(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add Cloud node group with multiple zones
@@ -348,7 +349,7 @@ func TestIntegrationErrorHandling(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Test with invalid data
@@ -378,7 +379,7 @@ func TestConcurrentAccess(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Start collector
@@ -464,7 +465,7 @@ func TestMetricsEndpointExcludesGoMetrics(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	// Create collector
-	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset)
+	nodeGroupCollector, err := collector.NewNodeGroupCollector(clientset, &rest.Config{})
 	assert.NoError(t, err)
 
 	// Add test data

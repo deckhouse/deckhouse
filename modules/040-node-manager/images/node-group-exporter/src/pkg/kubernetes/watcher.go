@@ -18,6 +18,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -152,6 +153,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 		defer w.wg.Done()
 		w.nodeGroupInformer.Run(w.stopCh)
 	}()
+
+	// Wait for cache sync before proceeding
+	log.Println("Waiting for informer caches to sync...")
+	if !cache.WaitForCacheSync(ctx.Done(), w.nodeInformer.HasSynced, w.nodeGroupInformer.HasSynced) {
+		return fmt.Errorf("failed to sync informer caches")
+	}
+	log.Println("Informer caches synced successfully")
 
 	return nil
 }
