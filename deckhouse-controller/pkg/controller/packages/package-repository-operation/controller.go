@@ -239,14 +239,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	}
 
 	for _, pkg := range repo.Status.Packages {
-		found := false
-		for _, discovered := range discoveredPackages {
-			if discovered.Name == pkg.Name {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !r.isPackageInList(pkg.Name, discoveredPackages) {
 			r.logger.Warn("package removed from registry", slog.String("package", pkg.Name))
 		}
 	}
@@ -343,11 +336,12 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 		if queueEmpty {
 			operation.Status.Message = fmt.Sprintf("All %d packages processed, completing operation", operation.Status.Packages.Total)
-		} else {
-			operation.Status.Message = fmt.Sprintf("Processed %d/%d packages",
-				operation.Status.Packages.Processed,
-				operation.Status.Packages.Total)
+			return nil
 		}
+
+		operation.Status.Message = fmt.Sprintf("Processed %d/%d packages",
+			operation.Status.Packages.Processed,
+			operation.Status.Packages.Total)
 		return nil
 	})
 	if err != nil {
@@ -374,29 +368,25 @@ func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.Pa
 	}
 
 	var allTags []string
+	var scanErr error
 
 	// Handle fullScan vs incremental scan
 	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		// Full scan: list all tags with pagination
-		r.logger.Debug("performing full scan", slog.String("package", pkg.Name))
-		allTags, err = r.listAllTagsWithPagination(ctx, registryClient)
-		if err != nil {
-			return fmt.Errorf("list all tags with pagination: %w", err)
+		allTags, scanErr = r.performFullScan(ctx, registryClient, pkg.Name)
+		if scanErr != nil {
+			return scanErr
 		}
-	} else {
-		// Incremental scan: start from the last processed version
-		r.logger.Debug("performing incremental scan", slog.String("package", pkg.Name))
-		lastVersion := r.getLastProcessedVersion(ctx, pkg.Name, pkg.Type, repo.Name)
-		if lastVersion != "" {
-			r.logger.Debug("found last processed version",
-				slog.String("package", pkg.Name),
-				slog.String("lastVersion", lastVersion))
-		}
+		r.logger.Info("found package versions",
+			slog.String("package", pkg.Name),
+			slog.Int("versions", len(allTags)))
 
-		allTags, err = r.listTagsFromVersion(ctx, registryClient, lastVersion)
-		if err != nil {
-			return fmt.Errorf("list tags from version: %w", err)
-		}
+		// Create PackageVersion resources for each version
+		return r.createPackageVersions(ctx, pkg, repo, allTags)
+	}
+
+	allTags, scanErr = r.performIncrementalScan(ctx, registryClient, pkg.Name, pkg.Type, repo.Name)
+	if scanErr != nil {
+		return scanErr
 	}
 
 	r.logger.Info("found package versions",
@@ -404,13 +394,17 @@ func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.Pa
 		slog.Int("versions", len(allTags)))
 
 	// Create PackageVersion resources for each version
+	return r.createPackageVersions(ctx, pkg, repo, allTags)
+}
+
+func (r *reconciler) createPackageVersions(ctx context.Context, pkg v1alpha1.PackageRepositoryOperationStatusPackageQueue, repo *v1alpha1.PackageRepository, allTags []string) error {
 	for _, versionTag := range allTags {
 		// Skip non-version tags (like "release-channel", "version", etc.)
 		if !r.isVersionTag(versionTag) {
 			continue
 		}
 
-		err = r.ensurePackageVersion(ctx, pkg.Name, pkg.Type, versionTag, repo.Name)
+		err := r.ensurePackageVersion(ctx, pkg.Name, pkg.Type, versionTag, repo.Name)
 		if err != nil {
 			r.logger.Warn("failed to create package version",
 				slog.String("package", pkg.Name),
@@ -427,70 +421,78 @@ func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.Pa
 func (r *reconciler) ensurePackageResource(ctx context.Context, packageName, packageType, repositoryName string) error {
 	switch packageType {
 	case "Application":
-		pkg := &v1alpha1.ApplicationPackage{}
-		err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Create new ApplicationPackage
-				pkg = &v1alpha1.ApplicationPackage{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
-						Kind:       v1alpha1.ApplicationPackageKind,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: packageName,
-						Labels: map[string]string{
-							"heritage": "deckhouse",
-						},
-					},
-				}
-				return r.client.Create(ctx, pkg)
-			}
-			return err
-		}
-
-		// Update existing package to add repository to available repositories
-		return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
-			if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
-				pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
-			}
-			return nil
-		})
-
+		return r.ensureApplicationPackage(ctx, packageName, repositoryName)
 	case "ClusterApplication":
-		pkg := &v1alpha1.ClusterApplicationPackage{}
-		err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Create new ClusterApplicationPackage
-				pkg = &v1alpha1.ClusterApplicationPackage{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.ClusterApplicationPackageGVK.GroupVersion().String(),
-						Kind:       v1alpha1.ClusterApplicationPackageKind,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: packageName,
-						Labels: map[string]string{
-							"heritage": "deckhouse",
-						},
-					},
-				}
-				return r.client.Create(ctx, pkg)
-			}
-			return err
-		}
-
-		// Update existing package to add repository to available repositories
-		return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
-			if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
-				pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
-			}
-			return nil
-		})
-
+		return r.ensureClusterApplicationPackage(ctx, packageName, repositoryName)
 	default:
 		return fmt.Errorf("unsupported package type: %s", packageType)
 	}
+}
+
+func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, repositoryName string) error {
+	pkg := &v1alpha1.ApplicationPackage{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		// Create new ApplicationPackage
+		pkg = &v1alpha1.ApplicationPackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ApplicationPackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+				},
+			},
+		}
+		return r.client.Create(ctx, pkg)
+	}
+
+	// Update existing package to add repository to available repositories
+	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
+		if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
+			pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
+		}
+		return nil
+	})
+}
+
+func (r *reconciler) ensureClusterApplicationPackage(ctx context.Context, packageName, repositoryName string) error {
+	pkg := &v1alpha1.ClusterApplicationPackage{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		// Create new ClusterApplicationPackage
+		pkg = &v1alpha1.ClusterApplicationPackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ClusterApplicationPackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ClusterApplicationPackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+				},
+			},
+		}
+		return r.client.Create(ctx, pkg)
+	}
+
+	// Update existing package to add repository to available repositories
+	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
+		if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
+			pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
+		}
+		return nil
+	})
 }
 
 func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
@@ -499,97 +501,95 @@ func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, pack
 
 	switch packageType {
 	case "Application":
-		pkgVersion := &v1alpha1.ApplicationPackageVersion{}
-		err := r.client.Get(ctx, types.NamespacedName{Name: resourceName}, pkgVersion)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Create new ApplicationPackageVersion with draft label
-				pkgVersion = &v1alpha1.ApplicationPackageVersion{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
-						Kind:       v1alpha1.ApplicationPackageVersionKind,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: resourceName,
-						Labels: map[string]string{
-							"heritage": "deckhouse",
-							v1alpha1.ApplicationPackageVersionLabelRepository: repositoryName,
-							v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
-							v1alpha1.ApplicationPackageVersionLabelDraft:      "true",
-						},
-					},
-					Spec: v1alpha1.ApplicationPackageVersionSpec{
-						PackageName: packageName,
-						Version:     version,
-						Repository:  repositoryName,
-					},
-				}
-
-				// Add owner reference to PackageRepository
-				repo := &v1alpha1.PackageRepository{}
-				if err := r.client.Get(ctx, types.NamespacedName{Name: repositoryName}, repo); err == nil {
-					ownerRef := metav1.OwnerReference{
-						APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
-						Kind:       v1alpha1.PackageRepositoryKind,
-						Name:       repo.Name,
-						UID:        repo.UID,
-						Controller: &[]bool{true}[0],
-					}
-					pkgVersion.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
-				}
-
-				return r.client.Create(ctx, pkgVersion)
-			}
-			return err
-		}
-		// Version already exists
-		return nil
-
+		return r.ensureApplicationPackageVersion(ctx, resourceName, packageName, version, repositoryName)
 	case "ClusterApplication":
-		pkgVersion := &v1alpha1.ClusterApplicationPackageVersion{}
-		err := r.client.Get(ctx, types.NamespacedName{Name: resourceName}, pkgVersion)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Create new ClusterApplicationPackageVersion with draft label
-				pkgVersion = &v1alpha1.ClusterApplicationPackageVersion{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.ClusterApplicationPackageVersionGVK.GroupVersion().String(),
-						Kind:       v1alpha1.ClusterApplicationPackageVersionKind,
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: resourceName,
-						Labels: map[string]string{
-							"heritage": "deckhouse",
-							v1alpha1.ClusterApplicationPackageVersionLabelRepository: repositoryName,
-							v1alpha1.ClusterApplicationPackageVersionLabelPackage:    packageName,
-							v1alpha1.ClusterApplicationPackageVersionLabelDraft:      "true",
-						},
-					},
-				}
-
-				// Add owner reference to PackageRepository
-				repo := &v1alpha1.PackageRepository{}
-				if err := r.client.Get(ctx, types.NamespacedName{Name: repositoryName}, repo); err == nil {
-					ownerRef := metav1.OwnerReference{
-						APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
-						Kind:       v1alpha1.PackageRepositoryKind,
-						Name:       repo.Name,
-						UID:        repo.UID,
-						Controller: &[]bool{true}[0],
-					}
-					pkgVersion.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
-				}
-
-				return r.client.Create(ctx, pkgVersion)
-			}
-			return err
-		}
-		// Version already exists
-		return nil
-
+		return r.ensureClusterApplicationPackageVersion(ctx, resourceName, packageName, repositoryName)
 	default:
 		return fmt.Errorf("unsupported package type: %s", packageType)
 	}
+}
+
+func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resourceName, packageName, version, repositoryName string) error {
+	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: resourceName}, pkgVersion)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		// Create new ApplicationPackageVersion with draft label
+		pkgVersion = &v1alpha1.ApplicationPackageVersion{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ApplicationPackageVersionKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: resourceName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+					v1alpha1.ApplicationPackageVersionLabelRepository: repositoryName,
+					v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
+					v1alpha1.ApplicationPackageVersionLabelDraft:      "true",
+				},
+			},
+			Spec: v1alpha1.ApplicationPackageVersionSpec{
+				PackageName: packageName,
+				Version:     version,
+				Repository:  repositoryName,
+			},
+		}
+
+		// Add owner reference to PackageRepository
+		if err := r.setOwnerReference(ctx, pkgVersion, repositoryName); err != nil {
+			r.logger.Warn("failed to set owner reference",
+				slog.String("repository", repositoryName),
+				log.Err(err))
+		}
+
+		return r.client.Create(ctx, pkgVersion)
+	}
+
+	// Version already exists
+	return nil
+}
+
+func (r *reconciler) ensureClusterApplicationPackageVersion(ctx context.Context, resourceName, packageName, repositoryName string) error {
+	pkgVersion := &v1alpha1.ClusterApplicationPackageVersion{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: resourceName}, pkgVersion)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		// Create new ClusterApplicationPackageVersion with draft label
+		pkgVersion = &v1alpha1.ClusterApplicationPackageVersion{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ClusterApplicationPackageVersionGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ClusterApplicationPackageVersionKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: resourceName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+					v1alpha1.ClusterApplicationPackageVersionLabelRepository: repositoryName,
+					v1alpha1.ClusterApplicationPackageVersionLabelPackage:    packageName,
+					v1alpha1.ClusterApplicationPackageVersionLabelDraft:      "true",
+				},
+			},
+		}
+
+		// Add owner reference to PackageRepository
+		if err := r.setOwnerReference(ctx, pkgVersion, repositoryName); err != nil {
+			r.logger.Warn("failed to set owner reference",
+				slog.String("repository", repositoryName),
+				log.Err(err))
+		}
+
+		return r.client.Create(ctx, pkgVersion)
+	}
+
+	// Version already exists
+	return nil
 }
 
 func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, packageName string, opts []cr.Option) (string, error) {
@@ -702,6 +702,59 @@ func (r *reconciler) listTagsFromVersion(ctx context.Context, registryClient cr.
 	}
 
 	return newTags, nil
+}
+
+func (r *reconciler) isPackageInList(packageName string, packages []v1alpha1.PackageRepositoryOperationStatusPackageQueue) bool {
+	for _, pkg := range packages {
+		if pkg.Name == packageName {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *reconciler) performFullScan(ctx context.Context, registryClient cr.Client, packageName string) ([]string, error) {
+	// Full scan: list all tags with pagination
+	r.logger.Debug("performing full scan", slog.String("package", packageName))
+	tags, err := r.listAllTagsWithPagination(ctx, registryClient)
+	if err != nil {
+		return nil, fmt.Errorf("list all tags with pagination: %w", err)
+	}
+	return tags, nil
+}
+
+func (r *reconciler) performIncrementalScan(ctx context.Context, registryClient cr.Client, packageName, packageType, repositoryName string) ([]string, error) {
+	// Incremental scan: start from the last processed version
+	r.logger.Debug("performing incremental scan", slog.String("package", packageName))
+	lastVersion := r.getLastProcessedVersion(ctx, packageName, packageType, repositoryName)
+	if lastVersion != "" {
+		r.logger.Debug("found last processed version",
+			slog.String("package", packageName),
+			slog.String("lastVersion", lastVersion))
+	}
+
+	tags, err := r.listTagsFromVersion(ctx, registryClient, lastVersion)
+	if err != nil {
+		return nil, fmt.Errorf("list tags from version: %w", err)
+	}
+	return tags, nil
+}
+
+func (r *reconciler) setOwnerReference(ctx context.Context, obj client.Object, repositoryName string) error {
+	repo := &v1alpha1.PackageRepository{}
+	if err := r.client.Get(ctx, types.NamespacedName{Name: repositoryName}, repo); err != nil {
+		return err
+	}
+
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+		Kind:       v1alpha1.PackageRepositoryKind,
+		Name:       repo.Name,
+		UID:        repo.UID,
+		Controller: &[]bool{true}[0],
+	}
+	obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+	return nil
 }
 
 func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, packageType, repositoryName string) string {
