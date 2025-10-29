@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
@@ -70,6 +71,7 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.PackageRepository{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(packageRepositoryController)
 }
 
@@ -171,6 +173,12 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	err = r.client.Create(ctx, operation)
 	if err != nil {
+		// If operation already exists (race condition), that's fine - just requeue
+		if apierrors.IsAlreadyExists(err) {
+			r.logger.Debug("operation already exists, skipping creation",
+				slog.String("operation", operationName))
+			return ctrl.Result{RequeueAfter: requeueInterval}, nil
+		}
 		r.logger.Error("failed to create package repository operation",
 			slog.String("name", packageRepository.Name),
 			slog.String("operation", operationName),
