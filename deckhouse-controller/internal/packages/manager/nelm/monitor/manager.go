@@ -30,6 +30,8 @@ import (
 // Manager coordinates multiple resource monitors for Helm releases.
 // Thread-safe for concurrent access.
 type Manager struct {
+	ctx context.Context
+
 	cache runtimecache.Cache
 	nelm  *nelm.Client
 
@@ -42,8 +44,9 @@ type Manager struct {
 }
 
 // New creates a new monitor manager instance.
-func New(cache runtimecache.Cache, nelm *nelm.Client, logger *log.Logger) *Manager {
+func New(ctx context.Context, cache runtimecache.Cache, nelm *nelm.Client, logger *log.Logger) *Manager {
 	return &Manager{
+		ctx:      ctx,
 		cache:    cache,
 		nelm:     nelm,
 		monitors: make(map[string]*resourcesMonitor),
@@ -72,7 +75,7 @@ func (m *Manager) CheckResources(ctx context.Context, name string) error {
 // AddMonitor creates and starts a new monitor for a Helm release.
 // If a monitor already exists for this release, the call is a no-op.
 // The monitor will run in the background, checking resources every 4 minutes.
-func (m *Manager) AddMonitor(ctx context.Context, name, rendered string) {
+func (m *Manager) AddMonitor(name, rendered string) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
@@ -82,7 +85,7 @@ func (m *Manager) AddMonitor(ctx context.Context, name, rendered string) {
 
 	m.monitors[name] = newMonitor(m.cache, m.nelm, name, rendered, m.logger)
 
-	m.monitors[name].Start(ctx, func(name string) {
+	m.monitors[name].Start(m.ctx, func(name string) {
 		select {
 		case m.eventCh <- name:
 		default:
@@ -145,6 +148,8 @@ func (m *Manager) ResumeMonitor(name string) {
 func (m *Manager) Stop() {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
+
+	m.logger.Debug("stop monitors")
 
 	for name, monitor := range m.monitors {
 		monitor.Stop()

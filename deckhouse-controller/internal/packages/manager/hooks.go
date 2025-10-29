@@ -22,6 +22,7 @@ import (
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	shkubetypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -48,9 +49,8 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 
 	m.logger.Debug("run package hook", slog.String("hook", hook), slog.String("name", name))
 
-	// TODO(ipaqsa): how to work with parallel hooks?
-	// t.dc.HelmResourcesManager().PauseMonitor(t.name)
-	// defer t.dc.HelmResourcesManager().ResumeMonitor(t.name)
+	m.nelm.PauseMonitor(name)
+	defer m.nelm.ResumeMonitor(name)
 
 	app, err := m.getApp(name)
 	if err != nil {
@@ -60,7 +60,7 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 
 	// Track if values changed during hook execution
 	oldChecksum := app.GetValuesChecksum()
-	if err = app.RunHookByName(ctx, hook, bctx, m.dc); err != nil {
+	if err = app.RunHookByName(ctx, hook, bctx, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return false, err
 	}
@@ -92,8 +92,8 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 	// Initialize hook controllers and bind them to Kubernetes events and schedules
 	for _, hook := range app.GetHooks() {
 		hookCtrl := hookcontroller.NewHookController()
-		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.dc.KubeEventsManager(), m.logger)
-		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, m.dc.ScheduleManager())
+		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.kubeEventsManager, m.logger)
+		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, m.scheduleManager)
 
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(m.tmpDir)
@@ -172,4 +172,9 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 	}
 
 	return res
+}
+
+// KubeObjectPatcher implements dependency container
+func (m *Manager) KubeObjectPatcher() *objectpatch.ObjectPatcher {
+	return m.kubeObjectPatcher
 }

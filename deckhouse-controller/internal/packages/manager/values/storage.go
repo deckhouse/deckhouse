@@ -78,11 +78,20 @@ func NewStorage(name string, staticValues addonutils.Values, configBytes, values
 	return s, nil
 }
 
+func (s *Storage) GetValuesChecksum() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.resultValues.Checksum()
+}
+
 func (s *Storage) GetValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.resultValues
+	return addonutils.Values{
+		s.name: s.resultValues,
+	}
 }
 
 // GetConfigValues returns only user defined values
@@ -90,7 +99,23 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.configValues
+	return addonutils.Values{
+		s.name: s.resultValues,
+	}
+}
+
+// ApplyConfigValues validates and saves config values
+func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.validateConfigValues(settings); err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+
+	s.configValues = settings
+
+	return s.calculateResultValues()
 }
 
 func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
@@ -168,4 +193,10 @@ func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
 	return s.schemaStorage.ValidateValues(s.name, validatableValues)
+}
+
+func (s *Storage) validateConfigValues(values addonutils.Values) error {
+	validatableValues := addonutils.Values{s.name: values}
+
+	return s.schemaStorage.ValidateConfigValues(s.name, validatableValues)
 }
