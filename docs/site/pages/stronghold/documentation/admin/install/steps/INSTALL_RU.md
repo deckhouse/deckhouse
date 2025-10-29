@@ -185,16 +185,16 @@ spec:
 
 ## Установка платформы
 
-> При установке платформы, отличной от [редакции Community Edition](../../../about/editions.html), из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
+> При установке платформы, отличной от [редакции Community Edition](../../../about/editions.html), из официального container registry `registry.deckhouse.ru` необходимо предварительно авторизоваться с помощью лицензионного ключа:
 >
 > ```shell
-> docker login -u license-token registry.deckhouse.io
+> docker login -u license-token registry.deckhouse.ru
 > ```
 
 Пример запуска контейнера инсталлятора из публичного container registry платформы:
 
 ```shell
-docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL> bash
+docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL> bash
 ```
 
 где:
@@ -217,7 +217,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yaml:/resources.yaml" \
-  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
 ```
 
 Установка платформы запускается в контейнере инсталлятора с помощью команды `dhctl`:
