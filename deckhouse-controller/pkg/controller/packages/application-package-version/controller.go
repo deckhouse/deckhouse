@@ -81,7 +81,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := r.client.Get(ctx, req.NamespacedName, apv); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("application package version not found", slog.String("name", req.Name))
+			r.logger.Debug("application package version not found", slog.String("name", req.Name))
 
 			return res, nil
 		}
@@ -93,7 +93,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !apv.DeletionTimestamp.IsZero() {
-		return r.delete(ctx, apv)
+		return r.handleDelete(ctx, apv)
 	}
 
 	// skip handle for non drafted resources
@@ -104,7 +104,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	err := r.handle(ctx, apv)
+	err := r.handleCreateOrUpdate(ctx, apv)
 	if err != nil {
 		r.logger.Warn("failed to handle application package version", slog.String("name", req.Name), log.Err(err))
 
@@ -114,7 +114,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
 	original := apv.DeepCopy()
 	logger := r.logger.With(slog.String("name", apv.Name))
 
@@ -232,7 +232,7 @@ func (r *reconciler) handle(ctx context.Context, apv *v1alpha1.ApplicationPackag
 	return nil
 }
 
-func (r *reconciler) delete(_ context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) handleDelete(_ context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", apv.Name))
 	logger.Debug("deleting ApplicationPackageVersion")
 	defer logger.Debug("delete ApplicationPackageVersion complete")
