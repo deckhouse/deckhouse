@@ -12,7 +12,7 @@ shell:
 ---
 image: {{ .ModuleName }}/build-keepalived
 final: false
-fromImage: builder/alpine
+fromImage: builder/alpine-3.21
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
