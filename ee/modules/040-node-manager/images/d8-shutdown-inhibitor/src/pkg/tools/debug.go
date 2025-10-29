@@ -6,10 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package tools
 
 import (
-	"fmt"
-
 	"d8_shutdown_inhibitor/pkg/app"
 	"d8_shutdown_inhibitor/pkg/inputdev"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func Run(args []string) bool {
@@ -24,7 +24,7 @@ func Run(args []string) bool {
 		NodeCordon()
 	case "node-condition":
 		if len(args) < 3 {
-			fmt.Println("Choose stage: start, pods, or unlock")
+			dlog.Info("debug tool: node-condition requires stage (start, pods, unlock)")
 			return false
 		}
 		NodeCondition(args[2])
@@ -33,7 +33,7 @@ func Run(args []string) bool {
 	case "list-input-devices":
 		ListInputDevices()
 	case "watch-for-key":
-		fmt.Println("Use real tty (vm console) and press buttons Q W E or Enter")
+		dlog.Info("debug tool: watch-for-key requires real tty, press Q/W/E/Enter")
 		WatchForKey(inputdev.KEY_Q, inputdev.KEY_E, inputdev.KEY_W, inputdev.KEY_ENTER)
 	default:
 		return false

@@ -9,7 +9,11 @@ import (
 	"context"
 	"fmt"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/systemd"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type ShutdownInhibitor struct {
@@ -34,34 +38,34 @@ func (s *ShutdownInhibitor) Run(ctx context.Context, errCh chan error) {
 		errCh <- fmt.Errorf("shutdownInhibitor: lock not acquired")
 		return
 	}
-	fmt.Printf("shutdownInhibitor: got delay lock\n")
+	dlog.Info("shutdown inhibitor: delay lock acquired")
 
 	shutdownSignalCh := s.waitForShutdownSignal()
 
 	// Stage 1: wait for shutdown signal.
 	select {
 	case <-ctx.Done():
-		fmt.Printf("shutdownInhibitor(s1): unlock on global exit\n")
+		dlog.Info("shutdown inhibitor: unlock on context cancel")
 		return
 	case <-shutdownSignalCh:
-		fmt.Printf("shutdownInhibitor(s1): Got PrepareShutdownSignal, trigger pod checker\n")
+		dlog.Info("shutdown inhibitor: received shutdown signal, triggering pod checker")
 		close(s.ShutdownSignalCh)
 	}
 
 	// Stage 2: wait for shutdown requirements.
 	select {
 	case <-ctx.Done():
-		fmt.Printf("shutdownInhibitor(s2): unlock on global exit\n")
+		dlog.Info("shutdown inhibitor: unlock on context cancel (stage2)")
 	case <-s.UnlockInhibitorsCh:
-		fmt.Printf("shutdownInhibitor(s2): unlock on meeting shutdown requirements.\n")
+		dlog.Info("shutdown inhibitor: shutdown requirements met, unlocking")
 	}
 
 	err = s.dbusCon.ReleaseInhibitLock(s.inhibitLock)
 	if err != nil {
-		fmt.Printf("shutdownInhibitor: unlock error: %v\n", err)
+		dlog.Error("shutdown inhibitor: unlock error", slog.Int("lock", int(s.inhibitLock)), dlog.Err(err))
 		return
 	}
-	fmt.Printf("shutdownInhibitor: unlocked\n")
+	dlog.Info("shutdown inhibitor: lock released")
 }
 
 func (s *ShutdownInhibitor) acquireLock() error {
@@ -85,7 +89,7 @@ func (s *ShutdownInhibitor) acquireLock() error {
 func (s *ShutdownInhibitor) waitForShutdownSignal() <-chan bool {
 	ch, err := s.dbusCon.MonitorShutdown()
 	if err != nil {
-		fmt.Printf("shutdownInhibitor: failed to monitor shutdown signal: %v\n", err)
+		dlog.Error("shutdown inhibitor: failed to monitor shutdown signal", dlog.Err(err))
 		return nil
 	}
 	return ch

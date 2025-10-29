@@ -11,9 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/system"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // PodObserver starts to check Pods on node and stops inhibitors when no pods to wait remain.
@@ -40,13 +44,13 @@ use 'kubectl drain' to move Pods to other Nodes.
 
 func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	// Stage 1. Wait for shutdown.
-	fmt.Printf("podObserver: wait for PrepareForShutdown signal or power key press\n")
+	dlog.Info("pod observer: waiting for shutdown signal", slog.String("node", p.NodeName))
 	select {
 	case <-ctx.Done():
-		fmt.Printf("podObserver(s1): stop on context cancel\n")
+		dlog.Info("pod observer: context cancelled during wait", slog.String("node", p.NodeName))
 		return
 	case <-p.ShutdownSignalCh:
-		fmt.Printf("podObserver(s1): catch prepare shutdown signal, start pods checker\n")
+		dlog.Info("pod observer: received shutdown signal, start checking pods", slog.String("node", p.NodeName))
 	}
 
 	// Stage 2. Wait for Pods to stop.
@@ -58,34 +62,37 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		// Check for global stop (do it at the beginning so 'continue' work correctly).
 		select {
 		case <-ctx.Done():
-			fmt.Printf("podObserver(s2): stop on context cancel\n")
+			dlog.Info("pod observer: context cancelled while monitoring pods", slog.String("node", p.NodeName))
 			return
 		default:
 		}
 		matchedPods, err := p.ListMatchedPods(ctx)
 		if err != nil {
-			fmt.Printf("podObserver(s2): list matched Pods: %v\n", err)
+			dlog.Error("pod observer: list matched pods failed", slog.String("node", p.NodeName), dlog.Err(err))
 		} else {
 			if len(matchedPods) == 0 {
-				fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
+				dlog.Info("pod observer: no pods with inhibitor label remaining, unlocking inhibitors", slog.String("node", p.NodeName))
 				err = nodecondition.GracefulShutdownPostpone(p.Klient).UnsetOnUnlock(ctx, p.NodeName)
 				if err != nil {
-					fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
+					dlog.Warn("pod observer: failed to unset node condition", slog.String("node", p.NodeName), dlog.Err(err))
 				}
 				close(p.StopInhibitorsCh)
 				return
 			}
 
 			p.stopOnce.Do(func() {
-				fmt.Printf("podObserver(s2): %d pods are still running, triggering node cordon\n", len(matchedPods))
+				dlog.Info("pod observer: pods still running, triggering node cordon",
+					slog.String("node", p.NodeName),
+					slog.Int("pods", len(matchedPods)),
+				)
 				close(p.StartCordonCh)
 			})
-			fmt.Printf("podObserver(s2): %d pods are still running\n", len(matchedPods))
+			dlog.Info("pod observer: pods still running", slog.String("node", p.NodeName), slog.Int("pods", len(matchedPods)))
 
 			err = nodecondition.GracefulShutdownPostpone(p.Klient).SetPodsArePresent(ctx, p.NodeName)
 			if err != nil {
 				// Will retry on next iteration, just log the error.
-				fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
+				dlog.Warn("pod observer: failed to update node condition", slog.String("node", p.NodeName), dlog.Err(err))
 			}
 
 			// Reduce wall broadcast messages with longer interval than pods checking interval.
@@ -94,7 +101,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 				err = system.WallMessage(wallMessage)
 				if err != nil {
 					// Will retry on next iteration, just log the error.
-					fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
+					dlog.Warn("pod observer: failed to send wall message", slog.String("node", p.NodeName), dlog.Err(err))
 				}
 				lastWall = now
 			}

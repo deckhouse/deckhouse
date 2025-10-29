@@ -7,8 +7,11 @@ package taskstarter
 
 import (
 	"context"
-	"fmt"
 	"sync"
+
+	"log/slog"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Starter struct {
@@ -38,7 +41,7 @@ func (s *Starter) Start(ctx context.Context) {
 		go func(task Task) {
 			defer wg.Done()
 			task.Run(s.ctx, errCh)
-			fmt.Printf("Task %s done\n", task.Name())
+			dlog.Info("task finished", slog.String("task", task.Name()))
 		}(s.tasks[i])
 	}
 
@@ -62,7 +65,7 @@ func (s *Starter) Stop() {
 	if s.stopped {
 		return
 	}
-	fmt.Printf("Stop all tasks...\n")
+	dlog.Info("stopping all tasks")
 	// Cancel contexts of all tasks.
 	s.cancel()
 	s.stopped = true

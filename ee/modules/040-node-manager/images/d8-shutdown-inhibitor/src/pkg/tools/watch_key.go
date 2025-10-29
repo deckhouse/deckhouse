@@ -6,27 +6,29 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package tools
 
 import (
-	"fmt"
 	"os"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/inputdev"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func WatchForKey(buttons ...inputdev.Button) {
 	devs, err := inputdev.ListInputDevicesWithAnyButton(buttons...)
 	if err != nil {
-		fmt.Printf("list devices with Q W E Enter: %w", err)
-		os.Exit(1)
+		dlog.Fatal("watch key: failed to list devices", dlog.Err(err))
 	}
 
 	for _, dev := range devs {
-		fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
+		dlog.Info("watch key: device found", slog.String("name", dev.Name), slog.String("path", dev.DevPath))
 	}
 
 	watcher := inputdev.NewWatcher(devs, buttons...)
 	watcher.Start()
-	fmt.Printf("watch for button press\n")
+	dlog.Info("watch key: waiting for button press")
 	<-watcher.Pressed()
-	fmt.Printf("button was pressed\n")
+	dlog.Info("watch key: button pressed")
 	os.Exit(0)
 }

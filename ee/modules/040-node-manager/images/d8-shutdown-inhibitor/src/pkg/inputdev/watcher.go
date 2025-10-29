@@ -9,6 +9,10 @@ import (
 	"fmt"
 	"syscall"
 	"unsafe"
+
+	"log/slog"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Watcher struct {
@@ -87,7 +91,7 @@ func (w *Watcher) readEvents(evCh chan *inputEvent) {
 		// TODO add timeout to check stopCh more frequently?
 		_, err := syscall.Select(fdMax, &fdSet, nil, nil, nil)
 		if err != nil {
-			fmt.Printf("select: %v\n", err)
+			dlog.Warn("input watcher: select failed", dlog.Err(err))
 			continue
 		}
 
@@ -99,7 +103,7 @@ func (w *Watcher) readEvents(evCh chan *inputEvent) {
 
 			event, err := readEvent(fd)
 			if err != nil {
-				fmt.Printf("readEvent: %v\n", err)
+				dlog.Warn("input watcher: read event failed", slog.Int("fd", fd), dlog.Err(err))
 				continue
 			}
 

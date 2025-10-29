@@ -7,25 +7,26 @@ package tools
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sort"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/app/tasks"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func ListPods(podLabel string) {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("START Error: get hostname: %v\n", err)
-		os.Exit(1)
+		dlog.Fatal("list pods: failed to get hostname", dlog.Err(err))
 	}
 
 	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
 	if err != nil {
-		fmt.Printf("START Error: create kubernetes client: %v\n", err)
-		os.Exit(1)
+		dlog.Fatal("list pods: failed to create kubernetes client", dlog.Err(err))
 	}
 
 	podObserver := &tasks.PodObserver{
@@ -39,7 +40,7 @@ func ListPods(podLabel string) {
 
 	pods, err := podObserver.ListMatchedPods(context.Background())
 	if err != nil {
-		fmt.Printf("List matched Pods: %v\n", err)
+		dlog.Error("list pods: failed to list matched pods", dlog.Err(err), slog.String("node", nodeName))
 		return
 	}
 
@@ -47,8 +48,12 @@ func ListPods(podLabel string) {
 		return pods[i].Name < pods[j].Name
 	})
 
-	fmt.Printf("Pods with label %s:\n", podLabel)
+	dlog.Info("pods with label", slog.String("label", podLabel), slog.Int("count", len(pods)))
 	for _, pod := range pods {
-		fmt.Printf("  %s\n", pod.Name)
+		dlog.Info("pod matched",
+			slog.String("name", pod.Name),
+			slog.String("namespace", pod.Namespace),
+			slog.String("node", nodeName),
+		)
 	}
 }

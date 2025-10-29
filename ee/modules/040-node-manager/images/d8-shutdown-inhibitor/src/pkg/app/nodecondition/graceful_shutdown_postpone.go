@@ -9,9 +9,13 @@ import (
 	"context"
 	"fmt"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -96,12 +100,14 @@ func (g *gracefulShutdownPostpone) uncordonAndCleanup(ctx context.Context, node 
 }
 
 func (g *gracefulShutdownPostpone) isShutdownInhibitedByPods(condition v1.NodeCondition) bool {
-	fmt.Printf("isShutdownInhibitedByPods: condition=%+v\n", condition)
+	dlog.Debug("graceful shutdown postpone condition state",
+		slog.Any("condition", condition),
+	)
 	return condition.Status == "True" && condition.Type == GracefulShutdownPostponeType
 }
 
 func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName string) (bool, error) {
-	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
+	dlog.Info("uncordonOnStart: begin", slog.String("node", nodeName))
 
 	node := g.Klient.GetNode(ctx, nodeName)
 	if err := node.Err(); err != nil {
@@ -112,26 +118,26 @@ func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName
 	if err != nil {
 		return false, err
 	}
-	fmt.Printf("uncordonOnStart: isShutdownInProgress %t\n", isShutdownInProgress)
+	dlog.Info("uncordonOnStart: shutdown progress state", slog.String("node", nodeName), slog.Bool("inProgress", isShutdownInProgress))
 
 	podsPresentCondition, err := node.GetConditionByReason(ReasonPodsArePresent)
 	isInhibited := g.isShutdownInhibitedByPods(podsPresentCondition)
-	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
+	dlog.Info("uncordonOnStart: inhibitor state", slog.String("node", nodeName), slog.Bool("inhibited", isInhibited))
 
 	if isShutdownInProgress && isInhibited {
-		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
+		dlog.Info("uncordonOnStart: node not ready and shutdown signal active, holding cordon", slog.String("node", nodeName))
 		return false, nil
 	}
 
-	fmt.Println("uncordonOnStart: uncordonAndCleanup")
+	dlog.Info("uncordonOnStart: proceeding with uncordon cleanup", slog.String("node", nodeName))
 	isOurCordon, err := g.cordonedByInhibitor(node)
-	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
+	dlog.Info("uncordonOnStart: inhibitor cordon ownership", slog.String("node", nodeName), slog.Bool("isOurCordon", isOurCordon))
 	if err != nil {
 		return false, err
 	}
 
 	if !isOurCordon {
-		fmt.Println("uncordonOnStart: Node is not cordoned by inhibitor. No action needed")
+		dlog.Info("uncordonOnStart: node not cordoned by inhibitor, nothing to do", slog.String("node", nodeName))
 		return true, nil
 	}
 

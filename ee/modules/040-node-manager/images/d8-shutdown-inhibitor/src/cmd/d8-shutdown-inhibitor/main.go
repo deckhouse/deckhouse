@@ -6,27 +6,28 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/app"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("START Error: get hostname: %v\n", err)
-		os.Exit(1)
+		dlog.Fatal("failed to get hostname", dlog.Err(err))
 	}
 
 	// Start application.
 	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
 	if err != nil {
-		log.Fatal(err)
+		dlog.Fatal("failed to create kubernetes client", dlog.Err(err))
 	}
 	app := app.NewApp(app.AppConfig{
 		PodLabel:              app.InhibitNodeShutdownLabel,
@@ -36,10 +37,8 @@ func main() {
 		NodeName:              nodeName,
 	}, kubeClient)
 
-	err = app.Start()
-	if err != nil {
-		fmt.Printf("START Error: %s\n", err.Error())
-		os.Exit(1)
+	if err := app.Start(); err != nil {
+		dlog.Fatal("application start failed", dlog.Err(err))
 	}
 
 	// Wait for signal to stop application.
@@ -48,16 +47,14 @@ func main() {
 
 	select {
 	case sig := <-interruptCh:
-		fmt.Printf("Grace shutdown by '%s' signal\n", sig.String())
+		dlog.Info("received shutdown signal", slog.String("signal", sig.String()))
 		app.Stop()
 		<-app.Done()
 	case <-app.Done():
-		fmt.Printf("Application stopped\n")
+		dlog.Info("application stopped by internal signal")
 	}
 
-	err = app.Err()
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err.Error())
-		os.Exit(1)
+	if err := app.Err(); err != nil {
+		dlog.Fatal("application error", dlog.Err(err))
 	}
 }

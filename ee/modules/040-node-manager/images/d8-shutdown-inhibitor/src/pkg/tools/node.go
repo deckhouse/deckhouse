@@ -7,61 +7,65 @@ package tools
 
 import (
 	"context"
-	"fmt"
 	"os"
+
+	"log/slog"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func NodeName() {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("get hostname: %v\n", err)
+		dlog.Error("node tool: failed to get hostname", dlog.Err(err))
+		return
 	}
-	fmt.Printf("node name: %s\n", nodeName)
+	dlog.Info("node name", slog.String("node", nodeName))
 }
 
 func NodeCordon() {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("get hostname: %v\n", err)
+		dlog.Error("node cordon: failed to get hostname", dlog.Err(err))
 		return
 	}
-	fmt.Printf("node name: %s\n", nodeName)
+	dlog.Info("node cordon: operating on node", slog.String("node", nodeName))
 
 	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
 	if err != nil {
-		fmt.Printf("nodeCordoner: fail to init kubernetes client: %v\n", err)
+		dlog.Error("node cordon: failed to init kubernetes client", dlog.Err(err))
 		return
 	}
 
 	ctx := context.Background()
 	nodeRef := kubeClient.GetNode(ctx, nodeName).Cordon(ctx)
 	if err := nodeRef.Err(); err != nil {
-		fmt.Printf("nodeCordoner: fail to cordon node: %v\n", err)
+		dlog.Error("node cordon: failed to cordon", dlog.Err(err), slog.String("node", nodeName))
 		return
 	}
 
 	if err := kubeClient.GetNode(ctx, nodeName).SetCordonAnnotation(ctx).Err(); err != nil {
-		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n", err)
+		dlog.Error("node cordon: failed to set cordon annotation", dlog.Err(err), slog.String("node", nodeName))
 		return
 	}
 
-	fmt.Println("node cordoned by shutdown inhibitor")
+	dlog.Info("node cordoned by shutdown inhibitor", slog.String("node", nodeName))
 }
 
 func NodeCondition(stage string) {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("get hostname: %v\n", err)
+		dlog.Error("node condition: failed to get hostname", dlog.Err(err))
 		return
 	}
-	fmt.Printf("node name: %s\n", nodeName)
+	dlog.Info("node condition: operating on node", slog.String("node", nodeName))
 
 	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
 	if err != nil {
-		fmt.Printf("init kubernetes client: %v\n", err)
+		dlog.Error("node condition: failed to init kubernetes client", dlog.Err(err))
 		return
 	}
 
@@ -78,6 +82,6 @@ func NodeCondition(stage string) {
 	}
 
 	if err != nil {
-		fmt.Printf("update condition: %v\n", err)
+		dlog.Error("node condition: update failed", dlog.Err(err), slog.String("node", nodeName), slog.String("stage", stage))
 	}
 }

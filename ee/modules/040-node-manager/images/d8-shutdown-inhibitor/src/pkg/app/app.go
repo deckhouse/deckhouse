@@ -10,16 +10,20 @@ import (
 	"fmt"
 	"time"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/app/tasks"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/systemd"
 	"d8_shutdown_inhibitor/pkg/taskstarter"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type App struct {
 	config      AppConfig
 	taskStarter *taskstarter.Starter
-	klient *kubernetes.Klient
+	klient      *kubernetes.Klient
 }
 
 func NewApp(config AppConfig, klient *kubernetes.Klient) *App {
@@ -49,7 +53,7 @@ func (a *App) Start() error {
 }
 
 func (a *App) Stop() {
-	fmt.Printf("Stop app...\n")
+	dlog.Info("stop app")
 	a.taskStarter.Stop()
 }
 
@@ -73,11 +77,19 @@ func (a *App) overrideInhibitDelayMax() error {
 	}
 
 	if currentInhibitDelay >= a.config.InhibitDelayMax {
-		fmt.Printf("overrideInhibitDelayMax: current inhibit delay is already greater or equal to requested: %s >= %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
+		dlog.Info(
+			"skip inhibit delay override: current is greater or equal to requested",
+			slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+			slog.String("requested", a.config.InhibitDelayMax.Truncate(time.Second).String()),
+		)
 		return nil
 	}
 
-	fmt.Printf("overrideInhibitDelayMax: current inhibit delay: %s, override to %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
+	dlog.Info(
+		"override inhibit delay",
+		slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+		slog.String("requested", a.config.InhibitDelayMax.Truncate(time.Second).String()),
+	)
 
 	err = dbusCon.OverrideInhibitDelay(a.config.InhibitDelayMax)
 	if err != nil {
@@ -98,7 +110,10 @@ func (a *App) overrideInhibitDelayMax() error {
 		return fmt.Errorf("overrideInhibitDelayMax: unable to override inhibit delay to %s, current value of InhibitDelayMaxSec (%v) is less than requested", a.config.InhibitDelayMax.Truncate(time.Second).String(), currentInhibitDelay.Truncate(time.Second).String())
 	}
 
-	fmt.Printf("overrideInhibitDelayMax: overridden inhibit delay: %s\n", currentInhibitDelay.Truncate(time.Second).String())
+	dlog.Info(
+		"inhibit delay overridden",
+		slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+	)
 	return nil
 }
 
@@ -138,12 +153,12 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			NodeName:           a.config.NodeName,
 			StartCordonCh:      startCordonCh,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
-			Klient: a.klient,
+			Klient:             a.klient,
 		},
 		&tasks.NodeConditionSetter{
 			NodeName:           a.config.NodeName,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
-			Klient: a.klient,
+			Klient:             a.klient,
 		},
 	}
 }
