@@ -47,4 +47,6 @@ shell:
   setup:
   - cd /src/inhibitor
   - GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /d8-shutdown-inhibitor ./cmd/d8-shutdown-inhibitor
+  - chown 64535:64535 /d8-shutdown-inhibitor
+  - chmod 0755 /d8-shutdown-inhibitor
   - mv /src/scripts/* /
