@@ -1,5 +1,5 @@
 diff --git a/cmd/cloud-controller-manager/app/options/options.go b/cmd/cloud-controller-manager/app/options/options.go
-index c9b91b5e9..ae5cc425c 100644
+index c9b91b5e9..fac347947 100644
 --- a/cmd/cloud-controller-manager/app/options/options.go
 +++ b/cmd/cloud-controller-manager/app/options/options.go
 @@ -68,6 +68,7 @@ type CloudControllerManagerOptions struct {
@@ -15,7 +15,7 @@ index c9b91b5e9..ae5cc425c 100644
  			ServiceControllerConfiguration: &componentConfig.ServiceController,
  		},
 +		NodeController: &cpoptions.NodeControllerOptions{
-+			NodeControllerConfiguration: &componentConfig.NodeController,
++			&componentConfig.NodeController,
 +		},
  		NodeIPAMController:        defaultNodeIPAMControllerOptions(),
  		SecureServing:             apiserveroptions.NewSecureServingOptions().WithLoopback(),
