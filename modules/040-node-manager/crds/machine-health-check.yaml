@@ -730,117 +730,40 @@ spec:
                   - status
                   - type
                   type: object
-                maxItems: 32
-                type: array
-                x-kubernetes-list-map-keys:
-                - type
-                x-kubernetes-list-type: map
-              currentHealthy:
-                description: currentHealthy is the total number of healthy machines
-                  counted by this machine health check
-                format: int32
-                minimum: 0
-                type: integer
-              deprecated:
-                description: deprecated groups all the status fields that are deprecated
-                  and will be removed when all the nested field are removed.
-                properties:
-                  v1beta1:
-                    description: v1beta1 groups all the status fields that are deprecated
-                      and will be removed when support for v1beta1 will be dropped.
-                    properties:
-                      conditions:
-                        description: |-
-                          conditions defines current service state of the MachineHealthCheck.
-
-                          Deprecated: This field is deprecated and is going to be removed when support for v1beta1 will be dropped. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
-                        items:
-                          description: Condition defines an observation of a Cluster
-                            API resource operational state.
-                          properties:
-                            lastTransitionTime:
-                              description: |-
-                                lastTransitionTime is the last time the condition transitioned from one status to another.
-                                This should be when the underlying condition changed. If that is not known, then using the time when
-                                the API field changed is acceptable.
-                              format: date-time
-                              type: string
-                            message:
-                              description: |-
-                                message is a human readable message indicating details about the transition.
-                                This field may be empty.
-                              maxLength: 10240
-                              minLength: 1
-                              type: string
-                            reason:
-                              description: |-
-                                reason is the reason for the condition's last transition in CamelCase.
-                                The specific API may choose whether or not this field is considered a guaranteed API.
-                                This field may be empty.
-                              maxLength: 256
-                              minLength: 1
-                              type: string
-                            severity:
-                              description: |-
-                                severity provides an explicit classification of Reason code, so the users or machines can immediately
-                                understand the current situation and act accordingly.
-                                The Severity field MUST be set only when Status=False.
-                              maxLength: 32
-                              type: string
-                            status:
-                              description: status of the condition, one of True, False,
-                                Unknown.
-                              type: string
-                            type:
-                              description: |-
-                                type of condition in CamelCase or in foo.example.com/CamelCase.
-                                Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
-                                can be useful (see .node.status.conditions), the ability to deconflict is important.
-                              maxLength: 256
-                              minLength: 1
-                              type: string
-                          required:
-                          - lastTransitionTime
-                          - status
-                          - type
-                          type: object
-                        type: array
-                    type: object
-                type: object
-              expectedMachines:
-                description: expectedMachines is the total number of machines counted
-                  by this machine health check
-                format: int32
-                minimum: 0
-                type: integer
-              observedGeneration:
-                description: observedGeneration is the latest generation observed
-                  by the controller.
-                format: int64
-                minimum: 1
-                type: integer
-              remediationsAllowed:
-                description: |-
-                  remediationsAllowed is the number of further remediations allowed by this machine health check before
-                  maxUnhealthy short circuiting will be applied
-                format: int32
-                minimum: 0
-                type: integer
-              targets:
-                description: targets shows the current list of machines the machine
-                  health check is watching
-                items:
-                  maxLength: 253
-                  minLength: 1
-                  type: string
-                maxItems: 10000
-                type: array
-                x-kubernetes-list-type: atomic
-            type: object
-        required:
-        - spec
-        type: object
-    served: true
-    storage: false
-    subresources:
-      status: {}
+                expectedMachines:
+                  description: expectedMachines is the total number of machines counted
+                    by this machine health check
+                  format: int32
+                  minimum: 0
+                  type: integer
+                observedGeneration:
+                  description: observedGeneration is the latest generation observed
+                    by the controller.
+                  format: int64
+                  minimum: 1
+                  type: integer
+                remediationsAllowed:
+                  description: |-
+                    remediationsAllowed is the number of further remediations allowed by this machine health check before
+                    maxUnhealthy short circuiting will be applied
+                  format: int32
+                  minimum: 0
+                  type: integer
+                targets:
+                  description: targets shows the current list of machines the machine
+                    health check is watching
+                  items:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  maxItems: 10000
+                  type: array
+                  x-kubernetes-list-type: atomic
+              type: object
+          required:
+          - spec
+          type: object
+      served: true
+      storage: false
+      subresources:
+        status: {}

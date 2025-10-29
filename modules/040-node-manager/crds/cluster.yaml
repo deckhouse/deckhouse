@@ -2985,89 +2985,61 @@ spec:
                   required:
                   - name
                   type: object
-                maxItems: 100
-                minItems: 1
-                type: array
-                x-kubernetes-list-map-keys:
-                - name
-                x-kubernetes-list-type: map
-              initialization:
-                description: |-
-                  initialization provides observations of the Cluster initialization process.
-                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
-                minProperties: 1
-                properties:
-                  controlPlaneInitialized:
-                    description: |-
-                      controlPlaneInitialized denotes when the control plane is functional enough to accept requests.
-                      This information is usually used as a signal for starting all the provisioning operations that depends on
-                      a functional API server, but do not require a full HA control plane to exists, like e.g. join worker Machines,
-                      install core addons like CNI, CPI, CSI etc.
-                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
-                      The value of this field is never updated after initialization is completed.
-                    type: boolean
-                  infrastructureProvisioned:
-                    description: |-
-                      infrastructureProvisioned is true when the infrastructure provider reports that Cluster's infrastructure is fully provisioned.
-                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
-                      The value of this field is never updated after provisioning is completed.
-                    type: boolean
-                type: object
-              observedGeneration:
-                description: observedGeneration is the latest generation observed
-                  by the controller.
-                format: int64
-                minimum: 1
-                type: integer
-              phase:
-                description: phase represents the current phase of cluster actuation.
-                enum:
-                - Pending
-                - Provisioning
-                - Provisioned
-                - Deleting
-                - Failed
-                - Unknown
-                type: string
-              workers:
-                description: workers groups all the observations about Cluster's Workers
-                  current state.
-                properties:
-                  availableReplicas:
-                    description: availableReplicas is the total number of available
-                      worker machines in this cluster. A machine is considered available
-                      when Machine's Available condition is true.
-                    format: int32
-                    type: integer
-                  desiredReplicas:
-                    description: desiredReplicas is the total number of desired worker
-                      machines in this cluster.
-                    format: int32
-                    type: integer
-                  readyReplicas:
-                    description: readyReplicas is the total number of ready worker
-                      machines in this cluster. A machine is considered ready when
-                      Machine's Ready condition is true.
-                    format: int32
-                    type: integer
-                  replicas:
-                    description: |-
-                      replicas is the total number of worker machines in this cluster.
-                      NOTE: replicas also includes machines still being provisioned or being deleted.
-                    format: int32
-                    type: integer
-                  upToDateReplicas:
-                    description: upToDateReplicas is the number of up-to-date worker
-                      machines in this cluster. A machine is considered up-to-date
-                      when Machine's UpToDate condition is true.
-                    format: int32
-                    type: integer
-                type: object
-            type: object
-        required:
-        - spec
-        type: object
-    served: true
-    storage: false
-    subresources:
-      status: {}
+                observedGeneration:
+                  description: observedGeneration is the latest generation observed
+                    by the controller.
+                  format: int64
+                  minimum: 1
+                  type: integer
+                phase:
+                  description: phase represents the current phase of cluster actuation.
+                  enum:
+                  - Pending
+                  - Provisioning
+                  - Provisioned
+                  - Deleting
+                  - Failed
+                  - Unknown
+                  type: string
+                workers:
+                  description: workers groups all the observations about Cluster's Workers
+                    current state.
+                  properties:
+                    availableReplicas:
+                      description: availableReplicas is the total number of available
+                        worker machines in this cluster. A machine is considered available
+                        when Machine's Available condition is true.
+                      format: int32
+                      type: integer
+                    desiredReplicas:
+                      description: desiredReplicas is the total number of desired worker
+                        machines in this cluster.
+                      format: int32
+                      type: integer
+                    readyReplicas:
+                      description: readyReplicas is the total number of ready worker
+                        machines in this cluster. A machine is considered ready when
+                        Machine's Ready condition is true.
+                      format: int32
+                      type: integer
+                    replicas:
+                      description: |-
+                        replicas is the total number of worker machines in this cluster.
+                        NOTE: replicas also includes machines still being provisioned or being deleted.
+                      format: int32
+                      type: integer
+                    upToDateReplicas:
+                      description: upToDateReplicas is the number of up-to-date worker
+                        machines in this cluster. A machine is considered up-to-date
+                        when Machine's UpToDate condition is true.
+                      format: int32
+                      type: integer
+                  type: object
+              type: object
+          required:
+          - spec
+          type: object
+      served: true
+      storage: false
+      subresources:
+        status: {}
