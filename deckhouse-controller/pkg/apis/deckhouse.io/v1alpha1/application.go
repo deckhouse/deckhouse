@@ -29,10 +29,6 @@ const (
 
 	ApplicationProcessedFinalizer = "application.deckhouse.io/processed"
 
-	ApplicationStatusHealthy  = "Healthy"
-	ApplicationStatusDegraded = "Degraded"
-	ApplicationStatusError    = "Error"
-
 	ApplicationConditionRequirementsMet        = "RequirementsMet"
 	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
 	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
@@ -43,6 +39,31 @@ const (
 	ApplicationConditionReasonVersionNotFound        = "VersionNotFound"
 	ApplicationConditionReasonVersionIsDraft         = "VersionIsDraft"
 	ApplicationConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
+
+	// Application condition types
+	ApplicationConditionInstalled            = "Installed"
+	ApplicationConditionUpdateInstalled      = "UpdateInstalled"
+	ApplicationConditionConfigurationApplied = "ConfigurationApplied"
+	ApplicationConditionPartiallyDegraded    = "PartiallyDegraded"
+	ApplicationConditionManaged              = "Managed"
+	ApplicationConditionReady                = "Ready"
+
+	// Application condition reasons
+	ApplicationConditionInstalledReasonDownloading                              = "Downloading"
+	ApplicationConditionInstalledReasonInstallationInProgress                   = "InstallationInProgress"
+	ApplicationConditionInstalledReasonDownloadWasFailed                        = "DownloadWasFailed"
+	ApplicationConditionInstalledReasonRequirementsNotMet                       = "RequirementsNotMet"
+	ApplicationConditionInstalledReasonManifestsDeploymentFailed                = "ManifestsDeploymentFailed"
+	ApplicationConditionInstalledReasonLicenseCheckFailed                       = "LicenseCheckFailed"
+	ApplicationConditionInstalledReasonUpdateWasFailed                          = "UpdateWasFailed"
+	ApplicationConditionUpdateInstalledReasonDownloading                        = "Downloading"
+	ApplicationConditionUpdateInstalledReasonUpdateInProgress                   = "UpdateInProgress"
+	ApplicationConditionUpdateInstalledReasonUpdateFailed                       = "UpdateFailed"
+	ApplicationConditionUpdateInstalledReasonRequirementsNotMet                 = "RequirementsNotMet"
+	ApplicationConditionConfigurationAppliedReasonConfigurationValidationFailed = "ConfigurationValidationFailed"
+	ApplicationConditionPartiallyDegradedReasonScalingInProgress                = "ScalingInProgress"
+	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
+	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
 )
 
 var (
