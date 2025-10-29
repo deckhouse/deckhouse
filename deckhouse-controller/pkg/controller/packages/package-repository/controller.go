@@ -40,7 +40,7 @@ const (
 	// requeueInterval is the interval at which the controller will requeue the PackageRepository
 	// after successful reconciliation to trigger periodic scanning
 	// TODO: switch to 6h before merging
-	requeueInterval = 2 * time.Minute
+	requeueInterval = 6 * time.Hour
 
 	// operationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository
