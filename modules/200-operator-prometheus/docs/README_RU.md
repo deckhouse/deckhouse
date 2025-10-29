@@ -24,7 +24,7 @@ description: "Установка и управление системой мон
 
 Сервер Prometheus выполняет две основные задачи — собирает метрики и вычисляет правила.
 
-* Для каждой цели монитринга (target) на каждом `scrape_interval` выполняется HTTP-запрос к этой цели. Метрики [в собственном текстовом формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) сохраняются в базу данных Prometheus.
+* Для каждой цели мониторинга (target) на каждом `scrape_interval` выполняется HTTP-запрос к этой цели. Метрики [в собственном текстовом формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) сохраняются в базу данных Prometheus.
 * На каждом `evaluation_interval` обрабатываются правила (rules), в результате чего:
   * отправляются алерты;
   * в базу записываются новые метрики (результаты выполнения правил).
@@ -130,10 +130,10 @@ relabel_configs:
 
 Prometheus Operator с помощью механизма CRD (Custom Resource Definitions) определяет четыре кастомных ресурса:
 
-* [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — оописывает инсталляцию (кластер) Prometheus;
+* [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — описывает инсталляцию (кластер) Prometheus;
 * [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — задаёт, как собирать метрики с набора сервисов;
 * [Alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#alertmanager) — описывает кластер Alertmanager;
-* [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — осодержит набор правил Prometheus.
+* [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — содержит набор правил Prometheus.
 
 Также Prometheus Operator отслеживает ресурсы Prometheus и для каждого генерирует:
 
@@ -152,7 +152,7 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
   * `prometheus` — сам Prometheus;
   * `prometheus-config-reloader` — [утилита](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader), которая:
     * следит за изменениями `prometheus.yaml` и при необходимости инициирует перезагрузку конфигурации Prometheus (специальным HTTP-запросом, см. [подробнее ниже](#обработка-servicemonitor));
-    * отслеживает PrometheusRule (см. [подробнее ниже](#обработка-катомных-ресурсов-с-правилами)), по необходимости скачивает их и перезапускает Prometheus.
+    * отслеживает PrometheusRule (см. [подробнее ниже](#обработка-каcтомных-ресурсов-с-правилами)), по необходимости скачивает их и перезапускает Prometheus.
   * `kube-rbac-proxy` — прокси для аутентификации/авторизации по RBAC при доступе к метрикам Prometheus.
 * Ключевые тома (volumes):
   * `config` — примонтированный секрет с файлами `prometheus.yaml` и `configmaps.json`. Используется в контейнерах `prometheus` и `prometheus-config-reloader`.
@@ -170,7 +170,7 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
 1. Контейнер `prometheus-config-reloader` обнаруживает изменение `prometheus.yaml` и отправляет Prometheus HTTP-запрос на перезагрузку конфигурации.
 1. Prometheus перечитывает конфигурацию и применяет изменения в `scrape_configs` согласно своей логике работы.
 
-### Обработка катомных ресурсов с правилами
+### Обработка каcтомных ресурсов с правилами
 
 ![Как обрабатываются кастомные ресурсы с правилами](images/rules.png)
 
