@@ -81,11 +81,11 @@ spec:
     - envoyFileAccessLog:
         path: /dev/stdout
         logFormat:
-        {{- if eq .Values.istio.dataPlane.accessLog.type "Text" }}
-          text: {{ .Values.istio.dataPlane.accessLog.textFormat | toJson }}
-        {{- else if eq .Values.istio.dataPlane.accessLog.type "JSON" }}
+        {{- if eq $.Values.istio.dataPlane.accessLog.type "Text" }}
+          text: {{ $.Values.istio.dataPlane.accessLog.textFormat | toJson }}
+        {{- else if eq $.Values.istio.dataPlane.accessLog.type "JSON" }}
           labels:
-          {{- range $key, $value := .Values.istio.dataPlane.accessLog.jsonLabels }}
+          {{- range $key, $value := $.Values.istio.dataPlane.accessLog.jsonLabels }}
             {{ $key }}: {{ $value | toJson }}
           {{- end }}
         {{- end }}
