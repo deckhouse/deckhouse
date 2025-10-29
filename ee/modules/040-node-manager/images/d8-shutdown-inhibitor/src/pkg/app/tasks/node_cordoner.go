@@ -42,8 +42,8 @@ func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 		return
 	}
 
-	nodeRef := n.Klient.GetNode(ctx, n.NodeName).Cordon(ctx)
-	if err := nodeRef.Err(); err != nil {
+	node := n.Klient.GetNode(ctx, n.NodeName).Cordon(ctx)
+	if err := node.Err(); err != nil {
 		dlog.Error("node cordoner: failed to cordon node", slog.String("node", n.NodeName), dlog.Err(err))
 		return
 	}

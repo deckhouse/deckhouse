@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -35,57 +36,73 @@ func (c *Klient) GetNode(ctx context.Context, nodeName string) *Node {
 	return &Node{Node: node, client: c}
 }
 
-func (n *Node) update(ctx context.Context) *Node {
-	if n.err != nil {
-		return n
-	}
-	_, err := n.client.clientset.CoreV1().Nodes().Update(ctx, n.Node, metav1.UpdateOptions{})
-	if err != nil {
-		n.err = fmt.Errorf("update node %q: %w", n.Name, err)
-	}
-	return n
+func (n *Node) update(ctx context.Context, mutate func(*corev1.Node)) *Node {
+    if n.err != nil {
+        return n
+    }
+    err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+        current, err := n.client.clientset.CoreV1().Nodes().Get(ctx, n.Name, metav1.GetOptions{})
+        if err != nil {
+            return err
+        }
+        mutate(current)
+        updated, err := n.client.clientset.CoreV1().Nodes().Update(ctx, current, metav1.UpdateOptions{})
+        if err != nil {
+            return err
+        }
+        n.Node = updated
+        return nil
+    })
+
+    if err != nil {
+        n.err = fmt.Errorf("update node %q: %w", n.Name, err)
+    }
+
+    return n
 }
 
 func (n *Node) Uncordon(ctx context.Context) *Node {
-	if n.err != nil {
-		return n
-	}
-	n.Spec.Unschedulable = false
-	return n.update(ctx)
+    return n.update(ctx, func(node *corev1.Node) {
+        node.Spec.Unschedulable = false
+    })
 }
 
 func (n *Node) Cordon(ctx context.Context) *Node {
-	if n.err != nil {
-		return n
-	}
-	n.Spec.Unschedulable = true
-	return n.update(ctx)
+    return n.update(ctx, func(node *corev1.Node) {
+        node.Spec.Unschedulable = true
+    })
 }
 
 func (n *Node) RemoveCordonAnnotation(ctx context.Context) *Node {
-	if n.err != nil {
-		return n
-	}
-	annotations := n.GetAnnotations()
-	if annotations == nil {
-		return n
-	}
-	delete(annotations, CordonAnnotationKey)
-	n.SetAnnotations(annotations)
-	return n.update(ctx)
+    return n.update(ctx, func(node *corev1.Node) {
+        if node.Annotations != nil {
+            delete(node.Annotations, CordonAnnotationKey)
+        }
+    })
 }
 
 func (n *Node) SetCordonAnnotation(ctx context.Context) *Node {
 	if n.err != nil {
 		return n
 	}
-	annotations := n.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
+	patch := fmt.Sprintf(
+		`{"metadata":{"annotations":{"%s":"%s"}}}`,
+		CordonAnnotationKey,
+		CordonAnnotationValue,
+	)
+	node, err := n.client.clientset.CoreV1().Nodes().Patch(
+		ctx,
+		n.Name,
+		types.StrategicMergePatchType,
+		[]byte(patch),
+		metav1.PatchOptions{},
+	)
+	if err != nil {
+		n.err = fmt.Errorf("set cordon annotation on node %q: %w", n.Name, err)
+		return n
 	}
-	annotations[CordonAnnotationKey] = CordonAnnotationValue
-	n.SetAnnotations(annotations)
-	return n.update(ctx)
+	n.Node = node
+	return n
 }
 
 func (n *Node) GetAnnotationCordonedBy() (string, error) {

@@ -41,8 +41,8 @@ func NodeCordon() {
 	}
 
 	ctx := context.Background()
-	nodeRef := kubeClient.GetNode(ctx, nodeName).Cordon(ctx)
-	if err := nodeRef.Err(); err != nil {
+	node := kubeClient.GetNode(ctx, nodeName).Cordon(ctx)
+	if err := node.Err(); err != nil {
 		dlog.Error("node cordon: failed to cordon", dlog.Err(err), slog.String("node", nodeName))
 		return
 	}
