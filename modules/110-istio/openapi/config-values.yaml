@@ -666,6 +666,7 @@ properties:
     properties:
       accessLog:
         type: object
+        default: {}
         properties:
           type:
             type: string
