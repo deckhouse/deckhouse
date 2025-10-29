@@ -2,7 +2,6 @@
 title: Disk layout and size
 permalink: en/guides/fs-requirements.html
 description: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Kubernetes Platform.
-lang: ru
 layout: sidebar-guides
 ---
 
@@ -19,18 +18,18 @@ To avoid problems in the future, before installing, it is better to make sure th
 DKP stores various types of data in specific file system directories. Let's look at the main ones in more detail:
 
 * `/etc/kubernetes/`, `/etc/containerd`, etc. — directories with Kubernetes component configuration;
-* `/var/lib/containerd` – layers of images of DKP components and other containers running on the node. The more DKP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
-* `/var/lib/kubelet` – two types of information are stored in this directory:
+* `/var/lib/containerd` — layers of images of DKP components and other containers running on the node. The more DKP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
+* `/var/lib/kubelet` — two types of information are stored in this directory:
   * data about the pods running in the cluster;
   * ephemeral-storage data — for example, if 7 GB of ephemeral-storage is requested on the master node, and there is not enough space in this directory, pods will not be scheduled for this node.
-* `/var/lib/etcd` – the etcd database, which stores the information necessary for the operation of the Kubernetes cluster;
+* `/var/lib/etcd` — the etcd database, which stores the information necessary for the operation of the Kubernetes cluster;
 * `/var/lib/deckhouse/downloaded/` — repository of release configurations for Deckhouse DKP modules ([ModuleRelease](../documentation/v1/reference/api/cr.html#modulerelease));
-* `/var/lib/deckhouse/stronghold/` – data storage for [Stronghold](../../stronghold/) (if the corresponding module is enabled);
-* `/var/log/pods/` – storage of pod logs;
+* `/var/lib/deckhouse/stronghold/` — data storage for [Stronghold](../../stronghold/) (if the corresponding module is enabled);
+* `/var/log/pods/` — storage of pod logs;
 * `/opt/deckhouse/` — DKP service components such as kubelet, containerd, static utilities (e.g. lsblk), etc.;
-* `/opt/local-path-provider/` – directory for storing data when using [local storage Local Path Provisioner](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html) (may be redefined [in configuration](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources)).
+* `/opt/local-path-provider/` — directory for storing data when using [local storage Local Path Provisioner](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html) (may be redefined [in configuration](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources)).
 
-## Recommended amounts of disk space for the corresponding directories
+## Disk Space Recommendations
 
 The sections below show the disk volumes occupied by the various cluster components.
 
@@ -38,65 +37,137 @@ The sections below show the disk volumes occupied by the various cluster compone
 The total amount of space specified in the tables may exceed the minimum recommended disk size for a cluster node specified in the "Quick Start" or ["Bare metal Cluster Requirements"](./hardware-requirements.html ). This is due to the fact that the table shows the maximum required values for the components, and the minimum requirements for the node indicate the average value.
 {% endalert %}
 
-### On the master node
+### Master nodes
 
 The table below shows the recommended amounts of space for the directories used by DKP on the cluster's master nodes.
 
-| Folder                    | Disk size, Gb   |
-|---------------------------|-----------------|
-| `/mnt/vector-data`        | 1               |
-| `/opt`                    | 1               |
-| `/tmp`                    | 1               |
-| `/var/lib`                | 75              |
-| `/var/log/kube-audit`     | 2               |
-| `/var/log/pods`           | 5*              |
+<table>
+  <thead>
+    <tr>
+      <th>Directory</th>
+      <th>Disk size, GB</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/mnt/vector-data</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/opt</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/tmp</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/var/lib</code> <button type="button" onclick="toggleDetails('varlib-details')" style="background: none; border: none; cursor: pointer; font-size: 0.9em; color: #666;">[{{ site.data.i18n.common["show_details"][page.lang] }}]</button></td>
+      <td>75</td>
+    </tr>
+    <tbody id="varlib-details" style="display: none;">
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/containerd</code></td>
+        <td>30</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/deckhouse</code></td>
+        <td>5</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/etcd</code></td>
+        <td>10</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/kubelet</code></td>
+        <td>25</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/upmeter</code></td>
+        <td>5</td>
+      </tr>
+    </tbody>
+    <tr>
+      <td><code>/var/log/kube-audit</code></td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td><code>/var/log/pods</code></td>
+      <td>5 (<a href="#pod-log-storage">details...</a>)</td>
+    </tr>
+  </tbody>
+</table>
 
-{% offtopic title="More information about subdirectories in `/var/lib`" %}
-
-| Folder                    | Disk size, Gb   |
-|---------------------------|-----------------|
-| `/var/lib/containerd`     | 30              |
-| `/var/lib/deckhouse`      | 5               |
-| `/var/lib/etcd`           | 10              |
-| `/var/lib/kubelet`        | 20              |
-| `/var/lib/upmeter`        | 2               |
-
-{% endofftopic %}
-
-{% alert level="info" %}
-\* For more information about calculating the space in this catalog, see in the section ["How to calculate the volume for the storage of pod logs?"](#how-do-i-calculate-the-storage-capacity-for-pod-logs).
-{% endalert %}
-
-### On worker nodes
+### Worker nodes
 
 The table below shows the recommended amounts of space for the directories used by DKP on the worker nodes of the cluster.
 
-| Folder                            | Disk size, Gb   |
-|-----------------------------------|-----------------|
-| `/mnt/vector-data`                | 1               |
-| `/opt`                            | 1               |
-| `/opt/local-path-provisioner`     | 100*            |
-| `/tmp`                            | 1               |
-| `/var/lib`                        | 55              |
-| `/var/log/pods`                   | 5**             |
+<table>
+  <thead>
+    <tr>
+      <th>Directory</th>
+      <th>Disk size, GB</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/mnt/vector-data</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/opt</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/opt/local-path-provisioner</code>
+      <p style="font-size: 0.9em; color: #666;">Depends on the storage settings set by the user. It is recommended to put it on a separate section.</p>
+      </td>
+      <td>100</td>
+    </tr>
+    <tr>
+      <td><code>/tmp</code></td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>/var/lib</code> <button type="button" onclick="toggleDetails('varlib-worker-details')" style="background: none; border: none; cursor: pointer; font-size: 0.9em; color: #666;">[{{ site.data.i18n.common["show_details"][page.lang] }}]</button></td>
+      <td>55</td>
+    </tr>
+    <tbody id="varlib-worker-details" style="display: none;">
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/bashible</code></td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/containerd</code></td>
+        <td>30</td>
+      </tr>
+      <tr>
+        <td style="padding-left: 3em;"><code>/var/lib/kubelet</code></td>
+        <td>24</td>
+      </tr>
+    </tbody>
+    <tr>
+      <td><code>/var/log/pods</code></td>
+      <td>5 (<a href="#pod-log-storage">details...</a>)</td>
+    </tr>
+  </tbody>
+</table>
 
-{% offtopic title="More information about subdirectories in `/var/lib`" %}
+### System nodes
 
-| Folder                            | Disk size, Gb   |
-|-----------------------------------|-----------------|
-| `/var/lib/bashible`               | 1               |
-| `/var/lib/containerd`             | 30              |
-| `/var/lib/kubelet`                | 20              |
+The system nodes are the nodes on which the DKP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
 
-{% endofftopic %}
+- [Prometheus](../../../modules/prometheus/);
+- [loki](../../../modules/loki/);
+- [upmeter](../../../modules/upmeter/) and other DKP components.
+
+If monitoring data is stored locally on the nodes, it is recommended to additionally allocate ≥ 100 GB of free disk space for each system node.
 
 {% alert level="info" %}
-\* Depends on the storage settings set by the user. It is recommended to put it on a separate section.
-
-\*\* For more information about calculating the space in this catalog, see in the section ["How to calculate the volume for the storage of pod logs"](#how-do-i-calculate-the-storage-capacity-for-pod-logs).
+If you use a cluster configuration without dedicated system nodes, the above load will be distributed to other nodes, and you need to take into account the recommended amount of disk storage when choosing their configuration.
 {% endalert %}
 
-### How do I calculate the storage capacity for pod logs
+### Pod log storage
 
 Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DKP settings. On average, about 90 containers are running on the master node when using the [Default module set](../documentation/v1/admin/configuration/#module-bundles), with about 50 MB of space allocated to the logs of each of them by default. That is, there should be a minimum of `90 * 50 MB = 4.5 GB` space available in the directory `/var/log/pods/`.
 
@@ -106,21 +177,6 @@ The log storage parameters can also be redefined in the `containerLogMaxSize` pa
 containerLogMaxSize: 50Mi
 containerLogMaxFiles: 4
 ```
-
-### Requirement for system nodes
-
-The system nodes are the nodes on which the DKP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
-
-- [Prometheus](../../../modules/prometheus/);
-- [loki](../../../modules/loki/);
-- [upmeter](../../../modules/upmeter/);
-- and other support services.
-
-If monitoring data is stored locally on the nodes, it is recommended to additionally allocate ≥ 100 GB of free disk space for each system node.
-
-{% alert level="info" %}
-If you use a cluster configuration without dedicated system nodes, the above load will be distributed to other nodes, and you need to take into account the recommended amount of disk storage when choosing their configuration.
-{% endalert %}
 
 ### Trivy Vulnerability Database Repository
 
@@ -141,3 +197,5 @@ Requirements and placement procedure:
 - Free block devices (disk partitions) should be available on the node.
 - These devices will be used by the [sds-local-volume](../../../modules/sds-local-volume/) module to create a StorageClass.
 - The amount of free space on the block device must correspond to the amount that is planned to be provided through the created StorageClass.
+
+{% include table-toggle-details.js %}
