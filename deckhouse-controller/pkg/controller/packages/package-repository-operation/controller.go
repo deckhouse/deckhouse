@@ -49,7 +49,7 @@ const (
 	packageTypeLabel = "io.deckhouse.package.type"
 
 	// paginationLimit is the maximum number of tags to request per page
-	paginationLimit = 1000
+	paginationLimit = 10000
 )
 
 type reconciler struct {
