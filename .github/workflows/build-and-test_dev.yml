@@ -2289,6 +2289,7 @@ jobs:
           WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
     # </template: web_build_template>

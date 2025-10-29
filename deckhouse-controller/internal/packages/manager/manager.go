@@ -23,7 +23,6 @@ import (
 	"slices"
 	"sync"
 
-	helmresourcesmanager "github.com/flant/addon-operator/pkg/helm_resources_manager"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -48,7 +47,6 @@ var ErrPackageNotFound = errors.New("package not found")
 // DependencyContainer provides access to shared infrastructure services.
 type DependencyContainer interface {
 	KubeObjectPatcher() *objectpatch.ObjectPatcher
-	HelmResourcesManager() helmresourcesmanager.HelmResourcesManager
 	ScheduleManager() schedulemanager.ScheduleManager
 	KubeEventsManager() kubeeventsmanager.KubeEventsManager
 }
@@ -150,9 +148,12 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 		return err
 	}
 
-	// Hooks can delete release resources, so pause resources monitor before run hooks.
-	m.dc.HelmResourcesManager().PauseMonitor(name)
-	defer m.dc.HelmResourcesManager().ResumeMonitor(name)
+	// monitor may not be created by this time
+	if m.nelm.HasMonitor(name) {
+		// Hooks can delete release resources, so pause resources monitor before run hooks.
+		m.nelm.PauseMonitor(name)
+		defer m.nelm.ResumeMonitor(name)
+	}
 
 	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m.dc); err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -201,8 +202,6 @@ func (m *Manager) DisablePackage(ctx context.Context, name string) error {
 	if err != nil {
 		return nil
 	}
-
-	m.dc.HelmResourcesManager().StopMonitor(app.GetName())
 
 	if err = m.nelm.Delete(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
