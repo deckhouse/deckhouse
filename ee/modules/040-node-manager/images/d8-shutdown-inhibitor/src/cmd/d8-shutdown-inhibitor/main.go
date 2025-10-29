@@ -7,11 +7,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"d8_shutdown_inhibitor/pkg/app"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 func main() {
@@ -22,13 +24,17 @@ func main() {
 	}
 
 	// Start application.
+	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	app := app.NewApp(app.AppConfig{
 		PodLabel:              app.InhibitNodeShutdownLabel,
 		InhibitDelayMax:       app.InhibitDelayMaxSec,
 		PodsCheckingInterval:  app.PodsCheckingInterval,
 		WallBroadcastInterval: app.WallBroadcastInterval,
 		NodeName:              nodeName,
-	})
+	}, kubeClient)
 
 	err = app.Start()
 	if err != nil {

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -29,12 +30,25 @@ func NodeCordon() {
 	}
 	fmt.Printf("node name: %s\n", nodeName)
 
-	kubectl := kubernetes.NewDefaultKubectl()
-	output, err := kubectl.Cordon(nodeName)
+	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
 	if err != nil {
-		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, string(output))
+		fmt.Printf("nodeCordoner: fail to init kubernetes client: %v\n", err)
+		return
 	}
-	fmt.Println(string(output))
+
+	ctx := context.Background()
+	nodeRef := kubeClient.GetNode(ctx, nodeName).Cordon(ctx)
+	if err := nodeRef.Err(); err != nil {
+		fmt.Printf("nodeCordoner: fail to cordon node: %v\n", err)
+		return
+	}
+
+	if err := kubeClient.GetNode(ctx, nodeName).SetCordonAnnotation(ctx).Err(); err != nil {
+		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n", err)
+		return
+	}
+
+	fmt.Println("node cordoned by shutdown inhibitor")
 }
 
 func NodeCondition(stage string) {
@@ -45,13 +59,22 @@ func NodeCondition(stage string) {
 	}
 	fmt.Printf("node name: %s\n", nodeName)
 
+	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
+	if err != nil {
+		fmt.Printf("init kubernetes client: %v\n", err)
+		return
+	}
+
+	ctx := context.Background()
+	nc := nodecondition.GracefulShutdownPostpone(kubeClient)
+
 	switch stage {
 	case "start":
-		err = nodecondition.GracefulShutdownPostpone().SetOnStart(nodeName)
+		err = nc.SetOnStart(ctx, nodeName)
 	case "unlock":
-		err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(nodeName)
+		err = nc.UnsetOnUnlock(ctx, nodeName)
 	case "pods":
-		err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(nodeName)
+		err = nc.SetPodsArePresent(ctx, nodeName)
 	}
 
 	if err != nil {

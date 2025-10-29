@@ -55,16 +55,16 @@ func Test_podListJRson(t *testing.T) {
     }
   ]
 }`
-	podList, err := podsListFromJSON([]byte(in))
+	podList, err := podsFromJSON([]byte(in))
 	if err != nil {
-		t.Fatalf("should unmarshal json into PodList: %v", err)
+		t.Fatalf("should unmarshal json into Pod slice: %v", err)
 	}
 
 	if len(podList.Items) != 2 {
 		t.Fatalf("should have 2 items, got %d", len(podList.Items))
 	}
 
-	if podList.Items[0].Metadata.Labels["heritage"] != "upmeter" {
-		t.Fatalf("should have label 'heritage' with value 'upmeter', got %s", podList.Items[0].Metadata.Labels)
+	if podList.Items[0].Labels["heritage"] != "upmeter" {
+		t.Fatalf("should have label 'heritage' with value 'upmeter', got %s", podList.Items[0].Labels)
 	}
 }

@@ -8,38 +8,17 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
-type PodList struct {
-	Items []Pod `json:"items"`
-}
+type Pod = corev1.Pod
+type PodList = corev1.PodList
 
-type Pod struct {
-	Metadata *PodMetadata           `json:"metadata"`
-	Status   *PodStatus             `json:"status"`
-	Others   map[string]interface{} `json:"-"`
-}
-
-type PodMetadata struct {
-	Name        string                 `json:"name"`
-	Namespace   string                 `json:"namespace"`
-	Labels      map[string]string      `json:"labels"`
-	Annotations map[string]string      `json:"annotations"`
-	Others      map[string]interface{} `json:"-"`
-}
-
-type PodStatus struct {
-	Phase  string                 `json:"phase"`
-	Others map[string]interface{} `json:"-"`
-}
-
-func podsListFromJSON(podsJson []byte) (*PodList, error) {
-	var podList PodList
-
-	err := json.Unmarshal(podsJson, &podList)
-	if err != nil {
+func podsFromJSON(podsJSON []byte) (*corev1.PodList, error) {
+	var podList corev1.PodList
+	if err := json.Unmarshal(podsJSON, &podList); err != nil {
 		return nil, fmt.Errorf("pods list json unmarshal: %w", err)
 	}
-
 	return &podList, nil
 }

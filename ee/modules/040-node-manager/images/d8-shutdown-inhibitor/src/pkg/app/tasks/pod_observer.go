@@ -8,7 +8,6 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -26,7 +25,8 @@ type PodObserver struct {
 	ShutdownSignalCh      <-chan struct{}
 	StartCordonCh         chan<- struct{}
 	StopInhibitorsCh      chan<- struct{}
-	stopOnce             sync.Once
+	stopOnce              sync.Once
+	Klient                *kubernetes.Klient
 }
 
 func (p *PodObserver) Name() string {
@@ -62,16 +62,13 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			return
 		default:
 		}
-		matchedPods, err := p.ListMatchedPods()
+		matchedPods, err := p.ListMatchedPods(ctx)
 		if err != nil {
 			fmt.Printf("podObserver(s2): list matched Pods: %v\n", err)
-			if ee, ok := err.(*exec.ExitError); ok {
-				fmt.Printf("   stderr: %v\n", string(ee.Stderr))
-			}
 		} else {
 			if len(matchedPods) == 0 {
 				fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
-				err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(p.NodeName)
+				err = nodecondition.GracefulShutdownPostpone(p.Klient).UnsetOnUnlock(ctx, p.NodeName)
 				if err != nil {
 					fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
 				}
@@ -85,7 +82,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			})
 			fmt.Printf("podObserver(s2): %d pods are still running\n", len(matchedPods))
 
-			err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)
+			err = nodecondition.GracefulShutdownPostpone(p.Klient).SetPodsArePresent(ctx, p.NodeName)
 			if err != nil {
 				// Will retry on next iteration, just log the error.
 				fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
@@ -108,13 +105,16 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	}
 }
 
-func (p *PodObserver) ListMatchedPods() ([]kubernetes.Pod, error) {
+func (p *PodObserver) ListMatchedPods(ctx context.Context) ([]kubernetes.Pod, error) {
 	if len(p.PodMatchers) == 0 {
 		return nil, nil
 	}
 
-	kubectl := kubernetes.NewDefaultKubectl()
-	podList, err := kubectl.ListPods(p.NodeName)
+	if p.Klient == nil {
+		return nil, fmt.Errorf("kube client is not initialized")
+	}
+
+	podList, err := p.Klient.ListPodsOnNode(ctx, p.NodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,10 @@ func (p *PodObserver) ListMatchedPods() ([]kubernetes.Pod, error) {
 		return nil, nil
 	}
 
-	matchedPods := kubernetes.FilterPods(podList.Items, p.PodMatchers...)
+	filtered := p.Klient.FilterPods(podList, p.PodMatchers...)
+	if len(filtered) == 0 {
+		return nil, nil
+	}
 
-	return matchedPods, nil
+	return filtered, nil
 }

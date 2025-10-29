@@ -6,9 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 
 	"d8_shutdown_inhibitor/pkg/app/tasks"
@@ -22,28 +22,33 @@ func ListPods(podLabel string) {
 		os.Exit(1)
 	}
 
+	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
+	if err != nil {
+		fmt.Printf("START Error: create kubernetes client: %v\n", err)
+		os.Exit(1)
+	}
+
 	podObserver := &tasks.PodObserver{
 		NodeName: nodeName,
 		PodMatchers: []kubernetes.PodMatcher{
 			kubernetes.WithLabel(podLabel),
 			kubernetes.WithRunningPhase(),
 		},
+		Klient: kubeClient,
 	}
 
-	pods, err := podObserver.ListMatchedPods()
+	pods, err := podObserver.ListMatchedPods(context.Background())
 	if err != nil {
 		fmt.Printf("List matched Pods: %v\n", err)
-		if ee, ok := err.(*exec.ExitError); ok {
-			fmt.Printf("Stderr: %v\n", string(ee.Stderr))
-		}
+		return
 	}
 
 	sort.SliceStable(pods, func(i, j int) bool {
-		return pods[i].Metadata.Name < pods[j].Metadata.Name
+		return pods[i].Name < pods[j].Name
 	})
 
 	fmt.Printf("Pods with label %s:\n", podLabel)
 	for _, pod := range pods {
-		fmt.Printf("  %s\n", pod.Metadata.Name)
+		fmt.Printf("  %s\n", pod.Name)
 	}
 }

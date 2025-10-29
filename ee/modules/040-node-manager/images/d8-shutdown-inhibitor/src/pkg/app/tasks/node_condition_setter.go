@@ -10,13 +10,14 @@ import (
 	"fmt"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 // NodeConditionSetter set condition on start to prevent shutdown sequence in the kubelet
 // and remove it when inhibitors are unlocked so kubelet continue its shutdown sequence.
 type NodeConditionSetter struct {
 	NodeName string
-
+	Klient   *kubernetes.Klient
 	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
 	UnlockInhibitorsCh <-chan struct{}
 }
@@ -26,7 +27,9 @@ func (n *NodeConditionSetter) Name() string {
 }
 
 func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
-	err := nodecondition.GracefulShutdownPostpone().SetOnStart(n.NodeName)
+	nc := nodecondition.GracefulShutdownPostpone(n.Klient)
+
+	err := nc.SetOnStart(ctx, n.NodeName)
 	if err != nil {
 		errCh <- fmt.Errorf("nodeConditionSetter patch Node to set condition: %w", err)
 		return
@@ -41,7 +44,7 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 		fmt.Printf("nodeConditionSetter(s2): inhibitors unlocked, unset Node condition\n")
 	}
 
-	err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(n.NodeName)
+	err = nc.UnsetOnUnlock(ctx, n.NodeName)
 	if err != nil {
 		fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
 	}

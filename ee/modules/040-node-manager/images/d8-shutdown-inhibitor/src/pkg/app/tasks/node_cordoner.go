@@ -17,6 +17,7 @@ type NodeCordoner struct {
 	NodeName           string
 	StartCordonCh      <-chan struct{}
 	UnlockInhibitorsCh <-chan struct{}
+	Klient             *kubernetes.Klient
 }
 
 func (n *NodeCordoner) Name() string {
@@ -38,14 +39,13 @@ func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 		return
 	}
 
-	kubectl := kubernetes.NewDefaultKubectl()
-	output, err := kubectl.Cordon(n.NodeName)
-	if err != nil {
-		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, output)
+	nodeRef := n.Klient.GetNode(ctx, n.NodeName).Cordon(ctx)
+	if err := nodeRef.Err(); err != nil {
+		fmt.Printf("nodeCordoner: fail to cordon node: %v\n", err)
 		return
 	}
-	output, err = kubectl.SetCordonAnnotation(n.NodeName)
-	if err != nil {
-		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n, output: %s\n", err, output)
+
+	if err := n.Klient.GetNode(ctx, n.NodeName).SetCordonAnnotation(ctx).Err(); err != nil {
+		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n", err)
 	}
 }

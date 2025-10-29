@@ -19,11 +19,13 @@ import (
 type App struct {
 	config      AppConfig
 	taskStarter *taskstarter.Starter
+	klient *kubernetes.Klient
 }
 
-func NewApp(config AppConfig) *App {
+func NewApp(config AppConfig, klient *kubernetes.Klient) *App {
 	return &App{
 		config: config,
+		klient: klient,
 	}
 }
 
@@ -130,15 +132,18 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 				kubernetes.WithLabel(a.config.PodLabel),
 				kubernetes.WithRunningPhase(),
 			},
+			Klient: a.klient,
 		},
 		&tasks.NodeCordoner{
 			NodeName:           a.config.NodeName,
 			StartCordonCh:      startCordonCh,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
+			Klient: a.klient,
 		},
 		&tasks.NodeConditionSetter{
 			NodeName:           a.config.NodeName,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
+			Klient: a.klient,
 		},
 	}
 }

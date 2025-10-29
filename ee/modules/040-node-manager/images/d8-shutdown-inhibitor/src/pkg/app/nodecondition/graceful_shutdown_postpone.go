@@ -6,10 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package nodecondition
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 
 	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -20,33 +22,35 @@ const (
 	ReasonPendindgState          = "Pending"
 )
 
-func GracefulShutdownPostpone() *gracefulShutdownPostpone {
-	return &gracefulShutdownPostpone{}
+func GracefulShutdownPostpone(klient *kubernetes.Klient) *gracefulShutdownPostpone {
+	return &gracefulShutdownPostpone{Klient: klient}
 }
 
-type gracefulShutdownPostpone struct{}
+type gracefulShutdownPostpone struct {
+	Klient *kubernetes.Klient
+}
 
-func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
-	afterReboot, err := uncordonOnStart(nodeName)
+func (g *gracefulShutdownPostpone) SetOnStart(ctx context.Context, nodeName string) error {
+	afterReboot, err := g.uncordonOnStart(ctx, nodeName)
 	if err != nil {
 		return err
 	}
 	if !afterReboot {
 		return nil
 	}
-	return g.SetStatusUnknow(nodeName)
+	return g.SetStatusUnknow(ctx, nodeName)
 }
 
-func (g *gracefulShutdownPostpone) SetStatusUnknow(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusUnknown, ReasonPendindgState)
+func (g *gracefulShutdownPostpone) SetStatusUnknow(ctx context.Context, nodeName string) error {
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusUnknown, ReasonPendindgState)
 }
 
-func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonPodsArePresent)
+func (g *gracefulShutdownPostpone) SetPodsArePresent(ctx context.Context, nodeName string) error {
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusTrue, ReasonPodsArePresent)
 }
 
-func (g *gracefulShutdownPostpone) UnsetOnUnlock(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusFalse, ReasonOnUnlock)
+func (g *gracefulShutdownPostpone) UnsetOnUnlock(ctx context.Context, nodeName string) error {
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusFalse, ReasonOnUnlock)
 }
 
 // patchGracefulShutdownPostponeCondition updates GracefulShutdownPostpone condition.
@@ -59,75 +63,59 @@ kubectl patch node/static-vm-node-00 --type strategic
 -p '{"status":{"conditions":[{"type":"GracefulShutdownPostpone", "status":"False", "reason":"NoRunningPodsWithLabel"}]}}'
 --subresource=status
 */
-func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) error {
-	k := kubernetes.NewDefaultKubectl()
-	err := k.PatchCondition("Node", nodeName, GracefulShutdownPostponeType, status, reason, "")
-	return reformatExitError(err)
+func (g *gracefulShutdownPostpone) patchGracefulShutdownPostponeCondition(ctx context.Context, nodeName, status, reason string) error {
+	return g.Klient.GetNode(ctx, nodeName).
+		PatchCondition(ctx, GracefulShutdownPostponeType, status, reason, "").
+		Err()
 }
 
-func nodeShutdownInProgress(k *kubernetes.Kubectl, nodeName string) (bool, error) {
-	nodeNotReadyCondition, err := k.GetCondition(nodeName, "KubeletNotReady")
+func (g *gracefulShutdownPostpone) nodeShutdownInProgress(node *kubernetes.Node) (bool, error) {
+	nodeNotReadyCondition, err := node.GetConditionByReason("KubeletNotReady")
 	if err != nil {
-		return false, reformatExitError(err)
+		return false, err
 	}
-	if nodeNotReadyCondition != nil &&
-		nodeNotReadyCondition.Status == "False" &&
-		nodeNotReadyCondition.Type == "Ready" &&
-		nodeNotReadyCondition.Message == "node is shutting down" &&
-		nodeNotReadyCondition.Reason == "KubeletNotReady" {
-		return true, nil
-	}
-	return false, nil
+	return nodeNotReadyCondition.Status == v1.ConditionFalse &&
+		nodeNotReadyCondition.Type == v1.NodeReady &&
+		nodeNotReadyCondition.Message == "node is shutting down", nil
 }
 
-func cordonedByInhibitor(k *kubernetes.Kubectl, nodeName string) (bool, error) {
-	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
+func (g *gracefulShutdownPostpone) cordonedByInhibitor(node *kubernetes.Node) (bool, error) {
+	cordonBy, err := node.GetAnnotationCordonedBy()
 	if err != nil {
-		fmt.Printf("uncordonOnStart: error getting cordonBy annotation: %v\n", err)
-		return false, reformatExitError(err)
+		return false, fmt.Errorf("uncordonOnStart: error getting cordonBy annotation: %v", err)
 	}
-
-	if cordonBy == kubernetes.CordonAnnotationValue {
-		return true, nil
-	}
-	return false, nil
+	return cordonBy == kubernetes.CordonAnnotationValue, nil
 }
 
-func uncordonAndCleanup(k *kubernetes.Kubectl, nodeName string) error {
-	if _, err := k.Uncordon(nodeName); err != nil {
-		fmt.Printf("uncordonAndCleanup: error during Uncordon: %v\n", err)
-		return reformatExitError(err)
+func (g *gracefulShutdownPostpone) uncordonAndCleanup(ctx context.Context, node *kubernetes.Node) error {
+	if err := node.Uncordon(ctx).Err(); err != nil {
+		return err
 	}
 
-	if _, err := k.RemoveCordonAnnotation(nodeName); err != nil {
-		fmt.Printf("uncordonAndCleanup: error removing cordon annotation: %v\n", err)
-		return reformatExitError(err)
-	}
-	return nil
+	return g.Klient.GetNode(ctx, node.Name).RemoveCordonAnnotation(ctx).Err()
 }
 
-func isShutdownInhibitedByPods(condition *kubernetes.Condition) bool {
+func (g *gracefulShutdownPostpone) isShutdownInhibitedByPods(condition v1.NodeCondition) bool {
 	fmt.Printf("isShutdownInhibitedByPods: condition=%+v\n", condition)
-	if condition == nil {
-		return false
-	}
-	return condition.Status == "True" &&
-		condition.Type == GracefulShutdownPostponeType &&
-		condition.Reason == ReasonPodsArePresent
+	return condition.Status == "True" && condition.Type == GracefulShutdownPostponeType
 }
 
-func uncordonOnStart(nodeName string) (bool, error) {
+func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName string) (bool, error) {
 	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
-	k := kubernetes.NewDefaultKubectl()
 
-	isShutdownInProgress, err := nodeShutdownInProgress(k, nodeName)
+	node := g.Klient.GetNode(ctx, nodeName)
+	if err := node.Err(); err != nil {
+		return false, err
+	}
+
+	isShutdownInProgress, err := g.nodeShutdownInProgress(node)
 	if err != nil {
 		return false, err
 	}
 	fmt.Printf("uncordonOnStart: isShutdownInProgress %t\n", isShutdownInProgress)
 
-	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
-	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
+	podsPresentCondition, err := node.GetConditionByReason(ReasonPodsArePresent)
+	isInhibited := g.isShutdownInhibitedByPods(podsPresentCondition)
 	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
 
 	if isShutdownInProgress && isInhibited {
@@ -136,7 +124,7 @@ func uncordonOnStart(nodeName string) (bool, error) {
 	}
 
 	fmt.Println("uncordonOnStart: uncordonAndCleanup")
-	isOurCordon, err := cordonedByInhibitor(k, nodeName)
+	isOurCordon, err := g.cordonedByInhibitor(node)
 	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
 	if err != nil {
 		return false, err
@@ -147,17 +135,5 @@ func uncordonOnStart(nodeName string) (bool, error) {
 		return true, nil
 	}
 
-	return true, uncordonAndCleanup(k, nodeName)
-
-}
-
-func reformatExitError(err error) error {
-	if err == nil {
-		return nil
-	}
-	ee, ok := err.(*exec.ExitError)
-	if ok && len(ee.Stderr) > 0 {
-		return fmt.Errorf("%v: %s", err, string(ee.Stderr))
-	}
-	return err
+	return true, g.uncordonAndCleanup(ctx, node)
 }
