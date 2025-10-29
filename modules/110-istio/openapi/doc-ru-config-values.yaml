@@ -308,6 +308,8 @@ properties:
     properties:
       accessLog:
         properties:
+          type:
+            description: Тип формата access-логов
           textFormat:
             description: Тестовый формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
           jsonLabels:
