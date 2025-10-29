@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"node-group-exporter/pkg/collector"
+	"node-group-exporter/pkg/logger"
 )
 
 var (
@@ -43,6 +43,12 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Initialize logger
+	if err := logger.Init(*logLevel); err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
 
 	// Create Kubernetes client
 	var config *rest.Config
@@ -55,24 +61,24 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatalf("Failed to create kubernetes config: %v", err)
+		logger.Fatalf("Failed to create kubernetes config: %v", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("Failed to create kubernetes client: %v", err)
+		logger.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
 	// Create nodegroup collector
 	nodegroupCollector, err := collector.NewNodeGroupCollector(clientset, config)
 	if err != nil {
-		log.Fatalf("Failed to create nodegroup collector: %v", err)
+		logger.Fatalf("Failed to create nodegroup collector: %v", err)
 	}
 
 	// Start collector
 	ctx := context.Background()
 	if err := nodegroupCollector.Start(ctx); err != nil {
-		log.Fatalf("Failed to start collector: %v", err)
+		logger.Fatalf("Failed to start collector: %v", err)
 	}
 
 	// Register collector with Prometheus
@@ -97,24 +103,24 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting HTTP server on %s", *serverAddress)
+		logger.Infof("Starting HTTP server on %s", *serverAddress)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("HTTP server failed: %v", err)
+			logger.Fatalf("HTTP server failed: %v", err)
 		}
-		log.Println("HTTP server stopped")
+		logger.Info("HTTP server stopped")
 	}()
 
-	log.Println("Node group exporter is ready")
-	log.Printf("Metrics available at %s", *serverAddress)
+	logger.Info("Node group exporter is ready")
+	logger.Infof("Metrics available at %s", *serverAddress)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Received shutdown signal")
+	logger.Info("Received shutdown signal")
 
-	log.Println("Shutting down server...")
+	logger.Info("Shutting down server...")
 
 	// Stop collector
 	nodegroupCollector.Stop()
@@ -124,8 +130,8 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		logger.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server exited")
+	logger.Info("Server exited")
 }

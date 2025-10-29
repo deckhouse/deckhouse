@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
@@ -31,6 +30,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	"node-group-exporter/pkg/logger"
 )
 
 // NodeGroupWrapper wraps the NodeGroup for compatibility
@@ -93,7 +94,7 @@ func NewWatcher(clientset kubernetes.Interface, restConfig *rest.Config, eventHa
 
 // Start begins watching for resource changes
 func (w *Watcher) Start(ctx context.Context) error {
-	log.Println("Starting resource watchers...")
+	logger.Debug("Starting resource watchers...")
 
 	// Add event handlers to Node informer
 	w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -155,11 +156,11 @@ func (w *Watcher) Start(ctx context.Context) error {
 	}()
 
 	// Wait for cache sync before proceeding
-	log.Println("Waiting for informer caches to sync...")
+	logger.Debug("Waiting for informer caches to sync...")
 	if !cache.WaitForCacheSync(ctx.Done(), w.nodeInformer.HasSynced, w.nodeGroupInformer.HasSynced) {
 		return fmt.Errorf("failed to sync informer caches")
 	}
-	log.Println("Informer caches synced successfully")
+	logger.Info("Informer caches synced successfully")
 
 	return nil
 }
@@ -168,14 +169,14 @@ func (w *Watcher) Start(ctx context.Context) error {
 func (w *Watcher) Stop() {
 	close(w.stopCh)
 	w.wg.Wait()
-	log.Println("All watchers stopped")
+	logger.Debug("All watchers stopped")
 }
 
 // ConvertToNodeGroup converts a runtime.Object to NodeGroup
 func (w *Watcher) ConvertToNodeGroup(obj interface{}) *NodeGroupWrapper {
 	unstructuredObj, ok := obj.(*unstructured.Unstructured)
 	if !ok {
-		log.Printf("Failed to convert obj to unstructured: %T", obj)
+		logger.Debugf("Failed to convert obj to unstructured: %T", obj)
 		return nil
 	}
 
@@ -243,6 +244,16 @@ func convertUnstructuredToNodeGroup(obj *unstructured.Unstructured) *NodeGroup {
 		nodeGroup.Status.Ready = int32(ready)
 	}
 
+	// Extract status.nodes
+	if nodes, found, _ := unstructured.NestedInt64(obj.Object, "status", "nodes"); found {
+		nodeGroup.Status.Nodes = int32(nodes)
+	}
+
+	// Extract status.max
+	if max, found, _ := unstructured.NestedInt64(obj.Object, "status", "max"); found {
+		nodeGroup.Status.Max = int32(max)
+	}
+
 	return nodeGroup
 }
 
@@ -250,7 +261,7 @@ func convertUnstructuredToNodeGroup(obj *unstructured.Unstructured) *NodeGroup {
 func (w *Watcher) ConvertToNode(obj interface{}) *Node {
 	nodeObj, ok := obj.(*v1.Node)
 	if !ok {
-		log.Printf("Failed to convert obj to v1.Node: %T", obj)
+		logger.Debugf("Failed to convert obj to v1.Node: %T", obj)
 		return nil
 	}
 

@@ -107,7 +107,9 @@ func TestNodeGroupCollectorMetrics(t *testing.T) {
 			},
 			Status: k8s.NodeGroupStatus{
 				Desired: 3,
-				Ready:   3,
+				Ready:   1,  // One ready node (test expects 1)
+				Nodes:   1,  // One node total (test expects 1)
+				Max:     10, // 5 * 2 zones (test expects 10)
 			},
 		},
 	}
@@ -186,7 +188,9 @@ func TestStaticNodeGroup(t *testing.T) {
 			},
 			Status: k8s.NodeGroupStatus{
 				Desired: 3,
-				Ready:   3,
+				Ready:   3, // All 3 nodes ready
+				Nodes:   3, // All 3 nodes
+				Max:     3, // Max is 3 for static
 			},
 		},
 	}
@@ -230,65 +234,6 @@ func TestStaticNodeGroup(t *testing.T) {
 	// Test Static node group total nodes
 	count := testutil.ToFloat64(collector.nodeGroupCountNodesTotal.WithLabelValues("static-master", "Static"))
 	assert.Equal(t, float64(3), count)
-}
-
-// TestCalculateMaxNodes tests the calculateMaxNodes function
-func TestCalculateMaxNodes(t *testing.T) {
-	// Create fake Kubernetes client
-	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
-	assert.NoError(t, err)
-
-	// Test Cloud node group with zones
-	cloudNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-				CloudInstances: &k8s.CloudInstancesSpec{
-					MaxPerZone: 5,
-					Zones:      []string{"zone-a", "zone-b", "zone-c"},
-				},
-			},
-		},
-	}
-
-	max := collector.calculateMaxNodes(cloudNodeGroup, 0)
-	assert.Equal(t, 15, max) // 5 * 3 zones
-
-	// Test Cloud node group without zones
-	cloudNodeGroupNoZones := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-				CloudInstances: &k8s.CloudInstancesSpec{
-					MaxPerZone: 3,
-					Zones:      []string{},
-				},
-			},
-		},
-	}
-
-	max = collector.calculateMaxNodes(cloudNodeGroupNoZones, 0)
-	assert.Equal(t, 3, max) // 3 * 1 zone (default)
-
-	// Test Static node group - uses totalNodes parameter
-	staticNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "static-test",
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Static",
-			},
-		},
-	}
-
-	// For Static groups, max should equal totalNodes parameter
-	max = collector.calculateMaxNodes(staticNodeGroup, 2)
-	assert.Equal(t, 2, max) // Passed as parameter
-
-	max = collector.calculateMaxNodes(staticNodeGroup, 5)
-	assert.Equal(t, 5, max) // Passed as parameter
 }
 
 // TestNodeTypeExtraction tests direct node type extraction
@@ -444,7 +389,7 @@ func TestEventHandler(t *testing.T) {
 		NodeGroup: "test-group",
 	}
 
-	// Add NodeGroup first
+	// Add NodeGroup first with status showing 0 ready
 	testGroup := &k8s.NodeGroupWrapper{
 		NodeGroup: &k8s.NodeGroup{
 			ObjectMeta: metav1.ObjectMeta{
@@ -453,12 +398,17 @@ func TestEventHandler(t *testing.T) {
 			Spec: k8s.NodeGroupSpec{
 				NodeType: "Cloud",
 			},
+			Status: k8s.NodeGroupStatus{
+				Nodes: 1,
+				Ready: 0, // Initially not ready
+				Max:   10,
+			},
 		},
 	}
 	collector.OnNodeGroupAdd(testGroup)
 	collector.OnNodeAdd(notReadyNode)
 
-	// Check initial metrics - should show 0 ready
+	// Check initial metrics - should show 0 ready from status
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
 	metrics, _ := registry.Gather()
@@ -471,7 +421,7 @@ func TestEventHandler(t *testing.T) {
 			}
 		}
 	}
-	assert.Equal(t, 0.0, readyCount, "Node should not be ready initially")
+	assert.Equal(t, 0.0, readyCount, "Status should show 0 ready initially")
 
 	// Update node to Ready - this is the critical test
 	readyNode := &k8s.Node{
@@ -491,9 +441,12 @@ func TestEventHandler(t *testing.T) {
 		NodeGroup: "test-group",
 	}
 
+	// Update NodeGroup status to reflect ready state
+	testGroup.Status.Ready = 1
+	collector.OnNodeGroupUpdate(testGroup, testGroup)
 	collector.OnNodeUpdate(notReadyNode, readyNode)
 
-	// Check metrics again - should show 1 ready now
+	// Check metrics again - should show 1 ready from updated status
 	metrics, _ = registry.Gather()
 	readyCount = 0
 	for _, mf := range metrics {
@@ -503,7 +456,7 @@ func TestEventHandler(t *testing.T) {
 			}
 		}
 	}
-	assert.Equal(t, 1.0, readyCount, "Node should be ready after update - this test verifies the bug fix")
+	assert.Equal(t, 1.0, readyCount, "Status should show 1 ready after NodeGroup update")
 
 	// Check node_group_node metric
 	var nodeMetricValue float64
@@ -571,6 +524,7 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	registry.MustRegister(collector)
 	metrics, err := registry.Gather()
 	assert.NoError(t, err)
+	_ = metrics // Verify metrics can be collected without errors
 
 	// Since NodeGroup doesn't exist, no node_group_node metric for this node
 	// This is expected behavior - orphan nodes don't generate metrics until NodeGroup appears

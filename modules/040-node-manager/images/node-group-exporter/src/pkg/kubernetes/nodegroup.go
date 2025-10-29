@@ -206,6 +206,12 @@ type NodeGroupStatus struct {
 	// Ready defines the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`
 
+	// Nodes defines the number of Kubernetes nodes (in any state) in the group
+	Nodes int32 `json:"nodes,omitempty"`
+
+	// Max defines the maximum number of nodes in the group
+	Max int32 `json:"max,omitempty"`
+
 	// Updating defines the number of updating nodes
 	Updating int32 `json:"updating,omitempty"`
 
