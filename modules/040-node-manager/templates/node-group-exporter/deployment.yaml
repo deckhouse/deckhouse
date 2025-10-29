@@ -94,7 +94,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /health
+            path: /healthz
             port: 9200
             scheme: HTTP
           initialDelaySeconds: 10
