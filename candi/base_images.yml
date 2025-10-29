@@ -16,6 +16,7 @@ base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0
 base/shell-operator: "sha256:1021773be23ed49856148ab7a131b0034e67c90d5920ef14fdc2025102ce02ce" # fromImage: builder/scratch
 base/shell-operator-v1.9.3: "sha256:1021773be23ed49856148ab7a131b0034e67c90d5920ef14fdc2025102ce02ce" # fromImage: builder/scratch
 builder/alpine: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184acfea672a7acc8" # from: alpine:3.22.2
+builder/alpine-3.20: "sha256:b55c3d5bf9ba4c245496a1f7b38ee0ae2174a90496b4fe6f8937d6f3feff6f26" # from: alpine:3.20.7
 builder/alpine-3.21: "sha256:7b5050553bf256aec2c8c8e67179e689f13f6877e45a036755c6bc3113be7239" # from: alpine:3.21.5
 builder/alpine-3.22: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184acfea672a7acc8" # from: alpine:3.22.2
 builder/alpine-svace: "sha256:ea53c5b323bd5bf9df8a16360cf83fc02610ddb27710599f85b72ceb04132b39" # fromImage: builder/alpine-3.22
