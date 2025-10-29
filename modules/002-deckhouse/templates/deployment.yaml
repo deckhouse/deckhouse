@@ -355,6 +355,10 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- else }}
       dnsPolicy: Default
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "registry.d8-system.svc"
 {{- end}}
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
