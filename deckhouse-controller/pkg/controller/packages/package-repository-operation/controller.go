@@ -450,6 +450,14 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 				},
 			},
 		}
+
+		// Add owner reference to PackageRepository
+		if err := r.setOwnerReference(ctx, pkg, repositoryName); err != nil {
+			r.logger.Warn("failed to set owner reference",
+				slog.String("repository", repositoryName),
+				log.Err(err))
+		}
+
 		return r.client.Create(ctx, pkg)
 	}
 
@@ -483,6 +491,14 @@ func (r *reconciler) ensureClusterApplicationPackage(ctx context.Context, packag
 				},
 			},
 		}
+
+		// Add owner reference to PackageRepository
+		if err := r.setOwnerReference(ctx, pkg, repositoryName); err != nil {
+			r.logger.Warn("failed to set owner reference",
+				slog.String("repository", repositoryName),
+				log.Err(err))
+		}
+
 		return r.client.Create(ctx, pkg)
 	}
 
