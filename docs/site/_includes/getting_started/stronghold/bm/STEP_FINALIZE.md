@@ -257,7 +257,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
 {% snippetcut name="user.yml" selector="user-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
+{% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
@@ -303,6 +303,7 @@ upmeter.example.com</code>
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP stronghold.example.com
 $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP dashboard.example.com
