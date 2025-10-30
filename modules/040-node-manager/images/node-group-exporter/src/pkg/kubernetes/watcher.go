@@ -249,9 +249,54 @@ func convertUnstructuredToNodeGroup(obj *unstructured.Unstructured) *NodeGroup {
 		nodeGroup.Status.Nodes = int32(nodes)
 	}
 
+	// Extract status.instances
+	if instances, found, _ := unstructured.NestedInt64(obj.Object, "status", "instances"); found {
+		nodeGroup.Status.Instances = int32(instances)
+	}
+
+	// Extract status.min
+	if min, found, _ := unstructured.NestedInt64(obj.Object, "status", "min"); found {
+		nodeGroup.Status.Min = int32(min)
+	}
+
 	// Extract status.max
 	if max, found, _ := unstructured.NestedInt64(obj.Object, "status", "max"); found {
 		nodeGroup.Status.Max = int32(max)
+	}
+
+	// Extract status.upToDate
+	if upToDate, found, _ := unstructured.NestedInt64(obj.Object, "status", "upToDate"); found {
+		nodeGroup.Status.UpToDate = int32(upToDate)
+	}
+
+	// Extract status.standby
+	if standby, found, _ := unstructured.NestedInt64(obj.Object, "status", "standby"); found {
+		nodeGroup.Status.Standby = int32(standby)
+	}
+
+	// Extract status.conditions
+	if conditions, found, _ := unstructured.NestedSlice(obj.Object, "status", "conditions"); found {
+		nodeGroup.Status.Conditions = make([]NodeGroupCondition, 0, len(conditions))
+		for _, cond := range conditions {
+			condMap, ok := cond.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			condition := NodeGroupCondition{}
+			if condType, found, _ := unstructured.NestedString(condMap, "type"); found {
+				condition.Type = condType
+			}
+			if condStatus, found, _ := unstructured.NestedString(condMap, "status"); found {
+				condition.Status = condStatus
+			}
+			if reason, found, _ := unstructured.NestedString(condMap, "reason"); found {
+				condition.Reason = reason
+			}
+			if message, found, _ := unstructured.NestedString(condMap, "message"); found {
+				condition.Message = message
+			}
+			nodeGroup.Status.Conditions = append(nodeGroup.Status.Conditions, condition)
+		}
 	}
 
 	return nodeGroup

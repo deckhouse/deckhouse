@@ -209,8 +209,20 @@ type NodeGroupStatus struct {
 	// Nodes defines the number of Kubernetes nodes (in any state) in the group
 	Nodes int32 `json:"nodes,omitempty"`
 
+	// Instances defines the number of instances (in any state) in the group
+	Instances int32 `json:"instances,omitempty"`
+
+	// Min defines the minimal amount of instances in the group
+	Min int32 `json:"min,omitempty"`
+
 	// Max defines the maximum number of nodes in the group
 	Max int32 `json:"max,omitempty"`
+
+	// UpToDate defines the number of up-to-date nodes in the group
+	UpToDate int32 `json:"upToDate,omitempty"`
+
+	// Standby defines the number of overprovisioned instances in the group
+	Standby int32 `json:"standby,omitempty"`
 
 	// Updating defines the number of updating nodes
 	Updating int32 `json:"updating,omitempty"`
@@ -218,8 +230,8 @@ type NodeGroupStatus struct {
 	// Failed defines the number of failed nodes
 	Failed int32 `json:"failed,omitempty"`
 
-	// Instances defines the list of instances
-	Instances []InstanceStatus `json:"instances,omitempty"`
+	// InstanceList defines the list of instances (if available)
+	InstanceList []InstanceStatus `json:"instanceList,omitempty"`
 
 	// LastUpdated defines the last update time
 	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
@@ -251,10 +263,10 @@ type InstanceStatus struct {
 
 // NodeGroupCondition defines a condition
 type NodeGroupCondition struct {
-	// Type defines the condition type
+	// Type defines the condition type (e.g., "Error")
 	Type string `json:"type,omitempty"`
 
-	// Status defines the condition status
+	// Status defines the condition status (e.g., "True", "False")
 	Status string `json:"status,omitempty"`
 
 	// LastTransitionTime defines the last transition time

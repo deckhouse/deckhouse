@@ -40,11 +40,22 @@ type NodeGroupCollector struct {
 	nodesByGroup map[string][]*k8s.Node // Cached index: nodeGroup -> nodes
 	mutex        sync.RWMutex
 
-	// Metrics
+	// Metrics (existing)
 	nodeGroupCountNodesTotal *prometheus.GaugeVec
 	nodeGroupCountReadyTotal *prometheus.GaugeVec
 	nodeGroupCountMaxTotal   *prometheus.GaugeVec
 	nodeGroupNode            *prometheus.GaugeVec
+
+	// Metrics (compatible with hook/node_group_metrics.go)
+	d8NodeGroupReady     *prometheus.GaugeVec
+	d8NodeGroupNodes     *prometheus.GaugeVec
+	d8NodeGroupInstances *prometheus.GaugeVec
+	d8NodeGroupDesired   *prometheus.GaugeVec
+	d8NodeGroupMin       *prometheus.GaugeVec
+	d8NodeGroupMax       *prometheus.GaugeVec
+	d8NodeGroupUpToDate  *prometheus.GaugeVec
+	d8NodeGroupStandby   *prometheus.GaugeVec
+	d8NodeGroupHasErrors *prometheus.GaugeVec
 }
 
 func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config) (*NodeGroupCollector, error) {
@@ -85,6 +96,79 @@ func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Conf
 		[]string{"node_group", "node_type", "node"},
 	)
 
+	// Initialize metrics compatible with hook/node_group_metrics.go
+	collector.d8NodeGroupReady = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_ready",
+			Help: "Number of ready nodes in node group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupNodes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_nodes",
+			Help: "Number of Kubernetes nodes (in any state) in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupInstances = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_instances",
+			Help: "Number of instances (in any state) in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupDesired = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_desired",
+			Help: "Number of desired machines in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupMin = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_min",
+			Help: "Minimal amount of instances in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupMax = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_max",
+			Help: "Maximum amount of instances in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupUpToDate = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_up_to_date",
+			Help: "Number of up-to-date nodes in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupStandby = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_standby",
+			Help: "Number of overprovisioned instances in the group",
+		},
+		[]string{"node_group_name"},
+	)
+
+	collector.d8NodeGroupHasErrors = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "d8_node_group_has_errors",
+			Help: "Whether the node group has errors (1 if error condition is True, 0 otherwise)",
+		},
+		[]string{"node_group_name"},
+	)
+
 	watcher, err := k8s.NewWatcher(clientset, restConfig, collector)
 	if err != nil {
 		return nil, err
@@ -118,6 +202,17 @@ func (c *NodeGroupCollector) Describe(ch chan<- *prometheus.Desc) {
 	c.nodeGroupCountReadyTotal.Describe(ch)
 	c.nodeGroupCountMaxTotal.Describe(ch)
 	c.nodeGroupNode.Describe(ch)
+
+	// Describe hook-compatible metrics
+	c.d8NodeGroupReady.Describe(ch)
+	c.d8NodeGroupNodes.Describe(ch)
+	c.d8NodeGroupInstances.Describe(ch)
+	c.d8NodeGroupDesired.Describe(ch)
+	c.d8NodeGroupMin.Describe(ch)
+	c.d8NodeGroupMax.Describe(ch)
+	c.d8NodeGroupUpToDate.Describe(ch)
+	c.d8NodeGroupStandby.Describe(ch)
+	c.d8NodeGroupHasErrors.Describe(ch)
 }
 
 // Collect implements prometheus.Collector
@@ -129,6 +224,17 @@ func (c *NodeGroupCollector) Collect(ch chan<- prometheus.Metric) {
 	c.nodeGroupCountReadyTotal.Collect(ch)
 	c.nodeGroupCountMaxTotal.Collect(ch)
 	c.nodeGroupNode.Collect(ch)
+
+	// Collect hook-compatible metrics
+	c.d8NodeGroupReady.Collect(ch)
+	c.d8NodeGroupNodes.Collect(ch)
+	c.d8NodeGroupInstances.Collect(ch)
+	c.d8NodeGroupDesired.Collect(ch)
+	c.d8NodeGroupMin.Collect(ch)
+	c.d8NodeGroupMax.Collect(ch)
+	c.d8NodeGroupUpToDate.Collect(ch)
+	c.d8NodeGroupStandby.Collect(ch)
+	c.d8NodeGroupHasErrors.Collect(ch)
 }
 
 // syncResources performs initial sync of resources
@@ -245,6 +351,17 @@ func (c *NodeGroupCollector) updateMetrics() {
 	c.nodeGroupCountMaxTotal.Reset()
 	c.nodeGroupNode.Reset()
 
+	// Reset hook-compatible metrics
+	c.d8NodeGroupReady.Reset()
+	c.d8NodeGroupNodes.Reset()
+	c.d8NodeGroupInstances.Reset()
+	c.d8NodeGroupDesired.Reset()
+	c.d8NodeGroupMin.Reset()
+	c.d8NodeGroupMax.Reset()
+	c.d8NodeGroupUpToDate.Reset()
+	c.d8NodeGroupStandby.Reset()
+	c.d8NodeGroupHasErrors.Reset()
+
 	for _, nodeGroup := range c.nodeGroups {
 		nodeType := nodeGroup.Spec.NodeType
 
@@ -279,10 +396,30 @@ func (c *NodeGroupCollector) updateMetrics() {
 			logger.Warnf("NodeGroup '%s' status.nodes is 0, using index count %d", nodeGroup.Name, nodeCount)
 		}
 
-		// Set aggregated metrics from status
+		// Set aggregated metrics from status (existing metrics)
 		c.nodeGroupCountNodesTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(totalNodes))
 		c.nodeGroupCountReadyTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(readyNodes))
 		c.nodeGroupCountMaxTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(maxNodes))
+
+		// Set hook-compatible metrics (same as in hook/node_group_metrics.go)
+		c.d8NodeGroupReady.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Ready))
+		c.d8NodeGroupNodes.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Nodes))
+		c.d8NodeGroupInstances.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Instances))
+		c.d8NodeGroupDesired.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Desired))
+		c.d8NodeGroupMin.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Min))
+		c.d8NodeGroupMax.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Max))
+		c.d8NodeGroupUpToDate.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.UpToDate))
+		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Standby))
+
+		// Check for errors in conditions (same logic as in hook)
+		hasErrors := 0.0
+		for _, condition := range nodeGroup.Status.Conditions {
+			if condition.Type == "Error" && condition.Status == "True" {
+				hasErrors = 1.0
+				break
+			}
+		}
+		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(hasErrors)
 
 		logger.Debugf("Metrics set for '%s': total=%d, ready=%d, max=%d, node_metrics=%d", nodeGroup.Name, totalNodes, readyNodes, maxNodes, nodeCount)
 	}
