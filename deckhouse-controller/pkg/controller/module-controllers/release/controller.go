@@ -1656,7 +1656,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == v1alpha1.ModuleReleasePhaseDeployed {
+	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed) {
 		r.activeApplyCount.Add(1)
 		defer func() {
 			r.activeApplyCount.Add(-1)
