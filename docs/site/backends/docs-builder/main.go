@@ -62,7 +62,7 @@ func main() {
 		log.WithHandlerType(log.TextHandlerType),
 	)
 
-	mStorage := metricsstorage.NewMetricStorage("docs_builder")
+	mStorage := metricsstorage.NewMetricStorage()
 
 	if err := metrics.RegisterMetrics(mStorage); err != nil {
 		logger.Fatal("failed to register metrics", log.Err(err))
