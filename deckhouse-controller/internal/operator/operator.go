@@ -149,6 +149,16 @@ func (o *Operator) buildNelmService(ctx context.Context) error {
 		return fmt.Errorf("create runtime cache: %v", err)
 	}
 
+	go func() {
+		if err = cache.Start(ctx); err != nil {
+			o.logger.Error("failed to start cache", "error", err)
+		}
+	}()
+
+	if !cache.WaitForCacheSync(ctx) {
+		return fmt.Errorf("cache sync failed")
+	}
+
 	o.nelmService = nelm.NewService(ctx, namespace, cache, o.logger)
 	return nil
 }

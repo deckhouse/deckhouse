@@ -100,7 +100,7 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	defer s.mu.Unlock()
 
 	return addonutils.Values{
-		s.name: s.resultValues,
+		s.name: s.configValues,
 	}
 }
 
