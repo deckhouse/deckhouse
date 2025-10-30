@@ -19,6 +19,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -57,23 +58,25 @@ func New(ms *metricsstorage.MetricStorage) *Cache {
 		ms:  ms,
 	}
 
-	// function that will be triggered on metrics handler
-	ms.AddCollectorFunc(func(s metricsstorage.Storage) {
-		log.Debug(
-			"collector func triggered",
-			slog.Int("registry_len", len(c.val)),
-		)
-
-		for registry, modules := range c.val {
-			s.GaugeSet(
-				metrics.RegistryScannerCacheLengthMetric,
-				float64(len(modules)),
-				map[string]string{
-					"registry": string(registry),
-				},
+	t := time.NewTicker(30 * time.Second)
+	go func() {
+		for range t.C {
+			log.Debug(
+				"collector func triggered",
+				slog.Int("registry_len", len(c.val)),
 			)
+
+			for registry, modules := range c.val {
+				ms.GaugeSet(
+					metrics.RegistryScannerCacheLengthMetric,
+					float64(len(modules)),
+					map[string]string{
+						"registry": string(registry),
+					},
+				)
+			}
 		}
-	})
+	}()
 
 	return c
 }

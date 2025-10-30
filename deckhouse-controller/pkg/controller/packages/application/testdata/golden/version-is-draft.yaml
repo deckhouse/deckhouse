@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  creationTimestamp: null
+  name: test-app
+  namespace: foobar
+  resourceVersion: "2"
+spec:
+  applicationPackageName: test-package
+  repository: test-repo
+  version: v1.0.0
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ApplicationPackageVersion test-package-v1.0.0 is draft
+    reason: VersionIsDraft
+    status: "False"
+    type: Processed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    draft: "true"
+    package: test-package
+    repository: test-repo
+  name: test-package-v1.0.0
+  resourceVersion: "1"
+spec:
+  packageName: test-package
+  repository: test-repo
+  version: v1.0.0
+status: {}

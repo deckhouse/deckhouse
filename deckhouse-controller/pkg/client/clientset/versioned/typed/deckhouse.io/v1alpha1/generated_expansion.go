@@ -15,6 +15,18 @@
 
 package v1alpha1
 
+type ApplicationExpansion interface{}
+
+type ApplicationPackageExpansion interface{}
+
+type ApplicationPackageVersionExpansion interface{}
+
+type ClusterApplicationExpansion interface{}
+
+type ClusterApplicationPackageExpansion interface{}
+
+type ClusterApplicationPackageVersionExpansion interface{}
+
 type DeckhouseReleaseExpansion interface{}
 
 type ModuleExpansion interface{}
@@ -32,3 +44,7 @@ type ModuleSettingsDefinitionExpansion interface{}
 type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
+
+type PackageRepositoryExpansion interface{}
+
+type PackageRepositoryOperationExpansion interface{}

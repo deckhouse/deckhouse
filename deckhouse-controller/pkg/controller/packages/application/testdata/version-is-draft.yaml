@@ -1,0 +1,23 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+spec:
+  applicationPackageName: test-package
+  repository: test-repo
+  version: v1.0.0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: test-package-v1.0.0
+  labels:
+    package: test-package
+    repository: test-repo
+    draft: "true"
+spec:
+  packageName: test-package
+  version: v1.0.0
+  repository: test-repo
+status: {}
