@@ -1,4 +1,6 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 .feedback-container {
     position: relative;
@@ -17,14 +19,26 @@
         gap: 13px;
 
         &--descr {
-            width: 600;
+            font-weight: 500;
             font-size: 18px;
             color: #00122C;
+
+            @include breakpoints.max-w(xl) {
+                font-size: 16px;
+            }
+
+            @include breakpoints.max-w(s) {
+                font-size: 12px;
+            }
         }
 
         &--icon {
             display: flex;
             gap: 8px;
+
+            @include breakpoints.max-w(s) {
+                gap: 12px;
+            }
 
             .icon {
                 background-color: #F5F5FB;
@@ -33,6 +47,11 @@
                 border: none;
                 border-radius: 6px;
                 cursor: pointer;
+
+                @include breakpoints.max-w(s) {
+                    height: 25px;
+                    width: 25px;
+                }
                 
                 path {
                     transition: stroke 0.2s ease-in-out;
@@ -78,11 +97,29 @@
     border-radius: 8px;
     background-color: #fff;
 
+    @include breakpoints.max-w(xl) {
+        width: 300px;
+        padding: 20px 14px;
+    }
+
+    @include breakpoints.max-w(l) {
+        right: 5px !important;
+    }
+
+    @include breakpoints.max-w(s) {
+        width: 250px;
+        padding: 10px;
+    }
+
     .modal-window__close-btn {
         color: #00122C;
 
         &:hover {
             color: #f27474;
+        }
+
+        @include breakpoints.max-w(s) {
+            font-size: 15px;
         }
     }
     
@@ -94,6 +131,14 @@
 
         .anchorjs-link  {
             display: none;
+        }
+
+        @include breakpoints.max-w(xl) {
+            font-size: 15px;
+        }
+
+        @include breakpoints.max-w(s) {
+            font-size: 12px;
         }
     }
 
@@ -118,8 +163,17 @@
         gap: 17px;
         padding: 30px 30px;
 
+        @include breakpoints.max-w(xl) {
+            gap: 10px;
+            padding: 20px 20px;
+        }
+
         .window__feedback--title {
             max-width: 256px;
+
+            @include breakpoints.max-w(xl) {
+                max-width: 200px;
+            }
         }
     }
 
@@ -127,6 +181,10 @@
         display: none; 
         flex-direction: row;
         gap: 17px;
+
+        @include breakpoints.max-w(xl) {
+            gap: 12px;
+        }
     }
 
     &--form {
@@ -147,6 +205,14 @@
             line-height: 24px;
             color: #222A5E;
 
+            @include breakpoints.max-w(xl) {
+                gap: 10px;
+            }
+
+            @include breakpoints.max-w(s) {
+                gap: 5px;
+            }
+
             label {
                 display: inline-flex;
                 gap: 17px;
@@ -155,6 +221,11 @@
                 user-select: none;
                 font-size: 14.7px;
                 cursor: pointer;
+
+                @include breakpoints.max-w(xs) {
+                    gap: 10px;
+                    font-size: 12px;
+                }
             }
 
             > input[type="checkbox"] {
@@ -176,6 +247,16 @@
                     background-repeat: no-repeat;
                     background-size: 12px 10px;
                     transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+
+                    @include breakpoints.max-w(xl) {
+                        height: 20px;
+                        width: 20px;
+                    }
+
+                    @include breakpoints.max-w(xl) {
+                        height: 16px;
+                        width: 16px;
+                    }
                 }
 
                 &:checked + label::before {
@@ -206,6 +287,14 @@
                 border: 1px solid #BFC2D5;
                 border-radius: 8px;
                 outline: none;
+                
+                @include breakpoints.max-w(xl) {
+                    height: 80px;
+                }
+
+                @include breakpoints.max-w(s) {
+                    height: 60px;
+                }
 
                 &:hover {
                     border-color: #408bff;
