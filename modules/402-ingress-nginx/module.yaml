@@ -9,3 +9,6 @@ descriptions:
   en: |
     Ingress controller for nginx
     https://kubernetes.github.io/ingress-nginx
+requirements:
+  modules:
+    istio: "!optional"
