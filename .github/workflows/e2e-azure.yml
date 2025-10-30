@@ -553,6 +553,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -576,6 +577,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -1048,6 +1050,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1071,6 +1074,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -1543,6 +1547,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1566,6 +1571,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -2038,6 +2044,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2061,6 +2068,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -2533,6 +2541,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2556,6 +2565,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -3028,6 +3038,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3051,6 +3062,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -3523,6 +3535,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3546,6 +3559,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -4018,6 +4032,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4041,6 +4056,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -4513,6 +4529,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4536,6 +4553,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -5008,6 +5026,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5031,6 +5050,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -5503,6 +5523,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5526,6 +5547,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -5998,6 +6020,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -6021,6 +6044,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -6493,6 +6517,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -6516,6 +6541,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -6988,6 +7014,7 @@ jobs:
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
+          echo "branch-registry-path"=${BRANCH_REGISTRY_PATH} >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -7011,6 +7038,7 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          BRANCH_REGISTRY_PATH: ${{ steps.setup.outputs.branch-registry-path }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
