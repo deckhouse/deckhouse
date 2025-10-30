@@ -52,6 +52,6 @@ shell:
   - cd /src
   - make fmt
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
-  - mv /root/go/bin/terraform-provider-openstack /terraform-provider-openstack
+  - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
   - chmod -R 755 /terraform-provider-openstack
   - chown 64535:64535 /terraform-provider-openstack
