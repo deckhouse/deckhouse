@@ -1,6 +1,6 @@
 module registry-modules-watcher
 
-go 1.25.3
+go 1.24.9
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
