@@ -81,3 +81,9 @@ properties:
             caData:
               type: string
         default: []
+      enabledFeatureGates:
+        type: array
+        items:
+          type: string
+          pattern: '^[a-zA-Z]+$'
+        default: []
