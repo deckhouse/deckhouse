@@ -80,8 +80,8 @@ func handleHuaweiCloudInstanceClassConversion(_ context.Context, input *go_hook.
 		}
 
 		additionalNetworks := interfaceToStringsSlice(ic.Spec["additionalNetworks"])
-		allWithoutMain := append(additionalNetworks, subnets[1:]...)
-		ic.Spec["additionalNetworks"] = removeDuplicatesWithOrder(allWithoutMain)
+		additionalNetworks = append(additionalNetworks, subnets[1:]...)
+		ic.Spec["additionalNetworks"] = removeDuplicatesWithOrder(additionalNetworks)
 
 		delete(ic.Spec, "subnets")
 
