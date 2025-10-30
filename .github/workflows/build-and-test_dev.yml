@@ -573,7 +573,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -860,7 +860,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -1147,7 +1147,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -1434,7 +1434,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -1721,7 +1721,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -2008,7 +2008,7 @@ jobs:
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-          IMAGE_EDITION=${WERF_ENV,,}
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -2289,6 +2289,7 @@ jobs:
           WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
     # </template: web_build_template>
@@ -2362,7 +2363,7 @@ jobs:
       - name: Running default user validation on ${{env.TAG}}
         env:
           TAG: ${{needs.pull_request_info.outputs.ref_slug}}
-          IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."

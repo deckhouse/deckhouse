@@ -892,7 +892,7 @@ type: Opaque
 
 	err := suite.Suite.SetupNoLock(initObjects)
 	require.NoError(suite.T(), err)
-	logger := log.NewLogger(log.WithLevel(slog.LevelDebug))
+	logger := log.NewNop()
 
 	rec := &reconciler{
 		client:               suite.Suite.Client(),

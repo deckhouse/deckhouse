@@ -200,12 +200,15 @@ steps:
     {!{- else if eq $buildType "pre-release" }!}
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
+      if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+        IMAGE_EDITION=${WERF_ENV,,}
+      fi
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       export WERF_DISABLE_META_TAGS=true
     {!{- else }!}
       # Determine image tag
       if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-      IMAGE_EDITION=${WERF_ENV,,}
+        IMAGE_EDITION=${WERF_ENV,,}
       fi
       # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
       # Use it as image tag. Add suffix to not overlap with PRs in main repo.

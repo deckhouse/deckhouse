@@ -365,7 +365,9 @@ properties:
                       Configuring memory limits.
   ca:
     type: object
-    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    description: |
+      Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+      To create a certificate, you can use the [example](/products/kubernetes-platform/documentation/v1/user/security/tls.html#certificate-generation-example), in which `basicConstraints = CA:FALSE` needs to be replaced with `basicConstraints = CA:TRUE`.
     default: {}
     properties:
       cert:
@@ -662,6 +664,36 @@ properties:
     type: object
     default: {}
     properties:
+      accessLog:
+        type: object
+        default: {}
+        properties:
+          type:
+            type: string
+            enum: [Text, JSON]
+            default: Text
+          textFormat:
+            type: string
+            description: Sidecar's access log format template. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%'
+          jsonLabels:
+            type: object
+            additionalProperties:
+              type: string
+            description: Structured access log format using key-value pairs. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default:
+              start_time: "%START_TIME%"
+              method: "%REQ(:METHOD)%"
+              path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+              protocol: "%PROTOCOL%"
+              response_code: "%RESPONSE_CODE%"
+              response_flags: "%RESPONSE_FLAGS%"
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              duration: "%DURATION%"
+              user_agent: "%REQ(USER-AGENT)%"
+              authority: "%REQ(:AUTHORITY)%"
+              upstream_host: "%UPSTREAM_HOST%"
       trafficRedirectionSetupMode:
         type: string
         description: |

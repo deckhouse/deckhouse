@@ -4,8 +4,8 @@
     // Handler for .ready() called.
 
     function getHeaderHeight() {
-      const header = $('header');
-      return header.outerHeight(true);
+        const header = $('header');
+        return header.outerHeight(true);
     }
     const headerHeight = getHeaderHeight();
 
@@ -15,30 +15,30 @@
     const $toc = $('#toc-sidebar');
 
     $toc.toc({
-      minimumHeaders: 2,
-      title: '',
-      listType: 'ul',
-      showSpeed: 'none',
-      headers: '.docs h2,.docs h3',
-      classes: {
-        list: 'toc-sidebar',
-        item: 'toc-sidebar__item',
-        link: 'toc-sidebar__item-link'
-      }
+        minimumHeaders: 2,
+        title: '',
+        listType: 'ul',
+        showSpeed: 'none',
+        headers: '.docs h2,.docs h3',
+        classes: {
+            list: 'toc-sidebar',
+            item: 'toc-sidebar__item',
+            link: 'toc-sidebar__item-link'
+        }
     });
 
-        $toc.on('click', 'a', function () {
-            const target = decodeURI($(this).attr('href'));
-            const targetElement = $(target);
-            const scrollOffset = targetElement.offset().top - headerHeight;
+    $toc.on('click', 'a', function () {
+        const target = decodeURI($(this).attr('href'));
+        const targetElement = $(target);
+        const scrollOffset = targetElement.offset().top - headerHeight;
 
-            $('html, body').animate({
+        $('html, body').animate({
             scrollTop: scrollOffset - 10
-            }, 300);
-        });
+        }, 300);
+    });
 
     if (!$.trim($toc.html())) {
-      $toc.hide();
+        $toc.hide();
     }
 
     const sectionClasses = '.post-content h2, .post-content h3';
@@ -48,42 +48,53 @@
     const navHeight = $('.header').outerHeight();
 
     $(window).on('scroll', function () {
-      const currentPosition = $(this).scrollTop();
+        const currentPosition = $(this).scrollTop();
 
-      sections.each(function () {
-        const top = $(this).offset().top - navHeight - visibleOffset;
-        let bottom = top + $(this).outerHeight();
-        const nextElement = $(this).nextAll(sectionClasses).first();
+        sections.each(function () {
+            const top = $(this).offset().top - navHeight - visibleOffset;
+            let bottom = top + $(this).outerHeight();
+            const nextElement = $(this).nextAll(sectionClasses).first();
 
-        if (nextElement && nextElement.length > 0) {
-          bottom = $(nextElement).offset().top - navHeight - visibleOffset;
-        }
+            if (nextElement && nextElement.length > 0) {
+                bottom = $(nextElement).offset().top - navHeight - visibleOffset;
+            }
 
-        if (currentPosition >= top && currentPosition <= bottom) {
-          nav.find('a').removeClass('active');
-          sections.removeClass('active');
+            if (currentPosition >= top && currentPosition <= bottom) {
+                nav.find('a').removeClass('active');
+                sections.removeClass('active');
 
-          $(this).addClass('active');
-          nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
-        }
-      });
-    });
-
-        $(window).on('load', function() {
-            const hash = window.location.hash;
-            if(hash) {
-                const target = decodeURIComponent(hash);
-                const targetElement = $(target);
-
-                if(targetElement.length && targetElement.offset()) {
-                    const scrollOffset = targetElement.offset().top - headerHeight;
-
-                    $('html, body').animate({
-                        scrollTop: scrollOffse - 10
-                    }, 0);
-                }
+                $(this).addClass('active');
+                nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
             }
         });
+    });
+
+    $(window).on('load', function() {
+        const hash = window.location.hash;
+        
+        if(hash) {
+            const hashParts = hash.split('-');
+            const navItem = $(`li a[href='${hashParts[0]}']`);
+            const navItemHref = navItem.attr('href');
+
+            if(hash !== navItemHref) {
+                if(hashParts[0] === navItemHref) {
+                    navItem.addClass('active');
+                }
+            }
+            
+            const target = decodeURIComponent(hash);
+            const targetElement = $(target);
+
+            if(targetElement.length && targetElement.offset()) {
+                const scrollOffset = targetElement.offset().top - headerHeight;
+
+                $('html, body').animate({
+                    scrollTop: scrollOffset - 10
+                }, 0);
+            }
+        }
+    });
 });
 
 </script>
