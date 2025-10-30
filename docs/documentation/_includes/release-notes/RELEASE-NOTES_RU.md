@@ -2,11 +2,11 @@
 
 ### Обратите внимание
 
-- Релиз содержит ряд важных изменений, повышающих безопасность. Устранен ряд известных уязвимостей. В частности, устранена уязвимость в модуле `user-authn` (CVE-2025-22868), потенциально позволявшая обходить проверку аутентификации. Рекомендуется запланировать обновление. Подробнее в разделе Безопасность.
+- Релиз содержит ряд важных изменений, повышающих безопасность. Устранен ряд известных уязвимостей. В частности, устранена уязвимость в модуле `user-authn` (CVE-2025-22868), потенциально позволявшая обходить проверку аутентификации. Рекомендуется запланировать обновление. Подробнее в разделе [Безопасность](#безопасность).
 
-- Модуль `dashboard` будет удален в версии 1.75 DKP. Используйте [Веб-интерфейс](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) платформы (необходим включенный модуль [`console`](https://deckhouse.ru/modules/console/stable/)).
+- Модуль `dashboard` будет удален в версии 1.75 DKP. Используйте [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) (необходим включенный модуль [`console`](https://deckhouse.ru/modules/console/)).
 
-- Модуль `runtime-audit-engine` теперь загружается из  внешнего источника (ModuleSource deckhouse).
+- Модуль `runtime-audit-engine` теперь загружается из  внешнего источника (ModuleSource `deckhouse`).
 
 - В процессе обновления будут перезапущены все компоненты DKP.
 
@@ -29,10 +29,10 @@
 - В провайдере для интеграции с VMware vSphere добавлена возможность указания ID политики хранения SPBM (параметр [`storagePolicyID`](https://deckhouse.ru/modules/cloud-provider-vsphere/v1.73/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid)) и автоматическое создание StorageClass для каждой доступной политики хранения SPBM. Теперь можно явно выбирать политику для master- и worker-узлов, и получать соответствующие классы хранения.
 
 - Добавлены алерты, помогающие запланировать отключение модуля или миграцию:
-  - [ModuleIsDeprecated](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated) — сообщает о наличии устаревшего модуля, поддержка которого скоро прекратится.
-  - [D8ModuleOutdatedByMajorVersion](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion) — сообщает о том, что модуль отстаёт по мажорным версиям.
+  - [`ModuleIsDeprecated`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated) — сообщает о наличии устаревшего модуля, поддержка которого скоро прекратится.
+  - [`D8ModuleOutdatedByMajorVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion) — сообщает о том, что модуль отстаёт по мажорным версиям.
 
-- Добавлен алерт [GeoIPDownloadErrorDetected](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected), сообщающий об ошибках загрузки GeoIP-баз MaxMind.
+- Добавлен алерт [`GeoIPDownloadErrorDetected`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected), сообщающий об ошибках загрузки GeoIP-баз MaxMind.
 
 - Механика [оповещений об обновлениях](https://deckhouse.ru/modules/deckhouse/v1.73/usage.html#оповещение-об-обновлении-deckhouse) изменена — релиз применяется только при успешной доставке уведомления на настроенный вебхук. При ошибке доставки применение обновления приостанавливается до восстановления вебхука.
 
@@ -57,7 +57,7 @@
 
 - Добавлен флаг [`allowRbacWildcards`](https://deckhouse.ru/modules/admission-policy-engine/v1.73/cr.html#securitypolicy-v1alpha1-spec-policies-allowrbacwildcards) политики безопасности (SecurityPolicy) позволяющий управлять возможностю использования wildcard при описании объектов Role и RoleBinding (по умолчанию `true`). Также, политиками безопасности теперь можно ограничивать интерактивные подключения к подам (`CONNECT` для `pods/exec` и `pods/attach`) в пространствах имён.
 
-- Добавлена возможность управления запретом создания подов с tolerations из указанного списка (параметр [`pods.disallowedTolerations`](https://deckhouse.ru/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) операционной политики). Это помогает предотвратить попадание пользовательской нагрузки на узлы, отведенные под выделенные задачи.
+- Добавлена возможность управления запретом создания подов с tolerations из указанного списка (параметр [`policies.disallowedTolerations`](https://deckhouse.ru/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) операционной политики). Это помогает предотвратить попадание пользовательской нагрузки на узлы, отведенные под выделенные задачи.
 
 - Ingress-контроллер обновлен до версии 1.12 — добавлены изменения, повышающие безопасность (distroless-образ, устранение уязвимостей и др.).
 

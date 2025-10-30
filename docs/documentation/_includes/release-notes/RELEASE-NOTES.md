@@ -2,11 +2,11 @@
 
 ### Important
 
-- This release includes several important security improvements. Multiple known vulnerabilities have been fixed, including one in the user-authn module (CVE-2025-22868) that could potentially allow bypassing authentication checks. It is recommended that you schedule this update. See the Security section for details.
+- This release includes several important security improvements. Multiple known vulnerabilities have been fixed, including one in the user-authn module (CVE-2025-22868) that could potentially allow bypassing authentication checks. It is recommended that you schedule this update. See the [Security](#security) section for details.
 
-- The `dashboard` module will be removed in DKP version 1.75. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/stable/) module to be enabled).
+- The `dashboard` module will be removed in DKP version 1.75. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/) module to be enabled).
 
-- The built-in runtime-audit-engine module is now loaded from an external source (ModuleSource deckhouse).
+- The `runtime-audit-engine` module is now loaded from an external source (the `deckhouse` ModuleSource).
 
 - All DKP components will be restarted during the update.
 
@@ -20,7 +20,7 @@
 
 - Dex updated to **v2.44.0**. It now allows authentication through available identity providers if one of them is down, and supports authentication via identity providers through a proxy.
 
-- The [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object status now displays the reason for user [`lockout`](https://deckhouse.io/modules/user-authn/v1.73/configuration.html#parameters-passwordpolicy-lockout) (controlled by the lockout parameter).
+- The [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object status now displays the reason for user lockout (controlled by the [`lockout`](https://deckhouse.io/modules/user-authn/v1.73/configuration.html#parameters-passwordpolicy-lockout) parameter).
 
 - Added the [`additionalDisks`](https://deckhouse.io/modules/cloud-provider-dvp/v1.73/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-additionaldisks) parameter for the Deckhouse Virtualization Platform integration provider, allowing creation and attachment of additional disks to VMs in a NodeGroup (`size` and StorageClass must be specified). This simplifies data distribution across multiple disks.
 
@@ -29,16 +29,16 @@
 - For the VMware vSphere integration provider, you can now specify an SPBM storage policy ID (via the [`storagePolicyID`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.73/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter) and configure automatic creation of a StorageClass for each available SPBM policy. You can now explicitly select a policy for master and worker nodes and use the corresponding storage classes.
 
 - Added alerts to help plan module deprecation or migration:
-  - [ModuleIsDeprecated](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated): Notifies when a module is deprecated and nearing end of support.
-  - [D8ModuleOutdatedByMajorVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion): Notifies when a module is behind by one or more major versions.
+  - [`ModuleIsDeprecated`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated): Notifies when a module is deprecated and nearing end of support.
+  - [`D8ModuleOutdatedByMajorVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion): Notifies when a module is behind by one or more major versions.
 
-- Added [GeoIPDownloadErrorDetected](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected) alert to notify about MaxMind GeoIP database download issues.
+- Added [`GeoIPDownloadErrorDetected`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected) alert to notify about MaxMind GeoIP database download issues.
 
 - The [update notification workflow](https://deckhouse.io/modules/deckhouse/v1.73/usage.html#deckhouse-update-notifications) has changed — a release is applied only after the notification is successfully delivered to the configured webhook. If delivery fails, the update is paused until the webhook is restored.
 
 - Reorganized in-cluster documentation. All module documentation (including connected ones) is now located under the [Modules section]((https://deckhouse.io/modules/)). Search has been updated.
 
-- For NGINX Ingress Controller v1.10, added the option to enable the profiler (via the [`nginxProfilingEnabled`](https://deckhouse.ru/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled) parameter). Enabling the profiler increases resource consumption but may be useful for debugging controller issues.
+- For NGINX Ingress Controller v1.10, added the option to enable the profiler (via the [`nginxProfilingEnabled`](https://deckhouse.io/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled) parameter). Enabling the profiler increases resource consumption but may be useful for debugging controller issues.
 
 - Added support for custom HTTP authentication headers (via the [`headers`](https://deckhouse.io/modules/upmeter/v1.73/cr.html#upmeterremotewrite-v1-spec-config-headers) parameter of UpmeterRemoteWrite) when sending SLA monitoring metrics via Prometheus Remote Write protocol.
 
@@ -57,7 +57,7 @@
 
 - Added the [`allowRbacWildcards`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#securitypolicy-v1alpha1-spec-policies-allowrbacwildcards) flag to the SecurityPolicy, controlling whether wildcards are allowed in Role and RoleBinding definitions (set to `true` by default). Security policies can now also restrict interactive connections to pods (`CONNECT` for `pods/exec` and `pods/attach`) within namespaces.
 
-- Added support for preventing creation of pods with specific tolerations from a list ([`pods.disallowedTolerations`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) parameter in the operational policy). This helps prevent user workloads from running on nodes reserved for special tasks.
+- Added support for preventing creation of pods with specific tolerations from a list ([`policies.disallowedTolerations`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) parameter in the operational policy). This helps prevent user workloads from running on nodes reserved for special tasks.
 
 - Enhanced security in NGINX Ingress Controller v1.12 (distroless image, vulnerability fixes, and other improvements).
 
