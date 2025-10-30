@@ -72,6 +72,7 @@ shell:
     fi
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
+    # todo: rm RUSTFLAGS afte update to 0.50.0
     export RUSTFLAGS="-A mismatched_lifetime_syntaxes"
     cargo build \
     --release \
