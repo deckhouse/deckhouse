@@ -1,4 +1,4 @@
-# version=v0.5.36
+# version=v0.5.37
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:a6e0220edd70c87368869f45a66c10c684709fe2ffdbaf8471d3d055f698de91" # fromImage: builder/scratch
@@ -13,8 +13,8 @@ base/ruby-bundler: "sha256:5a4f5d7cdf36020344325315040efee7edfc11c563c2d54cc3466
 base/ruby-bundler-v3_4_7: "sha256:5a4f5d7cdf36020344325315040efee7edfc11c563c2d54cc3466a1324f019db" # fromImage: builder/alpine
 base/ruby-v3_4_7: "sha256:63fca121dbeb721a139c2bab322236889b1d3f3d40cb00b25db42775e81df3f8" # fromImage: base/distroless
 base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # fromImage: builder/scratch
-base/shell-operator: "sha256:1021773be23ed49856148ab7a131b0034e67c90d5920ef14fdc2025102ce02ce" # fromImage: builder/scratch
-base/shell-operator-v1.9.3: "sha256:1021773be23ed49856148ab7a131b0034e67c90d5920ef14fdc2025102ce02ce" # fromImage: builder/scratch
+base/shell-operator: "sha256:d3a00f5f05a8d0dc031b3eaf3bb42de80c646f76d0a9184d67d9b361e9005cf2" # fromImage: builder/scratch
+base/shell-operator-v1.9.3: "sha256:d3a00f5f05a8d0dc031b3eaf3bb42de80c646f76d0a9184d67d9b361e9005cf2" # fromImage: builder/scratch
 builder/alpine: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184acfea672a7acc8" # from: alpine:3.22.2
 builder/alpine-3.20: "sha256:b55c3d5bf9ba4c245496a1f7b38ee0ae2174a90496b4fe6f8937d6f3feff6f26" # from: alpine:3.20.7
 builder/alpine-3.21: "sha256:7b5050553bf256aec2c8c8e67179e689f13f6877e45a036755c6bc3113be7239" # from: alpine:3.21.5
@@ -30,12 +30,12 @@ builder/debian-svace: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38d5dbf1ee9f7
 builder/debian-svace-12.11-slim: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38d5dbf1ee9f7961f156de88a50" # fromImage: builder/debian
 builder/debian-svace-trixie-slim: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38d5dbf1ee9f7961f156de88a50" # fromImage: builder/debian
 builder/debian-trixie-slim: "sha256:0ed78087f23de3d6a9e3bb75bc6df7e2d17373cf7f4d45568a8d265cfd0ca0e2" # from: debian:trixie-slim
-builder/golang-alpine: "sha256:d14b0360933645410bd44d00f940411cb0ba64024ba39e40d53fcc24152f2423" # fromImage: builder/alpine
-builder/golang-alpine-1.24: "sha256:d7a2c6933c9530816beffe005dbf63096270029997fe5afc9b09b486024160d2" # fromImage: builder/alpine
-builder/golang-alpine-1.25: "sha256:d14b0360933645410bd44d00f940411cb0ba64024ba39e40d53fcc24152f2423" # fromImage: builder/alpine
-builder/golang-alpine-svace: "sha256:c98ca806c2a578d3ce57cc4dfd26e950219eaa535f95ea67595fc888694a3e14" # fromImage: builder/golang-alpine-1.25
-builder/golang-alpine-svace-1.24: "sha256:7e4f0ba1bf70fba40b103de1f9f3ee64b149b7648575a5b4294a39c7454e7e2e" # fromImage: builder/golang-alpine-1.24
-builder/golang-alpine-svace-1.25: "sha256:c98ca806c2a578d3ce57cc4dfd26e950219eaa535f95ea67595fc888694a3e14" # fromImage: builder/golang-alpine-1.25
+builder/golang-alpine: "sha256:b5b10c06033baa5d37152610c4c86ba44079257581229ae9d663c66263de4c66" # fromImage: builder/alpine
+builder/golang-alpine-1.24: "sha256:69bf124658d134df780a10fc7544ba9c0681b9b54e8b1f5c634205ee0bb83267" # fromImage: builder/alpine
+builder/golang-alpine-1.25: "sha256:b5b10c06033baa5d37152610c4c86ba44079257581229ae9d663c66263de4c66" # fromImage: builder/alpine
+builder/golang-alpine-svace: "sha256:00094bb59b51bd887fbc02a99daaa0592e418d6493adf0b08c4425c65a1d5aac" # fromImage: builder/golang-alpine-1.25
+builder/golang-alpine-svace-1.24: "sha256:a164badd96db4b8306ff5519c8becadfb43666748896866c1efd42376e75a8a8" # fromImage: builder/golang-alpine-1.24
+builder/golang-alpine-svace-1.25: "sha256:00094bb59b51bd887fbc02a99daaa0592e418d6493adf0b08c4425c65a1d5aac" # fromImage: builder/golang-alpine-1.25
 builder/golang-alt: "sha256:4554086aedf3692b9ab70a47cf4f5929569888bbdaa0de400554674706a7c544" # fromImage: builder/alt
 builder/golang-alt-1.24.9: "sha256:b77245d9a1506813c494491612bad34aa4fd0fd5c122527536ea9f6bf8621b37" # fromImage: builder/alt
 builder/golang-alt-1.25.3: "sha256:4554086aedf3692b9ab70a47cf4f5929569888bbdaa0de400554674706a7c544" # fromImage: builder/alt
@@ -205,8 +205,8 @@ tools/conntrack-tools: "sha256:8641b9643b02de809f03cdc508f22d5c6f275bc0eb85eb78e
 tools/conntrack-tools-conntrack-tools-1.4.8: "sha256:8641b9643b02de809f03cdc508f22d5c6f275bc0eb85eb78e260d04924612f15" # fromImage: builder/scratch
 tools/coreutils: "sha256:9b38bb9458ea788d43a74ce7a9d908280460743faa03dabc540275836872fa46" # fromImage: builder/scratch
 tools/coreutils-v9.7: "sha256:9b38bb9458ea788d43a74ce7a9d908280460743faa03dabc540275836872fa46" # fromImage: builder/scratch
-tools/cosign: "sha256:591df1ab81743370e2264803fc12edfc7799c8d85582e31818c98666c1f1c069" # fromImage: builder/scratch
-tools/cosign-v2.4.3: "sha256:591df1ab81743370e2264803fc12edfc7799c8d85582e31818c98666c1f1c069" # fromImage: builder/scratch
+tools/cosign: "sha256:4b423d1f6ff8daeaf4616d3bb45b8bb032f15c2609e1094410330d9ec79ab855" # fromImage: builder/scratch
+tools/cosign-v2.4.3: "sha256:4b423d1f6ff8daeaf4616d3bb45b8bb032f15c2609e1094410330d9ec79ab855" # fromImage: builder/scratch
 tools/cryptsetup: "sha256:1fa1ee8217e119e4bb523e5c0f9791b7370c9309c4813438e038e8ae2d55fd78" # fromImage: builder/scratch
 tools/cryptsetup-v2.7.5: "sha256:1fa1ee8217e119e4bb523e5c0f9791b7370c9309c4813438e038e8ae2d55fd78" # fromImage: builder/scratch
 tools/curl: "sha256:139f987d7242278fb4e66c1c6d6c08baaedec0d6834522f82f741bcad3580be4" # fromImage: builder/scratch
@@ -276,8 +276,8 @@ tools/sed: "sha256:034af4bc8824a78eb576221a81393e0d2163eb641e120d0b65f1c4b84ecbd
 tools/sed-v4.9: "sha256:034af4bc8824a78eb576221a81393e0d2163eb641e120d0b65f1c4b84ecbdb6c" # fromImage: builder/scratch
 tools/semver: "sha256:c2a68ad5ee839aecc88a6ab9610f5dd9d1c3e8cdcd7d459e27c6d6303ceed620" # fromImage: builder/scratch
 tools/semver-3.4.0: "sha256:c2a68ad5ee839aecc88a6ab9610f5dd9d1c3e8cdcd7d459e27c6d6303ceed620" # fromImage: builder/scratch
-tools/shell-operator: "sha256:de33b31e86df85914ea2b22caf1cc9099f2df8b270df0a7ab1d98dd143cf10b3" # fromImage: builder/scratch
-tools/shell-operator-v1.9.3: "sha256:de33b31e86df85914ea2b22caf1cc9099f2df8b270df0a7ab1d98dd143cf10b3" # fromImage: builder/scratch
+tools/shell-operator: "sha256:5f757ede35445372f17829ed99d51c8955ae0e8272e8724a7c7f1c64facf50dd" # fromImage: builder/scratch
+tools/shell-operator-v1.9.3: "sha256:5f757ede35445372f17829ed99d51c8955ae0e8272e8724a7c7f1c64facf50dd" # fromImage: builder/scratch
 tools/ssh: "sha256:0304dc786cc9feb89ff6d51f387388767d2272337c672e598163c6edc819b108" # fromImage: builder/scratch
 tools/ssh-V_10_0_P2: "sha256:0304dc786cc9feb89ff6d51f387388767d2272337c672e598163c6edc819b108" # fromImage: builder/scratch
 tools/tar: "sha256:b526c97902b6a929bdcf3ecbb7818138e4a4d1580a6af416ad44c9f78efe421f" # fromImage: builder/scratch
@@ -290,6 +290,6 @@ tools/vim: "sha256:e60b06004aacaf9ff1e0e307818ef1c491ce4f954d7d9125fd83dbf53e586
 tools/vim-v9.1.1236: "sha256:e60b06004aacaf9ff1e0e307818ef1c491ce4f954d7d9125fd83dbf53e586f65" # fromImage: builder/scratch
 tools/xfsprogs: "sha256:bb8b1e677b0be4a2bdf33c61d1e09803126ce32486ebda278ac66bd3d7e5a750" # fromImage: builder/scratch
 tools/xfsprogs-v6.16.0: "sha256:bb8b1e677b0be4a2bdf33c61d1e09803126ce32486ebda278ac66bd3d7e5a750" # fromImage: builder/scratch
-tools/yq: "sha256:e4edb660b9c05698265ba517afbda6a92c900da59c9202ccb8530e6724774180" # fromImage: builder/scratch
-tools/yq-v4.45.1: "sha256:52af2e176b95098d96b244b1acb76c40df96c931d0c0262f4028fa85a078d6bf" # fromImage: builder/scratch
-tools/yq-v4.47.1: "sha256:e4edb660b9c05698265ba517afbda6a92c900da59c9202ccb8530e6724774180" # fromImage: builder/scratch
+tools/yq: "sha256:8fe1b539bbebda51f079265a6c26339e917d87fe2b036c7ce804102546c90f66" # fromImage: builder/scratch
+tools/yq-v4.45.1: "sha256:551458722e31cf275d8109a4cda9b9141f91d890edcb5a27c233f328db88dfbf" # fromImage: builder/scratch
+tools/yq-v4.47.1: "sha256:8fe1b539bbebda51f079265a6c26339e917d87fe2b036c7ce804102546c90f66" # fromImage: builder/scratch
