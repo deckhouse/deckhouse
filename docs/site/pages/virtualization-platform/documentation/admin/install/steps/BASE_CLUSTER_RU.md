@@ -170,7 +170,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap-phase install-deckhouse`.
