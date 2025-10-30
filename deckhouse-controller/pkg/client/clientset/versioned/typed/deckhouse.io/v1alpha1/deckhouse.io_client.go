@@ -25,6 +25,12 @@ import (
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ApplicationsGetter
+	ApplicationPackagesGetter
+	ApplicationPackageVersionsGetter
+	ClusterApplicationsGetter
+	ClusterApplicationPackagesGetter
+	ClusterApplicationPackageVersionsGetter
 	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
@@ -34,11 +40,37 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
+	PackageRepositoriesGetter
+	PackageRepositoryOperationsGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
 type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *DeckhouseV1alpha1Client) Applications(namespace string) ApplicationInterface {
+	return newApplications(c, namespace)
+}
+
+func (c *DeckhouseV1alpha1Client) ApplicationPackages() ApplicationPackageInterface {
+	return newApplicationPackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ApplicationPackageVersions() ApplicationPackageVersionInterface {
+	return newApplicationPackageVersions(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ClusterApplications() ClusterApplicationInterface {
+	return newClusterApplications(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ClusterApplicationPackages() ClusterApplicationPackageInterface {
+	return newClusterApplicationPackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ClusterApplicationPackageVersions() ClusterApplicationPackageVersionInterface {
+	return newClusterApplicationPackageVersions(c)
 }
 
 func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
@@ -75,6 +107,14 @@ func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 
 func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
 	return newModuleUpdatePolicies(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {
+	return newPackageRepositories(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositoryOperations() PackageRepositoryOperationInterface {
+	return newPackageRepositoryOperations(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.

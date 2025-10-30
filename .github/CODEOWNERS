@@ -44,8 +44,8 @@
 500-openvpn/                    @apolovov
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @shvgn
-500-upmeter/                    @vladimirGuryanov @lazovskiy @kolashtov
-500-okmeter/                    @vladimirGuryanov @lazovskiy @kolashtov
+500-upmeter/                    @vladimirGuryanov @lazovskiy
+500-okmeter/                    @vladimirGuryanov @lazovskiy
 500-operator-trivy/             @yalosev @ldmonster
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster

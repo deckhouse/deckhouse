@@ -23,7 +23,7 @@ lang: ru
 ## Восстановление master-узла при ошибке загрузки компонентов control plane через kubelet
 
 Ситуация, когда kubelet не может загрузить компоненты control plane, может возникнуть, если в кластере с одним master-узлом был удалён каталог с образами (например, `/var/lib/containerd`).
-В этом случае после перезапуска kubelet не сможет загрузить образы компонентов control plane, поскольку параметры авторизации для доступа к `registry.deckhouse.io` на master-узле отсутствуют.
+В этом случае после перезапуска kubelet не сможет загрузить образы компонентов control plane, поскольку параметры авторизации для доступа к `registry.deckhouse.ru` на master-узле отсутствуют.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -34,7 +34,7 @@ lang: ru
    ```shell
    d8 k -n d8-system get secrets deckhouse-registry -o json |
    jq -r '.data.".dockerconfigjson"' | base64 -d |
-   jq -r '.auths."registry.deckhouse.io".auth'
+   jq -r '.auths."registry.deckhouse.ru".auth'
    ```
 
 1. Скопируйте вывод команды и присвойте переменной `AUTH` на поврежденном master-узле.

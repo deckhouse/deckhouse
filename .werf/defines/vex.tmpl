@@ -6,7 +6,12 @@
 {{- define "vex mitigation" }}
   {{- $context := index . 0 }}
   {{- $imageName := index . 1 }}
-  {{- $knownVulnPath := (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $knownVulnPath := "" }}
+  {{- if eq $imageName "dev" }}
+    {{- $knownVulnPath = "/deckhouse-controller/known_vulnerabilities.vex" }}
+  {{- else }}
+    {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- end }}
   {{- $vexFile := false }}
   {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
     {{- $vexFile = true }}

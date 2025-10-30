@@ -30,7 +30,7 @@ To delete a cluster, several steps need to be followed:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
-      registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+      registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    where:
@@ -48,7 +48,7 @@ To delete a cluster, several steps need to be followed:
    ```shell
    docker run -it --pull=always \
       -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
+      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
    ```
 
 1. Execute the cluster removal command:

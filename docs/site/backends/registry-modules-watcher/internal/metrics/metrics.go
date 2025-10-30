@@ -29,21 +29,21 @@ import (
 )
 
 const (
-	RegistryRequestSecondsMetric          = "{PREFIX}_registry_request_seconds"
-	RegistryRequestsCountMetric           = "{PREFIX}_registry_requests_count"
-	RegistryPullSecondsMetric             = "{PREFIX}_registry_pull_seconds"
-	RegistryScannerCacheLengthMetric      = "{PREFIX}_registry_scanner_cache_length"
-	RegistryWatcherBackendsTotalMetric    = "{PREFIX}_registry_watcher_backends_total"
-	RegistryWatcherNewBackendsTotalMetric = "{PREFIX}_registry_watcher_new_backends_total"
-	SenderUploadRequestsCountMetric       = "{PREFIX}_sender_upload_requests_count"
-	SenderUploadRequestsSecondsMetric     = "{PREFIX}_sender_upload_requests_seconds"
-	SenderBuildRequestsCountMetric        = "{PREFIX}_sender_build_requests_count"
-	SenderBuildRequestsSecondsMetric      = "{PREFIX}_sender_build_requests_seconds"
-	SenderDeleteRequestsCountMetric       = "{PREFIX}_sender_delete_requests_count"
-	SenderDeleteRequestsSecondsMetric     = "{PREFIX}_sender_delete_requests_seconds"
+	RegistryRequestSecondsMetric          = "registry_modules_watcher_registry_request_seconds"
+	RegistryRequestsCountMetric           = "registry_modules_watcher_registry_requests_count"
+	RegistryPullSecondsMetric             = "registry_modules_watcher_registry_pull_seconds"
+	RegistryScannerCacheLengthMetric      = "registry_modules_watcher_registry_scanner_cache_length"
+	RegistryWatcherBackendsTotalMetric    = "registry_modules_watcher_registry_watcher_backends_total"
+	RegistryWatcherNewBackendsTotalMetric = "registry_modules_watcher_registry_watcher_new_backends_total"
+	SenderUploadRequestsCountMetric       = "registry_modules_watcher_sender_upload_requests_count"
+	SenderUploadRequestsSecondsMetric     = "registry_modules_watcher_sender_upload_requests_seconds"
+	SenderBuildRequestsCountMetric        = "registry_modules_watcher_sender_build_requests_count"
+	SenderBuildRequestsSecondsMetric      = "registry_modules_watcher_sender_build_requests_seconds"
+	SenderDeleteRequestsCountMetric       = "registry_modules_watcher_sender_delete_requests_count"
+	SenderDeleteRequestsSecondsMetric     = "registry_modules_watcher_sender_delete_requests_seconds"
+	SenderTimeoutRequestsTotalMetric      = "registry_modules_watcher_sender_timeout_requests_total"
 	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_module_validations_no_module_yaml_in_release_image"
 	RegistryScannerNoModuleSign           = "d8_telemetry_module_validations_no_module_sign_in_release_image"
-	SenderTimeoutRequestsTotalMetric      = "{PREFIX}_sender_timeout_requests_total"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -87,7 +87,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", RegistryWatcherNewBackendsTotalMetric))
-	_, err = ms.RegisterGauge(RegistryWatcherNewBackendsTotalMetric, []string{}, options.WithHelp("Count of new watcher backends"))
+	_, err = ms.RegisterCounter(RegistryWatcherNewBackendsTotalMetric, []string{}, options.WithHelp("Count of new watcher backends"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryWatcherNewBackendsTotalMetric, err)
 	}

@@ -107,8 +107,8 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
   - cd /src/nginx-deps/opentelemetry-cpp-contrib
   # Remove directory for fix CVE
-  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
   - git reset --hard {{ $opentelemetryCppContribCommit }}
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
   #
   - cd /src/nginx-deps
   - git clone -b {{ $coreRulesetBranch }} $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset

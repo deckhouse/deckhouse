@@ -87,3 +87,5 @@ shell:
   - cp /out/deckhouse-controller /out/caps-deckhouse-controller
   - setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /out/caps-deckhouse-controller
 ---
+{{- include "vex mitigation" (list $ "dev") }}
+---

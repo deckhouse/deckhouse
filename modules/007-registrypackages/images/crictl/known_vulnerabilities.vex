@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "k8s.io/kubernetes"
+          "@id": "pkg:golang/k8s.io/kubernetes"
         }
       ],
       "status": "not_affected",
@@ -24,7 +24,7 @@
       },
       "products": [
         {
-          "@id": "k8s.io/kubernetes"
+          "@id": "pkg:golang/k8s.io/kubernetes"
         }
       ],
       "status": "not_affected",

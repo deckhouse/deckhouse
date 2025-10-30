@@ -46,7 +46,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
+			cache:           cache.New(metricsstorage.NewMetricStorage()),
 		}
 
 		tasks := scanner.processRegistries(context.Background())
@@ -85,7 +85,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
+			cache:           cache.New(metricsstorage.NewMetricStorage()),
 		}
 
 		scanner.processRegistries(context.Background())

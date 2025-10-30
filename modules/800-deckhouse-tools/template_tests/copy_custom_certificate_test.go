@@ -66,7 +66,7 @@ var _ = Describe("Module :: deckhouse-tools :: helm template :: custom-certifica
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			createdSecret := f.KubernetesResource("Secret", "d8-system", "tools-ingress-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 		})
 
 	})

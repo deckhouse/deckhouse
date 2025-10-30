@@ -299,6 +299,7 @@ jobs:
           WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url=${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
       # </template: deploy_site_template>
 

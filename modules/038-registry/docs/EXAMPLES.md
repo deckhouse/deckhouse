@@ -65,7 +65,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    - no tasks to handle.
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -81,7 +81,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
        registry:
          mode: Direct
          direct:
-           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           imagesRepo: registry.deckhouse.io/deckhouse/ee
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```
@@ -141,7 +141,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    - no tasks to handle.
    ```
 
-1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -157,7 +157,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
        registry:
          mode: Unmanaged
          unmanaged:
-           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           imagesRepo: registry.deckhouse.io/deckhouse/ee
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```

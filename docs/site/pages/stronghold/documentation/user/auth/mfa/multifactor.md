@@ -46,7 +46,7 @@ spec:
         app: ldap-adapter
     spec:
       containers:
-      - image: registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7
+      - image: registry.deckhouse.io/stronghold/multifactor/multifactor-ldap-adapter:3.0.7
         name: ldap-adapter
         volumeMounts:
         - mountPath: /opt/multifactor/ldap/multifactor-ldap-adapter.dll.config
@@ -99,8 +99,8 @@ and the values of `multifactor-nas-identifier` and `multifactor-shared-secret` o
 
 Available images:
 
-- Ubuntu 24.04–based: `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7`
-- Alpine 3.22–based: `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7-alpine`
+- Ubuntu 24.04–based: `registry.deckhouse.io/stronghold/multifactor/multifactor-ldap-adapter:3.0.7`
+- Alpine 3.22–based: `registry.deckhouse.io/stronghold/multifactor/multifactor-ldap-adapter:3.0.7-alpine`
 
 ## Configuring Stronghold
 

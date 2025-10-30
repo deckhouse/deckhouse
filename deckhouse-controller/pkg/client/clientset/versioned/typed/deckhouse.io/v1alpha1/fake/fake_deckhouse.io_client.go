@@ -25,6 +25,30 @@ type FakeDeckhouseV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeDeckhouseV1alpha1) Applications(namespace string) v1alpha1.ApplicationInterface {
+	return &FakeApplications{c, namespace}
+}
+
+func (c *FakeDeckhouseV1alpha1) ApplicationPackages() v1alpha1.ApplicationPackageInterface {
+	return &FakeApplicationPackages{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ApplicationPackageVersions() v1alpha1.ApplicationPackageVersionInterface {
+	return &FakeApplicationPackageVersions{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ClusterApplications() v1alpha1.ClusterApplicationInterface {
+	return &FakeClusterApplications{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ClusterApplicationPackages() v1alpha1.ClusterApplicationPackageInterface {
+	return &FakeClusterApplicationPackages{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) ClusterApplicationPackageVersions() v1alpha1.ClusterApplicationPackageVersionInterface {
+	return &FakeClusterApplicationPackageVersions{c}
+}
+
 func (c *FakeDeckhouseV1alpha1) DeckhouseReleases() v1alpha1.DeckhouseReleaseInterface {
 	return &FakeDeckhouseReleases{c}
 }
@@ -59,6 +83,14 @@ func (c *FakeDeckhouseV1alpha1) ModuleSources() v1alpha1.ModuleSourceInterface {
 
 func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePolicyInterface {
 	return &FakeModuleUpdatePolicies{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) PackageRepositories() v1alpha1.PackageRepositoryInterface {
+	return &FakePackageRepositories{c}
+}
+
+func (c *FakeDeckhouseV1alpha1) PackageRepositoryOperations() v1alpha1.PackageRepositoryOperationInterface {
+	return &FakePackageRepositoryOperations{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -224,7 +224,6 @@ func (c *Client) GetChecksum(ctx context.Context, releaseName string) (string, e
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
-	ValuesSets  []string // Values set via --set flags
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 }
@@ -252,7 +251,6 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 		ReleaseStorageDriver:   c.driver,
 		Timeout:                c.opts.Timeout,
 		ValuesFilesPaths:       opts.ValuesPaths,
-		ValuesSets:             opts.ValuesSets,
 		ForceAdoption:          true,
 		NoPodLogs:              true,
 	}); err != nil {
@@ -300,7 +298,6 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 		ReleaseStorageDriver:   c.driver,
 		Remote:                 true,
 		ValuesFilesPaths:       opts.ValuesPaths,
-		ValuesSets:             opts.ValuesSets,
 		ForceAdoption:          true,
 	})
 	if err != nil {

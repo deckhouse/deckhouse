@@ -56,7 +56,7 @@ func TestReleaseQueueDepthDelta_MajorVersionChange(t *testing.T) {
 		listFunc: func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 			return releases, nil
 		},
-		log:            log.NewLogger(),
+		log:            log.NewNop(),
 		releaseChannel: "",
 	}
 
@@ -98,7 +98,7 @@ func TestReleaseQueueDepthDelta_PatchVersionChange(t *testing.T) {
 		listFunc: func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 			return releases, nil
 		},
-		log:            log.NewLogger(),
+		log:            log.NewNop(),
 		releaseChannel: "",
 	}
 
@@ -140,7 +140,7 @@ func TestReleaseQueueDepthDelta_MinorVersionWithPatches(t *testing.T) {
 		listFunc: func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 			return releases, nil
 		},
-		log:            log.NewLogger(),
+		log:            log.NewNop(),
 		releaseChannel: "",
 	}
 
@@ -181,7 +181,7 @@ func TestReleaseQueueDepthDelta_MajorVersionAwaiting(t *testing.T) {
 		listFunc: func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 			return releases, nil
 		},
-		log:            log.NewLogger(),
+		log:            log.NewNop(),
 		releaseChannel: "",
 	}
 
@@ -225,7 +225,7 @@ func TestReleaseQueueDepthDelta_MajorVersionWithMinorUpdates(t *testing.T) {
 		listFunc: func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 			return releases, nil
 		},
-		log:            log.NewLogger(),
+		log:            log.NewNop(),
 		releaseChannel: "",
 	}
 

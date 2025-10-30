@@ -472,7 +472,7 @@ During installation, DKP can be configured to work with an external registry (e.
 Set the following parameters in the `InitConfiguration` resource:
 
 - `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — the path to the DKP EE image in the external registry.  
-  Example: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
+  Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
 - `registryDockerCfg: <BASE64>` — base64-encoded Docker config with access credentials to the external registry.
 
 If anonymous access is allowed to DKP images in the external registry, the `registryDockerCfg` should look like this:
@@ -535,13 +535,13 @@ When using the [Nexus](https://github.com/sonatype/nexus-public) repository mana
 
 Setup Steps:
 
-1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse registry](https://registry.deckhouse.ru/):  
+1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse registry](https://registry.deckhouse.io/):  
    ![Create Proxy Docker Repository](../images/registry/nexus/nexus-repository.png)
 
 1. Fill out the repository creation form with the following values:
    * `Name`: the desired repository name, e.g., `d8-proxy`.
    * `Repository Connectors / HTTP` or `HTTPS`: a dedicated port for the new repository, e.g., `8123` or another.
-   * `Remote storage`: must be set to `https://registry.deckhouse.ru/`.
+   * `Remote storage`: must be set to `https://registry.deckhouse.io/`.
    * `Auto blocking enabled` and `Not found cache enabled`: can be disabled for debugging; otherwise, enable them.
    * `Maximum Metadata Age`: must be set to `0`.
    * If using a commercial edition of Deckhouse Kubernetes Platform, enable the `Authentication` checkbox and fill in the following:
@@ -573,7 +573,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
   * Go to `Administration` → `Registries` → `New Endpoint`.
   * `Provider`: Docker Registry.
   * `Name`: arbitrary value of your choice.
-  * `Endpoint URL`: `https://registry.deckhouse.ru`.
+  * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Set `Access ID` and `Access Secret` (your Deckhouse Kubernetes Platform license key).
 
     ![Registry Configuration](../images/registry/harbor/harbor1.png)
@@ -610,7 +610,7 @@ You can check the current status of versions in the release channels at [release
 
    ```shell
    d8 mirror pull \
-     --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
+     --source='registry.deckhouse.io/deckhouse/<EDITION>' \
      --license='<LICENSE_KEY>' /home/user/d8-bundle
    ```
 
@@ -638,7 +638,7 @@ You can check the current status of versions in the release channels at [release
      - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
      - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
    - `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
-   - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.ru/deckhouse/EDITION/modules`);
+   - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`);
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
    - `--deckhouse-tag` — download only the specific DKP version (regardless of update channels). Cannot be used with `--since-version`;
    - `--gost-digest` — calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball;
@@ -673,7 +673,7 @@ You can check the current status of versions in the release channels at [release
    ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
-   --source='registry.deckhouse.ru/deckhouse/se' \
+   --source='registry.deckhouse.io/deckhouse/se' \
    /home/user/d8-bundle
    ```
 
@@ -765,7 +765,7 @@ You can check the current status of versions in the release channels at [release
 
 1. After uploading the images to the registry, you can proceed with installing DKP. Use the [Quick Start Guide](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-   When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+   When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    In the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
 

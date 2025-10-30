@@ -120,7 +120,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает автомат�
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:

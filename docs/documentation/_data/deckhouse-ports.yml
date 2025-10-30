@@ -236,7 +236,7 @@ groups:
     protocol: TCP
     description:
       en: "`storage-status` agent healthcheck"
-      ru: "Healthcheck агента модуля `sds-node-configurator`"
+      ru: "Healthcheck агента модуля `storage-status`"
   - ports: "4240"
     protocol: TCP
     description:

@@ -3909,7 +3909,7 @@ alerts:
       description: |-
         An IngressNginxController and/or Ingress object in the cluster is using variables from the deprecated NGINX GeoIPv1 module. Support for this module has been discontinued in Ingress NGINX Controller version 1.10 and higher.
 
-        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
 
         To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
 

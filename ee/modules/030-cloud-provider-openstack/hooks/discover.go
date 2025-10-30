@@ -124,15 +124,35 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/openstack/openapi"})
-	if err != nil {
-		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
-	}
-
 	var discoveryData v1alpha1.OpenStackCloudProviderDiscoveryData
+
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+	}
+
+	// workaround to pass OpenAPI schema validation in hybrid mode
+	hybridMode, ok := input.Values.GetOk("cloudProviderOpenstack.internal.hybridMode")
+	if ok && hybridMode.Bool() {
+		zones, ok := input.Values.GetOk("cloudProviderOpenstack.zones")
+		if ok {
+			zonesArray := zones.Array()
+			discoveryData.Zones = []string{}
+
+			for _, zone := range zonesArray {
+				discoveryData.Zones = append(discoveryData.Zones, zone.String())
+			}
+
+			discoveryDataJSON, err = json.Marshal(discoveryData)
+			if err != nil {
+				return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+			}
+		}
+	}
+
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/openstack/openapi"})
+	if err != nil {
+		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	input.Values.Set("cloudProviderOpenstack.internal.discoveryData", discoveryData)
