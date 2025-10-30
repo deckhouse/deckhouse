@@ -1,25 +1,23 @@
 module github.com/flant/docs-builder
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.25.3
 
 require (
 	github.com/bep/clocks v0.5.0
 	github.com/bep/lazycache v0.8.0
 	github.com/bep/logg v0.4.0
 	github.com/bep/overlayfs v0.10.0
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250814114239-c4ff4e7470c2
+	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/gohugoio/hugo v0.150.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/afero v1.14.0
 	github.com/spf13/fsync v0.10.1
 	golang.org/x/sync v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.28.3
-	k8s.io/apimachinery v0.28.3
-	k8s.io/client-go v0.28.3
+	k8s.io/api v0.30.11
+	k8s.io/apimachinery v0.30.11
+	k8s.io/client-go v0.30.11
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
@@ -46,7 +44,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disintegration/gift v1.2.1 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanw/esbuild v0.25.9 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/frankban/quicktest v1.14.6 // indirect
@@ -134,10 +132,10 @@ require (
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
+	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	rsc.io/qr v0.2.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )

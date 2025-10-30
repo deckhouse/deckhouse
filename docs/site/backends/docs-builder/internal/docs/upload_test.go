@@ -106,7 +106,7 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
-			var svc = NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage(""))
+			var svc = NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage())
 
 			got, ok := svc.getLocalPath("moduleName", "stable", tt.fileName)
 			if got != tt.want || ok != tt.wantOK {

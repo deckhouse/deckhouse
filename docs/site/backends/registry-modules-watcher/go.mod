@@ -1,18 +1,18 @@
 module registry-modules-watcher
 
-go 1.23.8
+go 1.25.3
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250814114239-c4ff4e7470c2
+	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/stretchr/testify v1.10.0
-	k8s.io/api v0.29.8
-	k8s.io/apimachinery v0.29.8
-	k8s.io/client-go v0.29.8
+	k8s.io/api v0.30.11
+	k8s.io/apimachinery v0.30.11
+	k8s.io/client-go v0.30.11
 )
 
 require (
