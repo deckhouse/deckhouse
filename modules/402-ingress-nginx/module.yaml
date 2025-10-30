@@ -11,4 +11,4 @@ descriptions:
     https://kubernetes.github.io/ingress-nginx
 requirements:
   modules:
-    istio: "!optional"
+    istio: ">=0.1.0 !optional"
