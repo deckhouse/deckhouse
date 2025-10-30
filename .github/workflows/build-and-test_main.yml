@@ -2023,9 +2023,9 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
-          WERF_ENV: "EE"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+          WERF_ENV: "EE"
 
     # </template: web_build_template>
 
@@ -2132,12 +2132,12 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
-          WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+          WERF_ENV: "EE"
 
     # </template: web_build_template>
 
@@ -2794,10 +2794,9 @@ jobs:
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
-          WERF_ENV: "EE"
           DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
-
+          WERF_ENV: "EE"
           WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
         run: |
           # Temporary disable it without failing the step.
@@ -3009,203 +3008,6 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
-
-
-  deploy_release_doc_prod:
-    name: (Prod) Deploy release documentation
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-
-      # <template: doc_release_version_template>
-      - name: Set documentation version
-        env:
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-        run: |
-          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
-      # </template: doc_release_version_template>
-      # <template: deploy_doc_template>
-      - name: Deploy documentation to production
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
-          env: web-production
-        env:
-          WERF_REQUIRE_BUILT_IMAGES: "true"
-          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
-          WERF_DIR: "docs/documentation"
-          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
-          WERF_NAMESPACE: deckhouse-web-production
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.io"
-          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
-          WERF_SET_WEB_ENV: "web.env=web-production"
-          WERF_SET_DCNAME: "web.dc_name=prod-25"
-          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_PROD }}"
-          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
-          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
-          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
-          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
-      # </template: deploy_doc_template>
-
-
-  deploy_release_doc_stage:
-    name: (Stage) Deploy release documentation
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-
-      # <template: doc_release_version_template>
-      - name: Set documentation version
-        env:
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-        run: |
-          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
-      # </template: doc_release_version_template>
-      # <template: deploy_doc_template>
-      - name: Deploy documentation to stage
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-stage
-        env:
-          WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
-          WERF_DIR: "docs/documentation"
-          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
-          WERF_NAMESPACE: deckhouse-web-stage
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
-          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
-          WERF_SET_WEB_ENV: "web.env=web-stage"
-          WERF_SET_DCNAME: "web.dc_name=dev"
-          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
-          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
-          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
-          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
-          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
-      # </template: deploy_doc_template>
 
 
   deploy_latest_web_site_prod:
