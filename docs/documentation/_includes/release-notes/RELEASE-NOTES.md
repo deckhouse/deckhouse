@@ -1,3 +1,76 @@
+## Version 1.73
+
+### Important
+
+- This release includes several important security improvements. Multiple known vulnerabilities have been fixed, including one in the user-authn module (CVE-2025-22868) that could potentially allow bypassing authentication checks. It is recommended that you schedule this update. See the Security section for details.
+
+- The `dashboard` module will be removed in DKP version 1.75. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/stable/) module to be enabled).
+
+- The built-in runtime-audit-engine module is now loaded from an external source (ModuleSource deckhouse).
+
+- All DKP components will be restarted during the update.
+
+### Major changes
+
+- Added support for changing the registry settings (via the [`mode`](https://deckhouse.io/modules/deckhouse/v1.73/configuration.html#parameters-registry-mode) parameter) in `Unmanaged` mode, similar to `Direct` mode. A new parameter [`checkMode`](https://deckhouse.io/modules/deckhouse/v1.73/configuration.html#parameters-registry-direct-checkmode) has been added to control registry validation behavior:
+  - `Default`: Verifies the availability of all system module images and the deckhouse-controller images.
+  - `Relax`: Verifies only the deckhouse-controller images.
+
+- Updated requirements for the `email` field of the [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object: the email address must now be in lowercase. Existing users will not be affected.
+
+- Dex updated to **v2.44.0**. It now allows authentication through available identity providers if one of them is down, and supports authentication via identity providers through a proxy.
+
+- The [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object status now displays the reason for user [`lockout`](https://deckhouse.io/modules/user-authn/v1.73/configuration.html#parameters-passwordpolicy-lockout) (controlled by the lockout parameter).
+
+- Added the [`additionalDisks`](https://deckhouse.io/modules/cloud-provider-dvp/v1.73/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-additionaldisks) parameter for the Deckhouse Virtualization Platform integration provider, allowing creation and attachment of additional disks to VMs in a NodeGroup (`size` and StorageClass must be specified). This simplifies data distribution across multiple disks.
+
+- Added support for [`additionalMetadata`](https://deckhouse.io/modules/cloud-provider-vcd/v1.73/cr.html#vcdinstanceclass-v1-spec-additionalmetadata) in objects (networks, VMs, disks) for the VMware Cloud Director integration provider. Metadata is merged with existing data, with `additionalMetadata` values taking precedence. Changing `additionalMetadata` triggers recreation of CloudEphemeral node groups that use the affected VCDInstanceClass.
+
+- For the VMware vSphere integration provider, you can now specify an SPBM storage policy ID (via the [`storagePolicyID`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.73/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter) and configure automatic creation of a StorageClass for each available SPBM policy. You can now explicitly select a policy for master and worker nodes and use the corresponding storage classes.
+
+- Added alerts to help plan module deprecation or migration:
+  - [ModuleIsDeprecated](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated): Notifies when a module is deprecated and nearing end of support.
+  - [D8ModuleOutdatedByMajorVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion): Notifies when a module is behind by one or more major versions.
+
+- Added [GeoIPDownloadErrorDetected](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected) alert to notify about MaxMind GeoIP database download issues.
+
+- The [update notification workflow](https://deckhouse.io/modules/deckhouse/v1.73/usage.html#deckhouse-update-notifications) has changed — a release is applied only after the notification is successfully delivered to the configured webhook. If delivery fails, the update is paused until the webhook is restored.
+
+- Reorganized in-cluster documentation. All module documentation (including connected ones) is now located under the [Modules section]((https://deckhouse.io/modules/)). Search has been updated.
+
+- For NGINX Ingress Controller v1.10, added the option to enable the profiler (via the [`nginxProfilingEnabled`](https://deckhouse.ru/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled) parameter). Enabling the profiler increases resource consumption but may be useful for debugging controller issues.
+
+- Added support for custom HTTP authentication headers (via the [`headers`](https://deckhouse.io/modules/upmeter/v1.73/cr.html#upmeterremotewrite-v1-spec-config-headers) parameter of UpmeterRemoteWrite) when sending SLA monitoring metrics via Prometheus Remote Write protocol.
+
+- Optimized DKP core module loading, reducing startup time in clusters with many modules.
+
+- Audit logs now show which OIDC provider issued the authentication token
+
+- Deckhouse CLI (`d8`) updated to v0.20.7:
+  - Added the [`d8 status`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-status) command, which provides a quick cluster summary (nodes, releases, Deckhouse pods, alerts, registry, Deckhouse settings, CNI, queue state).
+  - Added the [`d8 k debug`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-k-debug) command, which runs the DKP built-in debug container (image can be overridden via `--image`). This simplifies interactive pod debugging.
+  - Added the `--watch` flag to the [`d8 system queue list`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-system-queue-list) command to track queue state changes.
+
+### Security
+
+- Improved baseline container security. Updated security profiles for the following modules to restrict privileges and access rights to the minimum required: `cni-cilium`, `cni-flannel`, `cni-simple-bridge`, `ingress-nginx`, `istio`, `keepalived`, `kube-dns`, `kube-proxy`, `node-local-dns`, `network-gateway`, `network-policy-engine`, `open-vpn`.
+
+- Added the [`allowRbacWildcards`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#securitypolicy-v1alpha1-spec-policies-allowrbacwildcards) flag to the SecurityPolicy, controlling whether wildcards are allowed in Role and RoleBinding definitions (set to `true` by default). Security policies can now also restrict interactive connections to pods (`CONNECT` for `pods/exec` and `pods/attach`) within namespaces.
+
+- Added support for preventing creation of pods with specific tolerations from a list ([`pods.disallowedTolerations`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) parameter in the operational policy). This helps prevent user workloads from running on nodes reserved for special tasks.
+
+- Enhanced security in NGINX Ingress Controller v1.12 (distroless image, vulnerability fixes, and other improvements).
+
+- Fixed known vulnerabilities in the following modules: `operator-trivy`, `registry`, `user-authn`, `cloud-provider-dvp`, `multitenancy-manager`, `admission-policy-engine`, `ingress-nginx`, `alertmanager`, `metallb`, `istio`, `node-local-dns`, `kube-apiserver`.
+
+### Network
+
+- For the VMware Cloud Director integration provider, added support for [LoadBalancer](https://deckhouse.io/modules/cloud-provider-vcd/v1.73/environment.html#using-the-loadbalancer) backed by VMware NSX Advanced Load Balancer (ALB/Avi) when using `NSX-T`. Requires the Load Balancer feature to be enabled on the Edge Gateway. If LoadBalancer is enabled after cluster creation, DKP automatically detects and applies the change within an hour. For open ports, DKP creates corresponding `Pool + Virtual Service` pairs. If there is a firewall, add allow rules for the LoadBalancer’s external IP address and relevant ports.
+
+### Component version updates
+
+The following DKP components have been updated:
+
 ## Version 1.72
 
 ### Important
