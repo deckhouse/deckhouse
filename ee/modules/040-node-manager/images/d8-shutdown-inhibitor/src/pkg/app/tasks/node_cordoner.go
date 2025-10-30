@@ -7,7 +7,6 @@ package tasks
 
 import (
 	"context"
-
 	"log/slog"
 
 	"d8_shutdown_inhibitor/pkg/kubernetes"
@@ -20,6 +19,7 @@ type NodeCordoner struct {
 	NodeName           string
 	StartCordonCh      <-chan struct{}
 	UnlockInhibitorsCh <-chan struct{}
+	CordonEnabled      bool
 	Klient             *kubernetes.Klient
 }
 
@@ -28,6 +28,12 @@ func (n *NodeCordoner) Name() string {
 }
 
 func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
+
+    if !n.CordonEnabled {
+        dlog.Info("node cordoner: cordoning disabled, skipping", slog.String("node", n.NodeName))
+        return
+    }
+
 	// Stage 1. Wait for a signal to start.
 	dlog.Info("node cordoner: waiting for cordon signal", slog.String("node", n.NodeName))
 	select {

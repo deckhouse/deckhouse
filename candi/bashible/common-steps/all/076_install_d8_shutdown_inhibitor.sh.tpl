@@ -30,6 +30,15 @@ bb-log-warning "package = {{ $inhibitorPackage }}, present = {{ $imagePresent }}
 inhibitor_service_name="d8-shutdown-inhibitor.service"
 extra_logind_conf="/etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf"
 
+
+bb-event-on 'inhibitor-unit-changed' '_inhibitor-unit-changed'
+_inhibitor-unit-changed() {
+systemctl daemon-reload
+systemctl enable $inhibitor_service_name
+systemctl restart $inhibitor_service_name
+}
+
+
 bb-event-on 'restart-inhibitor-if-needed' '_restart_inhibitor_if_needed'
 _restart_inhibitor_if_needed() {
   # Machine reboot is scheduled, no need to restart service right now.
@@ -50,8 +59,42 @@ function _shutdown-inhibitor-cleanup() {
   systemctl -s SIGHUP kill systemd-logind
 }
 
+function inhibitor::install:service() {
+{{- $noCordon := true }}
+{{- if eq .runType "Normal" }}
+{{- if eq .nodeGroup.name "master" }}
+
+{{- $apiserverEndpoints := dig "apiserverEndpoints" (list) .normal }}
+{{- $endpointsCount := len $apiserverEndpoints }}
+
+{{- if and (eq .nodeGroup.name "master") (lt $endpointsCount 2) }}
+  {{- $noCordon = false }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+bb-sync-file /etc/systemd/system/$inhibitor_service_name - inhibitor-unit-changed << EOF
+[Unit]
+Description=Shutdown inhibitor to allow manual Pod eviction
+Documentation=https://deckhouse.io/modules/node-manager/
+Wants=network-online.target kubelet.service containerd-deckhouse.service
+After=network-online.target kubelet.service containerd-deckhouse.service
+[Service]
+Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+ExecStartPre=/bin/bash -c 'until /opt/deckhouse/bin/nc -z 127.0.0.1 6445; do sleep 1; done'
+ExecStart=/opt/deckhouse/bin/d8-shutdown-inhibitor{{ if $noCordon }} --no-cordon{{ end }}
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
 
 function inhibitor::install() {
+  inhibitor::install:service
+
   digest_path="${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest"
 
   old_inhibitor_hash=""

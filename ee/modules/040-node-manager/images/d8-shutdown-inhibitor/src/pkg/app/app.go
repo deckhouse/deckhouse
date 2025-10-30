@@ -8,9 +8,8 @@ package app
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"log/slog"
+	"time"
 
 	"d8_shutdown_inhibitor/pkg/app/tasks"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
@@ -148,12 +147,14 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 				kubernetes.WithRunningPhase(),
 			},
 			Klient: a.klient,
+			CordonEnabled:      a.config.CordonEnabled,
 		},
 		&tasks.NodeCordoner{
 			NodeName:           a.config.NodeName,
 			StartCordonCh:      startCordonCh,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 			Klient:             a.klient,
+			CordonEnabled:      a.config.CordonEnabled,
 		},
 		&tasks.NodeConditionSetter{
 			NodeName:           a.config.NodeName,

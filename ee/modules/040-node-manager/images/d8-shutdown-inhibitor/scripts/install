@@ -8,8 +8,3 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
 cp -f d8-shutdown-inhibitor /opt/deckhouse/bin
 
-# Install systemd unit.
-cp -f d8-shutdown-inhibitor.service /lib/systemd/system
-chmod 600 /lib/systemd/system/d8-shutdown-inhibitor.service
-systemctl daemon-reload
-systemctl enable d8-shutdown-inhibitor.service

@@ -9,10 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-type PodMatcher func(pod Pod) bool
+type PodMatcher func(pod corev1.Pod) bool
 
-func WithLabel(label string) func(pod Pod) bool {
-	return func(pod Pod) bool {
+func WithLabel(label string) func(pod corev1.Pod) bool {
+	return func(pod corev1.Pod) bool {
 		if label == "" {
 			return false
 		}
@@ -24,13 +24,13 @@ func WithLabel(label string) func(pod Pod) bool {
 	}
 }
 
-func WithRunningPhase() func(pod Pod) bool {
-	return func(pod Pod) bool {
+func WithRunningPhase() func(pod corev1.Pod) bool {
+	return func(pod corev1.Pod) bool {
 		return pod.Status.Phase == corev1.PodRunning
 	}
 }
 
-func (c *Klient) FilterPods(podList *PodList, matchers ...PodMatcher) []corev1.Pod {
+func (c *Klient) FilterPods(podList *corev1.PodList, matchers ...PodMatcher) []corev1.Pod {
 	if len(matchers) == 0 {
 		out := make([]corev1.Pod, len(podList.Items))
 		for i := range podList.Items {

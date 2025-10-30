@@ -8,14 +8,15 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
-
-	"log/slog"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/system"
+
+	corev1 "k8s.io/api/core/v1"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -31,16 +32,25 @@ type PodObserver struct {
 	StopInhibitorsCh      chan<- struct{}
 	stopOnce              sync.Once
 	Klient                *kubernetes.Klient
+	CordonEnabled         bool
 }
 
 func (p *PodObserver) Name() string {
 	return "podObserver"
 }
 
-const wallMessage = `Pods with shutdown inhibitor label are still running, waiting for them to stop.
+func (p *PodObserver) getWallMessage() string {
+    if p.CordonEnabled {
+        return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
 Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
 use 'kubectl drain' to move Pods to other Nodes.
 `
+    }
+    return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
+Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them.
+Please terminate these pods gracefully before proceeding with node shutdown.
+`
+}
 
 func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	// Stage 1. Wait for shutdown.
@@ -98,7 +108,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			// Reduce wall broadcast messages with longer interval than pods checking interval.
 			now := time.Now()
 			if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
-				err = system.WallMessage(wallMessage)
+				err = system.WallMessage(p.getWallMessage())
 				if err != nil {
 					// Will retry on next iteration, just log the error.
 					dlog.Warn("pod observer: failed to send wall message", slog.String("node", p.NodeName), dlog.Err(err))
@@ -112,7 +122,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	}
 }
 
-func (p *PodObserver) ListMatchedPods(ctx context.Context) ([]kubernetes.Pod, error) {
+func (p *PodObserver) ListMatchedPods(ctx context.Context) ([]corev1.Pod, error) {
 	if len(p.PodMatchers) == 0 {
 		return nil, nil
 	}

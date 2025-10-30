@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -63,7 +64,7 @@ func (c *Klient) Clientset() kubeclient.Interface {
 }
 
 // ListPodsOnNode returns pods scheduled onto the provided node using a field selector.
-func (c *Klient) ListPodsOnNode(ctx context.Context, nodeName string) (*PodList, error) {
+func (c *Klient) ListPodsOnNode(ctx context.Context, nodeName string) (*corev1.PodList, error) {
 	sel := fmt.Sprintf("spec.nodeName=%s", nodeName)
 	pl, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{FieldSelector: sel})
 	if err != nil {
