@@ -49,6 +49,9 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 
 	m.logger.Debug("run package hook", slog.String("hook", hook), slog.String("name", name))
 
+	// Pause NELM monitoring during hook execution to prevent race conditions.
+	// Hooks may modify resources that the monitor is tracking, which could trigger
+	// false-positive alerts or inconsistent state. Resume monitoring after completion.
 	m.nelm.PauseMonitor(name)
 	defer m.nelm.ResumeMonitor(name)
 
@@ -58,13 +61,17 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 		return false, err
 	}
 
-	// Track if values changed during hook execution
+	// Track if values changed during hook execution.
+	// If the checksum differs after hook execution, it indicates that the hook
+	// modified application values (via patches), which may require a Helm upgrade
+	// to reconcile the cluster state with the new values.
 	oldChecksum := app.GetValuesChecksum()
 	if err = app.RunHookByName(ctx, hook, bctx, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return false, err
 	}
 
+	// Return true if values were modified, signaling the need for potential reconciliation
 	return oldChecksum != app.GetValuesChecksum(), nil
 }
 
@@ -109,10 +116,16 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 
 	m.logger.Debug("enable kubernetes hooks", slog.String("name", name))
 
+	// Collect synchronization tasks for Kubernetes hooks.
+	// When enabling a Kubernetes hook, it needs to synchronize its initial state
+	// by fetching existing resources matching its watch criteria. This returns
+	// BindingExecutionInfo for each resource that needs to be processed during sync.
 	res := make(map[string][]hookcontroller.BindingExecutionInfo)
 	for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 		m.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()), slog.String("name", name))
 		hookCtrl := hook.GetHookController()
+		// HandleEnableKubernetesBindings starts watching resources and calls the callback
+		// for each existing resource that matches the watch criteria (initial synchronization).
 		err = hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
 			res[name] = append(res[name], info)
 		})
@@ -125,10 +138,24 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 	return res, nil
 }
 
-// TaskBuilder used to create task from event to process
+// TaskBuilder is a function that converts a hook binding execution into a queue task.
+// It returns:
+//   - string: the queue name to enqueue the task into (allows routing to different queues)
+//   - queue.Task: the task to be executed
+//
+// The builder is provided by the caller (typically the event handler) to customize
+// task creation based on the specific execution context and requirements.
 type TaskBuilder func(ctx context.Context, name, hook string, info hookcontroller.BindingExecutionInfo) (string, queue.Task)
 
-// BuildKubeTasks is called at kube event and creates tasks to process
+// BuildKubeTasks converts a Kubernetes event into executable tasks for all matching hooks.
+//
+// For each application:
+//  1. Find hooks that are bound to Kubernetes events
+//  2. Check if the hook can handle this specific event (filtering)
+//  3. Generate tasks for matching hooks using the provided builder
+//
+// Returns a map of queue names to tasks, allowing different hooks to be routed
+// to different queues (e.g., priority queues, sequential queues).
 func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.KubeEvent, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
@@ -136,11 +163,13 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
 
-			// Handle hooks
+			// Check if this hook's binding criteria match the incoming event
+			// (e.g., resource type, namespace, labels, event type)
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
 				return nil
 			}
 
+			// Process the event and generate tasks via the builder callback
 			hookCtrl.HandleKubeEvent(ctx, kubeEvent, func(info hookcontroller.BindingExecutionInfo) {
 				q, t := builder(ctx, app.GetName(), hook.GetName(), info)
 				res[q] = append(res[q], t)
@@ -151,7 +180,14 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 	return res
 }
 
-// BuildScheduleTasks is called at schedule event and creates tasks to process
+// BuildScheduleTasks converts a schedule (cron) event into executable tasks for all matching hooks.
+//
+// For each application:
+//  1. Find hooks that are bound to schedule events
+//  2. Check if the hook's schedule matches the triggered crontab
+//  3. Generate tasks for matching hooks using the provided builder
+//
+// Returns a map of queue names to tasks, allowing hooks to specify their execution queue.
 func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
@@ -159,11 +195,12 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
 			hookCtrl := hook.GetHookController()
 
-			// Handle hooks
+			// Check if this hook's cron schedule matches the triggered event
 			if !hookCtrl.CanHandleScheduleEvent(crontab) {
 				return nil
 			}
 
+			// Process the schedule event and generate tasks via the builder callback
 			hookCtrl.HandleScheduleEvent(ctx, crontab, func(info hookcontroller.BindingExecutionInfo) {
 				q, t := builder(ctx, app.GetName(), hook.GetName(), info)
 				res[q] = append(res[q], t)
@@ -174,7 +211,11 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 	return res
 }
 
-// KubeObjectPatcher implements dependency container
+// KubeObjectPatcher returns the Kubernetes object patcher for applying patches from hooks.
+//
+// This implements the DependencyContainer interface required by hook execution.
+// Hooks can request object patching operations (create/update/delete K8s resources)
+// during their execution, which are applied through this patcher.
 func (m *Manager) KubeObjectPatcher() *objectpatch.ObjectPatcher {
 	return m.kubeObjectPatcher
 }
