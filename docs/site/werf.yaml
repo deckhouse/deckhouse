@@ -46,7 +46,7 @@ shell:
   - mkdir -p /data
   setup:
   - echo "Getting data from the API server..."
-  - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
+  - curl --fail --retry-delay 5 -H "Referer: {{- env "DOC_API_REFERER" | default "https://deckhouse.io" }}" --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
   - |
     jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
   - |
