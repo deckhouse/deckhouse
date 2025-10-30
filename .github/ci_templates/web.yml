@@ -28,6 +28,7 @@ steps:
 {!{- if eq $docPart "main" }!}
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
+      DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
       WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
@@ -58,6 +59,7 @@ steps:
     env:
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
+      DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
       WERF_ENV: "EE"
       DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
       CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
@@ -279,6 +281,7 @@ steps:
     WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
     DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
     DOC_API_URL: "${{vars.DOC_API_URL}}"
+    DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
     WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
 # </template: deploy_site_template>
 {!{- end -}!}
