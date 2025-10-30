@@ -71,6 +71,33 @@
 
 Обновлены следующие компоненты DKP:
 
+- `Kubernetes Control Plane`: 1.31.13, 1.32.9, 1.33.5
+- `Deckhouse CLI`: 0.20.7
+- `shell-operator`: 1.9.3
+- `OpenTofu`: 1.9.4
+- `CoreDNS`: 1.13.1
+- `cloud-provider-dynamix`:
+  - `cloud-data-discoverer`: 0.7.0
+- `cloud-provider-huaweicloud`:
+  - `cloud-data-discoverer`: 0.7.0
+- `cloud-provider-yandex`:
+  - `yandex-csi-plugin`: 0.15.0
+- `node-manager`:
+  - `nvidia-device-plugin`: 0.17.4
+  - `nvidia-mig-manager`: 0.12.3
+- `admission-policy-engine`:
+  - `gatekeeper`: 3.18.3
+- `registry`:
+  - `docker-auth`: 1.14.0
+- `user-authn`:
+  - `dex`: 2.44.0
+- `prometheus-pushgateway`: 1.11.1
+- `monitoring-kubernetes`:
+  - `ebpf-exporter`: 2.5.1
+  - `kube-state-metrics`: 2.17.0
+  - `node-exporter`: 1.9.1
+- `loki`: 2.9.15
+
 ## Версия 1.72
 
 ### Обратите внимание
