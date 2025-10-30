@@ -23,6 +23,11 @@ def oras(command_list):
     completed_process.check_returncode()
     return completed_process.stdout
 
+republished_images = {
+  "dev/install": "install",
+  "dev/install-standalone": "install-standalone"
+}
+
 images_tags_path = os.getenv("IMAGES_TAGS_PATH")
 
 with open(images_tags_path) as f:
@@ -39,3 +44,7 @@ for k in images.keys():
     to_image = f'{registry_to}:sha256-{sha256}.att'
     print(f'Copying {copied_image}: {from_image} => {to_image}')
     print(oras(['cp', from_image, to_image]))
+    if copied_image in republished_images:
+      to_image = f'{registry_to}/{republished_images[copied_image]}:sha256-{sha256}.att'
+      print(f'Copying {copied_image}: {from_image} => {to_image}')
+      print(oras(['cp', from_image, to_image]))
