@@ -92,7 +92,7 @@ spec:
                     List of networks (subnets) for secondary NICs.
                 subnets:
                   description: |
-                    DEPRICATED. Use 'additionalNetworks' instead.
+                    **DEPRICATED.** Use 'additionalNetworks' instead.
 
                     If set together with 'additionalNetworks', values are merged.
                   x-doc-examples:

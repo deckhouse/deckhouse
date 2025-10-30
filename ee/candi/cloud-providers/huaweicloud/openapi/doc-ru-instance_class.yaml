@@ -40,6 +40,22 @@ spec:
                     Параметр используется для указания типа тома, который будет использоваться для корневого диска.
 
                     **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
+                mainNetwork:
+                  description: |
+                    Основная сеть для основного сетевого интерфейса виртуальной машины.
+
+                    **По умолчанию** используется значение из `HuaweiCloudDiscoveryData`.
+                  type: string
+                  x-doc-required: false
+
+                additionalNetworks:
+                  description: |
+                    Список сетей (subnet'ов) для дополнительных сетевых интерфейсов (NIC).
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+
                 subnets:
                   description: |
                     Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.

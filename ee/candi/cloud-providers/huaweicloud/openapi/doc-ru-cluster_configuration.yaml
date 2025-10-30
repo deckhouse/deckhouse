@@ -126,6 +126,23 @@ apiVersions:
                 Частичное содержимое полей [HuaweiCloudInstanceClass](./cr.html#huaweicloudinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
+
+                mainNetwork:
+                  type: string
+                  x-doc-required: false
+                  description: |
+                    Основная сеть для основного сетевого интерфейса виртуальной машины.
+
+                     **По умолчанию** используется значение из `HuaweiCloudDiscoveryData`.
+
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                  description: |
+                    Список сетей для дополнительных сетевых интерфейсов (NIC)
+
             volumeTypeMap:
               description: |
                 Словарь типов дисков для рабочих узлов группы.
