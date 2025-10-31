@@ -10,6 +10,7 @@ properties:
     - pkiChecksum
     - rolloutEpoch
     - kubeSchedulerExtenders
+    - nodesCount
     properties:
       audit:
         type: object
@@ -37,6 +38,10 @@ properties:
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
           maxLength: 63
+      nodesCount:
+        type: integer
+        minimum: 0
+        x-examples: [3]
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'
