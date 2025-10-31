@@ -54,8 +54,8 @@ const (
 
 type reconciler struct {
 	client client.Client
-	logger *log.Logger
 	dc     dependency.Container
+	logger *log.Logger
 }
 
 func RegisterController(
@@ -65,8 +65,8 @@ func RegisterController(
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
-		logger: logger,
 		dc:     dc,
+		logger: logger,
 	}
 
 	packageRepositoryOperationController, err := controller.New(controllerName, runtimeManager, controller.Options{

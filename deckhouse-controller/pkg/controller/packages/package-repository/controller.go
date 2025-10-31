@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -48,15 +49,18 @@ const (
 
 type reconciler struct {
 	client client.Client
+	dc     dependency.Container
 	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
+	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
+		dc:     dc,
 		logger: logger,
 	}
 
@@ -162,7 +166,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	fullScan := len(operationList.Items) == 0
 
 	// Create a new PackageRepositoryOperation
-	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, time.Now().Unix())
+	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, r.dc.GetClock().Now().Unix())
 
 	logger.With(slog.String("operation", operationName), slog.Bool("full_scan", fullScan))
 

@@ -1,0 +1,25 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: test-repo
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  name: test-repo-scan-1234567890
+  labels:
+    packages.deckhouse.io/repository: test-repo
+spec:
+  packageRepository: test-repo
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Processing

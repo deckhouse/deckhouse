@@ -330,7 +330,7 @@ func NewDeckhouseController(
 	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
 		logger.Info("Package system controllers are enabled")
 
-		err = packagerepository.RegisterController(runtimeManager, logger.Named("package-repository-controller"))
+		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository controller: %w", err)
 		}
