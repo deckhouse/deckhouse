@@ -53,7 +53,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Empty feature gates array", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.31")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{})
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -76,7 +76,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Feature gates for Kubernetes 1.31", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.31")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"APIServerIdentity",
 				"StorageVersionAPI",
@@ -106,7 +106,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Forbidden feature gates for Kubernetes 1.33", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.33")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.0")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"SomeProblematicFeature",
 				"CPUManager",
@@ -133,7 +133,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 	Context("Non-existent feature gates", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.31")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
 			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
 				"NonExistentFeature",
 				"AnotherNonExistentFeature",

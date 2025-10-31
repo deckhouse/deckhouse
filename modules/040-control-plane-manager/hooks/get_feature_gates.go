@@ -39,12 +39,6 @@ type featureGatesResult struct {
 
 func getFeatureGatesHandler(ctx context.Context, input *go_hook.HookInput) error {
 	k8sVersion := input.Values.Get("global.discovery.kubernetesVersion").String()
-	if k8sVersion == "" {
-		input.Logger.Warn("Kubernetes version not found, skipping feature gates validation")
-		return nil
-	}
-
-	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
 	result := featureGatesResult{
 		APIServer:             []string{},
@@ -52,6 +46,14 @@ func getFeatureGatesHandler(ctx context.Context, input *go_hook.HookInput) error
 		KubeScheduler:         []string{},
 		Kubelet:               []string{},
 	}
+
+	if k8sVersion == "" {
+		input.Logger.Warn("Kubernetes version not found, skipping feature gates validation")
+		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
+		return nil
+	}
+
+	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
 	for _, fg := range userFeatureGates {
 		featureName := fg.String()
