@@ -175,8 +175,8 @@ controllerManager:
   extraArgs:
     - name: profiling
       value: "false"
-    - name: terminated-pod-gc-threshold
-      value: {{ if and (hasKey $.controlPlaneManager "internal") (hasKey $.controlPlaneManager.internal "nodesCount") }}{{ if lt $.controlPlaneManager.internal.nodesCount 4 }}"1000"{{ else if lt $.controlPlaneManager.internal.nodesCount 7 }}"3000"{{ else }}"6000"{{ end }}{{ else }}"1007"{{ end }}
+      - name: terminated-pod-gc-threshold
+        value: {{ $nodesCount := default 1007 .global.discovery.nodesCount }}{{ if lt $nodesCount 4 }}"1000"{{ else if lt $nodesCount 7 }}"3000"{{ else }}"6000"{{ end }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
     - name: node-cidr-mask-size
