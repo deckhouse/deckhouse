@@ -122,13 +122,13 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "namespace:name:packageName".
+// GetName returns the full application identifier in format "name:namespace:packageName".
 func (a *Application) GetName() string {
-	return MakeName(a.name, a.namespace, a.definition.Name)
+	return BuildName(a.name, a.namespace, a.definition.Name)
 }
 
-// MakeName returns the full application identifier in format "namespace:name:packageName".
-func MakeName(name, namespace, packageName string) string {
+// BuildName returns the full application identifier in format "name:namespace:packageName".
+func BuildName(name, namespace, packageName string) string {
 	return fmt.Sprintf("%s:%s:%s", name, namespace, packageName)
 }
 
