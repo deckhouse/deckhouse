@@ -39,12 +39,11 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// DependencyContainer provides access to shared infrastructure services.
-type DependencyContainer interface {
-	QueueService() *queue.Service
-	KubeEventManager() kubeeventsmanager.KubeEventsManager
-	ScheduleEventManager() schedulemanager.ScheduleManager
-	PackageManager() *packagemanager.Manager
+type Config struct {
+	KubeEventsManager kubeeventsmanager.KubeEventsManager
+	ScheduleManager   schedulemanager.ScheduleManager
+	PackageManager    *packagemanager.Manager
+	QueueService      *queue.Service
 }
 
 // Handler manages the event processing loop for Kubernetes and schedule events.
@@ -69,12 +68,15 @@ type Handler struct {
 	// wg tracks the event processing goroutine for graceful shutdown
 	wg *sync.WaitGroup
 
-	dc DependencyContainer
+	kubeEventsManager kubeeventsmanager.KubeEventsManager
+	scheduleManager   schedulemanager.ScheduleManager
+	packageManager    *packagemanager.Manager
+	queueService      *queue.Service
 
 	logger *log.Logger
 }
 
-// New creates a new Handler with the given configuration.
+// NewHandler creates a new Handler with the given configuration.
 // The returned Handler is ready to be started with Start().
 //
 // Initializes:
@@ -82,12 +84,15 @@ type Handler struct {
 //   - sync.Once to ensure Start() executes only once
 //
 // Note: The handler's context and cancel function are set when Start() is called first time.
-func New(dc DependencyContainer, logger *log.Logger) *Handler {
+func NewHandler(conf Config, logger *log.Logger) *Handler {
 	return &Handler{
 		wg:   new(sync.WaitGroup),
 		once: sync.Once{},
 
-		dc: dc,
+		queueService:      conf.QueueService,
+		scheduleManager:   conf.ScheduleManager,
+		kubeEventsManager: conf.KubeEventsManager,
+		packageManager:    conf.PackageManager,
 
 		logger: logger.Named("kube-event-handler"),
 	}
@@ -133,12 +138,12 @@ func (h *Handler) Start(ctx context.Context) {
 					h.logger.Info("stop event loop")
 					return
 
-				case crontab := <-h.dc.ScheduleEventManager().Ch():
+				case crontab := <-h.scheduleManager.Ch():
 					// Convert schedule event to tasks using handler's context
 					h.logger.Info("creates schedule tasks", slog.String("crontab", crontab))
 					res = h.scheduleTaskBuilder(h.ctx, crontab)
 
-				case kubeEvent := <-h.dc.KubeEventManager().Ch():
+				case kubeEvent := <-h.kubeEventsManager.Ch():
 					// Convert Kubernetes event to tasks using handler's context
 					h.logger.Info("creates kube events", slog.String("kubeEvent", kubeEvent.String()))
 					res = h.kubeTaskBuilder(h.ctx, kubeEvent)
@@ -149,7 +154,7 @@ func (h *Handler) Start(ctx context.Context) {
 				for queueName, tasks := range res {
 					for _, task := range tasks {
 						h.logger.Info("enqueue task", slog.String("task", task.String()), slog.String("queue", queueName))
-						h.dc.QueueService().Enqueue(h.ctx, queueName, task)
+						h.queueService.Enqueue(h.ctx, queueName, task)
 					}
 				}
 			}
@@ -189,10 +194,10 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 			queueName = name
 		}
 
-		return queueName, hookrun.New(name, hook, info.BindingContext, h.dc, h.logger)
+		return queueName, hookrun.New(name, hook, info.BindingContext, h, h.logger)
 	}
 
-	return h.dc.PackageManager().BuildKubeTasks(ctx, kubeEvent, builder)
+	return h.packageManager.BuildKubeTasks(ctx, kubeEvent, builder)
 }
 
 // scheduleTaskBuilder converts a cron schedule trigger into queue tasks.
@@ -210,8 +215,16 @@ func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[s
 			queueName = name
 		}
 
-		return queueName, hookrun.New(name, hook, info.BindingContext, h.dc, h.logger)
+		return queueName, hookrun.New(name, hook, info.BindingContext, h, h.logger)
 	}
 
-	return h.dc.PackageManager().BuildScheduleTasks(ctx, crontab, builder)
+	return h.packageManager.BuildScheduleTasks(ctx, crontab, builder)
+}
+
+func (h *Handler) QueueService() *queue.Service {
+	return h.queueService
+}
+
+func (h *Handler) PackageManager() *packagemanager.Manager {
+	return h.packageManager
 }
