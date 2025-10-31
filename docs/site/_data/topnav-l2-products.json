@@ -1,68 +1,90 @@
 {
   "en": [
     {
+      "id": 6079,
+      "parent_id": 0,
       "title": "Kubernetes Platform",
       "url": "/products/kubernetes-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6085,
+          "parent_id": 6079,
           "title": "Learn more",
           "url": "/products/kubernetes-platform/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Documentation",
-          "url": "/products/kubernetes-platform/documentation/v1/",
-          "target": "",
-          "rel": "doc"
-        },
-        {
+          "id": 6090,
+          "parent_id": 6079,
           "title": "Getting started",
           "url": "/products/kubernetes-platform/gs/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Guides",
-          "url": "/products/kubernetes-platform/guides/",
+          "id": 6089,
+          "parent_id": 6079,
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/documentation/v1/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "id": 8354,
+          "parent_id": 6079,
+          "title": "Modules",
+          "url": "/modules/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Modules",
-          "url": "/modules/",
+          "id": 6091,
+          "parent_id": 6079,
+          "title": "Guides",
+          "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
         }
       ]
     },
     {
+      "id": 6082,
+      "parent_id": 0,
       "title": "Virtualization Platform",
       "url": "/products/virtualization-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6088,
+          "parent_id": 6082,
           "title": "Learn more",
           "url": "/products/virtualization-platform/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 6092,
+          "parent_id": 6082,
           "title": "Documentation",
           "url": "/products/virtualization-platform/documentation/",
           "target": "",
           "rel": "doc"
         },
         {
+          "id": 6093,
+          "parent_id": 6082,
           "title": "Getting started",
           "url": "/products/virtualization-platform/gs/bm/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 6094,
+          "parent_id": 6082,
           "title": "Going to Production",
           "url": "/products/virtualization-platform/guides/production.html",
           "target": "",
@@ -71,18 +93,24 @@
       ]
     },
     {
+      "id": 6080,
+      "parent_id": 0,
       "title": "Observability Platform",
       "url": "/products/observability-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6086,
+          "parent_id": 6080,
           "title": "Learn more",
           "url": "/products/observability-platform/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 6095,
+          "parent_id": 6080,
           "title": "Documentation",
           "url": "/products/kubernetes-platform/modules/observability-platform/stable/",
           "target": "",
@@ -91,18 +119,24 @@
       ]
     },
     {
+      "id": 6077,
+      "parent_id": 0,
       "title": "Commander",
       "url": "/products/commander/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6083,
+          "parent_id": 6077,
           "title": "Learn more",
           "url": "/products/commander/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 6096,
+          "parent_id": 6077,
           "title": "Documentation",
           "url": "/products/kubernetes-platform/modules/commander/stable/",
           "target": "",
@@ -111,32 +145,50 @@
       ]
     },
     {
+      "id": 6081,
+      "parent_id": 0,
       "title": "Stronghold",
       "url": "/products/stronghold/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6087,
+          "parent_id": 6081,
           "title": "Learn more",
           "url": "/products/stronghold/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 6097,
+          "parent_id": 6081,
           "title": "Documentation",
           "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "id": 6698,
+          "parent_id": 6081,
+          "title": "Getting started",
+          "url": "/products/stronghold/gs/",
+          "target": "",
+          "rel": ""
         }
       ]
     },
     {
+      "id": 6078,
+      "parent_id": 0,
       "title": "Delivery Kit",
       "url": "/products/delivery-kit/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6084,
+          "parent_id": 6078,
           "title": "Learn more",
           "url": "/products/delivery-kit/",
           "target": "",
@@ -145,52 +197,60 @@
       ]
     },
     {
-      "title": "Code",
-      "url": "/products/code/",
+      "id": 6704,
+      "parent_id": 0,
+      "title": "Prom++",
+      "url": "/products/prompp/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6705,
+          "parent_id": 6704,
           "title": "Learn more",
-          "url": "/products/code/",
+          "url": "/products/prompp/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Documentation",
-          "url": "/products/code/documentation/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     }
   ],
   "ru": [
     {
+      "id": 5349,
+      "parent_id": 0,
       "title": "Kubernetes Platform",
       "url": "/products/kubernetes-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5355,
+          "parent_id": 5349,
           "title": "О продукте",
           "url": "/products/kubernetes-platform/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 8398,
+          "parent_id": 5349,
           "title": "Возможности",
           "url": "/products/kubernetes-platform/features/",
           "target": "",
           "rel": "",
           "items": [
             {
+              "id": 8451,
+              "parent_id": 8398,
               "title": "Обзор",
               "url": "/products/kubernetes-platform/features/",
               "target": "",
               "rel": ""
             },
             {
+              "id": 8450,
+              "parent_id": 8398,
               "title": "Наблюдаемость",
               "url": "/products/kubernetes-platform/features/observability/",
               "target": "",
@@ -199,68 +259,98 @@
           ]
         },
         {
+          "id": 5427,
+          "parent_id": 5349,
           "title": "ФСТЭК-редакция",
           "url": "/products/kubernetes-platform/certified-security-edition/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Условия и цены",
-          "url": "/products/kubernetes-platform/pricing/",
+          "id": 8265,
+          "parent_id": 5349,
+          "title": "Лицензирование",
+          "url": "/products/kubernetes-platform/licensing-dkp/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Документация",
-          "url": "/products/kubernetes-platform/documentation/v1/",
-          "target": "",
-          "rel": "doc"
-        },
-        {
+          "id": 5393,
+          "parent_id": 5349,
           "title": "Быстрый старт",
           "url": "/products/kubernetes-platform/gs/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Руководства",
-          "url": "/products/kubernetes-platform/guides/",
+          "id": 5359,
+          "parent_id": 5349,
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/documentation/v1/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "id": 8353,
+          "parent_id": 5349,
+          "title": "Модули",
+          "url": "/modules/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Модули",
-          "url": "/modules/",
+          "id": 5394,
+          "parent_id": 5349,
+          "title": "Руководства",
+          "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
         }
       ]
     },
     {
+      "id": 5352,
+      "parent_id": 0,
       "title": "Virtualization Platform",
       "url": "/products/virtualization-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5358,
+          "parent_id": 5352,
           "title": "О продукте",
           "url": "/products/virtualization-platform/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 8209,
+          "parent_id": 5352,
+          "title": "Возможности и лицензирование",
+          "url": "/products/virtualization-platform/licensing-dvp/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 5360,
+          "parent_id": 5352,
           "title": "Документация",
           "url": "/products/virtualization-platform/documentation/",
           "target": "",
           "rel": "doc"
         },
         {
+          "id": 5883,
+          "parent_id": 5352,
           "title": "Быстрый старт",
           "url": "/products/virtualization-platform/gs/bm/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 5884,
+          "parent_id": 5352,
           "title": "Подготовка к Production",
           "url": "/products/virtualization-platform/guides/production.html",
           "target": "",
@@ -269,18 +359,24 @@
       ]
     },
     {
+      "id": 5350,
+      "parent_id": 0,
       "title": "Observability Platform",
       "url": "/products/observability-platform/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5356,
+          "parent_id": 5350,
           "title": "О продукте",
           "url": "/products/observability-platform/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 5361,
+          "parent_id": 5350,
           "title": "Документация",
           "url": "/products/kubernetes-platform/modules/observability-platform/stable/",
           "target": "",
@@ -289,18 +385,58 @@
       ]
     },
     {
+      "id": 7585,
+      "parent_id": 0,
+      "title": "Observability в кластере",
+      "url": "/products/kubernetes-platform/features/observability/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 7586,
+          "parent_id": 7585,
+          "title": "О продукте",
+          "url": "/products/kubernetes-platform/features/observability/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 7588,
+          "parent_id": 7585,
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/documentation/v1/modules/prometheus/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "id": 5347,
+      "parent_id": 0,
       "title": "Commander",
       "url": "/products/commander/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5353,
+          "parent_id": 5347,
           "title": "О продукте",
           "url": "/products/commander/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 7817,
+          "parent_id": 5347,
+          "title": "Возможности и лицензирование",
+          "url": "/products/commander/pricing/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 5737,
+          "parent_id": 5347,
           "title": "Документация",
           "url": "/products/kubernetes-platform/modules/commander/stable/",
           "target": "",
@@ -309,30 +445,48 @@
       ]
     },
     {
+      "id": 5351,
+      "parent_id": 0,
       "title": "Stronghold",
       "url": "/products/stronghold/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5357,
+          "parent_id": 5351,
           "title": "О продукте",
           "url": "/products/stronghold/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Условия и цены",
-          "url": "/products/stronghold/pricing/",
+          "id": 8409,
+          "parent_id": 5351,
+          "title": "Возможности",
+          "url": "/products/stronghold/features/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 8410,
+          "parent_id": 5351,
+          "title": "Лицензирование",
+          "url": "/products/stronghold/licensing/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 5363,
+          "parent_id": 5351,
           "title": "Документация",
           "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
         },
         {
+          "id": 6699,
+          "parent_id": 5351,
           "title": "Быстрый старт",
           "url": "/products/stronghold/gs/",
           "target": "",
@@ -341,12 +495,16 @@
       ]
     },
     {
+      "id": 5348,
+      "parent_id": 0,
       "title": "Delivery Kit",
       "url": "/products/delivery-kit/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 5354,
+          "parent_id": 5348,
           "title": "О продукте",
           "url": "/products/delivery-kit/",
           "target": "",
@@ -355,18 +513,32 @@
       ]
     },
     {
+      "id": 6452,
+      "parent_id": 0,
       "title": "Code",
       "url": "/products/code/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6453,
+          "parent_id": 6452,
           "title": "О продукте",
           "url": "/products/code/",
           "target": "",
           "rel": ""
         },
         {
+          "id": 8336,
+          "parent_id": 6452,
+          "title": "Быстрый старт",
+          "url": "/products/kubernetes-platform/modules/code/stable/getting-started.html",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 6454,
+          "parent_id": 6452,
           "title": "Документация",
           "url": "/products/code/documentation/",
           "target": "",
@@ -375,14 +547,52 @@
       ]
     },
     {
+      "id": 6482,
+      "parent_id": 0,
       "title": "Prom++",
       "url": "/products/prompp/",
       "target": "",
       "rel": "",
       "items": [
         {
+          "id": 6483,
+          "parent_id": 6482,
           "title": "О продукте",
           "url": "/products/prompp/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 6928,
+          "parent_id": 6482,
+          "title": "Документация",
+          "url": "/products/prompp/documentation/overview/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "id": 8618,
+      "parent_id": 0,
+      "title": "Development Platform",
+      "url": "/products/development-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "id": 8619,
+          "parent_id": 8618,
+          "title": "О продукте",
+          "url": "/products/development-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "id": 8620,
+          "parent_id": 8618,
+          "title": "Документация",
+          "url": "/modules/development-platform/",
           "target": "",
           "rel": ""
         }

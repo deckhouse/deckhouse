@@ -19,3 +19,7 @@ The controllers logic is rewritten to watch this new private resource.
 ## 003-l2lb-annotation-for-pools.patch
 
 Add the ability to use only IPAddressPool with the annotation 'heritage=deckhouse'.
+
+## 004-l2lb-disable-bgp.patch
+
+Prohibit initializing BGP controller.

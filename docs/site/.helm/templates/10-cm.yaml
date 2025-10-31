@@ -16,3 +16,13 @@ metadata:
 data:
   ca.yaml: |
     {{ pluck .Values.werf.env .Values.s3.ca_bundle | first | default .Values.s3.ca_bundle._default | nindent 4 }}
+{{- if ne .Values.web.env "web-production" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-installer-version
+data:
+  installer-versions-nginx.include: |
+    "latest" "v0.4.1";
+{{- end }}
