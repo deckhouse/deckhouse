@@ -529,10 +529,14 @@ shell:
   # copy base images binaries
   - |
     for file in {{ $baseImagesBinaries }}; do
-      if [ -f "$file" ] || [ -L "$file" ]; then
+      if [ -f "$file" ] || [ -L "$file" ] || [ -d "$file" ]; then
         dir="/relocate/$(dirname "$file")"
         mkdir -p "$dir"
-        cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
+        if [ -f "$file" ] || [ -L "$file" ]; then
+          cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
+        elif [ -d "$file" ]; then
+          cp -r "$file" "$dir/"
+        fi
       else
         echo "Error: file or symlink '$file' does not exist!" >&2
         exit 1
