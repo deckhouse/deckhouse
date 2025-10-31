@@ -135,9 +135,9 @@ func GetFeatureGateInfo(version, component, featureName string) FeatureGateInfo 
 		featureList = features.Kubelet
 	case "apiserver":
 		featureList = features.APIServer
-	case "kube-controller-manager":
+	case "kubeControllerManager":
 		featureList = features.KubeControllerManager
-	case "kube-scheduler":
+	case "kubeScheduler":
 		featureList = features.KubeScheduler
 	default:
 		return info
