@@ -511,7 +511,7 @@ shell:
         if [ -f "$file" ] || [ -L "$file" ]; then
           cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
         elif [ -d "$file" ]; then
-          cp -r "$file" "$dir/"
+          cp -r "$file" "/relocate/$file"
         fi
       else
         echo "Error: file or symlink '$file' does not exist!" >&2
