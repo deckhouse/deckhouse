@@ -175,7 +175,7 @@ func (o *Operator) buildObjectPatcher() error {
 	client.WithTimeout(shapp.ObjectPatcherKubeClientTimeout)
 
 	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize object patcher client: %s\n", err)
+		return fmt.Errorf("initialize object patcher client: %w\n", err)
 	}
 
 	o.objectPatcher = objectpatch.NewObjectPatcher(client, o.logger.Named("object-patcher"))
@@ -198,7 +198,7 @@ func (o *Operator) buildKubeEventsManager(ctx context.Context) error {
 	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
 
 	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize kube events manager client: %s\n", err)
+		return fmt.Errorf("initialize kube events manager client: %w\n", err)
 	}
 
 	o.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(ctx, client, o.logger.Named("kube-events-manager"))
@@ -228,7 +228,7 @@ func (o *Operator) buildNelmService(ctx context.Context) error {
 	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
 
 	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize nelm service client: %s\n", err)
+		return fmt.Errorf("initialize nelm service client: %w\n", err)
 	}
 
 	// Create controller-runtime cache for efficient resource queries during monitoring
