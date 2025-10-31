@@ -216,7 +216,7 @@ jobs:
     needs:
       - git_info
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse-test-1' }}
     runs-on: [self-hosted, regular]
     steps:
       - uses: {!{ index (ds "actions") "actions/setup-python" }!}
