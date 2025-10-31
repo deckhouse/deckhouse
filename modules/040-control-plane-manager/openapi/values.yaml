@@ -85,7 +85,7 @@ properties:
         type: object
         default: {}
         properties:
-          apiServer:
+          apiserver:
             type: array
             items:
               type: string

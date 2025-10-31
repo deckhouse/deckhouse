@@ -11,10 +11,10 @@ versions = {
             "APIServerIdentity",
             "StorageVersionAPI",
         ],
-        "kube-controller-manager": [
+        "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
         ],
-        "kube-scheduler": [
+        "kubeScheduler": [
             "SchedulerQueueingHints",
         ],
     },
@@ -27,10 +27,10 @@ versions = {
             "APIServerIdentity",
             "StorageVersionAPI",
         ],
-        "kube-controller-manager": [
+        "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
         ],
-        "kube-scheduler": [
+        "kubeScheduler": [
             "SchedulerQueueingHints",
         ],
     },
@@ -43,10 +43,10 @@ versions = {
             "APIServerIdentity",
             "StorageVersionAPI",
         ],
-        "kube-controller-manager": [
+        "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
         ],
-        "kube-scheduler": [
+        "kubeScheduler": [
             "SchedulerQueueingHints",
         ],
     },
@@ -59,10 +59,10 @@ versions = {
             "APIServerIdentity",
             "StorageVersionAPI",
         ],
-        "kube-controller-manager": [
+        "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
         ],
-        "kube-scheduler": [
+        "kubeScheduler": [
             "SchedulerQueueingHints",
         ],
     },
@@ -81,10 +81,10 @@ versions = {
             "APIServerIdentity",
             "StorageVersionAPI",
         ],
-        "kube-controller-manager": [
+        "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
         ],
-        "kube-scheduler": [
+        "kubeScheduler": [
             "SchedulerQueueingHints",
         ],
     },
@@ -122,7 +122,7 @@ def get_feature_gate_info(version: str, component: str, feature_name: str) -> Fe
     if "forbidden" in features and feature_name in features["forbidden"]:
         info.is_forbidden = True
     
-    if component not in ["kubelet", "apiserver", "kube-controller-manager", "kube-scheduler"]:
+    if component not in ["kubelet", "apiserver", "kubeControllerManager", "kubeScheduler"]:
         return info
     
     if component in features and feature_name in features[component]:

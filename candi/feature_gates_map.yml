@@ -7,9 +7,9 @@
   apiserver:
     - APIServerIdentity
     - StorageVersionAPI
-  kube-controller-manager:
+  kubeControllerManager:
     - CronJobsScheduledAnnotation
-  kube-scheduler:
+  kubeScheduler:
     - SchedulerQueueingHints
 "1.30":
   deprecated: []
@@ -20,9 +20,9 @@
   apiserver:
     - APIServerIdentity
     - StorageVersionAPI
-  kube-controller-manager:
+  kubeControllerManager:
     - CronJobsScheduledAnnotation
-  kube-scheduler:
+  kubeScheduler:
     - SchedulerQueueingHints
 "1.31":
   deprecated: []
@@ -33,9 +33,9 @@
   apiserver:
     - APIServerIdentity
     - StorageVersionAPI
-  kube-controller-manager:
+  kubeControllerManager:
     - CronJobsScheduledAnnotation
-  kube-scheduler:
+  kubeScheduler:
     - SchedulerQueueingHints
 "1.32":
   deprecated: []
@@ -46,9 +46,9 @@
   apiserver:
     - APIServerIdentity
     - StorageVersionAPI
-  kube-controller-manager:
+  kubeControllerManager:
     - CronJobsScheduledAnnotation
-  kube-scheduler:
+  kubeScheduler:
     - SchedulerQueueingHints
 "1.33":
   deprecated:
@@ -61,8 +61,8 @@
   apiserver:
     - APIServerIdentity
     - StorageVersionAPI
-  kube-controller-manager:
+  kubeControllerManager:
     - CronJobsScheduledAnnotation
-  kube-scheduler:
+  kubeScheduler:
     - SchedulerQueueingHints
 
