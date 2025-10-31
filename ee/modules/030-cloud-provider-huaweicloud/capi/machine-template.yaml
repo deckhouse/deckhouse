@@ -38,7 +38,6 @@ spec:
         {{- $nets = concat $nets $ic.additionalNetworks -}}
       {{- end -}}
 
-      {{- /* Legacy subnets — только как дополнительные */ -}}
       {{- if $ic.subnets -}}
         {{- $nets = concat $nets $ic.subnets -}}
       {{- end -}}
