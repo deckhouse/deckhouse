@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -53,6 +54,12 @@ func getFeatureGatesHandler(ctx context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
+	normalizedVersion := k8sVersion
+	parts := strings.Split(k8sVersion, ".")
+	if len(parts) >= 2 {
+		normalizedVersion = parts[0] + "." + parts[1]
+	}
+
 	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
 	for _, fg := range userFeatureGates {
@@ -63,7 +70,7 @@ func getFeatureGatesHandler(ctx context.Context, input *go_hook.HookInput) error
 
 		components := []string{"apiserver", "kube-controller-manager", "kube-scheduler", "kubelet"}
 		for _, component := range components {
-			info := feature_gates.GetFeatureGateInfo(k8sVersion, component, featureName)
+			info := feature_gates.GetFeatureGateInfo(normalizedVersion, component, featureName)
 
 			if info.IsForbidden {
 				continue
