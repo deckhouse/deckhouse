@@ -18,8 +18,8 @@ type ComponentFeatures struct {
 	Forbidden             []string `yaml:"forbidden"`
 	Kubelet               []string `yaml:"kubelet"`
 	APIServer             []string `yaml:"apiserver"`
-	KubeControllerManager []string `yaml:"kube-controller-manager"`
-	KubeScheduler         []string `yaml:"kube-scheduler"`
+	KubeControllerManager []string `yaml:"kubeControllerManager"`
+	KubeScheduler         []string `yaml:"kubeScheduler"`
 }
 
 type FeatureGatesConfig map[string]ComponentFeatures
@@ -65,14 +65,14 @@ versions = {
         ],
 {{- end }}
 {{- if $features.KubeControllerManager }}
-        "kube-controller-manager": [
+        "kubeControllerManager": [
 {{- range $features.KubeControllerManager }}
             "{{ . }}",
 {{- end }}
         ],
 {{- end }}
 {{- if $features.KubeScheduler }}
-        "kube-scheduler": [
+        "kubeScheduler": [
 {{- range $features.KubeScheduler }}
             "{{ . }}",
 {{- end }}
@@ -116,7 +116,7 @@ def get_feature_gate_info(version: str, component: str, feature_name: str) -> Fe
     if "forbidden" in features and feature_name in features["forbidden"]:
         info.is_forbidden = True
     
-    if component not in ["kubelet", "apiserver", "kube-controller-manager", "kube-scheduler"]:
+    if component not in ["kubelet", "apiserver", "kubeControllerManager", "kubeScheduler"]:
         return info
     
     if component in features and feature_name in features[component]:
@@ -222,9 +222,9 @@ func GetFeatureGateInfo(version, component, featureName string) FeatureGateInfo 
 		featureList = features.Kubelet
 	case "apiserver":
 		featureList = features.APIServer
-	case "kube-controller-manager":
+	case "kubeControllerManager":
 		featureList = features.KubeControllerManager
-	case "kube-scheduler":
+	case "kubeScheduler":
 		featureList = features.KubeScheduler
 	default:
 		return info

@@ -66,7 +66,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		components := []string{"apiserver", "kube-controller-manager", "kube-scheduler", "kubelet"}
+		components := []string{"apiserver", "kubeControllerManager", "kubeScheduler", "kubelet"}
 		for _, component := range components {
 			info := GetFeatureGateInfo(normalizedVersion, component, featureName)
 
@@ -78,9 +78,9 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 				switch component {
 				case "apiserver":
 					result.APIServer = append(result.APIServer, featureName)
-				case "kube-controller-manager":
+				case "kubeControllerManager":
 					result.KubeControllerManager = append(result.KubeControllerManager, featureName)
-				case "kube-scheduler":
+				case "kubeScheduler":
 					result.KubeScheduler = append(result.KubeScheduler, featureName)
 				case "kubelet":
 					result.Kubelet = append(result.Kubelet, featureName)
