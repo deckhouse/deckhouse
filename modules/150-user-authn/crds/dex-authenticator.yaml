@@ -190,9 +190,11 @@ spec:
                 resources:
                   type: object
                   description: |-
-                    Defines CPU/Memory requests and limits for the `dex-authenticator` container.
+                    Defines CPU/Memory requests and limits for containers.
 
-                    If specified, these values will be applied to the container and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+                    If specified, these values will be applied to the containers and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+
+                    Resources can be specified directly (for `dex-authenticator` container) or in nested objects for both containers.
                   properties:
                     limits:
                       type: object
@@ -202,7 +204,7 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Limits describes the maximum amount of compute resources allowed.'
+                      description: 'Limits describes the maximum amount of compute resources allowed for `dex-authenticator` container (backward compatibility).'
                     requests:
                       type: object
                       additionalProperties:
@@ -211,7 +213,30 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Requests describes the minimum amount of compute resources required.'
+                      description: 'Requests describes the minimum amount of compute resources required for `dex-authenticator` container (backward compatibility).'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources for the `redis` container.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute resources allowed for `redis` container.'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute resources required for `redis` container.'
                 additionalApplications:
                   type: array
                   description: |
@@ -401,9 +426,11 @@ spec:
                 resources:
                   type: object
                   description: |-
-                    Defines CPU/Memory requests and limits for the `dex-authenticator` container.
+                    Defines CPU/Memory requests and limits for containers.
 
-                    If specified, these values will be applied to the container and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+                    If specified, these values will be applied to the containers and the Vertical Pod Autoscaler will be disabled for this `DexAuthenticator` instance. If not specified, behavior remains unchanged and VPA (if enabled) will control resources.
+
+                    Resources can be specified directly (for `dex-authenticator` container) or in nested objects for both containers.
                   properties:
                     limits:
                       type: object
@@ -413,7 +440,7 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Limits describes the maximum amount of compute resources allowed.'
+                      description: 'Limits describes the maximum amount of compute resources allowed for `dex-authenticator` container (backward compatibility).'
                     requests:
                       type: object
                       additionalProperties:
@@ -422,7 +449,30 @@ spec:
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
-                      description: 'Requests describes the minimum amount of compute resources required.'
+                      description: 'Requests describes the minimum amount of compute resources required for `dex-authenticator` container (backward compatibility).'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources for the `redis` container.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute resources allowed for `redis` container.'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute resources required for `redis` container.'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

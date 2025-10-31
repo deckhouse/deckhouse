@@ -255,7 +255,26 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "redis_resources" . | nindent 12 }}
-  {{- end }}
+          {{- if $crd.spec.resources }}
+            {{- with $crd.spec.resources.redis }}
+              {{- with .requests }}
+            {{ toYaml . | nindent 12 }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- if not $crd.spec.resources }}
+              {{- include "redis_resources" . | nindent 12 }}
+            {{- else if not $crd.spec.resources.redis }}
+              {{- include "redis_resources" . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- with $crd.spec.resources }}
+            {{- with .redis }}
+              {{- with .limits }}
+          limits:
+            {{ toYaml . | nindent 12 }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
 {{- end }}
