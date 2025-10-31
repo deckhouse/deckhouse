@@ -176,7 +176,7 @@ controllerManager:
     - name: profiling
       value: "false"
     - name: terminated-pod-gc-threshold
-      value: "12500"
+      value: {{ if lt $.controlPlaneManager.internal.nodesCount 100 }}"1000"{{ else if lt $.controlPlaneManager.internal.nodesCount 300 }}"3000"{{ else }}"6000"{{ end }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
     - name: node-cidr-mask-size
