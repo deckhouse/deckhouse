@@ -16,7 +16,7 @@
 - Логин — `admin@deckhouse.io`
 - Пароль — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `resource.yml`)
 
-Используйте их для доступа к веб-интерфейсу компонентов.
+Откройте в браузере `https://stronghold.example.com` и авторизуйтесь через Dex, используя указанные логин и пароль.
 </div>
 
 {% include getting_started/stronghold/global/partials/FINISH_CARDS_RU.md %}
