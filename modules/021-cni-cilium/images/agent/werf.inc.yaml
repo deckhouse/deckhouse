@@ -48,7 +48,7 @@
 # from libcap-v1.2.69
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libcap.a /usr/lib64/libcap.so /usr/lib64/libcap.so.2 /usr/lib64/libcap.so.2.69" }}
 # from zstd-v1.5.7
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libzstd.a /usr/lib64/libzstd.so /usr/lib64/libzstd.so.1 /usr/lib64/libzstd.so.1.5.6" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libzstd.a /usr/lib64/libzstd.so /usr/lib64/libzstd.so.1 /usr/lib64/libzstd.so.1.5.7" }}
 # from libxml2-v2.13.8
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libxml2.a /usr/lib64/libxml2.la /usr/lib64/libxml2.so /usr/lib64/libxml2.so.2 /usr/lib64/libxml2.so.2.13.4 /usr/lib64/libxml2.so.2.13.8" }}
 # from libffi-v3.4.8
@@ -354,7 +354,7 @@ import:
   - libzstd.a
   - libzstd.so
   - libzstd.so.1
-  - libzstd.so.1.5.6
+  - libzstd.so.1.5.7
 - image: libs/libxml2-v2.13.8
   add: /usr/lib
   to: /usr/lib64
