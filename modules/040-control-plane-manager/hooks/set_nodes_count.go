@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -33,10 +34,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "all_nodes",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			FilterFunc: applyNodeFilter,
+			Name:                         "all_nodes",
+			ApiVersion:                   "v1",
+			Kind:                         "Node",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			WaitForSynchronization:       ptr.To(true),
+			FilterFunc:                   applyNodeFilter,
 		},
 	},
 }, handleSetNodesCount)
