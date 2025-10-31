@@ -533,6 +533,9 @@ shell:
         dir="/relocate/$(dirname "$file")"
         mkdir -p "$dir"
         cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
+      else
+        echo "Error: file or symlink '$file' does not exist!" >&2
+        exit 1
       fi
     done
   # additional relocate llvm libs
