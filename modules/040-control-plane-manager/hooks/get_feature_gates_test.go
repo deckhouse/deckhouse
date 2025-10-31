@@ -43,7 +43,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 		It("internal.enabledFeatureGates must have empty arrays for all components", func() {
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiServer": [],
+				"apiserver": [],
 				"kubelet": [],
 				"kubeControllerManager": [],
 				"kubeScheduler": []
@@ -66,7 +66,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		It("internal.enabledFeatureGates must have empty arrays for all components", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiServer": [],
+				"apiserver": [],
 				"kubelet": [],
 				"kubeControllerManager": [],
 				"kubeScheduler": []
@@ -96,7 +96,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		It("Feature gates must be distributed correctly by components", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiServer": ["APIServerIdentity", "StorageVersionAPI"],
+				"apiserver": ["APIServerIdentity", "StorageVersionAPI"],
 				"kubelet": ["CPUManager", "MemoryManager"],
 				"kubeControllerManager": ["CronJobsScheduledAnnotation"],
 				"kubeScheduler": ["SchedulerQueueingHints"]
@@ -123,7 +123,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		It("Forbidden feature gates must be ignored", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiServer": ["APIServerIdentity"],
+				"apiserver": ["APIServerIdentity"],
 				"kubelet": ["CPUManager"],
 				"kubeControllerManager": [],
 				"kubeScheduler": []
@@ -150,7 +150,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		It("Non-existent feature gates must be ignored", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiServer": ["APIServerIdentity"],
+				"apiserver": ["APIServerIdentity"],
 				"kubelet": [],
 				"kubeControllerManager": [],
 				"kubeScheduler": []
