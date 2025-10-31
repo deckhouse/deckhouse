@@ -50,7 +50,7 @@
 # from zstd-v1.5.7
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libzstd.a /usr/lib64/libzstd.so /usr/lib64/libzstd.so.1 /usr/lib64/libzstd.so.1.5.7" }}
 # from libxml2-v2.13.8
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libxml2.a /usr/lib64/libxml2.la /usr/lib64/libxml2.so /usr/lib64/libxml2.so.2 /usr/lib64/libxml2.so.2.13.4 /usr/lib64/libxml2.so.2.13.8" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libxml2.a /usr/lib64/libxml2.la /usr/lib64/libxml2.so /usr/lib64/libxml2.so.2 /usr/lib64/libxml2.so.2.13.*" }}
 # from libffi-v3.4.8
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libffi.a /usr/lib64/libffi.la /usr/lib64/libffi.so /usr/lib64/libffi.so.8 /usr/lib64/libffi.so.8.1.4" }}
 # from xz-v5.8.1
@@ -364,8 +364,7 @@ import:
   - libxml2.la
   - libxml2.so
   - libxml2.so.2
-  - libxml2.so.2.13.4
-  - libxml2.so.2.13.8
+  - libxml2.so.2.13.*
 - image: libs/libffi-v3.4.8
   add: /usr/lib
   to: /usr/lib64
@@ -503,6 +502,23 @@ shell:
   - mkdir -p /relocate/usr/lib/locale
   - cp -a /usr/lib/locale/C.utf8 /relocate/usr/lib/locale
   setup:
+  # copy base images binaries
+  - |
+    for file in {{ $baseImagesBinaries }}; do
+      if [ -f "$file" ] || [ -L "$file" ]; then
+        dir="/relocate/$(dirname "$file")"
+        mkdir -p "$dir"
+        cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
+      else
+        echo "Error: file or symlink '$file' does not exist!" >&2
+        exit 1
+      fi
+      fi
+    done
+  # additional relocate llvm libs
+  - rm -rf /usr/lib64/libLLVM.so.19.1 && ln -snf /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1 /usr/lib64/libLLVM.so.19.1
+  - cp --parents /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1 /relocate/
+  - cp -P /usr/lib64/libLLVM.so.19.1 /relocate/usr/lib64/libLLVM.so.19.1
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
   - if [ -d "/relocate/sbin" ]; then cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin; fi
@@ -525,23 +541,6 @@ shell:
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
   - ln -f -s /run/lock "/relocate/var/lock"
-  #
-  # copy base images binaries
-  - |
-    for file in {{ $baseImagesBinaries }}; do
-      if [ -f "$file" ] || [ -L "$file" ]; then
-        dir="/relocate/$(dirname "$file")"
-        mkdir -p "$dir"
-        cp -P "$file" "$dir/"  # -P preserves symlinks as symlinks
-      else
-        echo "Error: file or symlink '$file' does not exist!" >&2
-        exit 1
-      fi
-    done
-  # additional relocate llvm libs
-  - rm -rf /usr/lib64/libLLVM.so.19.1 && ln -snf /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1 /usr/lib64/libLLVM.so.19.1
-  - cp --parents /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1 /relocate/
-  - cp -P /usr/lib64/libLLVM.so.19.1 /relocate/usr/lib64/libLLVM.so.19.1
   #
   - mkdir -p /relocate/home/cilium
   - mkdir -p /relocate/etc
