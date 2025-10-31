@@ -234,7 +234,7 @@ func (o *Operator) buildNelmService(ctx context.Context) error {
 	// Create controller-runtime cache for efficient resource queries during monitoring
 	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
 	if err != nil {
-		return fmt.Errorf("create runtime cache: %v", err)
+		return fmt.Errorf("create runtime cache: %w", err)
 	}
 
 	// Start cache informers in background
