@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -238,34 +239,41 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 		return r.markAsFailed(ctx, operation, fmt.Sprintf("Failed to create registry client: %v", err))
 	}
 
-	// List packages (tags at the packages level)
-	tags, err := registryClient.ListTags(ctx)
+	// List packages (packages at the packages level)
+	packages, err := registryClient.ListTags(ctx)
 	if err != nil {
 		r.logger.Error("failed to list packages", log.Err(err))
 		return r.markAsFailed(ctx, operation, fmt.Sprintf("Failed to list packages: %v", err))
 	}
 
-	r.logger.Info("discovered packages", slog.Int("count", len(tags)))
+	r.logger.Info("discovered packages", slog.Int("count", len(packages)))
+
+	originalRepo := repo.DeepCopy()
+	originalOperation := operation.DeepCopy()
 
 	// Build list of packages with their types
-	var discoveredPackages []v1alpha1.PackageRepositoryOperationStatusPackageQueue
-	for _, tag := range tags {
+	operationStatusPackages := make([]v1alpha1.PackageRepositoryOperationStatusPackageQueue, 0, len(packages))
+	repoStatusPackages := make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
+	discoveredPackagesMap := make(map[string]struct{}, len(packages))
+
+	for _, pkg := range packages {
 		// Get package type from Docker image label by inspecting manifest
-		packageType, err := r.determinePackageType(ctx, repo.Spec.Registry.Repo, tag, opts)
+		packageType, err := r.determinePackageType(ctx, repo.Spec.Registry.Repo, pkg, opts)
 		if err != nil {
-			r.logger.Warn(
-				"failed to determine package type, skipping",
-				slog.String("package", tag),
-				log.Err(err),
-			)
+			r.logger.Warn("failed to determine package type, skipping", slog.String("package", pkg), log.Err(err))
 
 			continue
 		}
 
-		discoveredPackages = append(discoveredPackages, v1alpha1.PackageRepositoryOperationStatusPackageQueue{
-			Name: tag,
+		queueItem := v1alpha1.PackageRepositoryOperationStatusPackageQueue{
+			Name: pkg,
 			Type: packageType,
-		})
+		}
+
+		operationStatusPackages = append(operationStatusPackages, queueItem)
+		repoStatusPackages = append(repoStatusPackages, v1alpha1.PackageRepositoryStatusPackage(queueItem))
+
+		discoveredPackagesMap[pkg] = struct{}{}
 	}
 
 	// Compare with existing packages in PackageRepository status
@@ -274,26 +282,21 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 		existingPackages[pkg.Name] = true
 	}
 
-	for _, pkg := range discoveredPackages {
+	for _, pkg := range operationStatusPackages {
 		if !existingPackages[pkg.Name] {
 			r.logger.Info("new package discovered", slog.String("package", pkg.Name), slog.String("type", pkg.Type))
 		}
 	}
 
 	for _, pkg := range repo.Status.Packages {
-		if !r.isPackageInList(pkg.Name, discoveredPackages) {
+		_, ok := discoveredPackagesMap[pkg.Name]
+		if !ok {
 			r.logger.Warn("package removed from registry", slog.String("package", pkg.Name))
 		}
 	}
 
-	// Update PackageRepository status with discovered packages
-	originalRepo := repo.DeepCopy()
-	var statusPackages []v1alpha1.PackageRepositoryStatusPackage
-	for _, pkg := range discoveredPackages {
-		statusPackages = append(statusPackages, v1alpha1.PackageRepositoryStatusPackage(pkg))
-	}
-	repo.Status.Packages = statusPackages
-	repo.Status.PackagesCount = len(statusPackages)
+	repo.Status.Packages = repoStatusPackages
+	repo.Status.PackagesCount = len(repoStatusPackages)
 	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
 	repo.Status.SyncTime = metav1.Now()
 
@@ -302,15 +305,14 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	}
 
 	// Update operation status with packages to process
-	originalOperation := operation.DeepCopy()
-	operation.Status.PackagesToProcess = discoveredPackages
+	operation.Status.PackagesToProcess = operationStatusPackages
 	if operation.Status.Packages == nil {
 		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
 	}
-	operation.Status.Packages.Discovered = len(discoveredPackages)
-	operation.Status.Packages.Total = len(discoveredPackages)
+	operation.Status.Packages.Discovered = len(operationStatusPackages)
+	operation.Status.Packages.Total = len(operationStatusPackages)
 	operation.Status.Packages.Processed = 0
-	operation.Status.Message = fmt.Sprintf("Discovered %d packages, starting processing", len(discoveredPackages))
+	operation.Status.Message = fmt.Sprintf("Discovered %d packages, starting processing", len(operationStatusPackages))
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(originalOperation)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -560,6 +562,8 @@ func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resour
 }
 
 func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, packageName string, opts []cr.Option) (string, error) {
+	logger := r.logger.With(slog.String("package", packageName))
+
 	// Create registry client for the package marker image
 	registryClient, err := r.dc.GetRegistryClient(registryRepo, opts...)
 	if err != nil {
@@ -570,18 +574,16 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 	image, err := registryClient.Image(ctx, packageName)
 	if err != nil {
 		// If we can't read the image, default to Application
-		r.logger.Warn("failed to get image, defaulting to Application",
-			slog.String("package", packageName),
-			log.Err(err))
+		logger.Warn("failed to get image, defaulting to Application", log.Err(err))
+
 		return packageTypeApplication, nil
 	}
 
 	// Get image config to extract labels
 	configFile, err := image.ConfigFile()
 	if err != nil {
-		r.logger.Warn("failed to get config file, defaulting to Application",
-			slog.String("package", packageName),
-			log.Err(err))
+		r.logger.Warn("failed to get config file, defaulting to Application", log.Err(err))
+
 		return packageTypeApplication, nil
 	}
 
@@ -593,8 +595,8 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 	}
 
 	// Default to Application if label not found
-	r.logger.Debug("package type label not found, defaulting to Application",
-		slog.String("package", packageName))
+	r.logger.Debug("package type label not found, defaulting to Application")
+
 	return packageTypeApplication, nil
 }
 
@@ -669,16 +671,6 @@ func (r *reconciler) listTagsFromVersion(ctx context.Context, registryClient cr.
 	}
 
 	return newTags, nil
-}
-
-func (r *reconciler) isPackageInList(packageName string, packages []v1alpha1.PackageRepositoryOperationStatusPackageQueue) bool {
-	for _, pkg := range packages {
-		if pkg.Name == packageName {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *reconciler) performFullScan(ctx context.Context, registryClient cr.Client, packageName string) ([]string, error) {
@@ -855,4 +847,62 @@ func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepo
 	}
 
 	return nil
+}
+
+func (r *reconciler) SetConditionTrue(operation *v1alpha1.PackageRepositoryOperation, condType string) *v1alpha1.PackageRepositoryOperation {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range operation.Status.Conditions {
+		if cond.Type == condType {
+			operation.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionTrue {
+				operation.Status.Conditions[idx].LastTransitionTime = time
+				operation.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+
+			operation.Status.Conditions[idx].Reason = ""
+			operation.Status.Conditions[idx].Message = ""
+
+			return operation
+		}
+	}
+
+	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return operation
+}
+
+func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOperation, condType string, reason string, message string) *v1alpha1.PackageRepositoryOperation {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range operation.Status.Conditions {
+		if cond.Type == condType {
+			operation.Status.Conditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionFalse {
+				operation.Status.Conditions[idx].LastTransitionTime = time
+				operation.Status.Conditions[idx].Status = corev1.ConditionFalse
+			}
+
+			operation.Status.Conditions[idx].Reason = reason
+			operation.Status.Conditions[idx].Message = message
+
+			return operation
+		}
+	}
+
+	operation.Status.Conditions = append(operation.Status.Conditions, v1alpha1.PackageRepositoryOperationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return operation
 }

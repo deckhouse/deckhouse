@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -88,6 +89,7 @@ type PackageRepositoryOperationStatus struct {
 	CompletionTime    *metav1.Time                                   `json:"completionTime,omitempty"`
 	Packages          *PackageRepositoryOperationStatusPackages      `json:"packages,omitempty"`
 	PackagesToProcess []PackageRepositoryOperationStatusPackageQueue `json:"packagesToProcess,omitempty"`
+	Conditions        []PackageRepositoryOperationStatusCondition    `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
@@ -99,6 +101,15 @@ type PackageRepositoryOperationStatusPackages struct {
 type PackageRepositoryOperationStatusPackageQueue struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
+}
+
+type PackageRepositoryOperationStatusCondition struct {
+	Type               string                 `json:"type"`
+	Status             corev1.ConditionStatus `json:"status"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
+	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
+	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
