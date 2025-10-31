@@ -1797,7 +1797,7 @@ func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool 
 	module := new(v1alpha1.Module)
 	err := r.client.Get(ctx, types.NamespacedName{Name: moduleName}, module)
 	if err != nil {
-		r.log.Warn("cannot find module", slog.String("module-name", moduleName), log.Err(err))
+		r.log.Warn("cannot find module", slog.String("module_name", moduleName), log.Err(err))
 
 		return false
 	}

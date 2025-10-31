@@ -140,7 +140,7 @@ func (h *Handler) Start(ctx context.Context) {
 
 				case kubeEvent := <-h.dc.KubeEventManager().Ch():
 					// Convert Kubernetes event to tasks using handler's context
-					h.logger.Info("creates kube events", slog.String("kubeEvent", kubeEvent.String()))
+					h.logger.Info("creates kube events", slog.String("kube_event", kubeEvent.String()))
 					res = h.kubeTaskBuilder(h.ctx, kubeEvent)
 				}
 

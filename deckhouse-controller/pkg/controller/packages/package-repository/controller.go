@@ -26,10 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
@@ -39,7 +39,6 @@ const (
 
 	// requeueInterval is the interval at which the controller will requeue the PackageRepository
 	// after successful reconciliation to trigger periodic scanning
-	// TODO: switch to 6h before merging
 	requeueInterval = 6 * time.Hour
 
 	// operationLabelRepository is the label used to identify PackageRepositoryOperations
@@ -76,30 +75,54 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Debug("reconciling PackageRepository", slog.String("name", req.Name))
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", req.Name))
+
+	logger.Debug("reconciling PackageRepository")
 
 	packageRepository := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, req.NamespacedName, packageRepository); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("package repository not found", slog.String("name", req.Name))
-			return ctrl.Result{}, nil
+			logger.Warn("package repository not found")
+
+			return res, nil
 		}
-		r.logger.Error("failed to get package repository", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+
+		logger.Warn("failed to get package repository", log.Err(err))
+
+		return res, err
 	}
 
 	// handle delete event
 	if !packageRepository.DeletionTimestamp.IsZero() {
-		r.logger.Debug("deleting package repository", slog.String("name", req.Name))
-		return r.delete(ctx, packageRepository)
+		logger.Debug("deleting package repository")
+
+		err := r.delete(ctx, packageRepository)
+		if err != nil {
+			logger.Warn("failed to delete package repository", log.Err(err))
+
+			return res, err
+		}
+
+		return res, nil
 	}
 
 	// handle create/update events
-	return r.handle(ctx, packageRepository)
+	res, err := r.handle(ctx, packageRepository)
+	if err != nil {
+		logger.Warn("failed to handle package repository", log.Err(err))
+
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	r.logger.Debug("handling PackageRepository", slog.String("name", packageRepository.Name))
+	logger := r.logger.With(slog.String("name", packageRepository.Name))
+
+	logger.Debug("handling PackageRepository")
 
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
@@ -107,10 +130,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		operationLabelRepository: packageRepository.Name,
 	})
 	if err != nil {
-		r.logger.Error("failed to list package repository operations",
-			slog.String("name", packageRepository.Name),
-			log.Err(err))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
 	// Check if there is an active operation (Pending or Processing)
@@ -120,17 +140,19 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhasePending ||
 			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhaseProcessing {
 			hasActiveOperation = true
-			r.logger.Debug("active operation exists, skipping creation",
+
+			logger.Debug("active operation exists, skipping creation",
 				slog.String("operation", op.Name),
 				slog.String("phase", op.Status.Phase))
+
 			break
 		}
 	}
 
 	// Only create a new operation if there is no active operation
 	if hasActiveOperation {
-		r.logger.Debug("skipping operation creation, active operation in progress",
-			slog.String("repository", packageRepository.Name))
+		logger.Debug("skipping operation creation, active operation in progress")
+
 		// Requeue to check again later
 		return ctrl.Result{RequeueAfter: requeueInterval}, nil
 	}
@@ -141,6 +163,9 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	// Create a new PackageRepositoryOperation
 	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, time.Now().Unix())
+
+	logger.With(slog.String("operation", operationName), slog.Bool("full_scan", fullScan))
+
 	operation := &v1alpha1.PackageRepositoryOperation{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.PackageRepositoryOperationGVK.GroupVersion().String(),
@@ -175,28 +200,24 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	if err != nil {
 		// If operation already exists (race condition), that's fine - just requeue
 		if apierrors.IsAlreadyExists(err) {
-			r.logger.Debug("operation already exists, skipping creation",
-				slog.String("operation", operationName))
+			logger.Debug("operation already exists, skipping creation")
+
 			return ctrl.Result{RequeueAfter: requeueInterval}, nil
 		}
-		r.logger.Error("failed to create package repository operation",
-			slog.String("name", packageRepository.Name),
-			slog.String("operation", operationName),
-			log.Err(err))
-		return ctrl.Result{}, err
+
+		return ctrl.Result{}, fmt.Errorf("create operation %s: %w", operationName, err)
 	}
 
-	r.logger.Info("created package repository operation",
-		slog.String("repository", packageRepository.Name),
-		slog.String("operation", operationName),
-		slog.Bool("fullScan", fullScan))
+	logger.Info("created package repository operation")
 
 	// Requeue after requeueInterval to trigger the next scan
 	return ctrl.Result{RequeueAfter: requeueInterval}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	r.logger.Info("deleting PackageRepository", slog.String("name", packageRepository.Name))
+func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) error {
+	logger := r.logger.With("name", packageRepository.Name)
+
+	logger.Info("deleting PackageRepository")
 
 	// Delete all PackageRepositoryOperations associated with this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
@@ -204,19 +225,16 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 		operationLabelRepository: packageRepository.Name,
 	})
 	if err != nil {
-		r.logger.Error("failed to list operations for deletion", log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("list operations: %w", err)
 	}
 
 	for _, op := range operationList.Items {
 		if err := r.client.Delete(ctx, &op); err != nil && !apierrors.IsNotFound(err) {
-			r.logger.Error("failed to delete operation",
-				slog.String("operation", op.Name),
-				log.Err(err))
-			return ctrl.Result{}, err
+			return fmt.Errorf("failed to delete operation %s: %w", op.Name, err)
 		}
 	}
 
-	r.logger.Info("cleanup completed", slog.String("repository", packageRepository.Name))
-	return ctrl.Result{}, nil
+	logger.Info("cleanup completed")
+
+	return nil
 }

@@ -459,7 +459,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = c.defaultReleaseChannel
-			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
+			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release_channel", settings.ReleaseChannel))
 		}
 
 		c.embeddedPolicy.Set(settings)

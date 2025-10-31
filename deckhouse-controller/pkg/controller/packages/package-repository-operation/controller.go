@@ -47,9 +47,6 @@ const (
 
 	// packageTypeLabel is a label on Docker images that indicates the package type
 	packageTypeLabel = "io.deckhouse.package.type"
-
-	// paginationLimit is the maximum number of tags to request per page
-	paginationLimit = 1000
 )
 
 type reconciler struct {
@@ -248,10 +245,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, repo, func() error {
 		var statusPackages []v1alpha1.PackageRepositoryStatusPackage
 		for _, pkg := range discoveredPackages {
-			statusPackages = append(statusPackages, v1alpha1.PackageRepositoryStatusPackage{
-				Name: pkg.Name,
-				Type: pkg.Type,
-			})
+			statusPackages = append(statusPackages, v1alpha1.PackageRepositoryStatusPackage(pkg))
 		}
 		repo.Status.Packages = statusPackages
 		repo.Status.PackagesCount = len(statusPackages)
