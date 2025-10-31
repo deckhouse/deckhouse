@@ -12,7 +12,7 @@ metadata:
     kind: PackageRepository
     name: test-repo
     uid: ""
-  resourceVersion: "30"
+  resourceVersion: "6"
 spec:
   packageRepository: test-repo
   type: Update
@@ -20,11 +20,17 @@ spec:
     fullScan: true
     timeout: 5m
 status:
+  completionTime: "2025-10-31T12:00:00Z"
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
   packages:
     discovered: 1
     processed: 1
     total: 1
-  phase: Processing
+  phase: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -32,7 +38,7 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: test-repo
-  resourceVersion: "10"
+  resourceVersion: "2"
 spec:
   registry:
     ca: ""

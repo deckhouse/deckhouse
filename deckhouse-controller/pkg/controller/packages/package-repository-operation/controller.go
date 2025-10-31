@@ -202,6 +202,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		if apierrors.IsNotFound(err) {
 			logger.Warn("package repository operation not found")
 
+			original := operation.DeepCopy()
+
 			now := metav1.Now()
 			operation.Status.CompletionTime = &now
 			message := fmt.Sprintf("PackageRepository not found: %v", err)
@@ -213,7 +215,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 				message,
 			)
 
-			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -223,6 +225,31 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 
 		return res, fmt.Errorf("get package repository: %w", err)
+	}
+
+	if operation.Status.Packages != nil && operation.Status.Packages.Discovered == operation.Status.Packages.Processed {
+		r.logger.Info("all packages processed, marking as completed",
+			slog.Int("total", operation.Status.Packages.Total))
+
+		original := operation.DeepCopy()
+
+		// All packages processed, mark as completed
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+
+		r.SetConditionTrue(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		r.logger.Info("operation completed", slog.String("name", operation.Name))
+
+		return ctrl.Result{}, nil
 	}
 
 	// If packagesToProcess is empty, we need to discover packages
@@ -251,6 +278,8 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	if err != nil {
 		r.logger.Error("failed to create registry client", log.Err(err))
 
+		original := operation.DeepCopy()
+
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 		message := fmt.Sprintf("Failed to create registry client: %v", err)
@@ -262,7 +291,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 			message,
 		)
 
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -276,6 +305,8 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	if err != nil {
 		r.logger.Error("failed to list packages", log.Err(err))
 
+		original := operation.DeepCopy()
+
 		now := metav1.Now()
 		operation.Status.CompletionTime = &now
 		message := fmt.Sprintf("Failed to list packages: %v", err)
@@ -287,7 +318,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 			message,
 		)
 
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -371,26 +402,6 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 }
 
 func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	if len(operation.Status.PackagesToProcess) == 0 {
-		// All packages processed, mark as completed
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-
-		r.SetConditionTrue(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-		}
-
-		r.logger.Info("operation completed", slog.String("name", operation.Name))
-
-		return ctrl.Result{}, nil
-	}
-
 	// Get first package from queue
 	currentPackage := operation.Status.PackagesToProcess[0]
 	r.logger.Info("processing package",
@@ -426,40 +437,15 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 	// Remove processed package from queue
 	original := operation.DeepCopy()
-	var queueEmpty bool
 	if len(operation.Status.PackagesToProcess) > 0 {
 		operation.Status.PackagesToProcess = operation.Status.PackagesToProcess[1:]
 	}
 	if operation.Status.Packages != nil {
 		operation.Status.Packages.Processed++
 	}
-	queueEmpty = len(operation.Status.PackagesToProcess) == 0
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-	}
-
-	if queueEmpty {
-		r.logger.Info("all packages processed, marking as completed",
-			slog.Int("total", operation.Status.Packages.Total))
-
-		// All packages processed, mark as completed
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-
-		r.SetConditionTrue(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-		}
-
-		r.logger.Info("operation completed", slog.String("name", operation.Name))
-
-		return ctrl.Result{}, nil
 	}
 
 	// Requeue to process next package

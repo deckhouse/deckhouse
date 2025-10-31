@@ -20,6 +20,15 @@ spec:
     fullScan: true
     timeout: 5m
 status:
+  completionTime: "2025-10-31T12:00:00Z"
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'PackageRepository not found: packagerepositories.deckhouse.io "test-repo"
+      not found'
+    reason: PackageRepositoryNotFound
+    status: "False"
+    type: Processed
   phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---
