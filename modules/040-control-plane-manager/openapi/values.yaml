@@ -78,8 +78,30 @@ properties:
               type: string
         default: []
       enabledFeatureGates:
-        type: array
-        items:
-          type: string
-          pattern: '^[a-zA-Z]+$'
-        default: []
+        type: object
+        default: {}
+        properties:
+          apiServer:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubelet:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubeControllerManager:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubeScheduler:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
