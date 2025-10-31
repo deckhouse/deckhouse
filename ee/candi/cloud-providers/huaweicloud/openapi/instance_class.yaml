@@ -110,8 +110,9 @@ spec:
                     If filled, enables Virtual IP for all nodes in this instance class. 
                     
                     `Auto` or IPv4 address are expected.
-                  x-doc-examples: ['Auto']
                   type: string
+                  pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^Auto$
+                  x-doc-examples: ['Auto']
                   x-doc-required: false
             status:
               type: object
