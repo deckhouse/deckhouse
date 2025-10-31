@@ -38,7 +38,7 @@ type featureGatesResult struct {
 	Kubelet               []string `json:"kubelet"`
 }
 
-func getFeatureGatesHandler(ctx context.Context, input *go_hook.HookInput) error {
+func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	k8sVersion := input.Values.Get("global.discovery.kubernetesVersion").String()
 
 	result := featureGatesResult{
