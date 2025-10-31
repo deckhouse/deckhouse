@@ -54,7 +54,7 @@
 # from libffi-v3.4.8
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libffi.a /usr/lib64/libffi.la /usr/lib64/libffi.so /usr/lib64/libffi.so.8 /usr/lib64/libffi.so.8.1.4" }}
 # from xz-v5.8.1
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libc.so /usr/lib64/liblzma.a /usr/lib64/liblzma.la /usr/lib64/liblzma.so /usr/lib64/liblzma.so.5 /usr/lib64/liblzma.so.5.6.3 /usr/lib64/liblzma.so.5.8.1" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libc.so /usr/lib64/liblzma.a /usr/lib64/liblzma.la /usr/lib64/liblzma.so /usr/lib64/liblzma.so.5 /usr/lib64/liblzma.so.5.8.1" }}
 # from libedit-v20250104.3.1
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/lib64/libedit.a /usr/lib64/libedit.la /usr/lib64/libedit.so /usr/lib64/libedit.so.0 /usr/lib64/libedit.so.0.0.75 /usr/lib64/libedit.so.3" }}
 # from ncurses-v6.5
@@ -385,7 +385,6 @@ import:
   - liblzma.la
   - liblzma.so
   - liblzma.so.5
-  - liblzma.so.5.6.3
   - liblzma.so.5.8.1
 - image: libs/libedit-v20250104.3.1
   add: /usr/lib
