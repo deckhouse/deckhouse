@@ -166,7 +166,6 @@ func (r *reconciler) handleInitialState(ctx context.Context, operation *v1alpha1
 	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhasePending
 	now := metav1.Now()
 	operation.Status.StartTime = &now
-	operation.Status.Message = "Operation initialized"
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -182,7 +181,6 @@ func (r *reconciler) handlePendingState(ctx context.Context, operation *v1alpha1
 	original := operation.DeepCopy()
 
 	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
-	operation.Status.Message = "Starting package discovery"
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -205,7 +203,24 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		if apierrors.IsNotFound(err) {
 			logger.Warn("package repository operation not found")
 
-			return r.markAsFailed(ctx, operation, fmt.Sprintf("PackageRepository not found: %v", err))
+			now := metav1.Now()
+			operation.Status.CompletionTime = &now
+			message := fmt.Sprintf("PackageRepository not found: %v", err)
+
+			r.SetConditionFalse(
+				operation,
+				v1alpha1.PackageRepositoryOperationConditionFailed,
+				v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound,
+				message,
+			)
+
+			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+			return ctrl.Result{}, nil
 		}
 
 		return res, fmt.Errorf("get package repository: %w", err)
@@ -236,14 +251,50 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	registryClient, err := r.dc.GetRegistryClient(repo.Spec.Registry.Repo, opts...)
 	if err != nil {
 		r.logger.Error("failed to create registry client", log.Err(err))
-		return r.markAsFailed(ctx, operation, fmt.Sprintf("Failed to create registry client: %v", err))
+
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+		message := fmt.Sprintf("Failed to create registry client: %v", err)
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionFailed,
+			v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
+			message,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+		return ctrl.Result{}, nil
 	}
 
 	// List packages (packages at the packages level)
 	packages, err := registryClient.ListTags(ctx)
 	if err != nil {
 		r.logger.Error("failed to list packages", log.Err(err))
-		return r.markAsFailed(ctx, operation, fmt.Sprintf("Failed to list packages: %v", err))
+
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+		message := fmt.Sprintf("Failed to list packages: %v", err)
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionFailed,
+			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
+			message,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+		return ctrl.Result{}, nil
 	}
 
 	r.logger.Info("discovered packages", slog.Int("count", len(packages)))
@@ -312,7 +363,6 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	operation.Status.Packages.Discovered = len(operationStatusPackages)
 	operation.Status.Packages.Total = len(operationStatusPackages)
 	operation.Status.Packages.Processed = 0
-	operation.Status.Message = fmt.Sprintf("Discovered %d packages, starting processing", len(operationStatusPackages))
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(originalOperation)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -370,15 +420,6 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 			operation.Status.Packages.Processed++
 		}
 		queueEmpty = len(operation.Status.PackagesToProcess) == 0
-
-		if queueEmpty {
-			operation.Status.Message = fmt.Sprintf("All %d packages processed, completing operation", operation.Status.Packages.Total)
-			return nil
-		}
-
-		operation.Status.Message = fmt.Sprintf("Processed %d/%d packages",
-			operation.Status.Packages.Processed,
-			operation.Status.Packages.Total)
 		return nil
 	})
 	if err != nil {
@@ -793,31 +834,12 @@ func (r *reconciler) markAsCompleted(ctx context.Context, operation *v1alpha1.Pa
 	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
 	now := metav1.Now()
 	operation.Status.CompletionTime = &now
-	operation.Status.Message = "Package discovery completed successfully"
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	r.logger.Info("operation completed", slog.String("name", operation.Name))
-
-	return ctrl.Result{}, nil
-}
-
-// TODO: rewrite this for condition
-func (r *reconciler) markAsFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, message string) (ctrl.Result, error) {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseFailed
-	now := metav1.Now()
-	operation.Status.CompletionTime = &now
-	operation.Status.Message = message
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-	}
-
-	r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
 
 	return ctrl.Result{}, nil
 }

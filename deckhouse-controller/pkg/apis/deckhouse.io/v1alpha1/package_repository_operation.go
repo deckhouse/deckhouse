@@ -33,6 +33,16 @@ const (
 	PackageRepositoryOperationPhaseProcessing = "Processing"
 	PackageRepositoryOperationPhaseCompleted  = "Completed"
 	PackageRepositoryOperationPhaseFailed     = "Failed"
+
+	// PackageRepositoryOperation condition types
+	PackageRepositoryOperationConditionReady  = "Ready"
+	PackageRepositoryOperationConditionFailed = "Failed"
+
+	// PackageRepositoryOperation condition reasons
+	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
+	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
+	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
+	PackageRepositoryOperationReasonOperationFailed              = "OperationFailed"
 )
 
 var (
@@ -84,7 +94,6 @@ type PackageRepositoryOperationUpdate struct {
 
 type PackageRepositoryOperationStatus struct {
 	Phase             string                                         `json:"phase,omitempty"`
-	Message           string                                         `json:"message,omitempty"`
 	StartTime         *metav1.Time                                   `json:"startTime,omitempty"`
 	CompletionTime    *metav1.Time                                   `json:"completionTime,omitempty"`
 	Packages          *PackageRepositoryOperationStatusPackages      `json:"packages,omitempty"`
