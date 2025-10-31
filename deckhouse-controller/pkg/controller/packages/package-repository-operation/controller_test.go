@@ -261,7 +261,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("package-repository-not-found.yaml")
 		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
 
-		err := repeat(20, func() error {
+		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: operation.Name},
 			})
@@ -280,7 +280,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("registry-client-failed.yaml", withDependencyContainer(dc))
 		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
 
-		err := repeat(20, func() error {
+		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: operation.Name},
 			})
@@ -298,7 +298,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("package-listing-failed.yaml", withDependencyContainer(dc))
 		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
 
-		err := repeat(20, func() error {
+		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: operation.Name},
 			})
@@ -335,7 +335,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("successful-discovery.yaml", withDependencyContainer(dc))
 		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
 
-		err := repeat(20, func() error {
+		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: operation.Name},
 			})
@@ -372,7 +372,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("successful-completion.yaml", withDependencyContainer(dc))
 		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
 
-		err := repeat(20, func() error {
+		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: operation.Name},
 			})
@@ -392,8 +392,10 @@ func (suite *ControllerTestSuite) getPackageRepositoryOperation(name string) *v1
 	return &operation
 }
 
-func repeat(times int, fn func() error) error {
-	for i := 0; i < times; i++ {
+const repeatTime = 20
+
+func repeat(fn func() error) error {
+	for i := 0; i < repeatTime; i++ {
 		err := fn()
 		if err != nil {
 			return err

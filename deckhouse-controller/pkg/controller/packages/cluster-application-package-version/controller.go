@@ -172,7 +172,7 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Cluste
 	}
 
 	// Extract metadata from image config and layers
-	metadata := r.extractMetadata(image, version)
+	metadata := r.extractMetadata(image)
 
 	// Update status with metadata
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, packageVersion, func() error {
@@ -221,7 +221,7 @@ func (r *reconciler) extractVersionFromName(resourceName, repositoryName, packag
 	return version, nil
 }
 
-func (r *reconciler) extractMetadata(image crv1.Image, version string) *v1alpha1.ClusterApplicationPackageVersionStatusMetadata {
+func (r *reconciler) extractMetadata(image crv1.Image) *v1alpha1.ClusterApplicationPackageVersionStatusMetadata {
 	// In a real implementation, this would parse package.yaml, changelog.yaml, etc.
 	// For now, return basic metadata
 	metadata := &v1alpha1.ClusterApplicationPackageVersionStatusMetadata{

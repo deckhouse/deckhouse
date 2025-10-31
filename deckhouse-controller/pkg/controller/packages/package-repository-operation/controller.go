@@ -140,9 +140,9 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
-		res, err = r.handleCompletedState(ctx, operation)
+		r.logger.Debug("operation already completed", slog.String("name", operation.Name))
 	case v1alpha1.PackageRepositoryOperationPhaseFailed:
-		res, err = r.handleFailedState(ctx, operation)
+		r.logger.Debug("operation already failed", slog.String("name", operation.Name))
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
 
@@ -851,16 +851,6 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 	}
 
 	return "v" + latest.String()
-}
-
-func (r *reconciler) handleCompletedState(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	r.logger.Debug("operation already completed", slog.String("name", operation.Name))
-	return ctrl.Result{}, nil
-}
-
-func (r *reconciler) handleFailedState(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	r.logger.Debug("operation already failed", slog.String("name", operation.Name))
-	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
