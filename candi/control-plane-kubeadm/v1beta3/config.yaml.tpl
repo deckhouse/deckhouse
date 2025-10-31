@@ -157,7 +157,7 @@ controllerManager:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "false"
-    terminated-pod-gc-threshold: {{ if and (hasKey $.controlPlaneManager "internal") (hasKey $.controlPlaneManager.internal "nodesCount") }}{{ if lt $.controlPlaneManager.internal.nodesCount 100 }}"1000"{{ else if lt $.controlPlaneManager.internal.nodesCount 300 }}"3000"{{ else }}"6000"{{ end }}{{ else }}"1000"{{ end }}
+    terminated-pod-gc-threshold: {{ if and (hasKey $.controlPlaneManager "internal") (hasKey $.controlPlaneManager.internal "nodesCount") }}{{ if lt $.controlPlaneManager.internal.nodesCount 4 }}"1000"{{ else if lt $.controlPlaneManager.internal.nodesCount 7 }}"3000"{{ else }}"6000"{{ end }}{{ else }}"1007"{{ end }}
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
