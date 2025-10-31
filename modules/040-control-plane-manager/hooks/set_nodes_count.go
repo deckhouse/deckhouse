@@ -70,7 +70,8 @@ func handleSetNodesCount(_ context.Context, input *go_hook.HookInput) error {
 
 	nodesCount := len(nodes)
 
-	input.Values.Set("controlPlaneManager.internal.nodesCount", nodesCount)
+	// Set in global values
+	input.Values.Set("global.discovery.nodesCount", nodesCount)
 
 	return nil
 }
