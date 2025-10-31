@@ -100,7 +100,7 @@ data:
 	)
 
 	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
-	hooks.DefaultKubernetesVersion = "1.33"
+	hooks.DefaultKubernetesVersion = "1.34"
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
