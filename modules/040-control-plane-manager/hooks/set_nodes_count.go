@@ -18,60 +18,33 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:                         "all_nodes",
-			ApiVersion:                   "v1",
-			Kind:                         "Node",
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(true),
-			WaitForSynchronization:       ptr.To(true),
-			FilterFunc:                   applyNodeFilter,
-		},
-	},
-}, handleSetNodesCount)
+}, dependency.WithExternalDependencies(handleSetNodesCount))
 
-type nodeInfo struct {
-	Name string
-}
-
-func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var node corev1.Node
-
-	err := sdk.FromUnstructured(obj, &node)
+func handleSetNodesCount(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+		return err
 	}
 
-	return nodeInfo{
-		Name: node.Name,
-	}, nil
-}
-
-func handleSetNodesCount(_ context.Context, input *go_hook.HookInput) error {
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[nodeInfo](input.Snapshots, "all_nodes")
+	nodes, err := k8sClient.CoreV1().Nodes().List(ctx, v1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal all_nodes snapshot: %w", err)
+		return err
 	}
 
-	nodesCount := len(nodes)
+	nodesCount := len(nodes.Items)
 
-	// Set in global values
-	input.Values.Set("global.discovery.nodesCount", nodesCount)
+	input.Values.Set("controlPlaneManager.internal.nodesCount", nodesCount)
 
 	return nil
 }
