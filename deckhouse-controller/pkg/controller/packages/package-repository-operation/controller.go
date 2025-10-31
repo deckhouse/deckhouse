@@ -507,7 +507,12 @@ func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.Pa
 func (r *reconciler) createPackageVersions(ctx context.Context, pkg v1alpha1.PackageRepositoryOperationStatusPackageQueue, repo *v1alpha1.PackageRepository, allTags []string) error {
 	for _, versionTag := range allTags {
 		// Skip non-version tags (like "release-channel", "version", etc.)
-		if !r.isVersionTag(versionTag) {
+		if err := r.checkVersionTag(versionTag); err != nil {
+			r.logger.Debug("skipping non-version tag",
+				slog.String("package", pkg.Name),
+				slog.String("tag", versionTag),
+				log.Err(err))
+
 			continue
 		}
 
@@ -676,19 +681,18 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 	return packageTypeApplication, nil
 }
 
-func (r *reconciler) isVersionTag(tag string) bool {
+func (r *reconciler) checkVersionTag(tag string) error {
 	if len(tag) == 0 {
-		return false
-	}
-
-	// Skip special tags
-	if tag == "latest" || tag == "release-channel" || tag == "version" {
-		return false
+		return nil
 	}
 
 	// Use semver validation for proper version tag detection
 	_, err := semver.NewVersion(strings.TrimPrefix(tag, "v"))
-	return err == nil
+	if err != nil {
+		return fmt.Errorf("invalid version tag: %w", err)
+	}
+
+	return nil
 }
 
 func (r *reconciler) listAllTagsWithPagination(ctx context.Context, registryClient cr.Client) ([]string, error) {
