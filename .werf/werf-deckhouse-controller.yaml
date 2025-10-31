@@ -15,11 +15,6 @@ git:
       {{ include "controller_src_git_imports_stage_deps" . | nindent 6}}
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-- add: /candi/feature_gates
-  to: /deckhouse/candi/feature_gates
-  stageDependencies:
-    install:
-      - '**/*'
 shell:
   install:
   # Migrate internal packages imports
