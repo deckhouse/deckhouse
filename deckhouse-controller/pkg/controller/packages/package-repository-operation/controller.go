@@ -47,6 +47,9 @@ const (
 
 	// packageTypeLabel is a label on Docker images that indicates the package type
 	packageTypeLabel = "io.deckhouse.package.type"
+
+	// TODO: unify constant
+	packageTypeApplication = "Application"
 )
 
 type reconciler struct {
@@ -80,61 +83,92 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Debug("reconciling PackageRepositoryOperation", slog.String("name", req.Name))
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", req.Name))
+
+	logger.Debug("reconciling PackageRepositoryOperation")
 
 	operation := new(v1alpha1.PackageRepositoryOperation)
 	if err := r.client.Get(ctx, req.NamespacedName, operation); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("package repository operation not found", slog.String("name", req.Name))
-			return ctrl.Result{}, nil
+			logger.Debug("package repository operation not found")
+
+			return res, nil
 		}
-		r.logger.Error("failed to get package repository operation", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+
+		logger.Warn("failed to get package repository operation", log.Err(err))
+
+		return res, err
 	}
 
 	// handle delete event
 	if !operation.DeletionTimestamp.IsZero() {
-		r.logger.Debug("deleting package repository operation", slog.String("name", req.Name))
-		return r.delete(ctx, operation)
+		logger.Debug("deleting package repository operation")
+
+		err := r.delete(ctx, operation)
+		if err != nil {
+			logger.Warn("failed to delete package repository operation", log.Err(err))
+
+			return res, err
+		}
+
+		return res, nil
 	}
 
 	// handle create/update events - state machine
-	return r.handle(ctx, operation)
+	res, err := r.handle(ctx, operation)
+	if err != nil {
+		logger.Warn("failed to handle package repository operation", log.Err(err))
+
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	var res ctrl.Result
+	var err error
+
 	// State machine based on phase
 	switch operation.Status.Phase {
 	case "": // Initial state
-		return r.handleInitialState(ctx, operation)
+		res, err = r.handleInitialState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhasePending:
-		return r.handlePendingState(ctx, operation)
+		res, err = r.handlePendingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
-		return r.handleProcessingState(ctx, operation)
+		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
-		return r.handleCompletedState(ctx, operation)
+		res, err = r.handleCompletedState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseFailed:
-		return r.handleFailedState(ctx, operation)
+		res, err = r.handleFailedState(ctx, operation)
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
+
 		return ctrl.Result{}, nil
 	}
+
+	if err != nil {
+		return res, fmt.Errorf("handle %s state: %w", operation.Status.Phase, err)
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) handleInitialState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	r.logger.Debug("handling initial state", slog.String("name", operation.Name))
 
 	// Move to Pending phase
-	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhasePending
-		now := metav1.Now()
-		operation.Status.StartTime = &now
-		operation.Status.Message = "Operation initialized"
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to update operation status", log.Err(err))
-		return ctrl.Result{}, err
+	original := operation.DeepCopy()
+
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhasePending
+	now := metav1.Now()
+	operation.Status.StartTime = &now
+	operation.Status.Message = "Operation initialized"
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	return ctrl.Result{Requeue: true}, nil
@@ -144,28 +178,36 @@ func (r *reconciler) handlePendingState(ctx context.Context, operation *v1alpha1
 	r.logger.Debug("handling pending state", slog.String("name", operation.Name))
 
 	// Move to Processing phase
-	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
-		operation.Status.Message = "Starting package discovery"
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to update operation status", log.Err(err))
-		return ctrl.Result{}, err
+	original := operation.DeepCopy()
+
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+	operation.Status.Message = "Starting package discovery"
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	return ctrl.Result{Requeue: true}, nil
 }
 
 func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	r.logger.Debug("handling processing state", slog.String("name", operation.Name))
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", operation.Name))
+
+	logger.Debug("handling processing state")
 
 	// Get PackageRepository
 	repo := &v1alpha1.PackageRepository{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: operation.Spec.PackageRepository}, repo)
 	if err != nil {
-		r.logger.Error("failed to get package repository", log.Err(err))
-		return r.markAsFailed(ctx, operation, fmt.Sprintf("PackageRepository not found: %v", err))
+		if apierrors.IsNotFound(err) {
+			logger.Warn("package repository operation not found")
+
+			return r.markAsFailed(ctx, operation, fmt.Sprintf("PackageRepository not found: %v", err))
+		}
+
+		return res, fmt.Errorf("get package repository: %w", err)
 	}
 
 	// If packagesToProcess is empty, we need to discover packages
@@ -211,9 +253,12 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 		// Get package type from Docker image label by inspecting manifest
 		packageType, err := r.determinePackageType(ctx, repo.Spec.Registry.Repo, tag, opts)
 		if err != nil {
-			r.logger.Warn("failed to determine package type, skipping",
+			r.logger.Warn(
+				"failed to determine package type, skipping",
 				slog.String("package", tag),
-				log.Err(err))
+				log.Err(err),
+			)
+
 			continue
 		}
 
@@ -242,37 +287,33 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	}
 
 	// Update PackageRepository status with discovered packages
-	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, repo, func() error {
-		var statusPackages []v1alpha1.PackageRepositoryStatusPackage
-		for _, pkg := range discoveredPackages {
-			statusPackages = append(statusPackages, v1alpha1.PackageRepositoryStatusPackage(pkg))
-		}
-		repo.Status.Packages = statusPackages
-		repo.Status.PackagesCount = len(statusPackages)
-		repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-		repo.Status.SyncTime = metav1.Now()
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to update package repository status", log.Err(err))
-		return ctrl.Result{}, err
+	originalRepo := repo.DeepCopy()
+	var statusPackages []v1alpha1.PackageRepositoryStatusPackage
+	for _, pkg := range discoveredPackages {
+		statusPackages = append(statusPackages, v1alpha1.PackageRepositoryStatusPackage(pkg))
+	}
+	repo.Status.Packages = statusPackages
+	repo.Status.PackagesCount = len(statusPackages)
+	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	repo.Status.SyncTime = metav1.Now()
+
+	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(originalRepo)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update package repository status: %w", err)
 	}
 
 	// Update operation status with packages to process
-	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		operation.Status.PackagesToProcess = discoveredPackages
-		if operation.Status.Packages == nil {
-			operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
-		}
-		operation.Status.Packages.Discovered = len(discoveredPackages)
-		operation.Status.Packages.Total = len(discoveredPackages)
-		operation.Status.Packages.Processed = 0
-		operation.Status.Message = fmt.Sprintf("Discovered %d packages, starting processing", len(discoveredPackages))
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to update operation status", log.Err(err))
-		return ctrl.Result{}, err
+	originalOperation := operation.DeepCopy()
+	operation.Status.PackagesToProcess = discoveredPackages
+	if operation.Status.Packages == nil {
+		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
+	}
+	operation.Status.Packages.Discovered = len(discoveredPackages)
+	operation.Status.Packages.Total = len(discoveredPackages)
+	operation.Status.Packages.Processed = 0
+	operation.Status.Message = fmt.Sprintf("Discovered %d packages, starting processing", len(discoveredPackages))
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(originalOperation)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	return ctrl.Result{Requeue: true}, nil
@@ -414,10 +455,8 @@ func (r *reconciler) createPackageVersions(ctx context.Context, pkg v1alpha1.Pac
 
 func (r *reconciler) ensurePackageResource(ctx context.Context, packageName, packageType, repositoryName string) error {
 	switch packageType {
-	case "Application":
+	case packageTypeApplication:
 		return r.ensureApplicationPackage(ctx, packageName, repositoryName)
-	case "ClusterApplication":
-		return r.ensureClusterApplicationPackage(ctx, packageName, repositoryName)
 	default:
 		return fmt.Errorf("unsupported package type: %s", packageType)
 	}
@@ -464,56 +503,13 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 	})
 }
 
-func (r *reconciler) ensureClusterApplicationPackage(ctx context.Context, packageName, repositoryName string) error {
-	pkg := &v1alpha1.ClusterApplicationPackage{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// Create new ClusterApplicationPackage
-		pkg = &v1alpha1.ClusterApplicationPackage{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.ClusterApplicationPackageGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ClusterApplicationPackageKind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: packageName,
-				Labels: map[string]string{
-					"heritage": "deckhouse",
-				},
-			},
-		}
-
-		// Add owner reference to PackageRepository
-		if err := r.setOwnerReference(ctx, pkg, repositoryName); err != nil {
-			r.logger.Warn("failed to set owner reference",
-				slog.String("repository", repositoryName),
-				log.Err(err))
-		}
-
-		return r.client.Create(ctx, pkg)
-	}
-
-	// Update existing package to add repository to available repositories
-	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
-		if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
-			pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
-		}
-		return nil
-	})
-}
-
 func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
 	// Generate resource name: <repo>-<package>-<version>
 	resourceName := fmt.Sprintf("%s-%s-%s", repositoryName, packageName, strings.TrimPrefix(version, "v"))
 
 	switch packageType {
-	case "Application":
+	case packageTypeApplication:
 		return r.ensureApplicationPackageVersion(ctx, resourceName, packageName, version, repositoryName)
-	case "ClusterApplication":
-		return r.ensureClusterApplicationPackageVersion(ctx, resourceName, packageName, repositoryName)
 	default:
 		return fmt.Errorf("unsupported package type: %s", packageType)
 	}
@@ -563,45 +559,6 @@ func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resour
 	return nil
 }
 
-func (r *reconciler) ensureClusterApplicationPackageVersion(ctx context.Context, resourceName, packageName, repositoryName string) error {
-	pkgVersion := &v1alpha1.ClusterApplicationPackageVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: resourceName}, pkgVersion)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// Create new ClusterApplicationPackageVersion with draft label
-		pkgVersion = &v1alpha1.ClusterApplicationPackageVersion{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.ClusterApplicationPackageVersionGVK.GroupVersion().String(),
-				Kind:       v1alpha1.ClusterApplicationPackageVersionKind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: resourceName,
-				Labels: map[string]string{
-					"heritage": "deckhouse",
-					v1alpha1.ClusterApplicationPackageVersionLabelRepository: repositoryName,
-					v1alpha1.ClusterApplicationPackageVersionLabelPackage:    packageName,
-					v1alpha1.ClusterApplicationPackageVersionLabelDraft:      "true",
-				},
-			},
-		}
-
-		// Add owner reference to PackageRepository
-		if err := r.setOwnerReference(ctx, pkgVersion, repositoryName); err != nil {
-			r.logger.Warn("failed to set owner reference",
-				slog.String("repository", repositoryName),
-				log.Err(err))
-		}
-
-		return r.client.Create(ctx, pkgVersion)
-	}
-
-	// Version already exists
-	return nil
-}
-
 func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, packageName string, opts []cr.Option) (string, error) {
 	// Create registry client for the package marker image
 	registryClient, err := r.dc.GetRegistryClient(registryRepo, opts...)
@@ -616,7 +573,7 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 		r.logger.Warn("failed to get image, defaulting to Application",
 			slog.String("package", packageName),
 			log.Err(err))
-		return "Application", nil
+		return packageTypeApplication, nil
 	}
 
 	// Get image config to extract labels
@@ -625,7 +582,7 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 		r.logger.Warn("failed to get config file, defaulting to Application",
 			slog.String("package", packageName),
 			log.Err(err))
-		return "Application", nil
+		return packageTypeApplication, nil
 	}
 
 	// Extract package type from label
@@ -638,7 +595,7 @@ func (r *reconciler) determinePackageType(ctx context.Context, registryRepo, pac
 	// Default to Application if label not found
 	r.logger.Debug("package type label not found, defaulting to Application",
 		slog.String("package", packageName))
-	return "Application", nil
+	return packageTypeApplication, nil
 }
 
 func (r *reconciler) isVersionTag(tag string) bool {
@@ -720,22 +677,26 @@ func (r *reconciler) isPackageInList(packageName string, packages []v1alpha1.Pac
 			return true
 		}
 	}
+
 	return false
 }
 
 func (r *reconciler) performFullScan(ctx context.Context, registryClient cr.Client, packageName string) ([]string, error) {
 	// Full scan: list all tags with pagination
 	r.logger.Debug("performing full scan", slog.String("package", packageName))
+
 	tags, err := r.listAllTagsWithPagination(ctx, registryClient)
 	if err != nil {
 		return nil, fmt.Errorf("list all tags with pagination: %w", err)
 	}
+
 	return tags, nil
 }
 
 func (r *reconciler) performIncrementalScan(ctx context.Context, registryClient cr.Client, packageName, packageType, repositoryName string) ([]string, error) {
 	// Incremental scan: start from the last processed version
 	r.logger.Debug("performing incremental scan", slog.String("package", packageName))
+
 	lastVersion := r.getLastProcessedVersion(ctx, packageName, packageType, repositoryName)
 	if lastVersion != "" {
 		r.logger.Debug("found last processed version",
@@ -747,6 +708,7 @@ func (r *reconciler) performIncrementalScan(ctx context.Context, registryClient 
 	if err != nil {
 		return nil, fmt.Errorf("list tags from version: %w", err)
 	}
+
 	return tags, nil
 }
 
@@ -763,7 +725,9 @@ func (r *reconciler) setOwnerReference(ctx context.Context, obj client.Object, r
 		UID:        repo.UID,
 		Controller: &[]bool{true}[0],
 	}
+
 	obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
 	return nil
 }
 
@@ -772,10 +736,8 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 	var versionList client.ObjectList
 
 	switch packageType {
-	case "Application":
+	case packageTypeApplication:
 		versionList = &v1alpha1.ApplicationPackageVersionList{}
-	case "ClusterApplication":
-		versionList = &v1alpha1.ClusterApplicationPackageVersionList{}
 	default:
 		return ""
 	}
@@ -834,36 +796,37 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 }
 
 func (r *reconciler) markAsCompleted(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-		operation.Status.Message = "Package discovery completed successfully"
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to mark operation as completed", log.Err(err))
-		return ctrl.Result{}, err
+	original := operation.DeepCopy()
+
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
+	now := metav1.Now()
+	operation.Status.CompletionTime = &now
+	operation.Status.Message = "Package discovery completed successfully"
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	r.logger.Info("operation completed", slog.String("name", operation.Name))
+
 	return ctrl.Result{}, nil
 }
 
+// TODO: rewrite this for condition
 func (r *reconciler) markAsFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, message string) (ctrl.Result, error) {
-	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseFailed
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-		operation.Status.Message = message
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to mark operation as failed", log.Err(err))
-		return ctrl.Result{}, err
+	original := operation.DeepCopy()
+
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseFailed
+	now := metav1.Now()
+	operation.Status.CompletionTime = &now
+	operation.Status.Message = message
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
-	r.logger.Error("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+	r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
 	return ctrl.Result{}, nil
 }
 
@@ -877,16 +840,19 @@ func (r *reconciler) handleFailedState(_ context.Context, operation *v1alpha1.Pa
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
 	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
 
 	// Remove finalizer if present
 	if controllerutil.ContainsFinalizer(operation, "packages.deckhouse.io/finalizer") {
+		original := operation.DeepCopy()
+
 		controllerutil.RemoveFinalizer(operation, "packages.deckhouse.io/finalizer")
-		if err := r.client.Update(ctx, operation); err != nil {
-			return ctrl.Result{}, err
+
+		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return err
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }

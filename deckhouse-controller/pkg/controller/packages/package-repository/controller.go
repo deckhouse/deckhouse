@@ -84,7 +84,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	packageRepository := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, req.NamespacedName, packageRepository); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Warn("package repository not found")
+			logger.Debug("package repository not found")
 
 			return res, nil
 		}
