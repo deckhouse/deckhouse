@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -209,7 +208,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 			r.SetConditionFalse(
 				operation,
-				v1alpha1.PackageRepositoryOperationConditionFailed,
+				v1alpha1.PackageRepositoryOperationConditionProcessed,
 				v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound,
 				message,
 			)
@@ -258,7 +257,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionFailed,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
 			v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
 			message,
 		)
@@ -283,7 +282,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionFailed,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
 			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
 			message,
 		)
@@ -374,7 +373,22 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	if len(operation.Status.PackagesToProcess) == 0 {
 		// All packages processed, mark as completed
-		return r.markAsCompleted(ctx, operation)
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+
+		r.SetConditionTrue(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		r.logger.Info("operation completed", slog.String("name", operation.Name))
+
+		return ctrl.Result{}, nil
 	}
 
 	// Get first package from queue
@@ -411,26 +425,41 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	}
 
 	// Remove processed package from queue
+	original := operation.DeepCopy()
 	var queueEmpty bool
-	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, operation, func() error {
-		if len(operation.Status.PackagesToProcess) > 0 {
-			operation.Status.PackagesToProcess = operation.Status.PackagesToProcess[1:]
-		}
-		if operation.Status.Packages != nil {
-			operation.Status.Packages.Processed++
-		}
-		queueEmpty = len(operation.Status.PackagesToProcess) == 0
-		return nil
-	})
-	if err != nil {
-		r.logger.Error("failed to update operation status", log.Err(err))
-		return ctrl.Result{}, err
+	if len(operation.Status.PackagesToProcess) > 0 {
+		operation.Status.PackagesToProcess = operation.Status.PackagesToProcess[1:]
+	}
+	if operation.Status.Packages != nil {
+		operation.Status.Packages.Processed++
+	}
+	queueEmpty = len(operation.Status.PackagesToProcess) == 0
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
 
 	if queueEmpty {
 		r.logger.Info("all packages processed, marking as completed",
 			slog.Int("total", operation.Status.Packages.Total))
-		return r.markAsCompleted(ctx, operation)
+
+		// All packages processed, mark as completed
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+
+		r.SetConditionTrue(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(operation.DeepCopy())); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		r.logger.Info("operation completed", slog.String("name", operation.Name))
+
+		return ctrl.Result{}, nil
 	}
 
 	// Requeue to process next package
@@ -538,12 +567,18 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 	}
 
 	// Update existing package to add repository to available repositories
-	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, pkg, func() error {
-		if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
-			pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
-		}
-		return nil
-	})
+	original := pkg.DeepCopy()
+
+	if !slices.Contains(pkg.Status.AvailableRepositories, repositoryName) {
+		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repositoryName)
+	}
+
+	err = r.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("update application package status: %w", err)
+	}
+
+	return nil
 }
 
 func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
@@ -826,22 +861,6 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 	}
 
 	return "v" + latest.String()
-}
-
-func (r *reconciler) markAsCompleted(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-	now := metav1.Now()
-	operation.Status.CompletionTime = &now
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
-	}
-
-	r.logger.Info("operation completed", slog.String("name", operation.Name))
-
-	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) handleCompletedState(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {

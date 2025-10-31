@@ -35,14 +35,12 @@ const (
 	PackageRepositoryOperationPhaseFailed     = "Failed"
 
 	// PackageRepositoryOperation condition types
-	PackageRepositoryOperationConditionReady  = "Ready"
-	PackageRepositoryOperationConditionFailed = "Failed"
+	PackageRepositoryOperationConditionProcessed = "Processed"
 
 	// PackageRepositoryOperation condition reasons
 	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
 	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
 	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
-	PackageRepositoryOperationReasonOperationFailed              = "OperationFailed"
 )
 
 var (
