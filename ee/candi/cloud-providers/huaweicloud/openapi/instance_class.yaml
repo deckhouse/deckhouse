@@ -76,11 +76,8 @@ spec:
                   x-doc-examples: ['GPSSD']
                   type: string
                   x-doc-required: false
-                mainNetwork:
-                  type: string
-                  x-doc-required: false
                   description: |
-                    Primary network for the for the VMs main NIC.
+                    Primary network for the VMs main NIC.
 
                     **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
@@ -128,12 +125,25 @@ spec:
                   pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^Auto$
                   x-doc-examples: ['Auto']
                   x-doc-required: false
+              oneOf:
+                - description: |
+                    Old schema (using deprecated 'subnets' field).
+                  required: ["subnets"]
+
+                - description: |
+                    New schema (using 'mainNetwork' and/or 'additionalNetworks' field).
+                  anyOf:
+                    - required: ["mainNetwork"]
+                    - required: ["additionalNetworks"]
             status:
               type: object
               properties:
                 nodeGroupConsumers:
                   type: array
                   items:
+                  type: string
+                  x-doc-required: false
+                mainNetwork:
                     type: string
       additionalPrinterColumns:
         - name: "Node Groups"

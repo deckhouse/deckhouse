@@ -30,14 +30,18 @@ spec:
       {{- end }}
 
       {{- $ic := .nodeGroup.instanceClass -}}
+
       {{- $primary := (default $subnetID $ic.mainNetwork) -}}
       {{- $nets := list $primary -}}
+
       {{- if $ic.additionalNetworks -}}
-      {{- $nets = concat $nets $ic.additionalNetworks -}}
+        {{- $nets = concat $nets $ic.additionalNetworks -}}
       {{- end -}}
+
+      {{- /* Legacy subnets — только как дополнительные */ -}}
       {{- if $ic.subnets -}}
-      {{- $nets = concat $nets $ic.subnets -}}
-      {{- end }}
+        {{- $nets = concat $nets $ic.subnets -}}
+      {{- end -}}
 
       subnets:
       {{- range $n := (uniq $nets) }}
