@@ -25,12 +25,12 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        moduleQueue + "/feature_gates",
+	Queue:        moduleQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, getFeatureGatesHandler)
 
 type featureGatesResult struct {
-	APIServer             []string `json:"apiServer"`
+	APIServer             []string `json:"apiserver"`
 	KubeControllerManager []string `json:"kubeControllerManager"`
 	KubeScheduler         []string `json:"kubeScheduler"`
 	Kubelet               []string `json:"kubelet"`
