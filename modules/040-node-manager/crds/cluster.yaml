@@ -25,6 +25,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
+        caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
         service:
           name: capi-webhook-service
           namespace: d8-cloud-instance-manager
