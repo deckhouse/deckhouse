@@ -126,12 +126,7 @@ spec:
                   x-doc-examples: ['Auto']
                   x-doc-required: false
               oneOf:
-                - description: |
-                    Old schema (using deprecated 'subnets' field).
                   required: ["subnets"]
-
-                - description: |
-                    New schema (using 'mainNetwork' and/or 'additionalNetworks' field).
                   anyOf:
                     - required: ["mainNetwork"]
                     - required: ["additionalNetworks"]
