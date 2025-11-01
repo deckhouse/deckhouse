@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		{
 			Name:                   "capi_mds",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -211,7 +211,7 @@ func handleSetReplicas(_ context.Context, input *go_hook.HookInput) error {
 		return err
 	}
 
-	err = calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
+	err = calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta2")
 	if err != nil {
 		return err
 	}

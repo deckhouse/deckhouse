@@ -5,7 +5,7 @@
 
 {{- include "capi_infrastructure_cluster" . }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   name: {{ $prefix }}
@@ -43,7 +43,7 @@ metadata:
   name: {{ $prefix }}-control-plane
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   namespace: d8-cloud-instance-manager

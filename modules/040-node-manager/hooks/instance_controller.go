@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "cluster_api_machines",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
+			ApiVersion: "cluster.x-k8s.io/v1beta2",
 			Kind:       "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -270,7 +270,7 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
-					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name)
+					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta2", "Machine", "d8-cloud-instance-manager", machine.Name)
 				}
 			}
 		} else {

@@ -14,23 +14,23 @@ object NodeGroup << deckhouse.io/v1 >> {
     spec.staticInstances.count
 }
 
-' cluster.x-k8s.io/v1beta1
-object Cluster << cluster.x-k8s.io/v1beta1 >> {
+' cluster.x-k8s.io/v1beta2
+object Cluster << cluster.x-k8s.io/v1beta2 >> {
     <font color="Green">spec.infrastructureRef: StaticCluster</font>
     <font color="Red">spec.controlPlaneRef: StaticControlPlane</font>
 }
 
-object MachineDeployment << cluster.x-k8s.io/v1beta1 >> {
+object MachineDeployment << cluster.x-k8s.io/v1beta2 >> {
     spec.clusterName
     <font color="Green">spec.template.spec.infrastructureRef: StaticMachineTemplate</font>
     <font color="Red">spec.template.spec.bootstrap.dataSecretName: Secret</font>
     spec.replicas: NodeGroup.spec.staticInstances.count
 }
-object MachineSet << cluster.x-k8s.io/v1beta1 >> {
+object MachineSet << cluster.x-k8s.io/v1beta2 >> {
     <font color="Green">spec.template.spec.infrastructureRef: StaticMachineTemplate</font>
     <font color="Red">spec.template.spec.bootstrap.dataSecretName: Secret</font>
 }
-object Machine << cluster.x-k8s.io/v1beta1 >> {
+object Machine << cluster.x-k8s.io/v1beta2 >> {
     <font color="Green">spec.infrastructureRef: StaticMachine</font>
     <font color="Red">spec.bootstrap.dataSecretName: Secret</font>
 }

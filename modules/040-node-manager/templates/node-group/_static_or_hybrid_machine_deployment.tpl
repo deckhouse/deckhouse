@@ -2,7 +2,7 @@
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager

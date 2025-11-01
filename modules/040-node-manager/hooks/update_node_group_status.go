@@ -99,7 +99,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "capi_mds",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -124,7 +124,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                   "capi_instances",
 			WaitForSynchronization: ptr.To(false),
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
