@@ -61,16 +61,11 @@ function _shutdown-inhibitor-cleanup() {
 
 function inhibitor::install:service() {
 {{- $noCordon := true }}
-{{- if eq .runType "Normal" }}
-{{- if eq .nodeGroup.name "master" }}
-
-{{- $apiserverEndpoints := dig "apiserverEndpoints" (list) .normal }}
-{{- $endpointsCount := len $apiserverEndpoints }}
-
-{{- if and (eq .nodeGroup.name "master") (lt $endpointsCount 2) }}
-  {{- $noCordon = false }}
-{{- end }}
-{{- end }}
+{{- if and (eq .runType "Normal") (eq .nodeGroup.name "master") }}
+  {{- $apiserverEndpoints := dig "apiserverEndpoints" (list) .normal }}
+  {{- if lt (len $apiserverEndpoints) 2 }}
+    {{- $noCordon = false }}
+  {{- end }}
 {{- end }}
 
 bb-sync-file /etc/systemd/system/$inhibitor_service_name - inhibitor-unit-changed << EOF
