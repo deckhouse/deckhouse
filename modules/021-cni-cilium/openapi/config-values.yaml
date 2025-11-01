@@ -49,7 +49,7 @@ properties:
 
       > Note! VXLAN mode is not compatible with following bpfLBMode modes: Hybrid, DSR. bpfLBMode will be overriden to SNAT if the tunnelMode is VXLAN.
       
-      > Note! Disabled mode is not compatible with clouds that have limitations in the operation of OSI Layer 2 (L2) networking technologies. Such clouds include Yandex Cloud, AWS, and GCP.
+      > Note! The Disabled mode is not compatible with cloud providers such as Yandex Cloud, AWS, and GCP, which have limitations in the operation of network technologies of the second level of the OSI model (L2).
   svcSourceRangeCheck:
     type: boolean
     default: false
