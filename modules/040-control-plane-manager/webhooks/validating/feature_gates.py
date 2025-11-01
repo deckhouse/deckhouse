@@ -102,14 +102,13 @@ def validate(ctx: DotMap) -> list[str]:
             except Exception:
                 continue
         
-        if found_in_any_component:
-            if is_forbidden:
-                warning_msg = f"'{feature_gate}' is forbidden for Kubernetes version {normalized_version} and will not be applied"
-                warnings.append(warning_msg)
-            elif is_deprecated:
-                warning_msg = f"'{feature_gate}' is deprecated for Kubernetes version {normalized_version} and will not be applied"
-                warnings.append(warning_msg)
-        else:
+        if is_forbidden:
+            warning_msg = f"'{feature_gate}' is forbidden for Kubernetes version {normalized_version} and will not be applied"
+            warnings.append(warning_msg)
+        elif is_deprecated:
+            warning_msg = f"'{feature_gate}' is deprecated for Kubernetes version {normalized_version} and will not be applied"
+            warnings.append(warning_msg)
+        elif not found_in_any_component:
             warning_msg = f"'{feature_gate}' is unknown or enabled by default FeatureGate for Kubernetes version {normalized_version} and will not be applied"
             warnings.append(warning_msg)
     
