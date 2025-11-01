@@ -104,11 +104,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
-  to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
   stageDependencies:

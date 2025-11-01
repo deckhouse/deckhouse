@@ -26,7 +26,6 @@ import (
 
 	objectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
@@ -128,11 +127,6 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to unmarshal secret: %v", err)
 	}
 	discoveryDataJSON := secret.Data["discovery-data.json"]
-
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi"})
-	if err != nil {
-		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
-	}
 
 	var discoveryData cloudDataV1.VsphereCloudDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)

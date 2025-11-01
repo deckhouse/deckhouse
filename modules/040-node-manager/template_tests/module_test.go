@@ -684,7 +684,6 @@ spec:
 const (
 	openstackCIMPath    = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
 	openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
-	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
 	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
 )
@@ -695,16 +694,12 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	BeforeSuite(func() {
 		err := os.Symlink(openstackCIMPath, openstackCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink(vsphereCIMPath, vsphereCIMSymlink)
-		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove(openstackCIMSymlink)
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove(vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
