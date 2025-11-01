@@ -168,6 +168,10 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Creating replicated thick pools
 
+{% alert level="info" %}
+To work with thin pool, you need to enable the parameter [`enableThinProvisioning`](/modules/sds-replicated-volume/configuration.html#parameters-enablethinprovisioning)
+{% endalert %}
+
 Now that the necessary LVM volume groups are created on the nodes, you need to combine them into a single logical space. This can be done by combining them into replicated storage pools in the `LINSTOR` backend through the [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource interface.
 
 Storage pools can be of two types: LVM (thick) and LVMThin (thin). The thick pool offers high performance, comparable to the performance of the storage device, but it does not allow snapshots. Example of creating a replicated thick pool:
