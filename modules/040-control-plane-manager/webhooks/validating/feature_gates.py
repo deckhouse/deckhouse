@@ -14,17 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import base64
+from typing import Optional, List
 from deckhouse import hook
 from dotmap import DotMap
 
 from feature_gates_generated import get_feature_gate_info
 
-config = """
+CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+
+config = f"""
 configVersion: v1
 kubernetesValidating:
 - name: cpm-moduleconfig-feature-gates.deckhouse.io
   group: main
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}"]
   matchConditions:
   - name: "only-control-plane-manager-module"
     expression: 'request.name == "control-plane-manager"'
@@ -34,6 +38,21 @@ kubernetesValidating:
     operations:  ["CREATE", "UPDATE"]
     resources:   ["moduleconfigs"]
     scope:       "Cluster"
+
+kubernetes:
+- name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: Secret
+  namespaceSelector:
+    nameSelector:
+      matchNames:
+      - kube-system
+  nameSelector:
+    matchNames:
+    - d8-cluster-configuration
+  executeHookOnEvent: []
+  executeHookOnSynchronization: true
+  keepFullObjectsInMemory: true
 """
 
 
@@ -46,15 +65,39 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
-def validate(ctx: DotMap) -> list[str]:
+def get_k8s_version(ctx: DotMap) -> Optional[str]:
+    snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
+    if not snapshot or len(snapshot) == 0:
+        return None
+    
+    secret = snapshot[0]
+    if not secret or not hasattr(secret, 'object'):
+        return None
+    
+    data = secret.object.data
+    if not data:
+        return None
+    
+    encoded_version = data.get('maxUsedControlPlaneKubernetesVersion')
+    if not encoded_version:
+        return None
+    
+    try:
+        decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
+        if decoded_version:
+            return decoded_version
+    except Exception:
+        pass
+    
+    return None
+
+
+def validate(ctx: DotMap) -> List[str]:
     req = ctx.review.request
     
-    k8s_version_file = "/tmp/kubectl_version"
-    if not os.path.exists(k8s_version_file) or os.path.getsize(k8s_version_file) == 0:
+    k8s_version = get_k8s_version(ctx)
+    if not k8s_version:
         return []
-    
-    with open(k8s_version_file, 'r') as f:
-        k8s_version = f.read().strip()
     
     version_parts = k8s_version.split('.')
     if len(version_parts) < 2:
