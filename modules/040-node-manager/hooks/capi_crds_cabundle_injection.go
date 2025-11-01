@@ -36,7 +36,7 @@ var capiCRDs = []string{
 	"machinepools.cluster.x-k8s.io",
 	"machinehealthchecks.cluster.x-k8s.io",
 	"machinedrainrules.cluster.x-k8s.io",
-	"extensionconfigs.cluster.x-k8s.io",
+	"extensionconfigs.runtime.cluster.x-k8s.io",
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
