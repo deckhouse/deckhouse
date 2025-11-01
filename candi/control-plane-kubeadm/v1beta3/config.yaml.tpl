@@ -157,7 +157,7 @@ controllerManager:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "false"
-    terminated-pod-gc-threshold: {{ $nodesCount := .nodesCount | default 0 | int }}{{ if lt $nodesCount 4 }}"1000"{{ else if lt $nodesCount 7 }}"3000"{{ else }}"6000"{{ end }}
+    terminated-pod-gc-threshold: {{ $nodesCount := .nodesCount | default 0 | int }}{{ if lt $nodesCount 100 }}"1000"{{ else if lt $nodesCount 300 }}"3000"{{ else }}"6000"{{ end }}
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
