@@ -10,7 +10,6 @@ properties:
     - pkiChecksum
     - rolloutEpoch
     - kubeSchedulerExtenders
-    - nodesCount
     properties:
       audit:
         type: object
