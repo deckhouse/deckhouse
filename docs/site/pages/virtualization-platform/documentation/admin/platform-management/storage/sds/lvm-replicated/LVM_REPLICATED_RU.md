@@ -204,7 +204,7 @@ thick-pool   Completed   LVM    87d
 ### Создание реплицированных thin pool
 
 {% alert level="info" %}
-Для работы с thin pool необходимо включить параметр [`enableThinProvisioning`](/modules/sds-replicated-volume/configuration.html#parameters-enablethinprovisioning)
+Для работы с thin pool необходимо включить параметр [enableThinProvisioning](/modules/sds-replicated-volume/configuration.html#parameters-enablethinprovisioning)
 {% endalert %}
 
 В отличие от thick pool, thin pool позволяет использовать снимки, но обладает меньшей производительностью.
