@@ -27,7 +27,7 @@ spec:
       {{- end }}
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
-      {{- end }}
+      {{ end }}
 
       {{- $ic := .nodeGroup.instanceClass -}}
 
