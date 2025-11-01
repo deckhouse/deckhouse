@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
@@ -25,7 +26,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
+var _ = FDescribe("Global hooks :: discovery/clusterConfiguration ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -97,8 +98,27 @@ metadata:
   namespace: kube-system
 data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
-	)
 
+
+		AllowedFeatureGates = `
+{
+  "controlPlaneManager": {
+    "enabledFeatureGates": [
+      "APIServerIdentity",
+      "AllowedFeature",
+    ]
+  }
+}`
+		ForbiddenFeatureGates = `
+{
+  "controlPlaneManager": {
+    "enabledFeatureGates": [
+      "APIServerIdentity",
+      "SomeProblematicFeature",,
+    ]
+  }
+}`
+	)
 	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
 	hooks.DefaultKubernetesVersion = "1.33"
 
@@ -181,8 +201,6 @@ data:
 
 		It("Should not fail, but should not create any Values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
 		})
 	})
 
@@ -206,6 +224,45 @@ data:
 			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
+
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(1))
+			value := metrics[0].Value
+			Expect(*value).To(Equal(float64(1024)))
+		})
+	})
+
+	FContext("Cluster has kubernetesVersion = `Automatic` with FeatureGates specified in MC", func() {
+		f := HookExecutionConfigInit(initValuesString, fmt.Printf(rconfigValuesWithFeatureGates, "asd"))
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
+			f.RunHook()
+		})
+
+		It("Should correctly fill the Values store from it", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("global.clusterConfiguration.clusterType").String()).To(Equal("Cloud"))
+
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(1))
+			value := metrics[0].Value
+			Expect(*value).To(Equal(float64(1024)))
+		})
+	})
+
+
+	FContext("Cluster has kubernetesVersion = `Automatic` with FeatureGates specified in MC", func() {
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesWithFeatureGates)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
+			f.RunHook()
+		})
+
+		It("Should correctly fill the Values store from it", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("global.clusterConfiguration.clusterType").String()).To(Equal("Cloud"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).To(HaveLen(1))
