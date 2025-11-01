@@ -16,4 +16,4 @@ limitations under the License.
 
 package main
 
-//go:generate go run ./feature_gates_generator/ -input=../candi/feature_gates_map.yml -output-py=../modules/040-control-plane-manager/webhooks/validating/feature_gates_generated.py -output-go=../modules/040-control-plane-manager/hooks/feature_gates_generated.go
+//go:generate go run ./feature_gates_generator/ -input=../candi/feature_gates_map.yml -output-py=../modules/040-control-plane-manager/webhooks/feature_gates_generated.py -output-go=../modules/040-control-plane-manager/hooks/feature_gates_generated.go
