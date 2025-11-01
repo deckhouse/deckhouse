@@ -574,7 +574,7 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 
 func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
 	// Generate resource name: <repo>-<package>-<version>
-	resourceName := fmt.Sprintf("%s-%s-%s", repositoryName, packageName, strings.TrimPrefix(version, "v"))
+	resourceName := fmt.Sprintf("%s-%s-%s", repositoryName, packageName, version)
 
 	switch packageType {
 	case packageTypeApplication:

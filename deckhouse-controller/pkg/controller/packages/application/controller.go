@@ -125,8 +125,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	original := app.DeepCopy()
 
-	// find ApplicationPackageVersion by spec.ApplicationPackageName and spec.version
-	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
+	// find ApplicationPackageVersion by spec.Repository, spec.ApplicationPackageName and spec.version
+	apvName := app.Spec.Repository + "-" + app.Spec.ApplicationPackageName + "-" + app.Spec.Version
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
 	if err != nil {
