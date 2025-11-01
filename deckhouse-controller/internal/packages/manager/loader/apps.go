@@ -115,7 +115,6 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 	span.SetAttributes(attribute.String("path", pkgVersionPath))
 
 	// Load package definition (package.yaml)
-	// TODO: Validate that definition matches requested package/version
 	def, err := loadDefinition(pkgVersionPath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -137,11 +136,17 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
+	appDef, err := def.ToApplication()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("convert app definition: %w", err)
+	}
+
 	// Build application configuration
 	conf := apps.ApplicationConfig{
 		Namespace: inst.Namespace,
 
-		Definition: def.ToApplication(),
+		Definition: appDef,
 
 		StaticValues: static,
 		ConfigSchema: config,
