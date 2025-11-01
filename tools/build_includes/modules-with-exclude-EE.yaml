@@ -174,19 +174,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/se-plus/modules/030-csi-vsphere
-  to: /deckhouse/modules/030-csi-vsphere
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
   excludePaths:

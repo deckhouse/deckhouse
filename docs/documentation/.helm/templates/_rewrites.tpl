@@ -2,7 +2,6 @@
 rewrite ^/(.+/modules)/[0-9]+-([^/]+/.*)$ /$1/$2 permanent;
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
 rewrite ^/(.+)/modules/030-cloud-provider-openstack/usage.html$ /$1/modules/cloud-provider-openstack/examples.html redirect;
-rewrite ^/(.+)/modules/030-cloud-provider-vsphere/usage.html$ /$1/modules/cloud-provider-vsphere/docs/examples.html redirect;
 rewrite ^/(.+)/modules/030-cloud-provider-aws/usage.html$ /$1/modules/cloud-provider-aws/examples.html redirect;
 rewrite ^/(.+)/modules/030-cloud-provider-azure/usage.html$ /$1/modules/cloud-provider-azure/examples.html redirect;
 rewrite ^/(.+)/modules/030-cloud-provider-gcp/usage.html$ /$1/modules/cloud-provider-gcp/examples.html redirect;

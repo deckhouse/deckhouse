@@ -44,14 +44,12 @@ k8s:
     ccm:
       openstack: v1.29.1
       aws: v1.29.8
-      vsphere: v1.29.2
       azure: v1.29.11
       gcp: ccm/v29.5.1
     csi:
       aws: v1.34.0
       azure: v1.29.12
       gcp: v1.12.13
-      vsphere: v3.0.3
       openstack: v1.29.1
       provisioner: v5.2.0
       attacher: v4.5.0
@@ -68,14 +66,12 @@ k8s:
     ccm:
       openstack: v1.30.2
       aws: v1.30.8
-      vsphere: v1.30.2
       azure: v1.30.7
       gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.30.7
       gcp: v1.15.4
-      vsphere: v3.0.3
       openstack: v1.30.2
       provisioner: v5.2.0
       attacher: v4.6.1
@@ -93,14 +89,12 @@ k8s:
     ccm:
       openstack: v1.31.2
       aws: v1.31.6
-      vsphere: v1.31.1
       azure: v1.31.1
       gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.7.0
@@ -117,14 +111,12 @@ k8s:
     ccm:
       openstack: v1.31.2
       aws: v1.32.3
-      vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.8.0
@@ -141,14 +133,12 @@ k8s:
     ccm:
       openstack: v1.31.2
       aws: v1.32.0
-      vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.8.1
