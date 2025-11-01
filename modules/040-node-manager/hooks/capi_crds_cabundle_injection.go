@@ -206,8 +206,6 @@ func injectCAIntoCAPICRDs(_ context.Context, input *go_hook.HookInput) error {
 				crdName,
 			)
 		}
-
 	}
-
 	return nil
 }
