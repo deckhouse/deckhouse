@@ -196,15 +196,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/src"
   labels:
   - "type/dependencies"

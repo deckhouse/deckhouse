@@ -36,7 +36,6 @@ if [[ "x$id" == "x" ]]; then
      -v /deckhouse/dhctl:/dhctl \
      -v /deckhouse/candi:/deckhouse/candi \
      -v /deckhouse/ee/candi/cloud-providers/openstack:/deckhouse/candi/cloud-providers/openstack \
-     -v /deckhouse/ee/se-plus/candi/cloud-providers/vsphere:/deckhouse/candi/cloud-providers/vsphere \
      ${INSTALLER_IMAGE_URL} \
      tail -f /dev/null)
   echo "Run new container with ID: ${id}"

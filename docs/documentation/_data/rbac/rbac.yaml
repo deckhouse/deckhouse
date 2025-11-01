@@ -433,38 +433,6 @@ modules:
     namespace: d8-cloud-provider-vcd
     subsystems:
     - infrastructure
-  cloud-provider-vsphere:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:cloud-provider-vsphere:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - cloud-provider-vsphere
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:cloud-provider-vsphere:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - cloud-provider-vsphere
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-cloud-provider-vsphere
-    subsystems:
-    - infrastructure
   cloud-provider-yandex:
     capabilities:
       manage:
@@ -2481,7 +2449,6 @@ subsystems:
     - cloud-provider-openstack
     - cloud-provider-vcd
     - keepalived
-    - cloud-provider-vsphere
     - cloud-provider-zvirt
     - cloud-provider-aws
     - cloud-provider-azure
@@ -2505,7 +2472,6 @@ subsystems:
     - d8-cloud-provider-huaweicloud
     - d8-cloud-provider-openstack
     - d8-cloud-provider-vcd
-    - d8-cloud-provider-vsphere
     - d8-cloud-provider-yandex
     - d8-cloud-provider-zvirt
     - d8-descheduler

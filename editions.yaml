@@ -51,7 +51,6 @@ editions:
 - name: SE-plus
   modulesDir: "ee/se-plus/modules"
   terraformProviders:
-    - vsphere
     - ovirt
   excludeModules:
   - dashboard

@@ -14,14 +14,6 @@
       }
     }
   },
-  "cloud-provider-vsphere": {
-    "editionFullyAvailable": [
-      "se-plus",
-      "ee"
-    ],
-    "editionMinimumAvailable": "ee",
-    "path": "modules/cloud-provider-vsphere/"
-  },
   "cloud-provider-zvirt": {
     "editionFullyAvailable": [
       "se-plus",

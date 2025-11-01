@@ -103,27 +103,6 @@ ovirt:
   vmResourceType: ovirt_vm
   useOpentofu: true
 
-vsphere:
-  namespace: hashicorp
-  cloudName: vSphere
-  type: vsphere
-  version: 2.0.2
-  artifact: terraform-provider-vsphere
-  artifactBinary: terraform-provider-vsphere
-  destinationBinary: terraform-provider-vsphere
-  vmResourceType: vsphere_virtual_machine
-  # Attention! For migrate to opentofu we need some manual actions.
-  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
-  # But we need enable automigrator and terraform state metrics hook. We can add global hook
-  # for autodiscovery terraform versions file, but we think that this attention will be enough.
-  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
-  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
-  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
-  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
-  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
-  # after migration, please remove this comment
-  useOpentofu: false
-
 vcd:
   namespace: vmware
   cloudName: VCD

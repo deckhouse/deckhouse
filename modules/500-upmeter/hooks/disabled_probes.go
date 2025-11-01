@@ -43,7 +43,6 @@ var _ = sdk.RegisterFunc(
 						"d8-cloud-provider-azure",
 						"d8-cloud-provider-gcp",
 						"d8-cloud-provider-openstack",
-						"d8-cloud-provider-vsphere",
 						"d8-cloud-provider-yandex",
 					}},
 				},
