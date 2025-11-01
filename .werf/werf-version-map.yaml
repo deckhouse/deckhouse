@@ -1,6 +1,6 @@
 ---
 image: version-map-artifact
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 final: false
 import:
 - image: tools/yq
