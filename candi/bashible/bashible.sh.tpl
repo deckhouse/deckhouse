@@ -319,7 +319,7 @@ function main() {
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
+      >&2 echo -e "Failed to execute step "$step" ... retry in 10 seconds.\n"
       sleep 10
       echo ===
       echo === Step: $step
