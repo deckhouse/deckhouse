@@ -4,7 +4,10 @@
     expr: |
       (
         max by (namespace, job_name, owner_kind, owner_name) (
+          # Job has failed attempts AND no successful completions
           (kube_job_status_failed > 0)
+          * on (namespace, job_name)
+          (kube_job_status_succeeded == 0)
           * on (namespace, job_name) group_right()
           # compare start time of a Job with the last schedule time of a CronJob
           (
@@ -15,7 +18,7 @@
               * on (namespace, owner_name) group_right()
               max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
             )
-          ) ^ 0
+          )
         )
       )
       * on (namespace, owner_name) group_left()
@@ -24,6 +27,7 @@
           label_replace((extended_monitoring_cronjob_enabled == 1), "owner_name", "$1", "cronjob", "(.*)")
         ) > 0
       )
+    for: 2m
     labels:
       severity_level: "5"
     annotations:
