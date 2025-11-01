@@ -34,88 +34,90 @@ spec:
               items:
                 type: string
   targets:
-    - engine: Rego
-      source:
-        version: "v1"
-        rego: |
-          package d8.security_policies
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-          violation[{"details": {}, "msg": msg}] if {
-            container := input_containers[_]
-            not allowed_by_any(input.review.object, container)
-            msg := sprintf(
-              "AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v",
-              [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles],
-            )
-          }
+              violation[{"details": {}, "msg": msg}] if {
+                container := input_containers[_]
+                not allowed_by_any(input.review.object, container)
+                msg := sprintf(
+                  "AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v",
+                  [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles],
+                )
+              }
 
-          allowed_by_any(pod, container) if {
-            allowed_by_securitypolicyexception(pod, container)
-          }
+              allowed_by_any(pod, container) if {
+                allowed_by_securitypolicyexception(pod, container)
+              }
 
-          allowed_by_any(pod, container) if {
-            allowed_by_securitypolicy(pod, container)
-          }
+              allowed_by_any(pod, container) if {
+                allowed_by_securitypolicy(pod, container)
+              }
 
-          allowed_by_securitypolicyexception(pod, container) if {
-            label := pod.metadata.labels["security.deckhouse.io/securityPolicyException"]
-            exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-            profile := canonicalize_apparmor_profile(container.securityContext.appArmorProfile)
-            profile in exception.spec.securityContext.appArmorProfile.allowedValues
-          }
+              allowed_by_securitypolicyexception(pod, container) if {
+                label := pod.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                profile := canonicalize_apparmor_profile(container.securityContext.appArmorProfile)
+                profile in exception.spec.securityContext.appArmorProfile.allowedValues
+              }
 
-          allowed_by_securitypolicy(pod, container) if {
-            apparmor_profile := get_apparmor_profile(pod, container)
-            glob.match(input.parameters.allowedProfiles[_], [], apparmor_profile)
-          }
+              allowed_by_securitypolicy(pod, container) if {
+                apparmor_profile := get_apparmor_profile(pod, container)
+                glob.match(input.parameters.allowedProfiles[_], [], apparmor_profile)
+              }
 
-          input_containers contains c if {
-            c := input.review.object.spec.containers[_]
-          }
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
 
-          input_containers contains c if {
-            c := input.review.object.spec.initContainers[_]
-          }
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
 
-          input_containers contains c if {
-            c := input.review.object.spec.ephemeralContainers[_]
-          }
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }
 
-          get_apparmor_profile(_, container) := out if {
-            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-            profile != null
-            out := canonicalize_apparmor_profile(profile)
-          }
+              get_apparmor_profile(_, container) := out if {
+                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+                profile != null
+                out := canonicalize_apparmor_profile(profile)
+              }
 
-          get_apparmor_profile(pod, container) := out if {
-            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-            profile == null
-            out := pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
-          }
+              get_apparmor_profile(pod, container) := out if {
+                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+                profile == null
+                out := pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
+              }
 
-          get_apparmor_profile(pod, container) := out if {
-            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
-            profile == null
-            not pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
-            out := canonicalize_apparmor_profile(object.get(pod, ["spec", "securityContext", "appArmorProfile"], null))
-          }
+              get_apparmor_profile(pod, container) := out if {
+                profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+                profile == null
+                not pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
+                out := canonicalize_apparmor_profile(object.get(pod, ["spec", "securityContext", "appArmorProfile"], null))
+              }
 
-          canonicalize_apparmor_profile(profile) := out if {
-            profile.type == "RuntimeDefault"
-            out := "runtime/default"
-          }
+              canonicalize_apparmor_profile(profile) := out if {
+                profile.type == "RuntimeDefault"
+                out := "runtime/default"
+              }
 
-          canonicalize_apparmor_profile(profile) := out if {
-            profile.type == "Unconfined"
-            out := "unconfined"
-          }
+              canonicalize_apparmor_profile(profile) := out if {
+                profile.type == "Unconfined"
+                out := "unconfined"
+              }
 
-          canonicalize_apparmor_profile(profile) := out if {
-            profile.type = "Localhost"
-            out := sprintf("localhost/%s", [profile.localhostProfile])
-          }
+              canonicalize_apparmor_profile(profile) := out if {
+                profile.type = "Localhost"
+                out := sprintf("localhost/%s", [profile.localhostProfile])
+              }
 
-          canonicalize_apparmor_profile(profile) := out if {
-            profile == null
-            out := "runtime/default"
-          }
+              canonicalize_apparmor_profile(profile) := out if {
+                profile == null
+                out := "runtime/default"
+              }

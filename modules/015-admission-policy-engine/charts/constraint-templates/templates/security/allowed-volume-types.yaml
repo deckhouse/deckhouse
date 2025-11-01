@@ -33,21 +33,44 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            volume_fields := {x | input.review.object.spec.volumes[_][x]; x != "name"}
-            field := volume_fields[_]
-            not input_volume_type_allowed(field)
-            msg := sprintf("The volume type %v is not allowed, pod: %v. Allowed volume types: %v", [field, input.review.object.metadata.name, input.parameters.volumes])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                  volume_fields := {x | input.review.object.spec.volumes[_][x]; x != "name"}
+                  field := volume_fields[_]
+                  not allowed_by_any(field)
+                  msg := sprintf("The volume type %v is not allowed, pod: %v. Allowed volume types: %v", [field, input.review.object.metadata.name, input.parameters.volumes])
+              }
 
-        # * may be used to allow all volume types
-        input_volume_type_allowed(field) {
-            input.parameters.volumes[_] == "*"
-        }
+              allowed_by_any(field) if {
+                  allowed_by_securitypolicyexception(field)
+              }
 
-        input_volume_type_allowed(field) {
-            field == input.parameters.volumes[_]
-        }
+              allowed_by_any(field) if {
+                  allowed_by_securitypolicy(field)
+              }
+
+              allowed_by_securitypolicyexception(field) if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                  exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  exception_params := exception.spec.volumes.types.allowedValues
+                  field in exception_params
+              }
+
+              allowed_by_securitypolicy(field) if {
+                  input_volume_type_allowed(field)
+              }
+
+              # * may be used to allow all volume types
+              input_volume_type_allowed(_) if {
+                  input.parameters.volumes[_] == "*"
+              }
+
+              input_volume_type_allowed(field) if {
+                  field == input.parameters.volumes[_]
+              }
