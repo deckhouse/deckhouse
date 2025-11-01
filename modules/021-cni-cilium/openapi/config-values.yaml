@@ -1,5 +1,14 @@
 type: object
 properties:
+  sctpEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enable SCTP support for Cilium.
+
+      > Note! Cilium implements only basic SCTP support.
+      > Port rewriting for SCTP packets is not supported. This means that when describing a Service `targetPort` MUST match `port`, otherwise the packet will be dropped.
+      > When using SCTP in Cilium, the following features are not supported: `SCTP multi-homing`, `NetworkPolicies for pod-to-VIP ` and `EgressGateway`.
   debugLogging:
     type: boolean
     default: false

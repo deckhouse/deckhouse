@@ -1,5 +1,13 @@
 type: object
 properties:
+  sctpEnabled:
+    description: |
+      Включает поддержку протокола SCTP для Cilium.
+
+      > Внимание! Cilium реализует только базовую поддержку протокола SCTP.
+      > Не поддерживается перезапись портов для SCTP-пакетов. Это означает, что при описании Service `targetPort` ДОЛЖЕН совпадать с `port`, в противном случае пакет будет отброшен.
+      > При использовании SCTP в Cilium не поддерживаются следующие функции: `SCTP multi-homing`, `NetworkPolicies для pod-to-VIP ` и `EgressGateway`.
+
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Cilium.
   labelsRegex:
