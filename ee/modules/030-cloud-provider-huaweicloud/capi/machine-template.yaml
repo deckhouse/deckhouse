@@ -48,15 +48,10 @@ spec:
       {{- end }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
-      securityGroups:
-      {{- range $sg := (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}
-        - {{ $sg | quote }}
-      {{- end }}
+      securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
       {{- else }}
-      securityGroups:
-        - {{ $securityGroupID | quote }}
+      securityGroups: [{{ $securityGroupID }}]
       {{- end }}
-
       {{- if .nodeGroup.instanceClass.serverGroupID }}
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
