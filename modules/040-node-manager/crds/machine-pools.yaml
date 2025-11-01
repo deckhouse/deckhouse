@@ -1230,100 +1230,54 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                       type: string
                   type: object
-                nodeRefs:
-                  description: nodeRefs will point to the corresponding Nodes if it
-                    they exist.
-                  items:
-                    description: ObjectReference contains enough information to let
-                      you inspect or modify the referred object.
-                    properties:
-                      apiVersion:
-                        description: API version of the referent.
-                        type: string
-                      fieldPath:
-                        description: |-
-                          If referring to a piece of an object instead of an entire object, this string
-                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within a pod, this would take on a value like:
-                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]" (container with
-                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                          referencing a part of an object.
-                        type: string
-                      kind:
-                        description: |-
-                          Kind of the referent.
-                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                        type: string
-                      name:
-                        description: |-
-                          Name of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      namespace:
-                        description: |-
-                          Namespace of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                        type: string
-                      resourceVersion:
-                        description: |-
-                          Specific resourceVersion to which this reference is made, if any.
-                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                        type: string
-                      uid:
-                        description: |-
-                          UID of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                        type: string
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  maxItems: 10000
-                  type: array
-                  x-kubernetes-list-type: atomic
-                observedGeneration:
-                  description: observedGeneration is the latest generation observed
-                    by the controller.
-                  format: int64
-                  minimum: 1
-                  type: integer
-                phase:
-                  description: phase represents the current phase of cluster actuation.
-                  enum:
-                  - Pending
-                  - Provisioning
-                  - Provisioned
-                  - Running
-                  - ScalingUp
-                  - ScalingDown
-                  - Scaling
-                  - Deleting
-                  - Failed
-                  - Unknown
-                  type: string
-                readyReplicas:
-                  description: readyReplicas is the number of ready replicas for this
-                    MachinePool. A machine is considered ready when Machine's Ready
-                    condition is true.
-                  format: int32
-                  type: integer
-                replicas:
-                  description: replicas is the most recently observed number of replicas.
-                  format: int32
-                  type: integer
-                upToDateReplicas:
-                  description: upToDateReplicas is the number of up-to-date replicas
-                    targeted by this MachinePool. A machine is considered up-to-date
-                    when Machine's UpToDate condition is true.
-                  format: int32
-                  type: integer
-              type: object
-          required:
-          - spec
-          type: object
-      served: true
-      storage: false
-      subresources:
-        scale:
-          specReplicasPath: .spec.replicas
-          statusReplicasPath: .status.replicas
-        status: {}
+                  x-kubernetes-map-type: atomic
+                maxItems: 10000
+                type: array
+                x-kubernetes-list-type: atomic
+              observedGeneration:
+                description: observedGeneration is the latest generation observed
+                  by the controller.
+                format: int64
+                minimum: 1
+                type: integer
+              phase:
+                description: phase represents the current phase of cluster actuation.
+                enum:
+                - Pending
+                - Provisioning
+                - Provisioned
+                - Running
+                - ScalingUp
+                - ScalingDown
+                - Scaling
+                - Deleting
+                - Failed
+                - Unknown
+                type: string
+              readyReplicas:
+                description: readyReplicas is the number of ready replicas for this
+                  MachinePool. A machine is considered ready when Machine's Ready
+                  condition is true.
+                format: int32
+                type: integer
+              replicas:
+                description: replicas is the most recently observed number of replicas.
+                format: int32
+                type: integer
+              upToDateReplicas:
+                description: upToDateReplicas is the number of up-to-date replicas
+                  targeted by this MachinePool. A machine is considered up-to-date
+                  when Machine's UpToDate condition is true.
+                format: int32
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: false
+    subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
+      status: {}
