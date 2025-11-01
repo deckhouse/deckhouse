@@ -15,8 +15,17 @@
 # limitations under the License.
 
 import os
+import sys
+from pathlib import Path
 from deckhouse import hook
 from dotmap import DotMap
+
+# import feature_gates_generated
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 from feature_gates_generated import get_feature_gate_info
 
 config = """
