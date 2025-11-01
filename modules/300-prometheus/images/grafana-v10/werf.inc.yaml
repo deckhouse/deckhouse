@@ -88,7 +88,7 @@ import:
   to: /usr/share/grafana/public
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/conf
+  add: /src/grafana/conf
   to: /usr/share/grafana/conf
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

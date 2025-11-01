@@ -1,4 +1,4 @@
-# version=v0.5.37
+# version=v0.5.38
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:a6e0220edd70c87368869f45a66c10c684709fe2ffdbaf8471d3d055f698de91" # fromImage: builder/scratch
@@ -8,10 +8,10 @@ base/python: "sha256:93bec8557300544fb6723837adafc8d72a8c7e5a81c92a847d5e7dce4c0
 base/python-v3.12.10: "sha256:93bec8557300544fb6723837adafc8d72a8c7e5a81c92a847d5e7dce4c0911b5" # fromImage: builder/scratch
 base/redis: "sha256:ca1f5271089dda8f473b86e9ab9883229f16f341b555292a860253d4e7876fd0" # fromImage: builder/scratch
 base/redis-7.4.5: "sha256:ca1f5271089dda8f473b86e9ab9883229f16f341b555292a860253d4e7876fd0" # fromImage: builder/scratch
-base/ruby: "sha256:63fca121dbeb721a139c2bab322236889b1d3f3d40cb00b25db42775e81df3f8" # fromImage: base/distroless
-base/ruby-bundler: "sha256:5a4f5d7cdf36020344325315040efee7edfc11c563c2d54cc3466a1324f019db" # fromImage: builder/alpine
-base/ruby-bundler-v3_4_7: "sha256:5a4f5d7cdf36020344325315040efee7edfc11c563c2d54cc3466a1324f019db" # fromImage: builder/alpine
-base/ruby-v3_4_7: "sha256:63fca121dbeb721a139c2bab322236889b1d3f3d40cb00b25db42775e81df3f8" # fromImage: base/distroless
+base/ruby: "sha256:e95e692539498f322e5f0eb47160c85491f3f6c41e8d411f428695f41080a1a1" # fromImage: base/distroless
+base/ruby-bundler: "sha256:79256ecb70ef6b280c9b2a3184fa92c878ccccfd66b6cd73a25d9ba9fee338a0" # fromImage: builder/alpine
+base/ruby-bundler-v3_4_7: "sha256:79256ecb70ef6b280c9b2a3184fa92c878ccccfd66b6cd73a25d9ba9fee338a0" # fromImage: builder/alpine
+base/ruby-v3_4_7: "sha256:e95e692539498f322e5f0eb47160c85491f3f6c41e8d411f428695f41080a1a1" # fromImage: base/distroless
 base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # fromImage: builder/scratch
 base/shell-operator: "sha256:d3a00f5f05a8d0dc031b3eaf3bb42de80c646f76d0a9184d67d9b361e9005cf2" # fromImage: builder/scratch
 base/shell-operator-v1.9.3: "sha256:d3a00f5f05a8d0dc031b3eaf3bb42de80c646f76d0a9184d67d9b361e9005cf2" # fromImage: builder/scratch
