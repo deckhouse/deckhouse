@@ -26,7 +26,7 @@ metadata:
   labels:
     package: test-package
     repository: test-repo
-  name: test-package-v1.0.0
+  name: test-repo-test-package-v1.0.0
   resourceVersion: "1"
 spec:
   packageName: test-package

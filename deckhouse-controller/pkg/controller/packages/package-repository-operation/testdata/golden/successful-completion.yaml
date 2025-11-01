@@ -42,7 +42,7 @@ metadata:
     heritage: deckhouse
     package: v1.0.0
     repository: test-repo
-  name: test-repo-v1.0.0-1.0.0
+  name: test-repo-v1.0.0-v1.0.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true

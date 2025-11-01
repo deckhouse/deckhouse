@@ -11,7 +11,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  name: test-package-v1.0.0
+  name: test-repo-test-package-v1.0.0
   labels:
     package: test-package
     repository: test-repo
