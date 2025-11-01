@@ -49,20 +49,10 @@ spec:
             )
           }
 
-          allowed_by_any(volume) if {
-            allowed_by_securitypolicyexception(volume)
-          }
+          ### SecurityPolicy logic
 
           allowed_by_any(volume) if {
             allowed_by_securitypolicy(volume)
-          }
-
-          allowed_by_securitypolicyexception(volume) if {
-            label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
-            exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-            allowedPaths := exception.spec.volumes.hostPath.allowedValues
-            allowedPaths_transformed := [entry | value := allowedPaths[_]; entry := {"pathPrefix": value.path, "readOnly": value.readOnly}]
-            input_hostpath_allowed(allowedPaths_transformed, volume)
           }
 
           allowed_by_securitypolicy(volume) if {
@@ -131,6 +121,34 @@ spec:
             i < n
           }
 
+          ### SecurityPolicyException logic
+
+          allowed_by_any(volume) if {
+            allowed_by_securitypolicyexception(volume)
+          }
+
+          allowed_by_securitypolicyexception(volume) if {
+            label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+            exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+            allowedPaths := exception.spec.volumes.hostPath.allowedValues
+            input_hostpath_allowed_exact(allowedPaths, volume)
+          }
+
+          input_hostpath_allowed_exact(allowedPaths, volume) if {
+            allowedHostPath := allowedPaths[_]
+            allowedHostPath.path == volume.hostPath.path
+            volume_mount_matches_read_only(allowedHostPath.readOnly, volume.name)
+          }
+
+          volume_mount_matches_read_only(expectedReadOnly, volume_name) if {
+            container := input_containers[_]
+            mount := container.volumeMounts[_]
+            mount.name == volume_name
+            mount.readOnly == expectedReadOnly
+          }
+
+          ### Common logic
+
           input_hostpath_volumes contains v if {
             v := input.review.object.spec.volumes[_]
             has_field(v, "hostPath")
@@ -152,3 +170,4 @@ spec:
           input_containers contains c if {
             c := input.review.object.spec.ephemeralContainers[_]
           }
+

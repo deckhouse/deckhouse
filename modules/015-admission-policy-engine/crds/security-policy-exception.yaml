@@ -252,6 +252,7 @@ spec:
                           description: List of allowed procMount values.
                           items:
                             type: string
+                            enum: ["Default", "Unmasked"]
                         metadata:
                           type: object
                           description: Metadata related to the exception.
