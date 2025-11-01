@@ -43,7 +43,7 @@ kubernetes:
 - name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
   apiVersion: v1
   kind: Secret
-  namespaceSelector:
+  namespace:
     nameSelector:
       matchNames:
       - kube-system
