@@ -163,7 +163,7 @@ func injectCAIntoCAPICRDs(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if len(input.Snapshots.Get("cabundle")) > 0 {
-		var crd CRD
+		var crd CRDCAPI
 		var bundle certificate.Certificate
 
 		if err := input.Snapshots.Get("cabundle")[0].UnmarshalTo(&bundle); err != nil {
