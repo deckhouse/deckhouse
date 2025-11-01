@@ -80,6 +80,13 @@ spec:
                     Primary network for the VMs main NIC.
 
                     **By default**, the value from 'HuaweiCloudDiscoverData' is used.
+                mainNetwork:
+                  type: string
+                  x-doc-required: false
+                  description: |
+                    Primary network for the VMs main NIC.
+
+                    **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
                   type: array
                   items:
@@ -136,9 +143,6 @@ spec:
                 nodeGroupConsumers:
                   type: array
                   items:
-                  type: string
-                  x-doc-required: false
-                mainNetwork:
                     type: string
       additionalPrinterColumns:
         - name: "Node Groups"
