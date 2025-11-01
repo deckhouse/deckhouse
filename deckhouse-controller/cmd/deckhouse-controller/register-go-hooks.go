@@ -20,7 +20,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/021-cni-cilium/hooks/ee"
-	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-csi-vsphere/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/se/modules/380-metallb/hooks"

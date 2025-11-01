@@ -2,13 +2,6 @@ cilium-hubble:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
-cloud-provider-vsphere:
-    - version: 2
-      description:
-        en: If the field `.storageClass.compatibilityFlag` exists, capitalize the field value.
-        ru: Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы.
-      conversions:
-        - if .storageClass | has("compatibilityFlag") then .storageClass.compatibilityFlag |= (.[0:1] | ascii_upcase) + (.[1:] | ascii_downcase) end
 control-plane-manager:
     - version: 2
       description:

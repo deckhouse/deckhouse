@@ -41,10 +41,6 @@
   "cloud-provider-vcd": [
     "cloud"
   ],
-  "cloud-provider-vsphere": [
-    "cloud",
-    "bare-metal"
-  ],
   "cloud-provider-yandex": [
     "cloud"
   ],

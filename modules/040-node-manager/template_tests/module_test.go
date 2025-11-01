@@ -684,7 +684,6 @@ spec:
 const (
 	openstackCIMPath    = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
 	openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
-	vsphereCIMPath      = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
 	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
 	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"

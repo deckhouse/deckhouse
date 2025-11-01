@@ -144,7 +144,6 @@
       "static-routing-manager"
     ],
     "includeModules": [
-      "cloud-provider-vsphere",
       "cloud-provider-zvirt"
     ]
   }

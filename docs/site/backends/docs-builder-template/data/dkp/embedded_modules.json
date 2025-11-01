@@ -206,23 +206,6 @@
       }
     },
     {
-      "title": "Cloud provider — VMware vSphere",
-      "description": "Managing cloud resources in Deckhouse Kubernetes Platform based on VMware vSphere.",
-      "module": "cloud-provider-vsphere",
-      "embedded": "true",
-      "tags": [
-        "bare-metal",
-        "cloud",
-        "embedded"
-      ],
-      "editionMinimumAvailable": "se-plus",
-      "url": "cloud-provider-vsphere/",
-      "ru": {
-        "title": "Cloud provider — VMware vSphere",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе VMware vSphere."
-      }
-    },
-    {
       "title": "Cloud provider — Yandex Cloud",
       "description": "Cloud resource management in Deckhouse Kubernetes Platform using Yandex Cloud.",
       "module": "cloud-provider-yandex",

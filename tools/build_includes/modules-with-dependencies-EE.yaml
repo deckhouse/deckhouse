@@ -274,29 +274,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/030-cloud-provider-vsphere
-  to: /deckhouse/modules/030-cloud-provider-vsphere
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt
   to: /deckhouse/modules/030-cloud-provider-zvirt
   excludePaths:

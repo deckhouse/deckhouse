@@ -94,11 +94,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/030-cloud-provider-vsphere
-  to: /deckhouse/modules/030-cloud-provider-vsphere
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt
   to: /deckhouse/modules/030-cloud-provider-zvirt
   stageDependencies:
