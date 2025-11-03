@@ -22,8 +22,8 @@ builder/alpine-3.22: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184a
 builder/alpine-svace: "sha256:ea53c5b323bd5bf9df8a16360cf83fc02610ddb27710599f85b72ceb04132b39" # fromImage: builder/alpine-3.22
 builder/alpine-svace-3.21: "sha256:901c0f38672089fc4098cee3426790354defb054e147c903a26e91448a691ecf" # fromImage: builder/alpine-3.21
 builder/alpine-svace-3.22: "sha256:ea53c5b323bd5bf9df8a16360cf83fc02610ddb27710599f85b72ceb04132b39" # fromImage: builder/alpine-3.22
-builder/alt: "sha256:f9f8dceeb403cbdd6f1393a8bb5eae55643e55917c701fcc9d638f5234681106" # from: registry.altlinux.org/p11/alt:20250625
-builder/alt-2025-10-29: "sha256:f9f8dceeb403cbdd6f1393a8bb5eae55643e55917c701fcc9d638f5234681106" # from: registry.altlinux.org/p11/alt:20250625
+builder/alt-2025-11-02: "sha256:f1b131ab710bd9ea9654a4efb9873cfda1955400ed85fe0de7d7f99416beb0f7" # fromImage: registry.altlinux.org/p11/alt:20250625
+builder/alt: "sha256:f1b131ab710bd9ea9654a4efb9873cfda1955400ed85fe0de7d7f99416beb0f7" # fromImage: registry.altlinux.org/p11/alt:20250625
 builder/debian: "sha256:0ed78087f23de3d6a9e3bb75bc6df7e2d17373cf7f4d45568a8d265cfd0ca0e2" # from: debian:trixie-slim
 builder/debian-12.11-slim: "sha256:12427020b18306124815a1edbcd2a774068b82f21e558d8271b7f457ce6f53f5" # from: debian:12.11-slim
 builder/debian-svace: "sha256:d0a6896d37b29c22757c0c8f33782bdcb255b38d5dbf1ee9f7961f156de88a50" # fromImage: builder/debian
