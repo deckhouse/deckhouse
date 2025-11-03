@@ -27,6 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+const errorPrefix = "Error during cleanup tmp dir:"
+
 // sortByDepthDescending sorts paths by depth (number of slashes) in descending order
 // This ensures that deeper directories are deleted first, preventing "directory not empty" errors
 func sortByDepthDescending(paths []string) {
@@ -43,9 +45,8 @@ func sortByDepthDescending(paths []string) {
 }
 
 type ClearTmpParams struct {
-	IsDebug          bool
-	RemoveTombStone  bool
-	PreserveStateDir bool
+	IsDebug         bool
+	RemoveTombStone bool
 
 	TmpDir        string
 	DefaultTmpDir string
@@ -68,11 +69,15 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 		logger = defaultLoggerProvider()
 	}
 
-	tmpDir := path.Clean(params.TmpDir)
+	tmpDir := params.TmpDir
 
-	if tmpDir == "" || tmpDir == "/" || tmpDir == "." {
+	if tmpDir != "" {
+		tmpDir = path.Clean(params.TmpDir)
+	}
+
+	if tmpDir == "" || tmpDir == "/" || tmpDir == "." || tmpDir == ".." {
 		return func() {
-			logger.LogDebugF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'", tmpDir)
+			logger.LogDebugF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", tmpDir)
 		}
 	}
 
@@ -97,7 +102,7 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 
 		err := filepath.Walk(params.TmpDir, func(fullPath string, info os.FileInfo, err error) error {
 			if err != nil {
-				log.DebugF("Skip cleaning temp %s because walk returns err: %v\n", fullPath, err)
+				log.DebugF("%s %s because walk returns err: %v\n", errorPrefix, fullPath, err)
 				return nil
 			}
 
@@ -117,32 +122,6 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 					return nil
 				}
 
-				// Skip state directories if PreserveStateDir is enabled
-				if params.PreserveStateDir {
-					// Check if this directory contains tombstone or other state files
-					tombstonePath := filepath.Join(fullPath, state.TombstoneKey)
-					if _, err := os.Stat(tombstonePath); err == nil {
-						logger.LogDebugF("Skip cleaning state dir '%s' (contains tombstone)\n", fullPath)
-						return filepath.SkipDir
-					}
-
-					// Check if this directory has any state files (non-log files)
-					entries, err := os.ReadDir(fullPath)
-					if err == nil {
-						hasStateFiles := false
-						for _, entry := range entries {
-							if !entry.IsDir() && !strings.HasSuffix(entry.Name(), ".log") {
-								hasStateFiles = true
-								break
-							}
-						}
-						if hasStateFiles {
-							logger.LogDebugF("Skip cleaning state dir '%s' (contains state files)\n", fullPath)
-							return filepath.SkipDir
-						}
-					}
-				}
-
 				dirsForDeletion = append(dirsForDeletion, fullPath)
 				return nil
 			}
@@ -154,15 +133,16 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 				}
 			}
 
+			logger.LogDebugF("Delete tmp file '%s'\n", fullPath)
 			err = os.Remove(fullPath)
 			if err != nil {
-				logger.LogDebugF("Error deleting temp file '%s': %v\n", fullPath, err)
+				logger.LogDebugF("%s file did not deleted '%s': %v\n", errorPrefix, fullPath, err)
 			}
 			return nil
 		})
 
 		if err != nil {
-			logger.LogDebugF("Error cleaning temp dir while walking '%s': %v\n", tmpDir, err)
+			logger.LogDebugF("%s walking '%s' got error: %v\n", errorPrefix, tmpDir, err)
 		}
 
 		sortByDepthDescending(dirsForDeletion)
@@ -171,12 +151,7 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 			for _, keep := range keepFiles {
 				// Check if the directory is an ancestor of the kept file
 				keepDir := filepath.Dir(keep)
-				if keepDir == dir {
-					return true
-				}
-				// Also check if the directory is a parent directory of the kept file
-				rel, err := filepath.Rel(dir, keep)
-				if err == nil && !strings.HasPrefix(rel, "..") {
+				if keepDir == dir || strings.HasPrefix(keepDir, dir) {
 					return true
 				}
 			}
@@ -188,14 +163,14 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 
 		for _, dir := range dirsForDeletion {
 			if skipDeleteDir(dir) {
-				logger.LogDebugF("Skip cleaning temp dir '%s'\n", dir)
+				logger.LogDebugF("Skip cleaning temp sub dir '%s'\n", dir)
 				continue
 			}
 
 			err := os.Remove(dir)
 			if err != nil {
 				if !os.IsNotExist(err) {
-					logger.LogDebugF("Error cleaning temp dir '%s': %v\n", dir, err)
+					logger.LogDebugF("%s directory '%s' deleting returns error: %v\n", errorPrefix, dir, err)
 				}
 			}
 		}
