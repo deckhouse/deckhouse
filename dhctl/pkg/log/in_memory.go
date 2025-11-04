@@ -188,12 +188,12 @@ func (l *InMemoryLogger) LogSuccess(s string) {
 	l.parent.LogSuccess(s)
 }
 func (l *InMemoryLogger) LogFail(s string) {
-	l.writeEntityFormatted("Fail: %s", s)
+	l.writeEntityWithPrefix(l.errorPrefix, "Fail: %s", s)
 	l.parent.LogFail(s)
 
 }
 func (l *InMemoryLogger) LogFailRetry(s string) {
-	l.writeEntityFormatted("Fail retry: %s", s)
+	l.writeEntityWithPrefix(l.errorPrefix, "Fail retry: %s", s)
 	l.parent.LogFailRetry(s)
 }
 
