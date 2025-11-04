@@ -51,13 +51,12 @@ func (m *Match) IsValid() error {
 type InMemoryLogger struct {
 	m       sync.RWMutex
 	entries []string
+	buffer  *bytes.Buffer
 
 	parent Logger
 
 	errorPrefix string
 	debugPrefix string
-
-	buffer *bytes.Buffer
 }
 
 func NewInMemoryLogger() *InMemoryLogger {
@@ -91,6 +90,9 @@ func (l *InMemoryLogger) WithDebugPrefix(prefix string) *InMemoryLogger {
 }
 
 func (l *InMemoryLogger) WithBuffer(buffer *bytes.Buffer) *InMemoryLogger {
+	l.m.Lock()
+	defer l.m.Unlock()
+
 	l.buffer = buffer
 	return l
 }
