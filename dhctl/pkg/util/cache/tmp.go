@@ -32,6 +32,10 @@ const errorPrefix = "Error during cleanup tmp dir:"
 // sortByDepthDescending sorts paths by depth (number of slashes) in descending order
 // This ensures that deeper directories are deleted first, preventing "directory not empty" errors
 func sortByDepthDescending(paths []string) {
+	if len(paths) == 0 {
+		return
+	}
+
 	sort.Slice(paths, func(i, j int) bool {
 		depthI := strings.Count(paths[i], string(filepath.Separator))
 		depthJ := strings.Count(paths[j], string(filepath.Separator))

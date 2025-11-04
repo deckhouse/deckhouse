@@ -34,11 +34,25 @@ import (
 const loggerErrorPrefix = "Error while do cleanup"
 
 func TestSortByDepthDescending(t *testing.T) {
+	emptySlice := make([]string, 0)
+
 	tests := []struct {
 		name     string
 		input    []string
 		expected []string
 	}{
+		{
+			name:     "nil slice",
+			input:    nil,
+			expected: nil,
+		},
+
+		{
+			name:     "empty slice",
+			input:    emptySlice,
+			expected: emptySlice,
+		},
+
 		{
 			name: "basic depth sorting",
 			input: []string{
@@ -141,8 +155,11 @@ func TestSortByDepthDescending(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			paths := make([]string, len(tt.input))
-			copy(paths, tt.input)
+			paths := tt.input
+			if len(paths) > 0 {
+				paths = make([]string, len(tt.input))
+				copy(paths, tt.input)
+			}
 
 			sortByDepthDescending(paths)
 
@@ -281,7 +298,7 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 	params := testClearFuncParams{
 		testName:              "TestKeepLogsAndTombstounes",
 		isDebug:               false,
-		tmpSubDir:             "allInSubDir",
+		tmpSubDir:             "keepLogsAndTombstounes",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      false,
 		makeDirs:              testJoinFilesDirs(keeptDirs, dirsForRemove),
