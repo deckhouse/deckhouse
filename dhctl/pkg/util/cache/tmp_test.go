@@ -259,8 +259,6 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 		{path: "state3/subdirb"},
 	}
 
-	dirs := testJoinFilesDirs(keeptDirs, dirsForRemove)
-
 	keeptFiles := []fileDirToCreate{
 		{path: ".tombstone"},
 		{path: "state/.tombstone"},
@@ -280,16 +278,14 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 		{path: "state3/another.bin"},
 	}
 
-	files := testJoinFilesDirs(keeptFiles, filesForRemove)
-
 	params := testClearFuncParams{
 		testName:              "TestKeepLogsAndTombstounes",
 		isDebug:               false,
 		tmpSubDir:             "allInSubDir",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      false,
-		makeDirs:              dirs,
-		makeFiles:             files,
+		makeDirs:              testJoinFilesDirs(keeptDirs, dirsForRemove),
+		makeFiles:             testJoinFilesDirs(keeptFiles, filesForRemove),
 	}
 
 	f := getTestClearFunc(t, params)
@@ -335,7 +331,8 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 	params := testClearFuncParams{
 		testName:              "TestSkipIncorrectAndDebug",
 		isDebug:               false,
-		defaultTmpDirAsSubdir: true,
+		tmpSubDir:             "skipLogsAndTombstones",
+		defaultTmpDirAsSubdir: false,
 		removeTombstones:      true,
 		makeDirs:              dirs,
 		makeFiles:             files,

@@ -292,7 +292,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
-		DisableBootstrapClearCache: false,
+		DisableBootstrapClearCache: true,
 		OnPhaseFunc:                p.switchPhase,
 		OnProgressFunc:             p.sendProgress,
 		CommanderMode:              p.request.Options.CommanderMode,

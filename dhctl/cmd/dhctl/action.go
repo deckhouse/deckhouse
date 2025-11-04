@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,14 @@ type actionIniter struct {
 
 func newActionIniter() *actionIniter {
 	return &actionIniter{}
+}
+
+func getCommandName(c *kingpin.ParseContext) string {
+	if c.SelectedCommand == nil {
+		return ""
+	}
+
+	return c.SelectedCommand.FullCommand()
 }
 
 func (i *actionIniter) init(c *kingpin.ParseContext) error {
@@ -66,16 +75,16 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	// _server is special command for running action eg bootstrap as standalone process
 	// we need to remove all for this command because state will write in db
 	// and do not need on fs
-	if c.SelectedCommand != nil && c.SelectedCommand.FullCommand() == "_server" {
+	if getCommandName(c) == "_server" {
 		log.DebugLn("Selected command: _server. Tombstone will be removed when temp directory remove")
 		clearTmpParams.RemoveTombStone = true
 	}
 
-	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.GetClearTemporaryDirsFunc(clearTmpParams))
-
 	tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
 		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLogger())
 	})
+
+	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.GetClearTemporaryDirsFunc(clearTmpParams))
 
 	return nil
 }
@@ -97,20 +106,25 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 	return nil
 }
 
+// empty is command not passed
+var skipTeeLoggerCommands = []string{"", "server", "_server"}
+
 func (i *actionIniter) initLogger(c *kingpin.ParseContext) error {
 	log.InitLogger(app.LoggerType)
 	if app.DoNotWriteDebugLogFile {
 		return nil
 	}
 
-	if c.SelectedCommand == nil {
+	commandName := getCommandName(c)
+
+	if slices.Contains(skipTeeLoggerCommands, commandName) {
 		return nil
 	}
 
 	logPath := app.DebugLogFilePath
 
 	if logPath == "" {
-		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(app.TmpDirName, logFile)
 	}

@@ -26,7 +26,6 @@ import (
 func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
-	app.DoNotWriteDebugLogFile = true
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		return server.Serve(settings.ServerParams{
@@ -45,7 +44,6 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
-	app.DoNotWriteDebugLogFile = true
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		return singlethreaded.Serve(settings.ServerSingleshotParams{

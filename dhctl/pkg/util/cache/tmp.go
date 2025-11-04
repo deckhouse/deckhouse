@@ -72,12 +72,12 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 	tmpDir := params.TmpDir
 
 	if tmpDir != "" {
-		tmpDir = path.Clean(params.TmpDir)
+		tmpDir = path.Clean(tmpDir)
 	}
 
 	if tmpDir == "" || tmpDir == "/" || tmpDir == "." || tmpDir == ".." {
 		return func() {
-			logger.LogDebugF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", tmpDir)
+			logger.LogInfoF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", tmpDir)
 		}
 	}
 
@@ -100,7 +100,7 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 		dirsForDeletion := make([]string, 0)
 		keepFiles := make([]string, 0)
 
-		err := filepath.Walk(params.TmpDir, func(fullPath string, info os.FileInfo, err error) error {
+		err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.DebugF("%s %s because walk returns err: %v\n", errorPrefix, fullPath, err)
 				return nil
