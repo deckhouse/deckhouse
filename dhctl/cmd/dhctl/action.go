@@ -41,14 +41,6 @@ func newActionIniter() *actionIniter {
 	return &actionIniter{}
 }
 
-func getCommandName(c *kingpin.ParseContext) string {
-	if c.SelectedCommand == nil {
-		return ""
-	}
-
-	return c.SelectedCommand.FullCommand()
-}
-
 func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	tmpDir := app.TmpDirName
 	dirsToInitialize := directoriesToInitialize{
@@ -63,13 +55,25 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		return err
 	}
 
+	i.registerCleanupProviders()
+
+	i.registerCleanupTmp(c, tmpDir)
+
+	return nil
+}
+
+func (i *actionIniter) registerCleanupProviders() {
+	tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
+		infrastructureprovider.CleanupProvidersFromDefaultCache(defaultLoggerProvider)
+	})
+}
+
+func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string) {
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:       app.IsDebug,
-		DefaultTmpDir: app.GetDefaultTmpDir(),
-		TmpDir:        tmpDir,
-		LoggerProvider: func() log.Logger {
-			return log.GetDefaultLogger()
-		},
+		IsDebug:        app.IsDebug,
+		DefaultTmpDir:  app.GetDefaultTmpDir(),
+		TmpDir:         tmpDir,
+		LoggerProvider: defaultLoggerProvider,
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process
@@ -80,13 +84,7 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		clearTmpParams.RemoveTombStone = true
 	}
 
-	tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
-		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLogger())
-	})
-
 	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.GetClearTemporaryDirsFunc(clearTmpParams))
-
-	return nil
 }
 
 type directoriesToInitialize map[string]string
@@ -161,4 +159,16 @@ func (i *actionIniter) getLoggerPath() string {
 	defer i.logFileMutex.Unlock()
 
 	return i.logFile
+}
+
+func getCommandName(c *kingpin.ParseContext) string {
+	if c.SelectedCommand == nil {
+		return ""
+	}
+
+	return c.SelectedCommand.FullCommand()
+}
+
+func defaultLoggerProvider() log.Logger {
+	return log.GetDefaultLogger()
 }

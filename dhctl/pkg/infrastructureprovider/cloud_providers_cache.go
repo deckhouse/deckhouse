@@ -28,15 +28,19 @@ import (
 
 var defaultProvidersCache = newCloudProvidersMapCache()
 
+type LoggerProviderForCleanup func() log.Logger
+
 // CleanupProvidersFromDefaultCache - warning! is not tread-safe to avoid deadlock
-func CleanupProvidersFromDefaultCache(logger log.Logger) {
+func CleanupProvidersFromDefaultCache(loggerProvider LoggerProviderForCleanup) {
 	defaultProvidersCache.finalizedMutex.Lock()
 	defer defaultProvidersCache.finalizedMutex.Unlock()
 
+	logger := loggerProvider()
+
 	for _, provider := range defaultProvidersCache.cloudProvidersCache {
-		logger.LogDebugF("CleanupProvidersFromDefaultCache called. Cleanup provider %s from default cache\n", provider.String())
+		logDebugF(logger, "CleanupProvidersFromDefaultCache called. Cleanup provider %s from default cache\n", provider.String())
 		if err := provider.Cleanup(); err != nil {
-			logger.LogWarnF("Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
+			logWarnF(logger, "Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
 		}
 	}
 
@@ -202,4 +206,20 @@ func getKey(clusterUUID string, metaConfig *config.MetaConfig) string {
 		metaConfig.ProviderName,
 		metaConfig.Layout,
 	)
+}
+
+func logWarnF(logger log.Logger, f string, args ...any) {
+	if govalue.IsNil(logger) {
+		return
+	}
+
+	logger.LogWarnF(f, args...)
+}
+
+func logDebugF(logger log.Logger, f string, args ...any) {
+	if govalue.IsNil(logger) {
+		return
+	}
+
+	logger.LogDebugF(f, args...)
 }
