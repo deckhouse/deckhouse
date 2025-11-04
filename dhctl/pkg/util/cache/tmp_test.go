@@ -152,7 +152,24 @@ func TestSortByDepthDescending(t *testing.T) {
 }
 
 func TestClearAllInSubDirWithTombstone(t *testing.T) {
-	files := []fileDirToCreate{
+	keeptDirs := []fileDirToCreate{
+		{path: "outside_dir", outsideTmpRoot: true},
+	}
+
+	dirsForRemove := []fileDirToCreate{
+		{path: "state"},
+		{path: "state/iefiwhguwurguhurgog4ogoggo4g5ohwrfjiorjgf842h3hfu34hgh4hg4hg4hgh54gh45h4"},
+		{path: "state/empty"},
+		{path: "state/subdir"},
+		{path: "state/subdir/sub"},
+	}
+
+	keeptFiles := []fileDirToCreate{
+		{path: "outside.file", outsideTmpRoot: true},
+		{path: "outside_dir/outside_in_sub.file", outsideTmpRoot: true},
+	}
+
+	filesToRemove := []fileDirToCreate{
 		{path: "in_root.txt"},
 		{path: "in_root2.txt"},
 		{path: "state/instate.txt"},
@@ -163,19 +180,51 @@ func TestClearAllInSubDirWithTombstone(t *testing.T) {
 		{path: "state/subdir/sub/file"},
 	}
 
-	dirs := []fileDirToCreate{
-		{path: "state"},
-		{path: "state/iefiwhguwurguhurgog4ogoggo4g5ohwrfjiorjgf842h3hfu34hgh4hg4hg4hgh54gh45h4"},
-		{path: "state/empty"},
-		{path: "state/subdir"},
-		{path: "state/subdir/sub"},
-	}
-
 	params := testClearFuncParams{
 		testName:              "TestClearAllInSubDirWithTombstone",
 		isDebug:               false,
 		tmpSubDir:             "allInSubDir",
 		defaultTmpDirAsSubdir: false,
+		removeTombstones:      true,
+		makeDirs:              testJoinFilesDirs(keeptDirs, dirsForRemove),
+		makeFiles:             testJoinFilesDirs(keeptFiles, filesToRemove),
+	}
+
+	f := getTestClearFunc(t, params)
+
+	defer func() {
+		clearTest(t, f)
+	}()
+
+	f.clear()
+
+	assertKeepAndRemoved(
+		t,
+		testJoinFilesDirs(filesToRemove, dirsForRemove),
+		f,
+		testJoinFilesDirs(keeptDirs, keeptFiles),
+	)
+	// assert removing tmp dir because it is not default
+	assertRemovedPath(t, f.tmpDir)
+}
+
+func TestClearAllInSubDirWithoutTombstoneWithDefaultDir(t *testing.T) {
+	dirs := []fileDirToCreate{
+		{path: "state"},
+		{path: "state/empty"},
+	}
+
+	files := []fileDirToCreate{
+		{path: "in_root.txt"},
+		{path: "state/instate.txt"},
+		{path: "state/.hidden"},
+	}
+
+	params := testClearFuncParams{
+		testName:              "TestClearAllInSubDirWithoutTombstoneWithDefaultDir",
+		isDebug:               false,
+		tmpSubDir:             "allInSubDirWithDefault",
+		defaultTmpDirAsSubdir: true,
 		removeTombstones:      true,
 		makeDirs:              dirs,
 		makeFiles:             files,
@@ -190,6 +239,8 @@ func TestClearAllInSubDirWithTombstone(t *testing.T) {
 	f.clear()
 
 	assertRemoved(t, f, testJoinFilesDirs(files, dirs))
+	// assert removing tmp dir because it is not default
+	assertKeepPath(t, f.tmpDir)
 }
 
 func TestKeepLogsAndTombstounes(t *testing.T) {
@@ -362,6 +413,25 @@ type testFunc struct {
 	testName    string
 }
 
+func (tf *testFunc) fullPath(f fileDirToCreate) string {
+	base := tf.tmpDir
+	if f.outsideTmpRoot {
+		base = tf.tmpRoot
+	}
+
+	return filepath.Join(base, f.path)
+}
+
+func (tf *testFunc) statFor(t *testing.T, f fileDirToCreate) (os.FileInfo, string, error) {
+	require.NotEmpty(t, f.path)
+	fullPath := tf.fullPath(f)
+	require.NotEmpty(t, fullPath)
+
+	stat, err := os.Stat(fullPath)
+
+	return stat, fullPath, err
+}
+
 func testMkDir(t *testing.T, dir string) {
 	t.Helper()
 
@@ -499,6 +569,41 @@ func assertNoErrorsInLog(t *testing.T, f testFunc) {
 	require.Empty(t, errorMsgs, fmt.Sprintf("Expected no errors in log: %v", errorMsgs))
 }
 
+func assertIsRemovedError(t *testing.T, err error, fullPath string) {
+	t.Helper()
+
+	require.Error(t, err, fullPath)
+	require.True(t, os.IsNotExist(err), fullPath)
+}
+
+func assertRemovedPath(t *testing.T, fullPath string) {
+	t.Helper()
+
+	_, err := os.Stat(fullPath)
+	assertIsRemovedError(t, err, fullPath)
+}
+
+func assertRemovedOne(t *testing.T, f testFunc, fd fileDirToCreate) {
+	t.Helper()
+
+	_, fullPath, err := f.statFor(t, fd)
+	assertIsRemovedError(t, err, fullPath)
+}
+
+func assertKeepPath(t *testing.T, fullPath string) {
+	t.Helper()
+
+	_, err := os.Stat(fullPath)
+	require.NoError(t, err, fullPath)
+}
+
+func assertKeepOne(t *testing.T, f testFunc, fd fileDirToCreate) {
+	t.Helper()
+
+	_, fullPath, err := f.statFor(t, fd)
+	require.NoError(t, err, fullPath)
+}
+
 func assertRemoved(t *testing.T, f testFunc, l []fileDirToCreate) {
 	t.Helper()
 
@@ -508,10 +613,7 @@ func assertRemoved(t *testing.T, f testFunc, l []fileDirToCreate) {
 	require.NotEmpty(t, tmpDir)
 
 	for _, e := range l {
-		fullPath := filepath.Join(tmpDir, e.path)
-		_, err := os.Stat(fullPath)
-		require.Error(t, err, fullPath)
-		require.True(t, os.IsNotExist(err), fullPath)
+		assertRemovedOne(t, f, e)
 	}
 
 	assertNoErrorsInLog(t, f)
@@ -526,9 +628,7 @@ func assertKeep(t *testing.T, f testFunc, l []fileDirToCreate) {
 	require.NotEmpty(t, tmpDir)
 
 	for _, e := range l {
-		fullPath := filepath.Join(tmpDir, e.path)
-		_, err := os.Stat(fullPath)
-		require.NoError(t, err, fullPath)
+		assertKeepOne(t, f, e)
 	}
 
 	assertNoErrorsInLog(t, f)
