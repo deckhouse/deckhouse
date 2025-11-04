@@ -41,13 +41,13 @@ var (
 	EditionFile  = deckhouseDir + "/edition"
 )
 
-var defaultTmpDirs = filepath.Join(os.TempDir(), "dhctl")
+var defaultTmpDir = filepath.Join(os.TempDir(), "dhctl")
 
 func GetDefaultTmpDir() string {
-	return defaultTmpDirs
+	return defaultTmpDir
 }
 
-var TmpDirName = defaultTmpDirs
+var TmpDirName = defaultTmpDir
 
 var (
 	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.

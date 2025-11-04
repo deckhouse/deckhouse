@@ -44,7 +44,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:            app.TmpDirName,
 			Logger:            logger,
 			IsDebug:           app.IsDebug,
-			ResetInitialState: true,
+			ResetInitialState: false,
 		})
 		return bootstraper.Bootstrap(context.Background())
 	})
