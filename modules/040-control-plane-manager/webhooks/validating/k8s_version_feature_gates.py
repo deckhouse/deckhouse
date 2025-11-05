@@ -68,7 +68,7 @@ kubernetes:
   nameSelector:
     matchNames:
     - control-plane-manager
-  executeHookOnEvent: ["Added", "Modified"]
+  executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
 """
@@ -150,6 +150,31 @@ def normalize_version(version: str) -> str:
         return version
     return f"{version_parts[0]}.{version_parts[1]}"
 
+# Return -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
+def compare_versions(v1: str, v2: str) -> int:
+    try:
+        major1, minor1 = map(int, v1.split('.'))
+        major2, minor2 = map(int, v2.split('.'))
+        
+        if (major1, minor1) < (major2, minor2):
+            return -1
+        elif (major1, minor1) > (major2, minor2):
+            return 1
+        return 0
+    except Exception:
+        return 0
+
+def is_feature_gate_deprecated_up_to_version(feature_gate: str, target_version: str, component: str) -> bool:
+    from feature_gates_generated import versions
+    
+    for version in versions.keys():
+        if compare_versions(version, target_version) <= 0:
+            info = get_feature_gate_info(version, component, feature_gate)
+            if info.is_deprecated:
+                return True
+    
+    return False
+
 
 def validate(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
@@ -200,8 +225,7 @@ def validate(ctx: DotMap) -> Optional[str]:
             continue
         
         try:
-            info = get_feature_gate_info(normalized_version, components[0], feature_gate)
-            if info.is_deprecated:
+            if is_feature_gate_deprecated_up_to_version(feature_gate, normalized_version, components[0]):
                 deprecated_feature_gates.append(feature_gate)
         except Exception:
             continue
@@ -210,7 +234,7 @@ def validate(ctx: DotMap) -> Optional[str]:
         feature_gates_str = ', '.join(f"'{fg}'" for fg in deprecated_feature_gates)
         return (
             f"Cannot change Kubernetes version to {target_version}:\n"
-            f"The following feature gates are deprecated in this version: {feature_gates_str}\n"
+            f"The following feature gates are deprecated in this version or earlier: {feature_gates_str}\n"
             f"You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
     
