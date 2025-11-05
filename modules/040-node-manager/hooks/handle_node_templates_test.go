@@ -979,6 +979,65 @@ spec:
 			Expect(f.MetricsCollector.CollectedMetrics()).Should(HaveLen(1), "should have only expire metric for managed node")
 		})
 	})
+	Context("NG without nodeTemplate and Node with bashible-uninitialized taint", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: CloudEphemeral
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ""
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node.deckhouse.io/uninitialized
+  - effect: NoSchedule
+    key: node.deckhouse.io/bashible-uninitialized
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must preserve the bashible-uninitialized taint while removing other uninitialized taints", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
+			taints := node.Get("spec.taints").Array()
+
+			// Should have exactly one taint remaining - bashible-uninitialized
+			Expect(taints).To(HaveLen(1))
+
+			// Verify it's the bashible-uninitialized taint
+			taint := taints[0]
+			Expect(taint.Get("key").String()).To(Equal("node.deckhouse.io/bashible-uninitialized"))
+			Expect(taint.Get("effect").String()).To(Equal("NoSchedule"))
+
+			// Verify regular uninitialized taint was removed
+			hasRegularUninitialized := false
+			hasBashibleUninitialized := false
+			for _, taint := range taints {
+				key := taint.Get("key").String()
+				if key == "node.deckhouse.io/uninitialized" {
+					hasRegularUninitialized = true
+				}
+				if key == "node.deckhouse.io/bashible-uninitialized" {
+					hasBashibleUninitialized = true
+				}
+			}
+			Expect(hasRegularUninitialized).To(BeFalse(), "regular uninitialized taint should be removed")
+			Expect(hasBashibleUninitialized).To(BeTrue(), "bashible uninitialized taint should be preserved")
+		})
+	})
 })
 
 func metricEqual(metrics []operation.MetricOperation, name string, value *float64) bool {

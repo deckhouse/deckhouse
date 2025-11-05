@@ -29,7 +29,6 @@ steps:
     env:
       WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
-      WERF_ENV: "EE"
 {!{- if eq $docPart "main" }!}
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
@@ -38,8 +37,10 @@ steps:
 {!{- if eq $buildType "release" }!}
       WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
       WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+      WERF_ENV: "EE"
 {!{- else }!}
       WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+      WERF_ENV: "development"
 {!{- end }!}
 
 # </template: web_build_template>
@@ -70,12 +71,13 @@ steps:
       DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
       DOC_API_URL: "${{vars.DOC_API_URL}}"
       DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
-      WERF_ENV: "EE"
       DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
       CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
-{!{ if eq $mode "release" }!}
+{!{- if eq $mode "release" }!}
+      WERF_ENV: "EE"
       WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
 {!{- else }!}
+      WERF_ENV: "development"
       WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
 {!{- end }!}
     run: |

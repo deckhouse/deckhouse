@@ -1,14 +1,19 @@
-Subject: [PATCH] .
----
-Index: go.mod
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.mod b/go.mod
---- a/go.mod	(revision 6b0d5d2f47bd0e42ffc81bcbc0ad30314af840b9)
-+++ b/go.mod	(revision 3afda001434140c177a372e774ceca26a6f51307)
-@@ -301,9 +301,9 @@
+diff --git i/go.mod w/go.mod
+index a0274c84..fd65826d 100644
+--- i/go.mod
++++ w/go.mod
+@@ -2,10 +2,6 @@ module github.com/hashicorp/terraform-provider-aws
+ 
+ go 1.23.3
+ 
+-// Disable experimental post-quantum key exchange mechanism X25519Kyber768Draft00
+-// This was causing errors with AWS Network Firewall
+-godebug tlskyber=0
+-
+ require (
+ 	github.com/ProtonMail/go-crypto v1.1.4
+ 	github.com/YakDriver/go-version v0.1.0
+@@ -301,9 +297,9 @@ require (
  	github.com/mitchellh/mapstructure v1.5.0
  	github.com/pquerna/otp v1.4.0
  	github.com/shopspring/decimal v1.4.0
@@ -20,7 +25,7 @@ diff --git a/go.mod b/go.mod
  	golang.org/x/tools v0.29.0
  	gopkg.in/dnaeon/go-vcr.v3 v3.2.1
  	gopkg.in/yaml.v3 v3.0.1
-@@ -370,9 +370,9 @@
+@@ -370,9 +366,9 @@ require (
  	go.opentelemetry.io/otel v1.33.0 // indirect
  	go.opentelemetry.io/otel/metric v1.33.0 // indirect
  	go.opentelemetry.io/otel/trace v1.33.0 // indirect
@@ -33,15 +38,11 @@ diff --git a/go.mod b/go.mod
  	google.golang.org/appengine v1.6.8 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
  	google.golang.org/grpc v1.68.1 // indirect
-Index: go.sum
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.sum b/go.sum
---- a/go.sum	(revision 6b0d5d2f47bd0e42ffc81bcbc0ad30314af840b9)
-+++ b/go.sum	(revision 3afda001434140c177a372e774ceca26a6f51307)
-@@ -782,8 +782,8 @@
+diff --git i/go.sum w/go.sum
+index 5002c980..84eccf0b 100644
+--- i/go.sum
++++ w/go.sum
+@@ -782,8 +782,8 @@ go.opentelemetry.io/otel/trace v1.33.0 h1:cCJuF7LRjUFso9LPnEAHJDB2pqzp+hbO8eu1qq
  go.opentelemetry.io/otel/trace v1.33.0/go.mod h1:uIcdVUZMpTAmz0tI1z04GoVSezK37CbGV4fr1f2nBck=
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
@@ -52,7 +53,7 @@ diff --git a/go.sum b/go.sum
  golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
  golang.org/x/mod v0.22.0 h1:D4nJWe9zXqHOmWqj4VMOJhvzj7bEZg4wEYa759z1pH4=
  golang.org/x/mod v0.22.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
-@@ -791,13 +791,13 @@
+@@ -791,13 +791,13 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
@@ -70,7 +71,7 @@ diff --git a/go.sum b/go.sum
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-@@ -810,19 +810,19 @@
+@@ -810,19 +810,19 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

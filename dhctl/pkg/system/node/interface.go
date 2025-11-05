@@ -62,6 +62,7 @@ type Script interface {
 	WithTimeout(timeout time.Duration)
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
+	WithCommanderMode(enabled bool)
 }
 
 type Tunnel interface {

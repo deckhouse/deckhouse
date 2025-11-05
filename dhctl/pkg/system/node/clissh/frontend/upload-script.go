@@ -48,6 +48,8 @@ type UploadScript struct {
 	stdoutHandler func(string)
 
 	timeout time.Duration
+
+	commanderMode bool
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -74,6 +76,10 @@ func (u *UploadScript) WithTimeout(timeout time.Duration) {
 
 func (u *UploadScript) WithEnvs(envs map[string]string) {
 	u.envs = envs
+}
+
+func (u *UploadScript) WithCommanderMode(enabled bool) {
+	u.commanderMode = enabled
 }
 
 // WithCleanupAfterExec option tells if ssh executor should delete uploaded script after execution was attempted or not.
@@ -200,7 +206,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 
 	processLogger := log.GetProcessLogger()
 
-	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
+	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout, u.commanderMode)
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
@@ -238,6 +244,7 @@ func bundleOutputHandler(
 	lastStep *string,
 	failsCounter *int,
 	isBashibleTimeout *bool,
+	commanderMode bool,
 ) func(string) {
 	stepLogs := make([]string, 0)
 	return func(l string) {
@@ -249,8 +256,19 @@ func bundleOutputHandler(
 			stepName := match[1]
 
 			if *lastStep == stepName {
-				log.ErrorF(strings.Join(stepLogs, "\n"))
+				logMessage := strings.Join(stepLogs, "\n")
+
+				switch {
+				case commanderMode && *failsCounter == 0:
+					log.ErrorF("%s", logMessage)
+				case commanderMode && *failsCounter > 0:
+					log.ErrorF("Run step %s finished with error^^^\n", stepName)
+					log.DebugF("%s", logMessage)
+				default:
+					log.ErrorF("%s", logMessage)
+				}
 				*failsCounter++
+				stepLogs = stepLogs[:0]
 				if *failsCounter > 10 {
 					*isBashibleTimeout = true
 					if cmd != nil {
@@ -261,7 +279,7 @@ func bundleOutputHandler(
 				}
 
 				processLogger.LogProcessFail()
-				stepName = fmt.Sprintf("%s, retry attempt #%d of 10", stepName, *failsCounter)
+				stepName = fmt.Sprintf("%s, retry attempt #%d of 10\n", stepName, *failsCounter)
 			} else if *lastStep != "" {
 				stepLogs = make([]string, 0)
 				processLogger.LogProcessEnd()

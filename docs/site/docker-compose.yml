@@ -24,6 +24,7 @@ services:
     command: ["/entrypoint.sh"]
     volumes:
       - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
+      - ".werf/installer-versions-nginx-local.include:/app/installer-versions-nginx.include:ro"
       - ".werf/entrypoint-local.sh:/entrypoint.sh:ro"
       - ".helm/channels.yaml:/app/channels.yaml:ro"
       - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"

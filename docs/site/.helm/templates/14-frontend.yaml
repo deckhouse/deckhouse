@@ -80,6 +80,9 @@ spec:
               name: web-tmp
             - name: channels-data
               mountPath: /app/channels-data
+            - name: installer-versions
+              mountPath: /app/installer-versions-nginx.include
+              subPath: installer-versions-nginx.include
         - name: router
           command: ["/app/server"]
           image: {{ index .Values.werf.image "web-router" }}
@@ -119,6 +122,9 @@ spec:
         - name: channels-yaml
           configMap:
             name: release-channels-data
+        - name: installer-versions
+          configMap:
+            name: doc-installer-version
         - name: web-tmp
           emptyDir: {}
         - name: channels-data

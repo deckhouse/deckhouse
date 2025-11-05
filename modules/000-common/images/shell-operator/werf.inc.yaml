@@ -204,4 +204,4 @@ shell:
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
-  - ln -s /bin/sh /bin/bash && ln -s /bin/bash /shell-operator/sh
+  - ln -s /bin/bash /shell-operator/sh

@@ -127,7 +127,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"node\",source_node_name=~\"${source_node:regex}\",target_node_name=~\"${destination_node:regex}\"}[$__range]) * 100",
+          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"node\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -227,7 +227,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"endpoint\",source_node_name=~\"${source_node:regex}\",target_node_name=~\"${destination_node:regex}\"}[$__range]) * 100",
+          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"endpoint\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,

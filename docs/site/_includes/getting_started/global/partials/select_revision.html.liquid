@@ -18,6 +18,7 @@
 {% endif %}
 <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+        {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
@@ -42,7 +43,8 @@ The {{ page.title_main }} installation is not available in the Community Edition
   <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
       {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
-      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se' %} active{% endif %}"
+      {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
+      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se-plus' %} active{% endif %}"
          onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
            openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
            toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
@@ -56,7 +58,11 @@ The {{ page.title_main }} installation is not available in the Community Edition
     // Function for initializing tabs on page load
     function initializeTabs() {
       // Set active tab
+      {% if page.platform_code == 'vsphere' %}
+      const defaultTab = 'se-plus';
+      {% else %}
       const defaultTab = 'se';
+      {% endif %}
       const defaultTabElement = document.getElementById(`tab_layout_${defaultTab}`);
       if (defaultTabElement) {
         defaultTabElement.click();
@@ -69,6 +75,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {% endif %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'be' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'se' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
@@ -105,12 +112,13 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {% endif %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 {%- if revision =='be' and page.ee_only == true %}{% continue %}{% endif %}
 {%- if revision =='se' and page.ee_only == true %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
 
 
-  {% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+  {% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 <div class="dimmer-block-content">
 {% endif %}
 
@@ -126,7 +134,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {%- include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {%- endif %}
 </div>
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 </div>
 {%- endif %}
 
@@ -136,6 +144,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 $(document).ready(function() {
   $.cookie('lang', '{{ page.lang }}');
   {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+  {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
   {% if revision != "ce" %}
   $('#enter-license-key-{{ revision }}').click((e)=> {
     e.preventDefault();

@@ -6,7 +6,7 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: base/python
+- image: common-base-python-artifact
   add: /
   to: /
   includePaths:

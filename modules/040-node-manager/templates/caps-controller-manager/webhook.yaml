@@ -65,6 +65,7 @@ webhooks:
           - v1alpha2
         operations:
           - UPDATE
+          - CREATE
           - DELETE
         resources:
           - staticinstances
@@ -86,6 +87,7 @@ webhooks:
           - v1alpha1
         operations:
           - UPDATE
+          - CREATE
           - DELETE
         resources:
           - staticinstances

@@ -112,14 +112,6 @@ jobs:
       - git_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
 
-  main_web_build:
-    name: Main web build
-    if: ${{ github.repository == 'deckhouse/deckhouse' }}
-    # Wait for success build of modules.
-    needs:
-      - git_info
-{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
-
   tests:
     name: Tests
     needs:
@@ -218,38 +210,6 @@ jobs:
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-
-{!{/* Autodeploy site to the production env on push to the main branch. */}!}
-  deploy_latest_web_site_prod:
-    name: (Prod) Deploy latest site
-    continue-on-error: true
-    needs:
-      - git_info
-      - main_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
-
-{!{/* Autodeploy docs to the production env on push to the main branch. */}!}
-  deploy_latest_web_doc_prod:
-    name: (Prod) Deploy latest doc
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 
   list_changed_modules:
     name: List changed modules

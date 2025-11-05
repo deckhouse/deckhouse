@@ -125,3 +125,5 @@ func (s *Script) WithEnvs(envs map[string]string) {
 func (s *Script) WithCleanupAfterExec(doCleanup bool) {
 	s.cleanupAfterRun = doCleanup
 }
+
+func (s *Script) WithCommanderMode(bool) {}

@@ -145,7 +145,7 @@ spec:
       node-role.kubernetes.io/master: ""
     taints: []
 ---
-# [<en>] stronghold module settings.
+# [<en>] Stronghold module settings.
 # [<en>] https://deckhouse.io/modules/stronghold/configuration.html
 # [<ru>] Настройки модуля stronghold.
 # [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
@@ -154,5 +154,11 @@ kind: ModuleConfig
 metadata:
   name: stronghold
 spec:
-  version: 1
   enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins

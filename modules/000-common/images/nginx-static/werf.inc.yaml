@@ -13,8 +13,8 @@ shell:
   - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/openssl/openssl.git /src/openssl
   - rm -r /src/nginx/.git /src/openssl/.git
 ---
-image: {{ $.ModuleName }}/build-nginx-static-artifact
-fromImage: builder/alpine-3.20
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/alpine-3.21
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -27,16 +27,23 @@ shell:
   - apk add pcre-dev zlib-dev zlib-static perl linux-headers build-base
   install:
   - cd /src/nginx
-  - ./auto/configure --prefix=/opt/nginx-static --with-cc-opt="-static -static-libgcc" --with-ld-opt="-static" --with-stream --with-cpu-opt=generic --with-pcre --with-mail --with-ipv6 --with-poll_module --with-select_module --with-http_ssl_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_dav_module --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module --with-http_stub_status_module --with-mail --with-mail_ssl_module --with-openssl=/src/openssl
-  - make -j1
-  - make -j1 install
+  - |
+    ./auto/configure --prefix=/opt/nginx-static --with-cc-opt="-static -static-libgcc" \
+      --with-ld-opt="-static" --with-stream --with-cpu-opt=generic --with-pcre --with-mail \
+      --with-ipv6 --with-poll_module --with-select_module --with-http_ssl_module --with-http_realip_module \
+      --with-http_addition_module --with-http_sub_module --with-http_dav_module --with-http_flv_module \
+      --with-http_mp4_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_auth_request_module \
+      --with-http_random_index_module --with-http_secure_link_module --with-http_degradation_module \
+      --with-http_stub_status_module --with-mail --with-mail_ssl_module --with-openssl=/src/openssl
+  - make -j4
+  - make -j4 install
   - chown -R 64535:64535 /opt/nginx-static
   - chmod 0700 /opt/nginx-static/sbin/nginx
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/build-nginx-static-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /opt/nginx-static
   to: /opt/nginx-static
   before: setup

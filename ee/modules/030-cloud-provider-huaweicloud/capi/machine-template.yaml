@@ -42,3 +42,6 @@ spec:
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
       availabilityZone: {{ .zoneName | quote }}
+      {{- if .nodeGroup.instanceClass.vipAddress}}
+      vipAddress: {{ .nodeGroup.instanceClass.vipAddress | quote }}
+      {{- end}}

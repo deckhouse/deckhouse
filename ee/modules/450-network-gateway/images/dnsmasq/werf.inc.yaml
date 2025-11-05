@@ -25,6 +25,7 @@ import:
   before: install
 shell:
   install:
+  - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

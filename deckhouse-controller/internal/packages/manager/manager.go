@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
@@ -44,34 +45,41 @@ const (
 
 var ErrPackageNotFound = errors.New("package not found")
 
-// DependencyContainer provides access to shared infrastructure services.
-type DependencyContainer interface {
-	KubeObjectPatcher() *objectpatch.ObjectPatcher
-	ScheduleManager() schedulemanager.ScheduleManager
-	KubeEventsManager() kubeeventsmanager.KubeEventsManager
-}
-
 // Manager manages the lifecycle of application packages.
 type Manager struct {
 	mu     sync.Mutex                   // Protects apps map
 	apps   map[string]*apps.Application // Loaded applications by name
 	tmpDir string                       // Temporary directory for hook execution
 
-	loader *loader.ApplicationLoader // Loads packages from filesystem
-	nelm   *nelm.Service             // nelm service to install/uninstall releases
-	dc     DependencyContainer       // Access to shared services
+	loader            *loader.ApplicationLoader // Loads packages from filesystem
+	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	kubeObjectPatcher *objectpatch.ObjectPatcher
+	scheduleManager   schedulemanager.ScheduleManager
+	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
 	logger *log.Logger
 }
 
+type Config struct {
+	AppsDir string
+
+	NelmService       *nelm.Service
+	KubeObjectPatcher *objectpatch.ObjectPatcher
+	ScheduleManager   schedulemanager.ScheduleManager
+	KubeEventsManager kubeeventsmanager.KubeEventsManager
+}
+
 // New creates a new package manager with the specified apps directory.
-func New(appsDir string, dc DependencyContainer, logger *log.Logger) *Manager {
+func New(conf Config, logger *log.Logger) *Manager {
 	return &Manager{
 		apps:   make(map[string]*apps.Application),
 		tmpDir: os.TempDir(),
 
-		loader: loader.NewApplicationLoader(appsDir, logger),
-		dc:     dc,
+		loader:            loader.NewApplicationLoader(conf.AppsDir, logger),
+		nelm:              conf.NelmService,
+		kubeEventsManager: conf.KubeEventsManager,
+		kubeObjectPatcher: conf.KubeObjectPatcher,
+		scheduleManager:   conf.ScheduleManager,
 
 		logger: logger.Named(managerTracer),
 	}
@@ -102,6 +110,16 @@ func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationIn
 	return nil
 }
 
+// ApplySettings validates and apply setting to application
+func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
+	app, err := m.getApp(name)
+	if err != nil {
+		return err
+	}
+
+	return app.ApplySettings(settings)
+}
+
 // StartupPackage runs OnStartup hooks for a package.
 // This must be called after InitializeHooks and before RunPackage.
 func (m *Manager) StartupPackage(ctx context.Context, name string) error {
@@ -119,7 +137,7 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run startup hooks: %w", err)
 	}
@@ -155,7 +173,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 		defer m.nelm.ResumeMonitor(name)
 	}
 
-	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run before helm hooks: %w", err)
 	}
@@ -167,7 +185,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
-	if err = app.RunHooksByBinding(ctx, addontypes.AfterHelm, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run after helm hooks: %w", err)
 	}

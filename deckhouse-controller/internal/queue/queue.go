@@ -288,8 +288,12 @@ func (q *queue) processOne() bool {
 // Stop cancels the queue's context and waits for the processing loop to finish.
 // It ensures all tasks stop gracefully.
 func (q *queue) Stop() {
-	q.cancel()
-	q.wg.Wait()
+	q.logger.Debug("stop queue")
+
+	if q.cancel != nil {
+		q.cancel()
+		q.wg.Wait()
+	}
 }
 
 // hasSeveral checks if there are more than 1 task in the queue

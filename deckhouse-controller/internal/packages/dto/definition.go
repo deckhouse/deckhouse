@@ -14,6 +14,10 @@
 
 package dto
 
+import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+)
+
 const (
 	// DefinitionFile is the filename for package metadata
 	DefinitionFile = "package.yaml"
@@ -47,4 +51,20 @@ type Requirements struct {
 type DisableOptions struct {
 	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+}
+
+// ToApplication converts package definition to application definition
+func (d *Definition) ToApplication() apps.Definition {
+	return apps.Definition{
+		Name:    d.Name,
+		Version: d.Version,
+		Stage:   d.Stage,
+		DisableOptions: apps.DisableOptions{
+			Confirmation: d.DisableOptions.Confirmation,
+			Message:      d.DisableOptions.Message,
+		},
+		Requirements: apps.Requirements{
+			Modules: d.Requirements.Modules,
+		},
+	}
 }
