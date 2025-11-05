@@ -66,7 +66,7 @@ kubernetes:
   nameSelector:
     matchNames:
     - control-plane-manager
-  executeHookOnEvent: []
+  executeHookOnEvent: ["Added", "Modified"]
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
 """
