@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-localhost-profile-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-localhost-profile
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        appArmorProfile:
+          type: Localhost
+          localhostProfile: different-profile
+

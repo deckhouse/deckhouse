@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-hostipc-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-hostipc-true
+spec:
+  hostIPC: false
+  hostPID: true
+  containers:
+    - name: nginx
+      image: nginx
+

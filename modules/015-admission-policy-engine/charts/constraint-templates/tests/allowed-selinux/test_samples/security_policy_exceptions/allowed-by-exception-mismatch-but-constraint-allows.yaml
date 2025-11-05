@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-mismatch-but-constraint-allows
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-spc-t
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seLinuxOptions:
+          type: container_t
+

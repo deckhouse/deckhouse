@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-localhost-profile
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-localhost-profile
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seccompProfile:
+          type: Localhost
+          localhostProfile: my-custom-profile.json
+

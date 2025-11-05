@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-allowPrivilegeEscalation-false
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-privilege-escalation-false
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        allowPrivilegeEscalation: false
+
