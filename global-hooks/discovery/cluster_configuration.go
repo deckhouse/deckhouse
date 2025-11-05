@@ -107,8 +107,11 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		input.MetricsCollector.Expire(featureGatesMetricGroupName)
 		if kubernetesVersionFromMetaConfig == "Automatic" {
 			if enabledFeatureGates, ok := input.ConfigValues.GetOk("controlPlaneManager.enabledFeatureGates"); ok {
+				fmt.Println("enabledFeature")
 				defaultFeatureGates := FeatureGatesMap[hooks.DefaultKubernetesVersion]
+				fmt.Printf("defaultFeature: %v",defaultFeatureGates)
 				for _, feature := range enabledFeatureGates.Array() {
+					fmt.Println("in range ",feature)
 					if err := defaultFeatureGates.ValidateFeature(feature.Str); err != nil {
 						// If moduleConfig contain featureGate which was deprecated or fordiden
 						input.MetricsCollector.Set(violateMetricName, 1, map[string]string{"feature_gate": feature.Str}, metrics.WithGroup(featureGatesMetricGroupName))
