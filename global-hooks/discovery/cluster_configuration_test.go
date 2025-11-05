@@ -26,7 +26,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Global hooks :: discovery/clusterConfiguration ::", func() {
+var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -187,6 +187,8 @@ data:
 
 		It("Should not fail, but should not create any Values", func() {
 			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
 		})
 	})
 
