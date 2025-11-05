@@ -131,9 +131,10 @@ func (p *ProgressTracker) Progress(
 	}
 
 	p.progress = progress
+	clonedProgress := progress.Clone()
 	p.mx.Unlock()
 
-	return p.onProgressFunc(progress.Clone())
+	return p.onProgressFunc(clonedProgress)
 }
 
 func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
@@ -165,14 +166,56 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 		p.progress.Phases[i].Action = ptr.To(PhaseActionSkip)
 	}
 
-	p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
+	// Check if the last completed phase was skipped
+	isLastCompletedPhaseSkipped := false
+	if lastCompletedPhaseIndex >= 0 {
+		lastPhaseAction := p.progress.Phases[lastCompletedPhaseIndex].Action
+		if lastPhaseAction != nil && *lastPhaseAction == PhaseActionSkip {
+			isLastCompletedPhaseSkipped = true
+		}
+	} else {
+		isLastCompletedPhaseSkipped = true
+	}
+
+	// If the last phase was not skipped - progress 1
+	if !isLastCompletedPhaseSkipped {
+		p.progress.Progress = 1.0
+		p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
+		p.progress.CurrentPhase = ""
+		p.progress.NextPhase = ""
+		clonedProgress := p.progress.Clone()
+
+		p.mx.Unlock()
+
+		return p.onProgressFunc(clonedProgress)
+	}
+
+	// If the last phase was skipped - find the last non-skipped phase
+	lastNonSkippedPhaseIndex := -1
+	for i := lastCompletedPhaseIndex; i >= 0; i-- {
+		if p.progress.Phases[i].Action != nil && *p.progress.Phases[i].Action != PhaseActionSkip {
+			lastNonSkippedPhaseIndex = i
+			break
+		}
+	}
+
+	if lastNonSkippedPhaseIndex >= 0 {
+		// Found non-skipped phase - calculate progress based on it
+		p.progress.Progress = float64(lastNonSkippedPhaseIndex+1) / float64(len(p.progress.Phases))
+		p.progress.CompletedPhase = p.progress.Phases[lastNonSkippedPhaseIndex].Phase
+	} else {
+		// All phases were skipped - progress 0
+		p.progress.Progress = 0.0
+		p.progress.CompletedPhase = ""
+	}
+
 	p.progress.CurrentPhase = ""
 	p.progress.NextPhase = ""
-	p.progress.Progress = 1.0
+	clonedProgress := p.progress.Clone()
 
 	p.mx.Unlock()
 
-	return p.onProgressFunc(p.progress.Clone())
+	return p.onProgressFunc(clonedProgress)
 }
 
 func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts ProgressOpts) Progress {

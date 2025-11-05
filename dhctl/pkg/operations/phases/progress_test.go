@@ -29,7 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-var opts = phases.ProgressOpts{Action: phases.PhaseActionDefault}
+var (
+	opts     = phases.ProgressOpts{Action: phases.PhaseActionDefault}
+	skipOpts = phases.ProgressOpts{Action: phases.PhaseActionSkip}
+)
 
 func TestProgressTracker_FindLastCompletedPhase(t *testing.T) {
 	t.Parallel()
@@ -256,6 +259,22 @@ func TestProgressTracker_Complete(t *testing.T) {
 	}
 }
 
+func TestProgressTracker_Complete_ZeroProgress(t *testing.T) {
+	t.Parallel()
+
+	var result []phases.Progress
+
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+		return nil
+	})
+
+	require.NoError(t, progressTracker.Progress("", "", skipOpts))
+	require.NoError(t, progressTracker.Complete(""))
+
+	assert.EqualValues(t, 0, result[len(result)-1].Progress)
+}
+
 func TestProgressTracker_NilCallback(t *testing.T) {
 	t.Parallel()
 
@@ -276,8 +295,6 @@ func TestProgressTracker_Skip(t *testing.T) {
 
 		return nil
 	})
-
-	skipOpts := phases.ProgressOpts{Action: phases.PhaseActionSkip}
 
 	require.NoError(t, progressTracker.Progress("", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.AllNodesPhase, "", skipOpts))
