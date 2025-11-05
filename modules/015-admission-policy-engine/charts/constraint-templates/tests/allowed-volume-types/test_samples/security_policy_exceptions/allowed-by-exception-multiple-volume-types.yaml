@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-volume-types
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-multiple-volume-types
+    security.deckhouse.io/security-policy-exception: allow-multiple-volume-types
 spec:
   containers:
     - name: nginx

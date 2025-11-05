@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-privileged-false
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-privileged-false
+    security.deckhouse.io/security-policy-exception: allow-privileged-false
 spec:
   containers:
     - name: nginx

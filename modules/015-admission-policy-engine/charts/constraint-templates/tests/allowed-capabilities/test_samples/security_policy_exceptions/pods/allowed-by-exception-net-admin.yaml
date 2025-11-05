@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-net-admin
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-net-admin
+    security.deckhouse.io/security-policy-exception: allow-net-admin
 spec:
   containers:
     - name: nginx

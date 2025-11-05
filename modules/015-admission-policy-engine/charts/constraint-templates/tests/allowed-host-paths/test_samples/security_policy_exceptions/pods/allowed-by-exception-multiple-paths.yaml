@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-paths
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-multiple-paths
+    security.deckhouse.io/security-policy-exception: allow-multiple-paths
 spec:
   containers:
     - name: nginx

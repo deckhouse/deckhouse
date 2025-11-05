@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostpid-false-hostipc-false
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostpid-false-hostipc-false
+    security.deckhouse.io/security-policy-exception: allow-hostpid-false-hostipc-false
 spec:
   containers:
     - name: nginx

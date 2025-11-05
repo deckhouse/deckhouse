@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-sysctls
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-multiple-sysctls
+    security.deckhouse.io/security-policy-exception: allow-multiple-sysctls
 spec:
   securityContext:
     sysctls:

@@ -69,7 +69,7 @@ spec:
               }
 
               allowed_by_securitypolicyexeption(obj) if {
-                label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
 
                 allowed_hostnetwork_by_exception(obj, exception)

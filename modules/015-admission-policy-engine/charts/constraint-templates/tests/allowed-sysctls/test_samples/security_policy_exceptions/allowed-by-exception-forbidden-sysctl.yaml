@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-forbidden-sysctl
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-net-fake-sysctl
+    security.deckhouse.io/security-policy-exception: allow-net-fake-sysctl
 spec:
   securityContext:
     sysctls:

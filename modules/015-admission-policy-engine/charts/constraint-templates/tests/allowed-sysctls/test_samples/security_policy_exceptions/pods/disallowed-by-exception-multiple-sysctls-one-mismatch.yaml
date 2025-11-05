@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-multiple-sysctls-one-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-net-core-rmem-max
+    security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
 spec:
   securityContext:
     sysctls:

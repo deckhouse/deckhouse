@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-capabilities
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-multiple-capabilities
+    security.deckhouse.io/security-policy-exception: allow-multiple-capabilities
 spec:
   containers:
     - name: nginx

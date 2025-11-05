@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-protocol-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-true-wrong-port
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-wrong-port
 spec:
   hostNetwork: true
   containers:

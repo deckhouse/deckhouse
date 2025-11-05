@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostnetwork-true-despite-constraint-false
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-true-despite-constraint
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-despite-constraint
 spec:
   hostNetwork: true
   containers:

@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-runtime-default
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-runtime-default
+    security.deckhouse.io/security-policy-exception: allow-runtime-default
 spec:
   containers:
     - name: nginx

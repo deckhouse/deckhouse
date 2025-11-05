@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostport-despite-empty-ranges
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostport-despite-empty-ranges
+    security.deckhouse.io/security-policy-exception: allow-hostport-despite-empty-ranges
 spec:
   hostNetwork: true
   containers:

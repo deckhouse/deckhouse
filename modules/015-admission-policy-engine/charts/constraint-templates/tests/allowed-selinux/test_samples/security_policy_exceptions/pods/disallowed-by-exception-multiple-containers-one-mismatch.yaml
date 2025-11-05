@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-multiple-containers-one-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-spc-t
+    security.deckhouse.io/security-policy-exception: allow-spc-t
 spec:
   containers:
     - name: nginx

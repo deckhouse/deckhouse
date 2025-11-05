@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-custom-user-range
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-custom-user-range
+    security.deckhouse.io/security-policy-exception: allow-custom-user-range
 spec:
   containers:
     - name: nginx

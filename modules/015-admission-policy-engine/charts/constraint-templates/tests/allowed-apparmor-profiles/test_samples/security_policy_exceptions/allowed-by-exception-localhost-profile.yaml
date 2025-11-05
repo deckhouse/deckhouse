@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-localhost-profile
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-localhost-profile
+    security.deckhouse.io/security-policy-exception: allow-localhost-profile
 spec:
   containers:
     - name: nginx

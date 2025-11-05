@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-custom-selinux-options-container
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-custom-selinux-options
+    security.deckhouse.io/security-policy-exception: allow-custom-selinux-options
 spec:
   containers:
     - name: nginx

@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-procmount-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-default
+    security.deckhouse.io/security-policy-exception: allow-default
 spec:
   containers:
     - name: nginx

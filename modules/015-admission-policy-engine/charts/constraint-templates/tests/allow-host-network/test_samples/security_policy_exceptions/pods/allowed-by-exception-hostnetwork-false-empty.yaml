@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostnetwork-false-empty
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-false-empty
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-empty
 spec:
   containers:
     - name: nginx

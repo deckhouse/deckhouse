@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostpid-true-despite-constraint-false
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostpid-true
+    security.deckhouse.io/security-policy-exception: allow-hostpid-true
 spec:
   hostPID: true
   containers:

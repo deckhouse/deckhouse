@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-multiple-containers-one-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-runtime-default
+    security.deckhouse.io/security-policy-exception: allow-runtime-default
 spec:
   containers:
     - name: nginx

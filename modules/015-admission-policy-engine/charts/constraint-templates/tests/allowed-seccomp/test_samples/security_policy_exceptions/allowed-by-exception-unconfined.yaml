@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-unconfined
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-unconfined
+    security.deckhouse.io/security-policy-exception: allow-unconfined
 spec:
   containers:
     - name: nginx

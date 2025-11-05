@@ -113,14 +113,14 @@ spec:
               } 
 
               get_allowed_profiles_exception contains allowed if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
                 allowed := exception_allowed_profiles
               }
 
               get_allowed_profiles_exception contains allowed if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
                 startswith(exception_allowed_profiles, "localhost")

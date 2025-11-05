@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-hostnetwork-true-tcp-25000
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-true-tcp-25000
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
 spec:
   hostNetwork: true
   containers:

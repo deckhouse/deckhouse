@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-hostpid-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostpid-true
+    security.deckhouse.io/security-policy-exception: allow-hostpid-true
 spec:
   hostPID: false
   hostIPC: true

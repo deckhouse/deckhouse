@@ -4,7 +4,7 @@ metadata:
   name: disallowed-exception-allows-false-constraint-allows-true
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostpid-false-hostipc-false
+    security.deckhouse.io/security-policy-exception: allow-hostpid-false-hostipc-false
 spec:
   hostPID: true
   containers:

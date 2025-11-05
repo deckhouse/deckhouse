@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-unmasked-container
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-unmasked
+    security.deckhouse.io/security-policy-exception: allow-unmasked
 spec:
   containers:
     - name: nginx

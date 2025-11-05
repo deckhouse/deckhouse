@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-privileged-true
+    security.deckhouse.io/security-policy-exception: allow-privileged-true
 spec:
   containers:
     - name: nginx

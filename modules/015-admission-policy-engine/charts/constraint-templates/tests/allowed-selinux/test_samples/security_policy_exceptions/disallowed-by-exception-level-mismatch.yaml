@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-level-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-custom-selinux-options
+    security.deckhouse.io/security-policy-exception: allow-custom-selinux-options
 spec:
   containers:
     - name: nginx

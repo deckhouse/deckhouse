@@ -48,7 +48,7 @@ spec:
               }
 
               allowed_by_securitypolicyexception(c) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 exception.spec.securityContext.allowPrivilegeEscalation.allowedValue == c.securityContext.allowPrivilegeEscalation
               }

@@ -4,7 +4,7 @@ metadata:
   name: disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-false-empty
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-empty
 spec:
   hostNetwork: true
   containers:

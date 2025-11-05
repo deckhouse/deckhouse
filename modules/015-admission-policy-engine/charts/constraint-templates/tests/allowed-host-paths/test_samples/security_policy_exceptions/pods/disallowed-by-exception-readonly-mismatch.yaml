@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-readonly-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-proc-etc
+    security.deckhouse.io/security-policy-exception: allow-proc-etc
 spec:
   containers:
     - name: nginx

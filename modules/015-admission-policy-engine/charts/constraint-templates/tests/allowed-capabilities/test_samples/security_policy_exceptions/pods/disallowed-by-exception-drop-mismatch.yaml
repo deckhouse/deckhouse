@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-drop-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-net-admin-drop-all
+    security.deckhouse.io/security-policy-exception: allow-net-admin-drop-all
 spec:
   containers:
     - name: nginx

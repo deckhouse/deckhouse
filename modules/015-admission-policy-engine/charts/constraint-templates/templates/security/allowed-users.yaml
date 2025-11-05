@@ -142,7 +142,7 @@ spec:
               }
 
               allowed_by_securitypolicyexception(container) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue

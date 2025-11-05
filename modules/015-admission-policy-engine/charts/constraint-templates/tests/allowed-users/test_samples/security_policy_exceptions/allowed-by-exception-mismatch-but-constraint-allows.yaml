@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-mismatch-but-constraint-allows
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-root-user
+    security.deckhouse.io/security-policy-exception: allow-root-user
 spec:
   containers:
     - name: nginx

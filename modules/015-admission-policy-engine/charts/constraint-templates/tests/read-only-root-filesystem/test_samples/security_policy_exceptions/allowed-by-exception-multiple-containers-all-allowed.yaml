@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-multiple-containers-all-allowed
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-writable-root-filesystem
+    security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
 spec:
   containers:
     - name: nginx

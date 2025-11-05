@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-multiple-containers-one-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-privilege-escalation-true
+    security.deckhouse.io/security-policy-exception: allow-privilege-escalation-true
 spec:
   containers:
     - name: nginx

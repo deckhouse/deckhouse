@@ -4,7 +4,7 @@ metadata:
   name: disallowed-by-exception-hostipc-mismatch
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostipc-true
+    security.deckhouse.io/security-policy-exception: allow-hostipc-true
 spec:
   hostIPC: false
   hostPID: true

@@ -4,7 +4,7 @@ metadata:
   name: allowed-by-exception-port-in-constraint-range
   namespace: testns
   labels:
-    security.deckhouse.io/securityPolicyException: allow-hostnetwork-true-port-in-constraint-range
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-in-constraint-range
 spec:
   hostNetwork: true
   containers:
