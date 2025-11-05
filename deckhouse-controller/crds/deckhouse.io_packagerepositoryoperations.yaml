@@ -61,8 +61,43 @@ spec:
               completionTime:
                 format: date-time
                 type: string
-              message:
-                type: string
+              conditions:
+                description: List of status conditions to indicate the status of a PackageRepositoryOperation.
+                items:
+                  description: PackageRepositoryOperationStatusCondition contains condition information for a PackageRepositoryOperation.
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of (`True`, `False`, `Unknown`).
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               packages:
                 properties:
                   discovered:
@@ -72,6 +107,20 @@ spec:
                   total:
                     type: integer
                 type: object
+              packagesToProcess:
+                description: List of packages that need to be processed.
+                items:
+                  description: PackageRepositoryOperationStatusPackageQueue represents a package in the processing queue.
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
               phase:
                 type: string
               startTime:
@@ -83,4 +132,3 @@ spec:
     storage: true
     subresources:
       status: {}
-
