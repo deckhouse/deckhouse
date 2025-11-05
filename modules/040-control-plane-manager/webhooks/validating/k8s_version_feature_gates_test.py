@@ -163,7 +163,7 @@ def _prepare_validation_binding_context(
     if enabled_feature_gates:
         module_config_snapshot = [DotMap({
             "object": {
-                "apiVersion": "deckhouse.io/v1",
+                "apiVersion": "deckhouse.io/v1alpha1",
                 "kind": "ModuleConfig",
                 "metadata": {
                     "name": "control-plane-manager"
