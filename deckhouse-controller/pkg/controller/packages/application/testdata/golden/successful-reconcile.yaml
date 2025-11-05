@@ -9,8 +9,8 @@ metadata:
   namespace: foobar
   resourceVersion: "3"
 spec:
-  applicationPackageName: test-package
-  repository: test-repo
+  applicationPackageName: test
+  repository: deckhouse
   version: v1.0.0
 status:
   conditions:
@@ -24,13 +24,13 @@ kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
-    package: test-package
-    repository: test-repo
-  name: test-repo-test-package-v1.0.0
+    package: test
+    repository: deckhouse
+  name: deckhouse-test-v1.0.0
   resourceVersion: "1"
 spec:
-  packageName: test-package
-  repository: test-repo
+  packageName: test
+  repository: deckhouse
   version: v1.0.0
 status:
   conditions:
@@ -41,20 +41,20 @@ status:
   metadata:
     category: Misc
     description:
-      en: test-package — test
-      ru: test-package — test
+      en: example — test
+      ru: example — test
     requirements:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test-package
+  packageName: test
   version: v1.0.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   creationTimestamp: null
-  name: test-repo
+  name: deckhouse
   resourceVersion: "1"
 spec:
   registry:

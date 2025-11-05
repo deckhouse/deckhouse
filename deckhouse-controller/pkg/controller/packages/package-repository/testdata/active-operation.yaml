@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  name: test-repo
+  name: deckhouse
 spec:
   registry:
     scheme: https
@@ -12,11 +12,11 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  name: test-repo-scan-1234567890
+  name: deckhouse-scan-1234567890
   labels:
-    packages.deckhouse.io/repository: test-repo
+    packages.deckhouse.io/repository: deckhouse
 spec:
-  packageRepository: test-repo
+  packageRepository: deckhouse
   type: Update
   update:
     fullScan: true
