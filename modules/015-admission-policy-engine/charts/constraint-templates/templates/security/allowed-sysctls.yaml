@@ -53,7 +53,7 @@ spec:
               # Block if forbidden, unless allowed by exception
               violation contains {"msg": msg, "details": {}} if {
                   sysctl := input.review.object.spec.securityContext.sysctls[_].name
-                  not allowed_by_exception(sysctl)  # Обработка исключения, если sysctl не входит в них
+                  not allowed_by_exception(sysctl)  
                   forbidden_sysctl(sysctl)
                   msg := sprintf("The sysctl %v is not allowed, pod: %v. Forbidden sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.forbiddenSysctls])
               }
