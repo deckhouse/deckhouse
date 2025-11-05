@@ -73,6 +73,7 @@ bb-label-node-bashible-first-run-finished() {
 
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-label-node-bashible-first-run-finished
 
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
