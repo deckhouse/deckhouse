@@ -1014,8 +1014,7 @@ spec:
                       description: |
                         MaxMind Account ID used to authenticate GeoIP2 database downloads.
 
-                        Required when `licenseKey` is set. If provided, downloads are performed
-                        using the official library `geoipupdate`.
+                        Required when `licenseKey` is set. If `accountID` parameter is provided, downloads are performed using the official library `geoipupdate`.
                     maxmindLicenseKey:
                       type: string
                       description: |
