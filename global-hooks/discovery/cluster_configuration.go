@@ -31,10 +31,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 )
 
-	const metricGroupName = "d8_feature_gate_violations"
-
+const (
+	featureGatesMetricGroupName = "d8_feature_gates"
+	violateMetricName           = "feature_gate_violation"
+)
 
 type ClusterConfigurationYaml struct {
 	Content []byte
@@ -101,19 +104,18 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
-
+		input.MetricsCollector.Expire(featureGatesMetricGroupName)
 		if kubernetesVersionFromMetaConfig == "Automatic" {
-			input.MetricsCollector.Expire(metricGroupName)
 			if enabledFeatureGates, ok := input.ConfigValues.GetOk("controlPlaneManager.enabledFeatureGates"); ok {
 				defaultFeatureGates := FeatureGatesMap[hooks.DefaultKubernetesVersion]
 				for _, feature := range enabledFeatureGates.Array() {
 					if err := defaultFeatureGates.ValidateFeature(feature.Str); err != nil {
 						// If moduleConfig contain featureGate which was deprecated or fordiden
-						input.MetricsCollector.Set(metricGroupName, 1, map[string]string{"feature_gate": feature.Str})
+						input.MetricsCollector.Set(violateMetricName, 1, map[string]string{"feature_gate": feature.Str}, metrics.WithGroup(featureGatesMetricGroupName))
 						return err
 					}
 				}
-			}		
+			}
 			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}

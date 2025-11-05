@@ -16,11 +16,11 @@ package hooks
 
 import (
 	"encoding/base64"
-	"fmt"
 
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -99,25 +99,8 @@ metadata:
 data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
 
-
-		AllowedFeatureGates = `
-{
-  "controlPlaneManager": {
-    "enabledFeatureGates": [
-      "APIServerIdentity",
-      "AllowedFeature",
-    ]
-  }
-}`
-		ForbiddenFeatureGates = `
-{
-  "controlPlaneManager": {
-    "enabledFeatureGates": [
-      "APIServerIdentity",
-      "SomeProblematicFeature",,
-    ]
-  }
-}`
+		AllowedFeatureGates = `{"controlPlaneManager":{"enabledFeatureGates":["APIServerIdentity","AllowedFeature"]}}`
+		ForbiddenFeatureGates = `{"controlPlaneManager":{"enabledFeatureGates":["APIServerIdentity","SomeProblematicFeature"]}}`
 	)
 	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
 	hooks.DefaultKubernetesVersion = "1.33"
@@ -145,8 +128,8 @@ data:
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
+			Expect(metrics).To(HaveLen(2))
+			value := metrics[1].Value
 			Expect(*value).To(Equal(float64(256)))
 		})
 
@@ -171,9 +154,12 @@ data:
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
 				metrics := f.MetricsCollector.CollectedMetrics()
-				Expect(metrics).To(HaveLen(1))
-				value := metrics[0].Value
-				Expect(*value).To(Equal(float64(1024)))
+				Expect(metrics).To(HaveLen(2))
+				Expect(metrics[0].Group).To(BeEquivalentTo("d8_feature_gates"))
+				Expect(metrics[0].Value).To(BeNil())
+
+				Expect(metrics[1].Name).To(BeEquivalentTo("d8_max_nodes_amount_by_pod_cidr"))
+				Expect(metrics[1].Value).To(Equal(ptr.To(float64(1024))))
 			})
 		})
 
@@ -226,14 +212,18 @@ data:
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(1024)))
+				Expect(metrics).To(HaveLen(2))
+				Expect(metrics[0].Group).To(BeEquivalentTo("d8_feature_gates"))
+				Expect(metrics[0].Value).To(BeNil())
+
+
+				Expect(metrics[1].Name).To(BeEquivalentTo("d8_max_nodes_amount_by_pod_cidr"))
+				Expect(metrics[1].Value).To(Equal(ptr.To(float64(1024))))
 		})
 	})
 
-	FContext("Cluster has kubernetesVersion = `Automatic` with FeatureGates specified in MC", func() {
-		f := HookExecutionConfigInit(initValuesString, fmt.Printf(rconfigValuesWithFeatureGates, "asd"))
+	Context("Cluster has kubernetesVersion = `Automatic` with FeatureGates specified in MC", func() {
+		f := HookExecutionConfigInit(initValuesString, AllowedFeatureGates)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
 			f.RunHook()
@@ -245,29 +235,35 @@ data:
 			Expect(f.ValuesGet("global.clusterConfiguration.clusterType").String()).To(Equal("Cloud"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(1024)))
+			Expect(metrics).To(HaveLen(2))
+			for _, m := range metrics {
+				if m.Name == "feature_gate_violation"{
+					Expect(*m.Value).To(BeNil())
+				}
+			}
 		})
 	})
 
 
-	FContext("Cluster has kubernetesVersion = `Automatic` with FeatureGates specified in MC", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesWithFeatureGates)
+	Context("Cluster has kubernetesVersion = `Automatic` with forbidden FeatureGates specified in MC", func() {
+		f := HookExecutionConfigInit(initValuesString, ForbiddenFeatureGates)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
 			f.RunHook()
 		})
 
-		It("Should correctly fill the Values store from it", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		It("Hook should be fail with error", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.ValuesGet("global.clusterConfiguration.clusterType").String()).To(Equal("Cloud"))
+		Expect(f.GoHookError.Error()).Should(ContainSubstring(`feature gate SomeProblematicFeature is forbidden`))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(1024)))
+			Expect(metrics).To(HaveLen(2))
+			for _, m := range metrics {
+				if m.Name == "feature_gate_violation"{
+					Expect(*m.Value).To(Equal(1.0))
+				}
+			}
 		})
 	})
 })
