@@ -248,7 +248,7 @@ func (c *ConvergeExporter) Start(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
-	clearTmp := cache.GetClearTemporaryDirsFunc(cache.ClearTmpParams{
+	clearTmp := cache.NewTmpCleaner(cache.ClearTmpParams{
 		IsDebug:         c.isDebug,
 		RemoveTombStone: true,
 		TmpDir:          c.tmpDir,
@@ -274,7 +274,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	}
 }
 
-func (c *ConvergeExporter) getStatistic(ctx context.Context, clearTmp func()) (*check.Statistics, bool) {
+func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.TmpCleaner) (*check.Statistics, bool) {
 	metaConfig, err := config.ParseConfigInCluster(
 		ctx,
 		c.kubeCl,
@@ -316,7 +316,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, clearTmp func()) (*
 			c.CounterMetrics["errors"].WithLabelValues().Inc()
 		}
 
-		clearTmp()
+		tmpCleaner.Cleanup()
 	}()
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)

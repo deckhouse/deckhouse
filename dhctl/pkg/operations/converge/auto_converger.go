@@ -81,7 +81,7 @@ func (c *AutoConverger) Start(ctx *convergectx.Context) error {
 }
 
 func (c *AutoConverger) convergerLoop(ctx *convergectx.Context, shutdownCh <-chan struct{}, doneCh chan<- struct{}) {
-	clearTmp := cache.GetClearTemporaryDirsFunc(cache.ClearTmpParams{
+	clearTmp := cache.NewTmpCleaner(cache.ClearTmpParams{
 		IsDebug:         false, // always clear in autoconverger
 		RemoveTombStone: true,
 		TmpDir:          c.params.TmpDir,
@@ -125,7 +125,7 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 	return &http.Server{Addr: c.params.ListenAddress, Handler: router, ReadHeaderTimeout: 30 * time.Second}
 }
 
-func (c *AutoConverger) runConverge(ctx *convergectx.Context, clearTmp func()) {
+func (c *AutoConverger) runConverge(ctx *convergectx.Context, tmpCleaner cache.TmpCleaner) {
 	log.InfoLn("Start next converge")
 
 	metaConfig, err := ctx.MetaConfig()
@@ -147,7 +147,7 @@ func (c *AutoConverger) runConverge(ctx *convergectx.Context, clearTmp func()) {
 			// do not return if error clean whole tmp dir
 		}
 
-		clearTmp()
+		tmpCleaner.Cleanup()
 	}()
 
 	err = c.runner.RunConverge(ctx)

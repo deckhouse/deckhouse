@@ -213,7 +213,7 @@ func TestClearAllInSubDirWithTombstone(t *testing.T) {
 		clearTest(t, f)
 	}()
 
-	f.clear()
+	f.cleaner.Cleanup()
 
 	assertKeepAndRemoved(
 		t,
@@ -253,7 +253,7 @@ func TestClearAllInSubDirWithoutTombstoneWithDefaultDir(t *testing.T) {
 		clearTest(t, f)
 	}()
 
-	f.clear()
+	f.cleaner.Cleanup()
 
 	assertRemoved(t, f, testJoinFilesDirs(files, dirs))
 	// assert removing tmp dir because it is not default
@@ -311,7 +311,7 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 		clearTest(t, f)
 	}()
 
-	f.clear()
+	f.cleaner.Cleanup()
 
 	assertKeepAndRemoved(
 		t,
@@ -339,7 +339,7 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 			clearTest(t, f)
 		}()
 
-		f.clear()
+		f.cleaner.Cleanup()
 
 		assertKeep(t, f, testJoinFilesDirs(files, dirs))
 		assertNoErrorsInLog(t, f)
@@ -419,7 +419,7 @@ type testClearFuncParams struct {
 }
 
 type testFunc struct {
-	clear       func()
+	cleaner     TmpCleaner
 	tmpRoot     string
 	tmpDir      string
 	clearParams ClearTmpParams
@@ -529,7 +529,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 	}
 
 	return testFunc{
-		clear:       GetClearTemporaryDirsFunc(clearParams),
+		cleaner:     NewTmpCleaner(clearParams),
 		tmpRoot:     testTmpDir,
 		tmpDir:      tmpDir,
 		clearParams: clearParams,
@@ -661,6 +661,23 @@ func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, k
 }
 
 func TestDefaultLoggerProvider(t *testing.T) {
-	logger := defaultLoggerProvider()
+	logger := safeLoggerProvider(nil)
 	require.False(t, govalue.IsNil(logger))
+
+	logger = safeLoggerProvider(func() log.Logger {
+		return nil
+	})
+	require.False(t, govalue.IsNil(logger))
+}
+
+func TestGlobalCleanerProvider(t *testing.T) {
+	cleaner := GetGlobalTmpCleaner()
+	require.False(t, govalue.IsNil(cleaner))
+
+	dummyCleaner := NewDummyTmpCleaner(nil, "")
+	SetGlobalTmpCleaner(dummyCleaner)
+
+	cleaner = GetGlobalTmpCleaner()
+	require.False(t, govalue.IsNil(cleaner))
+	require.Equal(t, cleaner, dummyCleaner)
 }

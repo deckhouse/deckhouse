@@ -84,7 +84,12 @@ func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string
 		clearTmpParams.RemoveTombStone = true
 	}
 
-	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.GetClearTemporaryDirsFunc(clearTmpParams))
+	cleaner := cache.NewTmpCleaner(clearTmpParams)
+	cache.SetGlobalTmpCleaner(cleaner)
+
+	tomb.RegisterOnShutdown("Clear dhctl temporary directory", func() {
+		cache.GetGlobalTmpCleaner().Cleanup()
+	})
 }
 
 type directoriesToInitialize map[string]string

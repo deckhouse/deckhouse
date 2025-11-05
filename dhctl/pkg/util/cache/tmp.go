@@ -15,11 +15,13 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/name212/govalue"
 
@@ -28,6 +30,203 @@ import (
 )
 
 const errorPrefix = "Error during cleanup tmp dir:"
+
+type LoggerProvider func() log.Logger
+
+type ClearTmpParams struct {
+	IsDebug         bool
+	RemoveTombStone bool
+
+	TmpDir        string
+	DefaultTmpDir string
+
+	LoggerProvider LoggerProvider
+}
+
+type TmpCleaner interface {
+	Cleanup()
+}
+
+var (
+	globalTmpCleanerMutex sync.Mutex
+	globalTmpCleaner      TmpCleaner
+)
+
+func GetGlobalTmpCleaner() TmpCleaner {
+	globalTmpCleanerMutex.Lock()
+	defer globalTmpCleanerMutex.Unlock()
+
+	if govalue.IsNil(globalTmpCleaner) {
+		return NewDummyTmpCleaner(nil, "")
+	}
+
+	return globalTmpCleaner
+}
+
+func SetGlobalTmpCleaner(c TmpCleaner) {
+	globalTmpCleanerMutex.Lock()
+	defer globalTmpCleanerMutex.Unlock()
+
+	globalTmpCleaner = c
+}
+
+func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
+	if params.IsDebug {
+		msg := fmt.Sprintf("Skip cleaning temp dir '%s' because dhctl work in debug mode\n", params.TmpDir)
+		return NewDummyTmpCleaner(params.LoggerProvider, msg)
+	}
+
+	tmpDir := params.TmpDir
+
+	if tmpDir != "" {
+		tmpDir = path.Clean(tmpDir)
+	}
+
+	if tmpDir == "" || tmpDir == "/" || tmpDir == "." || tmpDir == ".." {
+		msg := fmt.Sprintf("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", params.TmpDir)
+		return NewDummyTmpCleaner(params.LoggerProvider, msg)
+	}
+
+	suffixesForSkip := []string{
+		".log",
+	}
+
+	if !params.RemoveTombStone {
+		suffixesForSkip = append(suffixesForSkip, state.TombstoneKey)
+	}
+
+	paramsCopy := params
+	paramsCopy.TmpDir = tmpDir
+
+	return newRegularTmpCleaner(&paramsCopy, suffixesForSkip)
+}
+
+type DummyTmpCleaner struct {
+	loggerProvider LoggerProvider
+	msg            string
+}
+
+func NewDummyTmpCleaner(loggerProvider LoggerProvider, msg string) *DummyTmpCleaner {
+	return &DummyTmpCleaner{
+		loggerProvider: loggerProvider,
+		msg:            msg,
+	}
+}
+
+func (d *DummyTmpCleaner) Cleanup() {
+	if d.msg != "" {
+		safeLoggerProvider(d.loggerProvider).LogInfoLn(d.msg)
+	}
+}
+
+type regularTmpCleaner struct {
+	params          *ClearTmpParams
+	suffixesForSkip []string
+}
+
+func newRegularTmpCleaner(params *ClearTmpParams, suffixesForSkip []string) *regularTmpCleaner {
+	return &regularTmpCleaner{
+		params:          params,
+		suffixesForSkip: suffixesForSkip,
+	}
+}
+
+func (r *regularTmpCleaner) Cleanup() {
+	logger := safeLoggerProvider(r.params.LoggerProvider)
+
+	tmpDir := r.params.TmpDir
+
+	logger.LogDebugF("Clear temp dir: %s\n", tmpDir)
+	// do not clean tmp dir, because user may need temporary files to debug infra
+	dirsForDeletion := make([]string, 0)
+	keepFiles := make([]string, 0)
+
+	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.DebugF("%s %s because walk returns err: %v\n", errorPrefix, fullPath, err)
+			return nil
+		}
+
+		// If tmp folder doesn't exist
+		if info == nil {
+			return nil
+		}
+
+		if info.IsDir() {
+			if fullPath == "/" {
+				logger.LogWarnF("Found root dir '/' Skip all\n")
+				return filepath.SkipDir
+			}
+
+			if fullPath == r.params.DefaultTmpDir {
+				logger.LogDebugF("Skip cleaning default temp dir '%s'\n", fullPath)
+				return nil
+			}
+
+			dirsForDeletion = append(dirsForDeletion, fullPath)
+			return nil
+		}
+
+		for _, suffix := range r.suffixesForSkip {
+			if strings.HasSuffix(fullPath, suffix) {
+				keepFiles = append(keepFiles, fullPath)
+				return nil
+			}
+		}
+
+		logger.LogDebugF("Delete tmp file '%s'\n", fullPath)
+		err = os.Remove(fullPath)
+		if err != nil {
+			logger.LogDebugF("%s file did not deleted '%s': %v\n", errorPrefix, fullPath, err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		logger.LogDebugF("%s walking '%s' got error: %v\n", errorPrefix, tmpDir, err)
+	}
+
+	sortByDepthDescending(dirsForDeletion)
+
+	skipDeleteDir := func(dir string) bool {
+		for _, keep := range keepFiles {
+			// Check if the directory is an ancestor of the kept file
+			keepDir := filepath.Dir(keep)
+			if keepDir == dir || strings.HasPrefix(keepDir, dir) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	log.DebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
+
+	for _, dir := range dirsForDeletion {
+		if skipDeleteDir(dir) {
+			logger.LogDebugF("Skip cleaning temp sub dir '%s'\n", dir)
+			continue
+		}
+
+		err := os.Remove(dir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				logger.LogDebugF("%s directory '%s' deleting returns error: %v\n", errorPrefix, dir, err)
+			}
+		}
+	}
+}
+
+func safeLoggerProvider(provider LoggerProvider) log.Logger {
+	if provider != nil {
+		logger := provider()
+		if !govalue.IsNil(logger) {
+			return logger
+		}
+	}
+
+	return log.GetDefaultLogger()
+}
 
 // sortByDepthDescending sorts paths by depth (number of slashes) in descending order
 // This ensures that deeper directories are deleted first, preventing "directory not empty" errors
@@ -46,137 +245,4 @@ func sortByDepthDescending(paths []string) {
 
 		return paths[i] > paths[j]
 	})
-}
-
-type ClearTmpParams struct {
-	IsDebug         bool
-	RemoveTombStone bool
-
-	TmpDir        string
-	DefaultTmpDir string
-
-	LoggerProvider func() log.Logger
-}
-
-func defaultLoggerProvider() log.Logger {
-	return log.GetDefaultLogger()
-}
-
-func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
-	loggerProvider := params.LoggerProvider
-	if loggerProvider == nil {
-		loggerProvider = defaultLoggerProvider
-	}
-
-	logger := loggerProvider()
-	if govalue.IsNil(logger) {
-		logger = defaultLoggerProvider()
-	}
-
-	tmpDir := params.TmpDir
-
-	if tmpDir != "" {
-		tmpDir = path.Clean(tmpDir)
-	}
-
-	if tmpDir == "" || tmpDir == "/" || tmpDir == "." || tmpDir == ".." {
-		return func() {
-			logger.LogInfoF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'\n", tmpDir)
-		}
-	}
-
-	suffixesForSkip := []string{
-		".log",
-	}
-
-	if !params.RemoveTombStone {
-		suffixesForSkip = append(suffixesForSkip, state.TombstoneKey)
-	}
-
-	return func() {
-		logger.LogDebugF("Clear temp dir: %s\n", tmpDir)
-		// do not clean tmp dir, because user may need temporary files to debug infra
-		if params.IsDebug {
-			logger.LogDebugF("Skip cleaning temp dir '%s' because dhctl work in debug mode\n", tmpDir)
-			return
-		}
-
-		dirsForDeletion := make([]string, 0)
-		keepFiles := make([]string, 0)
-
-		err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
-			if err != nil {
-				log.DebugF("%s %s because walk returns err: %v\n", errorPrefix, fullPath, err)
-				return nil
-			}
-
-			// If tmp folder doesn't exist
-			if info == nil {
-				return nil
-			}
-
-			if info.IsDir() {
-				if fullPath == "/" {
-					logger.LogWarnF("Found root dir '/' Skip all\n")
-					return filepath.SkipDir
-				}
-
-				if fullPath == params.DefaultTmpDir {
-					logger.LogDebugF("Skip cleaning default temp dir '%s'\n", fullPath)
-					return nil
-				}
-
-				dirsForDeletion = append(dirsForDeletion, fullPath)
-				return nil
-			}
-
-			for _, suffix := range suffixesForSkip {
-				if strings.HasSuffix(fullPath, suffix) {
-					keepFiles = append(keepFiles, fullPath)
-					return nil
-				}
-			}
-
-			logger.LogDebugF("Delete tmp file '%s'\n", fullPath)
-			err = os.Remove(fullPath)
-			if err != nil {
-				logger.LogDebugF("%s file did not deleted '%s': %v\n", errorPrefix, fullPath, err)
-			}
-			return nil
-		})
-
-		if err != nil {
-			logger.LogDebugF("%s walking '%s' got error: %v\n", errorPrefix, tmpDir, err)
-		}
-
-		sortByDepthDescending(dirsForDeletion)
-
-		skipDeleteDir := func(dir string) bool {
-			for _, keep := range keepFiles {
-				// Check if the directory is an ancestor of the kept file
-				keepDir := filepath.Dir(keep)
-				if keepDir == dir || strings.HasPrefix(keepDir, dir) {
-					return true
-				}
-			}
-
-			return false
-		}
-
-		log.DebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
-
-		for _, dir := range dirsForDeletion {
-			if skipDeleteDir(dir) {
-				logger.LogDebugF("Skip cleaning temp sub dir '%s'\n", dir)
-				continue
-			}
-
-			err := os.Remove(dir)
-			if err != nil {
-				if !os.IsNotExist(err) {
-					logger.LogDebugF("%s directory '%s' deleting returns error: %v\n", errorPrefix, dir, err)
-				}
-			}
-		}
-	}
 }
