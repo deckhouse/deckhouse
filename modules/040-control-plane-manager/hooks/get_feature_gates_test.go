@@ -23,6 +23,52 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+func init() {
+	FeatureGatesMap = map[string]ComponentFeatures{
+		"1.31": {
+			Deprecated: []string{
+				"DynamicResourceAllocation",
+			},
+			Forbidden: []string{
+				"SomeProblematicFeature",
+			},
+			Kubelet: []string{
+				"CPUManager",
+				"MemoryManager",
+			},
+			APIServer: []string{
+				"APIServerIdentity",
+				"StorageVersionAPI",
+			},
+			KubeControllerManager: []string{
+				"CronJobsScheduledAnnotation",
+			},
+			KubeScheduler: []string{
+				"SchedulerQueueingHints",
+			},
+		},
+		"1.33": {
+			Forbidden: []string{
+				"SomeProblematicFeature",
+			},
+			Kubelet: []string{
+				"CPUManager",
+				"MemoryManager",
+			},
+			APIServer: []string{
+				"APIServerIdentity",
+				"StorageVersionAPI",
+			},
+			KubeControllerManager: []string{
+				"CronJobsScheduledAnnotation",
+			},
+			KubeScheduler: []string{
+				"SchedulerQueueingHints",
+			},
+		},
+	}
+}
+
 var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates ::", func() {
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}}}`
