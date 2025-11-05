@@ -206,13 +206,38 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
         out = hook.testrun(main, [ctx])
         error_msg = (
             "Cannot change Kubernetes version to 1.33.0:\n"
-            "The following feature gates are deprecated in this version: 'DynamicResourceAllocation'\n"
+            "The following feature gates are deprecated in this version or earlier: 'DynamicResourceAllocation'\n"
             "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
         tests.assert_validation_deny(self, out, error_msg)
     
     def test_validate_version_change_with_non_deprecated_feature_gate_should_allow(self):
         ctx = _prepare_validation_binding_context('1.29.0', '1.30.0', ['CPUManager'])
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
+    
+    def test_validate_upgrade_to_version_higher_than_deprecated_should_reject(self):
+        ctx = _prepare_validation_binding_context('1.30.0', '1.33.0', ['New123'])
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.33.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+    
+    def test_validate_upgrade_to_exact_deprecated_version_should_reject(self):
+        ctx = _prepare_validation_binding_context('1.30.0', '1.32.0', ['New123'])
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+    
+    def test_validate_upgrade_to_version_before_deprecated_should_allow(self):
+        ctx = _prepare_validation_binding_context('1.29.0', '1.30.0', ['DynamicResourceAllocation'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
