@@ -16,26 +16,40 @@ package yandex
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
 	validatePrefix bool
+	logger         log.Logger
 }
 
 func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
 		validatePrefix: validatePrefix,
+		logger:         log.NewSilentLogger(),
 	}
 }
 
-func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
+func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparator {
+	if !govalue.IsNil(logger) {
+		p.logger = logger
+	}
+
+	return p
+}
+
+func (p *MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
 	if p.validatePrefix {
 		prefix := metaConfig.ClusterPrefix
 		if !prefixRegex.MatchString(prefix) {
@@ -43,36 +57,77 @@ func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.Met
 		}
 	}
 
-	var masterNodeGroup masterNodeGroupSpec
-	if err := json.Unmarshal(metaConfig.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
-		return fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+	if err := p.validateMasterNodeGroup(metaConfig); err != nil {
+		return err
+	}
+
+	if err := p.validateNodeGroups(metaConfig); err != nil {
+		return err
+	}
+
+	if err := p.validateWithNATInstanceLayout(metaConfig); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *MetaConfigPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
+	return nil
+}
+
+func (p *MetaConfigPreparator) validateMasterNodeGroup(metaConfig *config.MetaConfig) error {
+	masterNodeGroup, err := dhctljson.UnmarshalToFromMessageMap[masterNodeGroupSpec](metaConfig.ProviderClusterConfig, "masterNodeGroup")
+	if err != nil {
+		return fmt.Errorf("Unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
 	if masterNodeGroup.Replicas > 0 &&
 		len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
 		masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
-		return fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+		return fmt.Errorf("Number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
 	}
 
-	nodeGroups, ok := metaConfig.ProviderClusterConfig["nodeGroups"]
-	if ok {
-		var yandexNodeGroups []nodeGroupSpec
-		if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
-			return fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
+	return nil
+}
+
+func (p *MetaConfigPreparator) validateNodeGroups(metaConfig *config.MetaConfig) error {
+	yandexNodeGroups, err := dhctljson.UnmarshalToFromMessageMap[[]nodeGroupSpec](metaConfig.ProviderClusterConfig, "nodeGroups")
+	if err != nil {
+		if errors.Is(err, dhctljson.ErrNotFound) {
+			p.logger.LogDebugLn("nodeGroups not found in provider cluster configuration. Skip validation.")
+			return nil
 		}
 
-		for _, nodeGroup := range yandexNodeGroups {
-			if nodeGroup.Replicas > 0 &&
-				len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-				nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
-				return fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
-			}
+		return fmt.Errorf("Unable to unmarshal node groups from provider cluster configuration: %v", err)
+	}
+
+	for _, nodeGroup := range *yandexNodeGroups {
+		if nodeGroup.Replicas > 0 &&
+			len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
+			nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+			return fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
 		}
 	}
 
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
+func (p *MetaConfigPreparator) validateWithNATInstanceLayout(metaConfig *config.MetaConfig) error {
+	// layout was prepared with strcase.ToKebab before calling preparator
+	if metaConfig.Layout != "with-nat-instance" {
+		p.logger.LogDebugF("Skip validate WithNATInstance layout. Got layout %v\n", metaConfig.Layout)
+		return nil
+	}
+
+	spec, err := dhctljson.UnmarshalToFromMessageMap[withNatInstanceSpec](metaConfig.ProviderClusterConfig, "withNATInstance")
+	if err != nil {
+		return fmt.Errorf("Unable to unmarshal withNATInstance from provider cluster configuration: %v", err)
+	}
+
+	if spec.InternalSubnetCIDR == "" && spec.InternalSubnetID == "" {
+		return errors.New("You should provide internalSubnetCIDR or internalSubnetID for withNATInstance")
+	}
+
 	return nil
 }
