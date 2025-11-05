@@ -234,7 +234,7 @@ apiVersions:
                     type: string
                   x-doc-required: false
                   description: |
-                    Secondary network IDs for extra NICs attached after the main NIC.
+                    List of network IDs (subnets) for secondary NICs.
 
             volumeTypeMap:
               description: |

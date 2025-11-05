@@ -80,7 +80,7 @@ spec:
                   type: string
                   x-doc-required: false
                   description: |
-                    Primary network for the VMs main NIC.
+                    ID of the primary network for the VMs main NIC.
 
                     **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
@@ -89,12 +89,12 @@ spec:
                     type: string
                   x-doc-required: false
                   description: |
-                    List of networks (subnets) for secondary NICs.
+                    List of networks IDs (subnets) for secondary NICs.
                 subnets:
                   description: |
                     **DEPRECATED.** Use 'additionalNetworks' instead.
 
-                    If set together with 'additionalNetworks', values are merged.
+                    Paths to networks that the secondary VirtualMachines NICs will connect to.
                   x-doc-examples:
                   - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
