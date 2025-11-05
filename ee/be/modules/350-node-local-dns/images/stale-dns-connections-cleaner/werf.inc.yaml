@@ -19,7 +19,7 @@ shell:
   - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-fromImage: common/alt-p11-artifact
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -32,14 +32,12 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-    - apt-get install -y ca-certificates golang libcap-utils
   install:
   - cd /src
   - export GO_VERSION=${GOLANG_VERSION}
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
-  - export GO_VERSION=${GOLANG_VERSION} 
+  - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
