@@ -35,6 +35,12 @@ versions = {
         ],
     },
     "1.31": {
+        "deprecated": [
+            "DynamicResourceAllocation",
+        ],
+        "forbidden": [
+            "SomeProblematicFeature",
+        ],
         "kubelet": [
             "CPUManager",
             "MemoryManager",
@@ -51,6 +57,12 @@ versions = {
         ],
     },
     "1.32": {
+        "deprecated": [
+            "New123",
+        ],
+        "forbidden": [
+            "SomeProblematicFeature",
+        ],
         "kubelet": [
             "CPUManager",
             "MemoryManager",
@@ -67,9 +79,6 @@ versions = {
         ],
     },
     "1.33": {
-        "deprecated": [
-            "DynamicResourceAllocation",
-        ],
         "forbidden": [
             "SomeProblematicFeature",
         ],
