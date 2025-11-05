@@ -23,8 +23,8 @@ const (
 // e.g. for kubelet.
 // TODO "enabled" file should be created via systemd unit configuration.
 type StatusReporter struct {
-	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
-	UnlockInhibitorsCh <-chan struct{}
+	// UnlockCtx signals that inhibitors can be unlocked.
+	UnlockCtx context.Context
 }
 
 func (s *StatusReporter) Name() string {
@@ -49,7 +49,7 @@ func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		dlog.Info("status reporter: stop on context cancel")
-	case <-s.UnlockInhibitorsCh:
+	case <-s.UnlockCtx.Done():
 		dlog.Info("status reporter: inhibitors unlocked, cleaning up files")
 	}
 

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"flag"
 	"log/slog"
 	"os"
@@ -29,7 +30,7 @@ func run(cordonEnabled bool) error {
 	if err != nil {
 		dlog.Fatal("failed to create kubernetes client", dlog.Err(err))
 	}
-	app := app.NewApp(app.AppConfig{
+	a := app.NewApp(app.AppConfig{
 		PodLabel:              app.InhibitNodeShutdownLabel,
 		InhibitDelayMax:       app.InhibitDelayMaxSec,
 		PodsCheckingInterval:  app.PodsCheckingInterval,
@@ -38,24 +39,28 @@ func run(cordonEnabled bool) error {
 		CordonEnabled:         cordonEnabled,
 	}, kubeClient)
 
-	if err := app.Start(); err != nil {
-		dlog.Fatal("application start failed", dlog.Err(err))
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Wait for signal to stop application.
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(interruptCh)
+
+	if err := a.Start(ctx, cancel); err != nil {
+		dlog.Fatal("application start failed", dlog.Err(err))
+	}
 
 	select {
 	case sig := <-interruptCh:
 		dlog.Info("received shutdown signal", slog.String("signal", sig.String()))
-		app.Stop()
-		<-app.Done()
-	case <-app.Done():
+		cancel()
+		a.Stop()
+		<-a.Done()
+	case <-a.Done():
 		dlog.Info("application stopped by internal signal")
 	}
 
-	if err := app.Err(); err != nil {
+	if err := a.Err(); err != nil {
 		dlog.Fatal("application error", dlog.Err(err))
 	}
 

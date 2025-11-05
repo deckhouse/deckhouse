@@ -63,7 +63,7 @@ function inhibitor::install:service() {
 {{- $noCordon := true }}
 {{- if and (eq .runType "Normal") (eq .nodeGroup.name "master") }}
   {{- $apiserverEndpoints := dig "apiserverEndpoints" (list) .normal }}
-  {{- if lt (len $apiserverEndpoints) 2 }}
+  {{- if gt (len $apiserverEndpoints) 1 }}
     {{- $noCordon = false }}
   {{- end }}
 {{- end }}

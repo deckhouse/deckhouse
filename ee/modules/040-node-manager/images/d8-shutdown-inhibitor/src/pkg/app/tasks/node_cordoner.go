@@ -16,11 +16,11 @@ import (
 
 // NodeCordoner waits for shutdown signal and cordons the node.
 type NodeCordoner struct {
-	NodeName           string
-	StartCordonCh      <-chan struct{}
-	UnlockInhibitorsCh <-chan struct{}
-	CordonEnabled      bool
-	Klient             *kubernetes.Klient
+	NodeName      string
+	StartCordonCh <-chan struct{}
+	UnlockCtx     context.Context
+	CordonEnabled bool
+	Klient        *kubernetes.Klient
 }
 
 func (n *NodeCordoner) Name() string {
@@ -28,11 +28,10 @@ func (n *NodeCordoner) Name() string {
 }
 
 func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
-
-    if !n.CordonEnabled {
-        dlog.Info("node cordoner: cordoning disabled, skipping", slog.String("node", n.NodeName))
-        return
-    }
+	if !n.CordonEnabled {
+		dlog.Info("node cordoner: cordoning disabled, skipping", slog.String("node", n.NodeName))
+		return
+	}
 
 	// Stage 1. Wait for a signal to start.
 	dlog.Info("node cordoner: waiting for cordon signal", slog.String("node", n.NodeName))
@@ -43,7 +42,7 @@ func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 		return
 	case <-n.StartCordonCh:
 		dlog.Info("node cordoner: received cordon signal", slog.String("node", n.NodeName))
-	case <-n.UnlockInhibitorsCh:
+	case <-n.UnlockCtx.Done():
 		dlog.Info("node cordoner: unlock signal received, skipping cordon", slog.String("node", n.NodeName))
 		return
 	}

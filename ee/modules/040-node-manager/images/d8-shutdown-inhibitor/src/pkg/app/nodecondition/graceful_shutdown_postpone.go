@@ -140,6 +140,5 @@ func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName
 		dlog.Info("uncordonOnStart: node not cordoned by inhibitor, nothing to do", slog.String("node", nodeName))
 		return true, nil
 	}
-
 	return true, g.uncordonAndCleanup(ctx, node)
 }

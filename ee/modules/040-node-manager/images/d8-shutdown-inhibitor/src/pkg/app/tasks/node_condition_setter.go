@@ -22,8 +22,8 @@ import (
 type NodeConditionSetter struct {
 	NodeName string
 	Klient   *kubernetes.Klient
-	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
-	UnlockInhibitorsCh <-chan struct{}
+	// UnlockCtx signals that inhibitors can be unlocked.
+	UnlockCtx context.Context
 }
 
 func (n *NodeConditionSetter) Name() string {
@@ -44,7 +44,7 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		dlog.Info("node condition setter: stop on context cancel", slog.String("node", n.NodeName))
-	case <-n.UnlockInhibitorsCh:
+	case <-n.UnlockCtx.Done():
 		dlog.Info("node condition setter: inhibitors unlocked, removing condition", slog.String("node", n.NodeName))
 	}
 

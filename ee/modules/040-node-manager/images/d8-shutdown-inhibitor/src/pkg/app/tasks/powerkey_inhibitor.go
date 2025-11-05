@@ -17,7 +17,7 @@ import (
 )
 
 type PowerKeyInhibitor struct {
-	UnlockInhibitorsCh <-chan struct{}
+	UnlockCtx context.Context
 
 	dbusCon     *systemd.DBusCon
 	inhibitLock systemd.InhibitLock
@@ -43,7 +43,7 @@ func (p *PowerKeyInhibitor) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		dlog.Info("power key inhibitor: unlock on context cancel")
-	case <-p.UnlockInhibitorsCh:
+	case <-p.UnlockCtx.Done():
 		dlog.Info("power key inhibitor: unlock on shutdown requirements met")
 	}
 

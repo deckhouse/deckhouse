@@ -9,15 +9,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
 	CordonAnnotationKey   = "node.deckhouse.io/cordoned-by"
-	KubectlPath           = "/opt/deckhouse/bin/kubectl"
 	KubeConfigPath        = "/etc/kubernetes/kubelet.conf"
 	CordonAnnotationValue = "shutdown-inhibitor"
 )
@@ -34,22 +36,38 @@ type nodePatch struct {
 }
 
 type nodeSpecPatch struct {
-	Unschedulable bool `json:"unschedulable,omitempty"`
+    Unschedulable bool `json:"unschedulable"`
 }
 
 type nodeMetadataPatch struct {
 	Annotations map[string]*string `json:"annotations,omitempty"`
 }
 
-
 func (c *Klient) GetNode(ctx context.Context, nodeName string) *Node {
-	node, err := c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	var (
+		node    *corev1.Node
+		lastErr error
+	)
+	attempt := 0
+	err := wait.ExponentialBackoffWithContext(ctx, kubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		attempt++
+		var err error
+		node, err = c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			dlog.Warn("get node retry", slog.Int("attempt", attempt), dlog.Err(err))
+			lastErr = err
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
+		if lastErr != nil && !isContextError(err) {
+			err = lastErr
+		}
 		return &Node{err: fmt.Errorf("get node %q: %w", nodeName, err)}
 	}
 	return &Node{Node: node, client: c}
 }
-
 
 func (n *Node) GetAnnotationCordonedBy() (string, error) {
 	annotations := n.GetAnnotations()
@@ -72,21 +90,38 @@ func (n *Node) patch(ctx context.Context, p nodePatch) *Node {
 	if n.err != nil {
 		return n
 	}
-
 	patchB, err := json.Marshal(p)
 	if err != nil {
 		n.err = fmt.Errorf("marshal patch: %w", err)
 		return n
 	}
 
-	node, err := n.client.clientset.CoreV1().Nodes().Patch(
-		ctx,
-		n.Name,
-		types.StrategicMergePatchType,
-		patchB,
-		metav1.PatchOptions{},
+	var (
+		node    *corev1.Node
+		lastErr error
 	)
+	attempt := 0
+	err = wait.ExponentialBackoffWithContext(ctx, kubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		attempt++
+		var err error
+		node, err = n.client.clientset.CoreV1().Nodes().Patch(
+			ctx,
+			n.Name,
+			types.StrategicMergePatchType,
+			patchB,
+			metav1.PatchOptions{},
+		)
+		if err != nil {
+			dlog.Warn("patch node retry", slog.Int("attempt", attempt), dlog.Err(err))
+			lastErr = err
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
+		if lastErr != nil && !isContextError(err) {
+			err = lastErr
+		}
 		n.err = fmt.Errorf("patch node %q: %w", n.Name, err)
 		return n
 	}
@@ -138,15 +173,29 @@ func (n *Node) PatchCondition(ctx context.Context, condType, status, reason, mes
 		condType, status, reason, message,
 	)
 
-	_, err := n.client.clientset.CoreV1().Nodes().Patch(
-		ctx,
-		n.Name,
-		types.StrategicMergePatchType,
-		[]byte(patch),
-		metav1.PatchOptions{},
-		"status",
-	)
+	var lastErr error
+	attempt := 0
+	err := wait.ExponentialBackoffWithContext(ctx, kubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		attempt++
+		_, err := n.client.clientset.CoreV1().Nodes().Patch(
+			ctx,
+			n.Name,
+			types.StrategicMergePatchType,
+			[]byte(patch),
+			metav1.PatchOptions{},
+			"status",
+		)
+		if err != nil {
+			dlog.Warn("patch node status retry", slog.Int("attempt", attempt), dlog.Err(err))
+			lastErr = err
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
+		if lastErr != nil && !isContextError(err) {
+			err = lastErr
+		}
 		n.err = fmt.Errorf("patch condition on node %q: %w", n.Name, err)
 	}
 

@@ -29,7 +29,7 @@ type PodObserver struct {
 	PodMatchers           []kubernetes.PodMatcher
 	ShutdownSignalCh      <-chan struct{}
 	StartCordonCh         chan<- struct{}
-	StopInhibitorsCh      chan<- struct{}
+	UnlockCancel          context.CancelFunc
 	stopOnce              sync.Once
 	Klient                *kubernetes.Klient
 	CordonEnabled         bool
@@ -40,13 +40,13 @@ func (p *PodObserver) Name() string {
 }
 
 func (p *PodObserver) getWallMessage() string {
-    if p.CordonEnabled {
-        return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
+	if p.CordonEnabled {
+		return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
 Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
 use 'kubectl drain' to move Pods to other Nodes.
 `
-    }
-    return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
+	}
+	return `Pods with shutdown inhibitor label are still running, waiting for them to stop.
 Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them.
 Please terminate these pods gracefully before proceeding with node shutdown.
 `
@@ -86,7 +86,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 				if err != nil {
 					dlog.Warn("pod observer: failed to unset node condition", slog.String("node", p.NodeName), dlog.Err(err))
 				}
-				close(p.StopInhibitorsCh)
+				p.UnlockCancel()
 				return
 			}
 

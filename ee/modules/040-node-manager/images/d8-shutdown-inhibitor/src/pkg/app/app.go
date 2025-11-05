@@ -32,16 +32,16 @@ func NewApp(config AppConfig, klient *kubernetes.Klient) *App {
 	}
 }
 
-func (a *App) Start() error {
+func (a *App) Start(ctx context.Context, cancel context.CancelFunc) error {
 	err := a.overrideInhibitDelayMax()
 	if err != nil {
 		return err
 	}
 
-	tasks := a.wireAppTasks()
+	tasks := a.wireAppTasks(ctx)
 	a.taskStarter = taskstarter.NewStarter(tasks...)
 
-	go a.taskStarter.Start(context.Background())
+	go a.taskStarter.Start(ctx, cancel)
 
 	go func() {
 		<-a.taskStarter.Done()
@@ -116,24 +116,25 @@ func (a *App) overrideInhibitDelayMax() error {
 	return nil
 }
 
-func (a *App) wireAppTasks() []taskstarter.Task {
+func (a *App) wireAppTasks(ctx context.Context) []taskstarter.Task {
+	unlockCtx, unlockCancel := context.WithCancel(ctx)
+
 	// Create channels for events.
 	// Event on receiving ShutdownPrepareSignal.
 	shutdownSignalCh := make(chan struct{})
-	// Event to unlock all inhibitors when shutdown requirements are met.
-	unlockInhibitorsCh := make(chan struct{})
+	// Event to signal all inhibitors when shutdown requirements are met.
 	startCordonCh := make(chan struct{})
 
 	return []taskstarter.Task{
 		&tasks.ShutdownInhibitor{
-			ShutdownSignalCh:   shutdownSignalCh,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			ShutdownSignalCh: shutdownSignalCh,
+			UnlockCtx:        unlockCtx,
 		},
 		&tasks.PowerKeyInhibitor{
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			UnlockCtx: unlockCtx,
 		},
 		&tasks.PowerKeyEvent{
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			UnlockCtx: unlockCtx,
 		},
 		&tasks.PodObserver{
 			NodeName:              a.config.NodeName,
@@ -141,25 +142,25 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			WallBroadcastInterval: a.config.WallBroadcastInterval,
 			ShutdownSignalCh:      shutdownSignalCh,
 			StartCordonCh:         startCordonCh,
-			StopInhibitorsCh:      unlockInhibitorsCh,
+			UnlockCancel:          unlockCancel,
 			PodMatchers: []kubernetes.PodMatcher{
 				kubernetes.WithLabel(a.config.PodLabel),
 				kubernetes.WithRunningPhase(),
 			},
-			Klient: a.klient,
-			CordonEnabled:      a.config.CordonEnabled,
+			Klient:        a.klient,
+			CordonEnabled: a.config.CordonEnabled,
 		},
 		&tasks.NodeCordoner{
-			NodeName:           a.config.NodeName,
-			StartCordonCh:      startCordonCh,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
-			Klient:             a.klient,
-			CordonEnabled:      a.config.CordonEnabled,
+			NodeName:      a.config.NodeName,
+			StartCordonCh: startCordonCh,
+			UnlockCtx:     unlockCtx,
+			Klient:        a.klient,
+			CordonEnabled: a.config.CordonEnabled,
 		},
 		&tasks.NodeConditionSetter{
-			NodeName:           a.config.NodeName,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
-			Klient:             a.klient,
+			NodeName:  a.config.NodeName,
+			UnlockCtx: unlockCtx,
+			Klient:    a.klient,
 		},
 	}
 }

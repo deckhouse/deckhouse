@@ -7,11 +7,15 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -23,6 +27,17 @@ const (
 	defaultBurst     = 10
 	defaultTimeout   = 15 * time.Second
 )
+
+var kubeAPIRetryBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   1.1,
+	Jitter:   0.1,
+	Steps:    43, // ~5 min
+}
+
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
 
 type Klient struct {
 	clientset kubeclient.Interface
@@ -66,9 +81,28 @@ func (c *Klient) Clientset() kubeclient.Interface {
 // ListPodsOnNode returns pods scheduled onto the provided node using a field selector.
 func (c *Klient) ListPodsOnNode(ctx context.Context, nodeName string) (*corev1.PodList, error) {
 	sel := fmt.Sprintf("spec.nodeName=%s", nodeName)
-	pl, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{FieldSelector: sel})
+	var pods *corev1.PodList
+	var lastErr error
+	attempt := 0
+	err := wait.ExponentialBackoffWithContext(ctx, kubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		attempt++
+		var err error
+		pods, err = c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{FieldSelector: sel})
+		if err != nil {
+			dlog.Warn("list pods retry", slog.Int("attempt", attempt), dlog.Err(err))
+			lastErr = err
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
+		if isContextError(err) {
+			return nil, err
+		}
+		if lastErr != nil {
+			err = lastErr
+		}
 		return nil, fmt.Errorf("list pods on node %q: %w", nodeName, err)
 	}
-	return pl, nil
+	return pods, nil
 }

@@ -20,8 +20,8 @@ import (
 // If power key is pressed, it sends a shutdown event.
 type PowerKeyEvent struct {
 	// PowerKeyPressedCh is a channel to send power key press event.
-	PowerKeyPressedCh  chan<- struct{}
-	UnlockInhibitorsCh <-chan struct{}
+	PowerKeyPressedCh chan<- struct{}
+	UnlockCtx         context.Context
 
 	powerKeyDevices []inputdev.Device
 }
@@ -55,7 +55,7 @@ func (p *PowerKeyEvent) Run(ctx context.Context, errCh chan error) {
 		if err != nil {
 			dlog.Error("power key reader: systemctl poweroff failed", dlog.Err(err))
 		}
-	case <-p.UnlockInhibitorsCh:
+	case <-p.UnlockCtx.Done():
 		dlog.Info("power key reader: shutdown initiated, stopping watcher")
 		return
 	}

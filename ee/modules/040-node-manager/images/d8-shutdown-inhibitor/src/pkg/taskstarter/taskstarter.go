@@ -30,8 +30,9 @@ func NewStarter(tasks ...Task) *Starter {
 	}
 }
 
-func (s *Starter) Start(ctx context.Context) {
-	s.ctx, s.cancel = context.WithCancel(ctx)
+func (s *Starter) Start(ctx context.Context, cancel context.CancelFunc) {
+	s.ctx = ctx
+	s.cancel = cancel
 
 	var wg sync.WaitGroup
 	errCh := make(chan error, 10)

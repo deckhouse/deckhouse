@@ -17,8 +17,8 @@ import (
 )
 
 type ShutdownInhibitor struct {
-	UnlockInhibitorsCh <-chan struct{}
-	ShutdownSignalCh   chan<- struct{}
+	UnlockCtx        context.Context
+	ShutdownSignalCh chan<- struct{}
 
 	dbusCon     *systemd.DBusCon
 	inhibitLock systemd.InhibitLock
@@ -56,7 +56,7 @@ func (s *ShutdownInhibitor) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		dlog.Info("shutdown inhibitor: unlock on context cancel (stage2)")
-	case <-s.UnlockInhibitorsCh:
+	case <-s.UnlockCtx.Done():
 		dlog.Info("shutdown inhibitor: shutdown requirements met, unlocking")
 	}
 
