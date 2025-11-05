@@ -42,24 +42,24 @@ spec:
       app: webhook
   template:
     metadata:
-      labels:
-        app: webhook
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
         checksum/certificate: {{ include (print .Template.BasePath "/webhook/secret-tls.yaml") . | sha256sum }}
+      labels:
+        app: webhook
     spec:
+      serviceAccountName: webhook
+      automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
-      serviceAccountName: webhook
-      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: webhook
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "certManagerWebhook") }}
         args:
         - --v=3
