@@ -19,6 +19,7 @@ import json
 import base64
 import yaml
 
+import feature_gates_generated
 from k8s_version_feature_gates import (
     main,
     get_enabled_feature_gates,
@@ -28,6 +29,40 @@ from k8s_version_feature_gates import (
 )
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+
+TEST_FEATURE_GATES_MAP = {
+    "1.29": {
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.30": {
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.32": {
+        "deprecated": ["New123"],
+        "forbidden": ["SomeProblematicFeature"],
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.33": {
+        "deprecated": ["DynamicResourceAllocation"],
+        "forbidden": ["SomeProblematicFeature"],
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+}
+
+feature_gates_generated.versions = TEST_FEATURE_GATES_MAP
 
 
 def _prepare_validation_binding_context(

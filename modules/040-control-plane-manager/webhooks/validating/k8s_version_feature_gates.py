@@ -32,9 +32,9 @@ kubernetesValidating:
   group: main
   includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}"]
   namespace:
-    nameSelector:
-      matchNames:
-      - kube-system
+    labelSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
   labelSelector:
     matchLabels:
       name: d8-cluster-configuration

@@ -18,9 +18,35 @@ import unittest
 import json
 import base64
 
+import feature_gates_generated
 from feature_gates import main, validate, CLUSTER_CONFIG_SNAPSHOT_NAME
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+
+TEST_FEATURE_GATES_MAP = {
+    "1.29": {
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.30": {
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.33": {
+        "forbidden": ["SomeProblematicFeature"],
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+}
+
+feature_gates_generated.versions = TEST_FEATURE_GATES_MAP
 
 
 def _prepare_validation_binding_context(k8s_version: str, enabled_feature_gates: list) -> DotMap:
