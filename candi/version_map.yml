@@ -51,7 +51,7 @@ k8s:
       aws: v1.40.0
       azure: v1.30.7
       gcp: v1.15.4
-      vsphere: v3.0.3
+      vsphere: v3.3.1
       openstack: v1.30.2
       provisioner: v5.2.0
       attacher: v4.6.1
@@ -75,7 +75,7 @@ k8s:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
+      vsphere: v3.3.1
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.7.0
@@ -100,7 +100,7 @@ k8s:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
+      vsphere: v3.3.1
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.8.0
@@ -124,7 +124,7 @@ k8s:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
+      vsphere: v3.3.1
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.8.1
@@ -148,7 +148,7 @@ k8s:
       aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      vsphere: v3.0.3
+      vsphere: v3.3.1
       openstack: v1.31.2
       provisioner: v5.2.0
       attacher: v4.8.1
