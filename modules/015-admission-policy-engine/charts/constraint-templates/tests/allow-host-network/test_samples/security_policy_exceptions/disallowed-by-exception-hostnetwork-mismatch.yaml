@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-hostnetwork-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-hostnetwork-true-wrong-port
+spec:
+  hostNetwork: false
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 9000
+          hostPort: 5000
+          protocol: TCP
+

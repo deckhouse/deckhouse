@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-true-wrong-port
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+    hostPorts:
+    - port: 25000
+      protocol: TCP
+

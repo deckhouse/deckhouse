@@ -55,69 +55,84 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
-              not allowed_by_any(input.review.object)
-              msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+                not allowed_by_any(input.review.object)
+                msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
               }
 
               allowed_by_any(obj) if {
-              allowed_by_securitypolicyexeption(obj)
+                allowed_by_securitypolicyexeption(obj)
               }
 
               # or
               allowed_by_any(obj) if {
-              allowed_by_securitypolicy(obj)
+                allowed_by_securitypolicy(obj)
               }
 
               allowed_by_securitypolicyexeption(obj) if {
-              label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
-              exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                label := obj.metadata.labels["security.deckhouse.io/securityPolicyException"]
+                exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
 
-              allowed_hostnetwork_by_exception(obj, exception)
-              allowed_hostports_by_exception(exception)
+                allowed_hostnetwork_by_exception(obj, exception)
+                allowed_hostports_by_exception(exception)
               }
 
               allowed_hostnetwork_by_exception(obj, exception) if {
-              exception.spec.network.hostNetwork.allowedValue == obj.spec.hostNetwork
+                exception.spec.network.hostNetwork.allowedValue == obj.spec.hostNetwork
               }
 
               allowed_hostports_by_exception(exception) if {
-              object_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
-              allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
-              every port in object_ports {
+                object_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in object_ports {
                   port in allowed_ports
-              }
+                }
               }
 
               allowed_by_securitypolicy(obj) if {
-              allowed_hostnetwork_by_securitypolicy(obj)
-              allowed_hostports_by_securitypolicy
+                allowed_hostnetwork_by_securitypolicy(obj)
+                allowed_hostports_by_securitypolicy
+              }
+
+              allowed_hostnetwork_by_securitypolicy(_) if {
+                input.parameters.allowHostNetwork == true
               }
 
               allowed_hostnetwork_by_securitypolicy(obj) if {
-              input.parameters.allowHostNetwork
-              obj.spec.hostNetwork
+                obj.spec.hostNetwork == false
+              }
+              allowed_hostnetwork_by_securitypolicy(obj) if {
+                not obj.spec.hostNetwork # not exist
+              }
+              allowed_hostports_by_securitypolicy if {
+                hostPort := input_containers[_].ports[_].hostPort
+                in_range(input.parameters.ranges, hostPort)
               }
 
               allowed_hostports_by_securitypolicy if {
-              hostPort := input_containers[_].ports[_].hostPort
-              in_range(input.parameters.ranges, hostPort)
+                port := input_containers[_].ports[_]
+                not port.hostPort
+              }
+
+              allowed_hostports_by_securitypolicy if {
+                container := input_containers[_]
+                not container.ports
               }
 
               in_range(ranges, port) if {
-              matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
-              count(matching) > 0
+                matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
+                count(matching) > 0
               }
 
               input_containers contains c if {
-              c := input.review.object.spec.containers[_]
-              }
-
-              # or
-              input_containers contains c if {
-              c := input.review.object.spec.initContainers[_]
+                c := input.review.object.spec.containers[_]
               }
 
               # or
               input_containers contains c if {
-              c := input.review.object.spec.ephemeralContainers[_]
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              # or
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
               }

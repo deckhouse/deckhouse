@@ -1,28 +1,44 @@
 kind: Suite
 apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
-  name: d8-allow-host-processes
+  name: d8-host-processes
 tests:
-  - name: pod-security-standards-baseline
+  - name: pss-baseline
     template: ../../templates/security/allow-host-processes.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-hostpid-no-hostipc
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_allowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-hostpid-no-hostipc.yaml
         assertions:
           - violations: no
-      - name: example-disallowed-ipc
+
+      - name: allowed-multiple-containers-no-hostpid-no-hostipc
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_disallowed_ipc.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-multiple-containers-no-hostpid-no-hostipc.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-hostpid-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostpid-true.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-pid
+
+      - name: disallowed-hostipc-true
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_disallowed_pid.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostipc-true.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-hostpid-true-hostipc-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostpid-true-hostipc-true.yaml
         assertions:
           - violations: yes
 
@@ -30,9 +46,140 @@ tests:
     template: ../../templates/security/allow-host-processes.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-hostpid-true
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/example_allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostpid-true.yaml
         assertions:
           - violations: no
+
+      - name: allowed-hostipc-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostipc-true.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-hostpid-true-hostipc-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostpid-true-hostipc-true.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-no-hostpid-no-hostipc
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-no-hostpid-no-hostipc.yaml
+        assertions:
+          - violations: no
+
+  - name: security-policy-with-exception
+    template: ../../templates/security/allow-host-processes.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: allowed-by-exception-hostpid-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-true.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostpid-true.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostipc-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostipc-true.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostipc-true.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostpid-true-hostipc-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-true-hostipc-true.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostpid-true-hostipc-true.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostpid-false-hostipc-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-false-hostipc-false.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostpid-false-hostipc-false.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-hostpid-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-true.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostpid-mismatch.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-hostipc-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostipc-true.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostipc-mismatch.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-exception-allows-false-but-constraint-allows-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-false-hostipc-false.yaml
+        object: test_samples/security_policy_exceptions/disallowed-exception-allows-false-constraint-allows-true.yaml
+        assertions:
+          - violations: no
+
+  - name: security-policy-restrictive-with-exception
+    template: ../../templates/security/allow-host-processes.yaml
+    constraint: constraint_pss_deny_all.yaml
+    cases:
+      - name: allowed-by-exception-hostpid-true-despite-constraint-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-true.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostpid-true-despite-constraint-false.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostipc-true-despite-constraint-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostipc-true.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostipc-true-despite-constraint-false.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-no-exception-hostpid-true-restrictive
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-hostpid-true-restrictive.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-hostpid-mismatch-restrictive
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostpid-true.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostpid-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-hostipc-mismatch-restrictive
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostipc-true.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostipc-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes

@@ -42,7 +42,7 @@ spec:
             rego: |
               package d8.security_policies
 
-              violation[{"details": {}, "msg": msg}] if {
+              violation contains {"msg": msg, "details": {}} if {
                 container := input_containers[_]
                 not allowed_by_any(input.review.object, container)
                 msg := sprintf(

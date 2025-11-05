@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-true-port-out-of-constraint-range
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+    hostPorts:
+    - port: 5000
+      protocol: TCP
+

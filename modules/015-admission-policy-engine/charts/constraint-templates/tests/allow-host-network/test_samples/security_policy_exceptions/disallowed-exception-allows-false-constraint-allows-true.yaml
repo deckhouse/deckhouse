@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-exception-allows-false-constraint-allows-true
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-hostnetwork-false-empty
+spec:
+  hostNetwork: true
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 9000
+          hostPort: 5000
+          protocol: TCP
+

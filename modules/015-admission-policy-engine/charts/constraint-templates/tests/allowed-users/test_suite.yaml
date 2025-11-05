@@ -3,50 +3,70 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-users
 tests:
-  - name: pod-security-standards-restricted
+  - name: pss-restricted
     template: ../../templates/security/allowed-users.yaml
     constraint: constraint_pss_restricted.yaml
     cases:
-      - name: example-allowed
+      - name: disallowed-no-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/allowed.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-no-securityContext.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-runAsNonRoot-true-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-runAsNonRoot-true-container.yaml
         assertions:
           - violations: no
-      - name: example-allowed-pod
+
+      - name: allowed-runAsNonRoot-true-pod
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/allowed_pod.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-runAsNonRoot-true-pod.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-runAsUser-non-zero-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-runAsUser-non-zero-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-runAsUser-non-zero-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-runAsUser-non-zero-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-runAsUser-zero-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-runAsUser-zero-container.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-pod
+
+      - name: disallowed-runAsUser-zero-pod
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_pod.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-runAsUser-zero-pod.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-root
+
+      - name: disallowed-runAsNonRoot-false-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_run_root.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-runAsNonRoot-false-container.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-root-pod
+
+      - name: disallowed-multiple-containers-one-root
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_run_root_pod.yaml
-        assertions:
-          - violations: yes
-      - name: example-disallowed-empty
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_empty.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-multiple-containers-one-root.yaml
         assertions:
           - violations: yes
 
@@ -54,27 +74,174 @@ tests:
     template: ../../templates/security/allowed-users.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: disallowed-no-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
-        assertions:
-          - violations: no
-      - name: example-allowed-pod
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed_pod.yaml
-        assertions:
-          - violations: no
-      - name: example-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-no-securityContext.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-pod
+
+      - name: allowed-runAsUser-in-range-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed_pod.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-runAsUser-in-range-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-runAsUser-in-range-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-runAsUser-in-range-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-runAsUser-on-edge-min-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-runAsUser-on-edge-min-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-runAsUser-on-edge-max-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-runAsUser-on-edge-max-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-runAsGroup-in-range-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-runAsGroup-in-range-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-fsGroup-in-range-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-fsGroup-in-range-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-supplementalGroups-in-range-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-supplementalGroups-in-range-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-all-fields-in-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-all-fields-in-range.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-all-fields-in-range-with-pod-level
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-all-fields-in-range-with-pod-level.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-runAsUser-out-of-range-low-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-runAsUser-out-of-range-low-container.yaml
         assertions:
           - violations: yes
+
+      - name: disallowed-runAsUser-out-of-range-high-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-runAsUser-out-of-range-high-container.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-runAsGroup-out-of-range-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-runAsGroup-out-of-range-container.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-fsGroup-out-of-range-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-fsGroup-out-of-range-pod.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-supplementalGroups-out-of-range-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-supplementalGroups-out-of-range-pod.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-multiple-containers-one-out-of-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-multiple-containers-one-out-of-range.yaml
+        assertions:
+          - violations: yes
+
+  - name: pss-restricted-with-exception
+    template: ../../templates/security/allowed-users.yaml
+    constraint: constraint_pss_restricted.yaml
+    cases:
+      - name: allowed-by-exception-root-user
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-root-user.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-root-user.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-custom-user-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-custom-user-range.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-custom-user-range.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-user-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-root-user.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-user-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-runAsNonRoot-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-root-user.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-runAsNonRoot-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-by-exception-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-root-user.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-containers-all-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-root-user.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-multiple-containers-all-allowed.yaml
+        assertions:
+          - violations: no
+

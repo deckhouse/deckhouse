@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-false-with-hostport
+spec:
+  network:
+    hostNetwork:
+      allowedValue: false
+    hostPorts:
+    - port: 5000
+      protocol: TCP
+

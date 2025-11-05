@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-multiple-paths
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-multiple-paths
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+        - name: proc-volume
+          mountPath: /host-proc
+          readOnly: false
+        - name: passwd-volume
+          mountPath: /host-passwd
+          readOnly: true
+  volumes:
+    - name: proc-volume
+      hostPath:
+        path: /proc/etc
+    - name: passwd-volume
+      hostPath:
+        path: /etc/passwd
+

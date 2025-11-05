@@ -46,7 +46,7 @@ spec:
             rego: |
               package d8.security_policies
 
-              violation[{"msg": msg}] if {
+              violation contains {"msg": msg, "details": {}} if {
                 container := input_containers[_]
                 not allowed_by_any(container)
                 msg := sprintf(
@@ -83,7 +83,7 @@ spec:
               }
 
 
-              violation[{"msg": msg}] if {
+              violation contains {"msg": msg, "details": {}} if {
                   container := input_containers[_]
                   not drops_required_capabilities_by_any(container)
                   msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", 

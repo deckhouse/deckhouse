@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-procmount-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-default
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        procMount: Unmasked
+

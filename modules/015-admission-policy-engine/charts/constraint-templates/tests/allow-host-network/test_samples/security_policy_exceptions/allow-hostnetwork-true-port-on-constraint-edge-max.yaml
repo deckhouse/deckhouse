@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-true-port-on-constraint-edge-max
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+    hostPorts:
+    - port: 30000
+      protocol: TCP
+

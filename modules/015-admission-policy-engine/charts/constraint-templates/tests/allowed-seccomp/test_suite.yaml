@@ -3,97 +3,109 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-seccomp-profiles
 tests:
-  - name: pod-security-standards-baseline
+  - name: pss-baseline
     template: ../../templates/security/allowed-seccomp.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-seccomp-profile
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-seccomp-profile.yaml
         assertions:
           - violations: no
-      - name: example-allowed-empty
+
+      - name: allowed-runtime-default-securityContext-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed_empty.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-runtime-default-securityContext-container.yaml
         assertions:
           - violations: no
-      - name: example-allowed-localhost
+
+      - name: allowed-runtime-default-securityContext-pod
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed_localhost.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-runtime-default-securityContext-pod.yaml
         assertions:
           - violations: no
-      - name: example-allowed-undefined
+
+      - name: allowed-runtime-default-annotation
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed_undefined.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-runtime-default-annotation.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-localhost-profile-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/disallowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-localhost-profile-securityContext.yaml
         assertions:
-          - violations: yes
-      - name: example-disallowed-ephemeral
+          - violations: no
+
+      - name: allowed-localhost-profile-annotation
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/disallowed_ephemeral.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-localhost-profile-annotation.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-unconfined-securityContext.yaml
         assertions:
           - violations: yes
 
-  - name: pod-security-standards-restricted.yaml
+      - name: disallowed-unconfined-annotation
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-unconfined-annotation.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-multiple-containers-one-unconfined
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-containers-one-unconfined.yaml
+        assertions:
+          - violations: yes
+
+  - name: pss-restricted
     template: ../../templates/security/allowed-seccomp.yaml
     constraint: constraint_pss_restricted.yaml
     cases:
-      - name: example-allowed
+      - name: disallowed-no-seccomp-profile
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/allowed.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-no-seccomp-profile.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-runtime-default-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-runtime-default-securityContext.yaml
         assertions:
           - violations: no
-      - name: example-allowed-pod
+
+      - name: allowed-localhost-profile-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/allowed_pod.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-localhost-profile-securityContext.yaml
         assertions:
           - violations: no
-      - name: example-disallowed-empty
+
+      - name: allowed-localhost-profile-annotation
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_empty.yaml
-        assertions:
-          - violations: yes
-      - name: example-allowed-localhost
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/allowed_localhost.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-localhost-profile-annotation.yaml
         assertions:
           - violations: no
-      - name: example-disallowed-undefined
+
+      - name: disallowed-unconfined-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_undefined.yaml
-        assertions:
-          - violations: yes
-      - name: example-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed.yaml
-        assertions:
-          - violations: yes
-      - name: example-disallowed-ephemeral
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_ephemeral.yaml
-        assertions:
-          - violations: yes
-      - name: example-disallowed-multi
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_restricted/disallowed_multi.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-unconfined-securityContext.yaml
         assertions:
           - violations: yes
 
@@ -101,15 +113,87 @@ tests:
     template: ../../templates/security/allowed-seccomp.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-localhost-verySpecialFile-securityContext
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-localhost-verySpecialFile-securityContext.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-localhost-verySpecialFile-annotation
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-localhost-verySpecialFile-annotation.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-no-seccomp-profile
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-no-seccomp-profile.yaml
         assertions:
           - violations: yes
+
+      - name: disallowed-runtime-default-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-runtime-default-securityContext.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-localhost-wrong-file-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-localhost-wrong-file-securityContext.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-unconfined-securityContext.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-multiple-containers-one-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-multiple-containers-one-disallowed.yaml
+        assertions:
+          - violations: yes
+
+  - name: pss-baseline-with-exception
+    template: ../../templates/security/allowed-seccomp.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: allowed-by-exception-unconfined
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-unconfined.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-unconfined.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-localhost-profile
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-localhost-profile.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-localhost-profile.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-unconfined.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+

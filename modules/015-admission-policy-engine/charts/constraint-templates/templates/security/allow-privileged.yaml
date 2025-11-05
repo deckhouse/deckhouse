@@ -35,7 +35,7 @@ spec:
             rego: |
               package d8.security_policies
 
-              violation[{"details": {}, "msg": msg}] if {
+              violation contains {"msg": msg, "details": {}} if {
                 c := input_containers[_]
                 not allowed_by_any(c)
                 msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-containers-both-readonly
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        readOnlyRootFilesystem: true
+    - name: redis
+      image: redis
+      securityContext:
+        readOnlyRootFilesystem: true
+

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-exception-allows-false-constraint-allows-true
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-hostpid-false-hostipc-false
+spec:
+  hostPID: true
+  containers:
+    - name: nginx
+      image: nginx
+

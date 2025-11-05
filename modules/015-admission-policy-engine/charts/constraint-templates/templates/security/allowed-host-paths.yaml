@@ -41,7 +41,7 @@ spec:
             rego: |
               package d8.security_policies
 
-              violation[{"details": {}, "msg": msg}] if {
+              violation contains {"msg": msg, "details": {}} if {
                 volume := input_hostpath_volumes[_]
                 not allowed_by_any(volume)
                 allowedPaths := get_allowed_paths(input)

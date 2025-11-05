@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-no-readOnlyRootFilesystem
+  namespace: testns
+  labels:
+    security.deckhouse.io/securityPolicyException: allow-writable-root-filesystem
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+

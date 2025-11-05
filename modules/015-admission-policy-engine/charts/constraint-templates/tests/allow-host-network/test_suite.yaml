@@ -3,32 +3,28 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-host-network-ports
 tests:
-  - name: pos-security-standards-baseline
+  - name: pss-baseline
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-hostnetwork
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_allowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-hostnetwork.yaml
         assertions:
           - violations: no
-      - name: example-allowed-2
+
+      - name: allowed-no-hostnetwork-multiple-containers
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_allowed2.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-hostnetwork-multiple-containers.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: disallowed-hostnetwork-true
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_disallowed.yaml
-        assertions:
-          - violations: yes
-      - name: example-disallowed-2
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/example_disallowed2.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostnetwork-true.yaml
         assertions:
           - violations: yes
 
@@ -36,15 +32,225 @@ tests:
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-hostnetwork-true-port-in-range
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/example_allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostnetwork-true-port-in-range.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-hostnetwork-true-no-hostport
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/example_disallowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostnetwork-true-no-hostport.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-hostnetwork-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-hostnetwork-false.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-hostnetwork-true-port-out-of-range-low
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-hostnetwork-true-port-out-of-range-low.yaml
         assertions:
           - violations: yes
+
+      - name: disallowed-hostnetwork-true-port-out-of-range-high
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-hostnetwork-true-port-out-of-range-high.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-hostnetwork-true-port-on-edge-min
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-hostnetwork-true-port-on-edge-min.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-hostnetwork-true-port-on-edge-max
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-hostnetwork-true-port-on-edge-max.yaml
+        assertions:
+          - violations: yes
+
+  - name: security-policy-with-exception
+    template: ../../templates/security/allow-host-network.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: allowed-by-exception-hostnetwork-true-tcp-25000
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-tcp-25000.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostnetwork-true-tcp-25000.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostnetwork-false-empty
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-false-empty.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostnetwork-false-empty.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-ports-tcp
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-multiple-ports.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-multiple-ports-tcp.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-ports-udp
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-multiple-ports.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-multiple-ports-udp.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-port-in-constraint-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-in-constraint-range.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-in-constraint-range.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-port-out-of-constraint-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-out-of-constraint-range.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-out-of-constraint-range.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-port-on-constraint-edge-min
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-on-constraint-edge-min.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-on-constraint-edge-min.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-port-on-constraint-edge-max
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-on-constraint-edge-max.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-on-constraint-edge-max.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-hostnetwork-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-wrong-port.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostnetwork-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-hostport-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-wrong-port.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-hostport-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-protocol-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-wrong-port.yaml
+        object: test_samples/security_policy_exceptions/disallowed-by-exception-protocol-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-exception-allows-false-but-pod-has-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-false-with-hostport.yaml
+        object: test_samples/security_policy_exceptions/disallowed-exception-allows-false-but-pod-has-true.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-exception-allows-false-constraint-allows-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-false-empty.yaml
+        object: test_samples/security_policy_exceptions/disallowed-exception-allows-false-constraint-allows-true.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-false-empty.yaml
+        object: test_samples/security_policy_exceptions/disallowed-exception-allows-false-constraint-allows-true-pod-uses-true.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-port-out-of-constraint-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-port-out-of-constraint-range.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-by-exception-port-exactly-min-constraint-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-on-constraint-edge-min.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-exactly-min-constraint-range.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-port-exactly-max-constraint-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-port-on-constraint-edge-max.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-port-exactly-max-constraint-range.yaml
+        assertions:
+          - violations: no
+
+  - name: security-policy-restrictive-with-exception
+    template: ../../templates/security/allow-host-network.yaml
+    constraint: constraint_pss_deny_all.yaml
+    cases:
+      - name: allowed-by-exception-hostnetwork-true-despite-constraint-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostnetwork-true-despite-constraint.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostnetwork-true-despite-constraint-false.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-hostport-despite-empty-ranges
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/allow-hostport-despite-empty-ranges.yaml
+        object: test_samples/security_policy_exceptions/allowed-by-exception-hostport-despite-empty-ranges.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-no-exception-hostnetwork-true
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
