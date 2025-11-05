@@ -14,7 +14,16 @@
 
 package fs
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	"github.com/google/uuid"
+)
 
 func IsDirExists(dir string) bool {
 	if dir == "" {
@@ -27,4 +36,84 @@ func IsDirExists(dir string) bool {
 	}
 
 	return stat.IsDir()
+}
+
+func IsRoot(dir string) bool {
+	if runtime.GOOS != "windows" {
+		return dir == "/"
+	}
+
+	withoutDiskLetter := stringsutil.TrimLeftChars(dir, 1)
+	return withoutDiskLetter == ":\\\\"
+}
+
+func RandomTmpDirWith10Runes(rootDir, idSalt string, firstIdRunes int) (string, error) {
+	if rootDir == "" {
+		rootDir = os.TempDir()
+	}
+
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+
+	hash := stringsutil.Sha256Encode(id.String() + idSalt)
+
+	runesCountStr := strconv.Itoa(firstIdRunes)
+
+	// "%.8s"
+	f := `%.` + runesCountStr + "s"
+	first8Runes := fmt.Sprintf(f, hash)
+
+	return filepath.Join(rootDir, first8Runes), nil
+}
+
+// FileExistsInDirAndParentsDirs
+// returns empty string if not found otherwise full path
+func FileExistsInDirAndParentsDirs(dir, fileName string) (string, error) {
+	if fileName == "" || dir == "" {
+		return "", fmt.Errorf("file or dir can't be empty")
+	}
+
+	if !filepath.IsAbs(filepath.Join(dir)) {
+		return "", fmt.Errorf("'%s' is not an absolute path", dir)
+	}
+
+	if !IsDirExists(dir) {
+		return "", fmt.Errorf("'%s' is not a directory or does not exists", dir)
+	}
+
+	parentDir := dir
+
+	for {
+		exists, err := IsExists(filepath.Join(parentDir, fileName))
+		if err != nil {
+			return "", err
+		}
+
+		if exists {
+			return parentDir, nil
+		}
+
+		parentDir = filepath.Dir(parentDir)
+		if IsRoot(parentDir) {
+			break
+		}
+	}
+
+	// if pass / return early because we check file in cycle
+	if parentDir == dir {
+		return "", nil
+	}
+
+	exists, err := IsExists(filepath.Join(parentDir, fileName))
+	if err != nil {
+		return "", err
+	}
+
+	if exists {
+		return parentDir, nil
+	}
+
+	return "", nil
 }
