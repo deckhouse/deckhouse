@@ -16,25 +16,8 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      additionalPrinterColumns:
-      - jsonPath: .status.deckhouse.synced
-        name: Synced
-        type: string
-        description: A status message that is shown if the current version of the security policy has been processed by the operator.
-      - name: Observed
-        jsonPath: .status.deckhouse.observed.lastTimestamp
-        type: string
-        description: A timestamp of when the resource was last observed by the operator.
-        priority: 1
-      - name: Processed
-        jsonPath: .status.deckhouse.processed.lastTimestamp
-        type: string
-        description: A timestamp of when the resource was last processed by the operator.
-        priority: 1
       served: true
       storage: true
-      subresources:
-        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -107,7 +90,7 @@ spec:
                       required: ["allowedValue"]
                     capabilities:
                       type: object
-                      description: Allows exceptions for Linux capabilities.
+                      description: Allows exceptions for the capabilities parameter.
                       properties:
                         allowedValues:
                           type: object
@@ -132,7 +115,7 @@ spec:
                       required: ["allowedValues"]
                     runAsUser:
                       type: object
-                      description: Allows exceptions for the runAsUser setting.
+                      description: Allows exceptions for the runAsUser parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -146,7 +129,7 @@ spec:
                       required: ["allowedValues"]
                     runAsNonRoot:
                       type: object
-                      description: Allows exceptions for the runAsNonRoot setting.
+                      description: Allows exceptions for the runAsNonRoot parameter.
                       properties:
                         allowedValue:
                           type: boolean
@@ -159,7 +142,7 @@ spec:
                       required: ["allowedValue"]
                     seccompProfile:
                       type: object
-                      description: Allows exceptions for seccomp profiles.
+                      description: Allows exceptions for the seccompProfile parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -175,26 +158,26 @@ spec:
                       type: object
                       description: |
                         The list of allowed profile values for appArmorProfile on Pods/containers.
-                            Both formats are supported:
-                            - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
-                              `localhost/*` allows any local profile.
-                            - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
-                              For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+                        Both formats are supported:
+                        - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                          `localhost/*` allows any local profile.
+                        - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                          For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
 
-                            Profile types:
-                            - `Unconfined` — no restrictions (not recommended for security reasons).
-                            - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
-                            - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
+                        Profile types:
+                        - `Unconfined` — no restrictions (not recommended for security reasons).
+                        - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
+                        - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
 
-                            Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
+                        Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
                       properties:
                         allowedValues:
                           type: array
-                          description: | 
+                          description: |
                             Allowed values:
-                              - runtime/default
-                              - unconfined
-                              - localhost/* (where `*` may be a profile name or a wildcard)
+                            - runtime/default
+                            - unconfined
+                            - localhost/* (where `*` may be a profile name or a wildcard)
                           items:
                             type: string
                             pattern: '^(runtime\/default|unconfined|localhost\/.+)$'
@@ -205,7 +188,7 @@ spec:
                       required: ["allowedValues"]
                     seLinuxOptions:
                       type: object
-                      description: Allows exceptions for SELinux options.
+                      description: Allows exceptions for the seLinuxOptions parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -232,7 +215,7 @@ spec:
                       required: ["allowedValues"]
                     privileged:
                       type: object
-                      description: Allows exceptions for privileged mode.
+                      description: Allows exceptions for the privileged parameter.
                       properties:
                         allowedValue:
                           type: boolean
@@ -245,7 +228,7 @@ spec:
                       required: ["allowedValue"]
                     procMount:
                       type: object
-                      description: Allows exceptions for procMount types.
+                      description: Allows exceptions for the procMount parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -260,7 +243,7 @@ spec:
                       required: ["allowedValues"]
                     sysctls:
                       type: object
-                      description: Allows exceptions for sysctls.
+                      description: Allows exceptions for the sysctls parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -285,7 +268,7 @@ spec:
                   properties:
                     hostPorts:
                       type: array
-                      description: List of exceptions for host ports.
+                      description: Exceptions for host ports.
                       items:
                         type: object
                         properties:
