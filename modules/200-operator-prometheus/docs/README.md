@@ -22,7 +22,7 @@ Operator:
 
 ### Prometheus functions
 
-The Prometheus server performs two primary tasks — it collects metrics and evaluates rules.
+The Prometheus server performs two primary tasks — it collects metrics and processes rules.
 
 * For each monitoring target, at every `scrape_interval` an HTTP request is sent to that target. The metrics [in its own text format](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) are stored in the Prometheus database.
 * At every `evaluation_interval`, rules are processed, resulting in:
@@ -35,8 +35,8 @@ Prometheus configuration consists of the main `config` file and rule files (`rul
 
 The key sections used in `config` are:
 
-* `scrape_configs` — defines where and how to discover monitoring targets;
-* `rule_files` — lists the paths to rule files that Prometheus should load. Example:
+* `scrape_configs`: Defines where and how to discover monitoring targets.
+* `rule_files`: Lists the paths to rule files that Prometheus should load. Example:
 
   ```yaml
   rule_files:
@@ -44,7 +44,7 @@ The key sections used in `config` are:
   - /etc/prometheus/rules/rules-1/*
 
 
-* `alerting` — defines how to discover and where to send alerts to Alertmanager clusters. Structurally, this section is similar to `scrape_configs`, but its result is a list of endpoints to which Prometheus sends notifications.
+* `alerting`: Defines how to discover and where to send alerts to Alertmanager clusters. Structurally, this section is similar to `scrape_configs`, but its result is a list of endpoints to which Prometheus sends notifications.
 
 ### Sources of monitoring targets
 
@@ -114,15 +114,15 @@ relabel_configs:
   action: replace
 ```
 
-Thus, Prometheus automatically tracks:
+Thus, Prometheus automatically tracks the addition and removal of:
 
-* the addition and removal of Pods (changes to endpoints lead to the addition or removal of monitoring targets);
-* the addition and removal of Services (and corresponding endpoints) in the specified namespaces.
+* Pods (changes to endpoints lead to the addition or removal of monitoring targets)
+* Services (and corresponding endpoints) in the specified namespaces
 
-Configuration changes are required when:
+Configuration changes are required when you need to:
 
-* you need to add a new `scrape_config` (usually a new class of services to monitor);
-* you need to change the list of namespaces.
+* Add a new `scrape_config` (usually a new class of services to monitor).
+* Change the list of namespaces.
 
 ## Prometheus Operator
 
@@ -130,15 +130,15 @@ Configuration changes are required when:
 
 Using CRDs (Custom Resource Definitions), Prometheus Operator defines four custom resources:
 
-* [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — describes a Prometheus installation (cluster);
-* [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — specifies how to collect metrics from a set of services;
-* [Alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#alertmanager) — describes an Alertmanager cluster;
-* [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — contains a set of Prometheus rules.
+* [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus): Describes a Prometheus installation (cluster);
+* [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor): Specifies how to collect metrics from a set of services;
+* [Alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#alertmanager): Describes an Alertmanager cluster;
+* [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule): Contains a set of Prometheus rules.
 
 Prometheus Operator also watches Prometheus resources and, for each one, generates:
 
-* a StatefulSet with Prometheus itself;
-* a Secret containing `prometheus.yaml` (the main configuration file) and `configmaps.json` (the configuration file for `prometheus-config-reloader`).
+* StatefulSet with Prometheus itself
+* Secret containing `prometheus.yaml` (the main configuration file) and `configmaps.json` (the configuration file for `prometheus-config-reloader`)
 
 It watches ServiceMonitor and PrometheusRule resources and, based on them, updates the configuration (`prometheus.yaml` and `configmaps.json`) in the corresponding Secret.
 
@@ -149,15 +149,15 @@ It watches ServiceMonitor and PrometheusRule resources and, based on them, updat
 Prometheus pods include:
 
 * Three containers:
-  * `prometheus` — the Prometheus server itself;
-  * `prometheus-config-reloader` — a [utility](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
-    * watches for changes to `prometheus.yaml` and, if needed, triggers a Prometheus configuration reload (via a special HTTP request; see [details below](#servicemonitor-processing));
-    * watches `PrometheusRule` (see [details below](#processing-custom-resources-with-rules)), downloads them if necessary, and restarts Prometheus.
-  * `kube-rbac-proxy` — a proxy that handles RBAC-based authentication/authorization for access to Prometheus metrics.
+  * `prometheus`: Prometheus server itself.
+  * `prometheus-config-reloader`: [Utility](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that watches:
+    * Changes made to `prometheus.yaml` and, if needed, triggers a Prometheus configuration reload (via a special HTTP request; see [details below](#servicemonitor-processing)).
+    * PrometheusRules (see [details below](#processing-custom-resources-with-rules)), downloads them if necessary, and restarts Prometheus.
+  * `kube-rbac-proxy`: Proxy that handles RBAC-based authentication and authorization for accessing Prometheus metrics.
 * Key volumes:
-  * `config` — a mounted Secret with the files `prometheus.yaml` and `configmaps.json`. Used by the `prometheus` and `prometheus-config-reloader` containers.
-  * `rules` — an `emptyDir` populated by `prometheus-config-reloader` and read by `prometheus`. Mounted into both containers; in `prometheus` it is read-only.
-  * `data` — Prometheus data. Mounted only into the `prometheus` container.
+  * `config`: Mounted Secret with the files `prometheus.yaml` and `configmaps.json`. Used by the `prometheus` and `prometheus-config-reloader` containers.
+  * `rules`: An `emptyDir` populated by `prometheus-config-reloader` and read by `prometheus`. Mounted into both containers; in `prometheus`, it is read-only.
+  * `data`: Prometheus data. Mounted only into the `prometheus` container.
 
 ### ServiceMonitor processing
 

@@ -22,10 +22,10 @@ description: "Установка и управление системой мон
 
 ### Функции Prometheus
 
-Сервер Prometheus выполняет две основные задачи — собирает метрики и вычисляет правила.
+Сервер Prometheus выполняет две основные задачи — собирает метрики и обрабатывает правила.
 
-* Для каждой цели мониторинга (target) на каждом `scrape_interval` выполняется HTTP-запрос к этой цели. Метрики [в собственном текстовом формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) сохраняются в базу данных Prometheus.
-* На каждом `evaluation_interval` обрабатываются правила (rules), в результате чего:
+* Для каждой цели мониторинга (target) с указанным интервалом `scrape_interval` выполняется HTTP-запрос к этой цели. Метрики [в собственном текстовом формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) сохраняются в базу данных Prometheus.
+* Через указанный интервал `evaluation_interval` обрабатываются правила (rules), в результате чего:
   * отправляются алерты;
   * в базу записываются новые метрики (результаты выполнения правил).
 
@@ -44,7 +44,7 @@ description: "Установка и управление системой мон
   - /etc/prometheus/rules/rules-1/*
   ```
 
-* `alerting` — задаёт поиск и параметры отправки алертов в кластеры Alertmanager. По структуре секция похожа на `scrape_configs`, но результат — список эндпоинтов, в которые Prometheus отправляет оповещения.
+* `alerting` — задаёт параметры поиска и отправки алертов в кластеры Alertmanager. По структуре секция похожа на `scrape_configs`, но результатом будет список эндпоинтов, в которые Prometheus отправляет оповещения.
 
 ### Источники целей мониторинга
 
@@ -52,9 +52,9 @@ description: "Установка и управление системой мон
 
 ![Работа Prometheus](images/targets.png)
 
-* Prometheus читает секцию scrape_configs и настраивает внутренний механизм Service Discovery.
-* Service Discovery взаимодействует с API Kubernetes (получает эндпоинты и связанную метаинформацию).
-* По событиям в кластере Service Discovery обновляет список целей мониторинга.
+1. Prometheus читает секцию `scrape_configs` и настраивает внутренний механизм Service Discovery.
+1. Service Discovery взаимодействует с API Kubernetes (получает эндпоинты и связанную метаинформацию).
+1. На основе событий в кластере Service Discovery обновляет список целей мониторинга.
 
 В `scrape_configs` задаётся набор `scrape job` — логических описаний того, откуда и как собирать метрики. Пример:
 
@@ -94,19 +94,19 @@ relabel_configs:
   target_label: job
   replacement: custom-$1
   action: replace
-# Добавление лейбла пространства имён.
+# Добавление лейбла namespace.
 - source_labels: [__meta_kubernetes_namespace]
   regex: (.*)
   target_label: namespace
   replacement: $1
   action: replace
-# Добавление лейбла сервиса.
+# Добавление лейбла service.
 - source_labels: [__meta_kubernetes_service_name]
   regex: (.*)
   target_label: service
   replacement: $1
   action: replace
-# Добавление лейбла инстанса (в котором будет имя пода).
+# Добавление лейбла instance (в котором будет имя пода).
 - source_labels: [__meta_kubernetes_pod_name]
   regex: (.*)
   target_label: instance
@@ -114,15 +114,15 @@ relabel_configs:
   action: replace
 ```
 
-Таким образом, Prometheus автоматически отслеживает:
+Таким образом, Prometheus автоматически отслеживает добавление и удаление:
 
-* добавление и удаление подов (изменение эндпоинтов приводит к добавлению или удалению целей мониторинга);
-* добавление и удаление сервисов (и соответствующих эндпоинтов) в указанных пространствах имён.
+* подов (изменение эндпоинтов приводит к добавлению или удалению целей мониторинга);
+* сервисов (и соответствующих эндпоинтов) в указанных пространствах имён.
 
-Изменение конфигурации требуется, когда:
+Изменение конфигурации требуется, когда необходимо:
 
-* необходимо добавить новый `scrape_config` (обычно — новый класс сервисов для мониторинга);
-* необходимо изменить список пространств имён.
+* добавить новый `scrape_config` (обычно — новый класс сервисов для мониторинга);
+* изменить список пространств имён.
 
 ## Prometheus Operator
 
@@ -138,7 +138,7 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
 Также Prometheus Operator отслеживает ресурсы Prometheus и для каждого генерирует:
 
 * StatefulSet с самим Prometheus;
-* Секрет с `prometheus.yaml` (основной конфигурационный файл) и `configmaps.json` (конфигурационный файл для `prometheus-config-reloader`).
+* секрет с `prometheus.yaml` (основной конфигурационный файл) и `configmaps.json` (конфигурационный файл для `prometheus-config-reloader`).
 
 Отслеживает ресурсы ServiceMonitor и PrometheusRule и на их основании обновляет конфигурацию (`prometheus.yaml` и `configmaps.json`) в соответствующем секрете.
 
@@ -153,7 +153,7 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
   * `prometheus-config-reloader` — [утилита](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader), которая:
     * следит за изменениями `prometheus.yaml` и при необходимости инициирует перезагрузку конфигурации Prometheus (специальным HTTP-запросом, см. [подробнее ниже](#обработка-servicemonitor));
     * отслеживает PrometheusRule (см. [подробнее ниже](#обработка-каcтомных-ресурсов-с-правилами)), по необходимости скачивает их и перезапускает Prometheus.
-  * `kube-rbac-proxy` — прокси для аутентификации/авторизации по RBAC при доступе к метрикам Prometheus.
+  * `kube-rbac-proxy` — прокси для аутентификации и авторизации по RBAC при доступе к метрикам Prometheus.
 * Ключевые тома (volumes):
   * `config` — примонтированный секрет с файлами `prometheus.yaml` и `configmaps.json`. Используется в контейнерах `prometheus` и `prometheus-config-reloader`.
   * `rules` — `emptyDir`, который заполняет `prometheus-config-reloader`, а читает `prometheus`. Примонтирован в оба контейнера, в `prometheus` — в режиме только для чтения.
@@ -163,10 +163,10 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
 
 ![Как обрабатываются Service Monitor](images/servicemonitors.png)
 
-1. Prometheus Operator отслеживает ресурсы ServiceMonitor (какие именно — задаётся в спецификации ресурса Prometheus, см. подробней [в официальной документации](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusspec)).
-1. Для каждого ServiceMonitor, у которого не задан явный список пространств имён (используется `any: true`), оператор через API Kubernetes вычисляет список пространств имён с сервисами (Service), подходящими под лейблы из ServiceMonitor.
-1. На основе найденных [ресурсов ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitorspec) и вычисленных пространств имён оператор формирует фрагмент конфигурации Prometheus (секцию `scrape_configs`) и сохраняет его в соответствующий секрет.
-1. Механизм монтирования Kubernetes обновляет файлы в поде Prometheus — `prometheus.yaml` из секрета обновляется.
+1. Prometheus Operator отслеживает ресурсы ServiceMonitor (какие именно — задаётся в спецификации ресурса Prometheus, см. подробнее [в официальной документации](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusspec)).
+1. Для каждого ServiceMonitor, у которого не задан явный список пространств имён (используется `any: true`), Prometheus Operator через API Kubernetes вычисляет список пространств имён с сервисами (Service), подходящими под лейблы из ServiceMonitor.
+1. На основе найденных [ресурсов ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitorspec) и вычисленных пространств имён Prometheus Operator формирует фрагмент конфигурации Prometheus (секцию `scrape_configs`) и сохраняет его в соответствующий секрет.
+1. Механизм монтирования Kubernetes обновляет файлы в поде Prometheus, в результате чего обновляется `prometheus.yaml` из секрета.
 1. Контейнер `prometheus-config-reloader` обнаруживает изменение `prometheus.yaml` и отправляет Prometheus HTTP-запрос на перезагрузку конфигурации.
 1. Prometheus перечитывает конфигурацию и применяет изменения в `scrape_configs` согласно своей логике работы.
 
@@ -175,8 +175,8 @@ Prometheus Operator с помощью механизма CRD (Custom Resource De
 ![Как обрабатываются кастомные ресурсы с правилами](images/rules.png)
 
 1. Prometheus Operator отслеживает объекты PrometheusRule, подходящие под `ruleSelector`, заданный в ресурсе Prometheus.
-1. При появлении нового или удалении существующего PrometheusRule оператор обновляет `prometheus.yam`l — далее срабатывает та же цепочка, что описана для обработки ServiceMonitor.
-1. При добавлении, удалении или изменении содержимого PrometheusRule оператор обновляет ConfigMap `prometheus-main-rulefiles-0`.
+1. При появлении нового или удалении существующего PrometheusRule Prometheus Operator обновляет `prometheus.yaml` — далее срабатывает та же цепочка, что описана для обработки ServiceMonitor.
+1. При добавлении, удалении или изменении содержимого PrometheusRule Prometheus Operator обновляет ConfigMap `prometheus-main-rulefiles-0`.
 1. Механизм монтирования Kubernetes доставляет обновлённый ConfigMap в под.
 1. Контейнер `prometheus-config-reloader` фиксирует изменения, затем:
    - выгружает обновлённые ConfigMap в каталог `rules` (`emptyDir`);
