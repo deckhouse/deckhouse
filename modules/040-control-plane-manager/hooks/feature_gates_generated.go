@@ -52,6 +52,12 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		},
 	},
 	"1.31": {
+		Deprecated: []string{
+			"DynamicResourceAllocation",
+		},
+		Forbidden: []string{
+			"SomeProblematicFeature",
+		},
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
@@ -68,6 +74,12 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		},
 	},
 	"1.32": {
+		Deprecated: []string{
+			"New123",
+		},
+		Forbidden: []string{
+			"SomeProblematicFeature",
+		},
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
@@ -84,9 +96,6 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		},
 	},
 	"1.33": {
-		Deprecated: []string{
-			"DynamicResourceAllocation",
-		},
 		Forbidden: []string{
 			"SomeProblematicFeature",
 		},
