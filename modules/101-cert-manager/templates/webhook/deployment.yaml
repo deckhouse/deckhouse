@@ -12,7 +12,7 @@ metadata:
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
   annotations:
-    werf.io/weight: "-10"
+    werf.io/weight: "10"
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -37,7 +37,7 @@ metadata:
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
   annotations:
-    werf.io/weight: "-10"
+    werf.io/weight: "10"
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
