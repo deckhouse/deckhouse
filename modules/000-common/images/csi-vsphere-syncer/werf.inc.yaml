@@ -1,5 +1,6 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-"}}
   {{- if $value.csi.vsphere }}
     {{- $src_version := toString $value.csi.vsphere }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
@@ -10,10 +11,10 @@
       {{- end }}
     {{- end }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
@@ -21,7 +22,7 @@ imageSpec:
   config:
     entrypoint: ["/bin/vsphere-syncer"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
 final: false
     {{- if $patch }}
@@ -45,11 +46,11 @@ shell:
   - rm -rf vendor
   - rm -rf .git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromImage: builder/golang-alpine
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
