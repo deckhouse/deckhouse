@@ -116,7 +116,7 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 
 	// Load package definition (package.yaml)
 	// TODO: Validate that definition matches requested package/version
-	_, err := loadDefinition(pkgVersionPath)
+	def, err := loadDefinition(pkgVersionPath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package '%s': %w", pkgVersionPath, err)
@@ -141,7 +141,7 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 	conf := apps.ApplicationConfig{
 		Namespace: inst.Namespace,
 
-		PackageName: inst.Package,
+		Definition: def.ToApplication(),
 
 		StaticValues: static,
 		ConfigSchema: config,

@@ -1,0 +1,53 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/repository: test-repo
+  name: test-repo-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: test-repo
+    uid: ""
+  resourceVersion: "6"
+spec:
+  packageRepository: test-repo
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  completionTime: "2025-10-31T12:00:00Z"
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
+  packages:
+    discovered: 1
+    processed: 1
+    total: 1
+  phase: Completed
+  startTime: "2025-10-31T12:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: test-repo
+  resourceVersion: "2"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: ""
+    repo: registry.example.com/test-repo
+status:
+  packages:
+  - name: test-package
+    type: Application
+  packagesCount: 1
+  phase: Active
+  syncTime: "2025-10-31T12:00:00Z"

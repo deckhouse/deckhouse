@@ -70,7 +70,7 @@
             "rel": ""
           },
           {
-            "title": "Deckhouse vs KaaS",
+            "title": "Deckhouse vs&nbsp;KaaS",
             "url": "/deckhouse-vs-kaas/",
             "target": "",
             "rel": ""
@@ -94,7 +94,7 @@
           },
           {
             "title": "Documentation",
-            "url": "/docs/",
+            "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
             "target": "",
             "rel": ""
           },
@@ -136,12 +136,6 @@
             "rel": ""
           },
           {
-            "title": "Observability в&nbsp;кластере",
-            "url": "/products/observability-in-cluster/",
-            "target": "",
-            "rel": ""
-          },
-          {
             "title": "Stronghold",
             "url": "/products/stronghold/",
             "target": "",
@@ -160,14 +154,14 @@
             "rel": ""
           },
           {
-            "title": "Code",
-            "url": "/products/code/",
+            "title": "Prom++",
+            "url": "/products/prompp/",
             "target": "",
             "rel": ""
           },
           {
-            "title": "Prom++",
-            "url": "/products/prompp/",
+            "title": "Code",
+            "url": "/products/code/",
             "target": "",
             "rel": ""
           },
@@ -225,7 +219,7 @@
           },
           {
             "title": "Блог",
-            "url": "https://blog.deckhouse.ru/",
+            "url": "/blog/",
             "target": "",
             "rel": ""
           },

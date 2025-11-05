@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: test-repo
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca

@@ -80,10 +80,16 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	SyncTime      metav1.Time `json:"syncTime,omitempty"`
-	PackagesCount int         `json:"packagesCount,omitempty"`
-	Phase         string      `json:"phase,omitempty"`
-	Message       string      `json:"message,omitempty"`
+	SyncTime      metav1.Time                      `json:"syncTime,omitempty"`
+	Packages      []PackageRepositoryStatusPackage `json:"packages,omitempty"`
+	PackagesCount int                              `json:"packagesCount,omitempty"`
+	Phase         string                           `json:"phase,omitempty"`
+	Message       string                           `json:"message,omitempty"`
+}
+
+type PackageRepositoryStatusPackage struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 // +kubebuilder:object:root=true

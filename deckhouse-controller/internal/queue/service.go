@@ -90,7 +90,7 @@ func (s *Service) Stop() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.logger.Debug("stop worker")
+	s.logger.Debug("stop queues")
 
 	for name, q := range s.queues {
 		q.Stop()
