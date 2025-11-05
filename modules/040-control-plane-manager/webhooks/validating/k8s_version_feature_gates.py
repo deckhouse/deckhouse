@@ -61,7 +61,7 @@ kubernetes:
   keepFullObjectsInMemory: true
 
 - name: {MODULE_CONFIG_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1
+  apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   nameSelector:
     matchNames:
