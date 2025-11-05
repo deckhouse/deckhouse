@@ -326,7 +326,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
-	// Package system controllers (feature flag) +
+	// Package system controllers (feature flag)
 	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
 		logger.Info("Package system controllers are enabled")
 
