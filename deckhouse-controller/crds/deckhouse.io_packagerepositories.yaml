@@ -61,6 +61,18 @@ spec:
             properties:
               message:
                 type: string
+              packages:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - name
+                  - type
               packagesCount:
                 type: integer
               phase:

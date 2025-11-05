@@ -88,9 +88,12 @@ spec:
                         type: array
                     type: object
                   description:
-                    additionalProperties:
-                      type: string
                     type: object
+                    properties:
+                      ru:
+                        type: string
+                      en:
+                        type: string
                   licensing:
                     properties:
                       editions:
