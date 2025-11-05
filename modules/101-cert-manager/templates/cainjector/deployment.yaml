@@ -34,8 +34,6 @@ kind: Deployment
 metadata:
   name: cainjector
   namespace: d8-cert-manager
-  annotations:
-    werf.io/weight: "-10"
   {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
