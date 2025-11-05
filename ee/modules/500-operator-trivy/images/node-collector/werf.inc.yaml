@@ -23,6 +23,18 @@ import:
   add: /usr/bin/bash
   to: /bin/sh
   before: setup
+- image: tools/grep
+  add: /usr/bin/grep
+  to: /bin/grep
+  before: setup
+- image: tools/grep
+  add: /usr/bin/egrep
+  to: /bin/egrep
+  before: setup
+- image: tools/grep
+  add: /usr/bin/fgrep
+  to: /bin/fgrep
+  before: setup
 - image: tools/gawk
   add: /
   to: /
