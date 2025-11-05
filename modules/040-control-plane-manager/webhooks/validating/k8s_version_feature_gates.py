@@ -29,7 +29,7 @@ config = f"""
 configVersion: v1
 kubernetesValidating:
 - name: cpm-k8s-version-feature-gates.deckhouse.io
-  group: main
+  group: cpm-feature-gates-validation
   includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}"]
   namespace:
     labelSelector:
@@ -49,6 +49,7 @@ kubernetes:
 - name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
   apiVersion: v1
   kind: Secret
+  group: cpm-version-validation
   namespace:
     nameSelector:
       matchNames:
@@ -63,6 +64,7 @@ kubernetes:
 - name: {MODULE_CONFIG_SNAPSHOT_NAME}
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
+  group: cpm-version-validation
   nameSelector:
     matchNames:
     - control-plane-manager
