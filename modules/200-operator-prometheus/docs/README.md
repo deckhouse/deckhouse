@@ -60,58 +60,58 @@ In `scrape_configs`, a set of `scrape job`s is defined — logical descriptions 
 
 ```yaml
 scrape_configs:
-# General settings.
-- job_name: d8-monitoring/custom/0    # Name of the scrape job, shown in the Service Discovery section.
-scrape_interval: 30s                  # How often to scrape data.
-scrape_timeout: 10s                   # Request timeout.
-metrics_path: /metrics                # HTTP path.
-scheme: http                          # HTTP or HTTPS.
-# Service Discovery settings.
-kubernetes_sd_configs:                # Get targets from Kubernetes.
-- api_server: null                    # API server address is taken from environment variables (present in every Pod).
-  role: endpoints                     # Use endpoints as targets.
-  namespaces:
-    names:                            # Restrict the list of namespaces.
-    - foo
-    - baz
-# Filtering settings (which endpoints to include/exclude) and relabeling (which labels to add or remove; applies to all scraped metrics).
-relabel_configs:
-# Filter by the value of the prometheus_custom_target label (taken from the Service associated with the endpoint).
-- source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-  regex: .+                           # Any non-empty label.
-  action: keep
-# Filter by port name.
-- source_labels: [__meta_kubernetes_endpointslice_port_name]
-  regex: http-metrics                 # Only the port named http-metrics.
-  action: keep
-# Add the job label. Use the value of the prometheus_custom_target label on the Service, prefixed with "custom-".
-#
-# The job label:
-#    * defines the group name under which the target will appear;
-#    * is added to metrics for convenient filtering in rules and dashboards.
-- source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-  regex: (.*)
-  target_label: job
-  replacement: custom-$1
-  action: replace
-# Add the namespace label.
-- source_labels: [__meta_kubernetes_namespace]
-  regex: (.*)
-  target_label: namespace
-  replacement: $1
-  action: replace
-# Add the service label.
-- source_labels: [__meta_kubernetes_service_name]
-  regex: (.*)
-  target_label: service
-  replacement: $1
-  action: replace
-# Add the instance label (will contain the Pod name).
-- source_labels: [__meta_kubernetes_pod_name]
-  regex: (.*)
-  target_label: instance
-  replacement: $1
-  action: replace
+  # General settings.
+  - job_name: d8-monitoring/custom/0    # Name of the scrape job, shown in the Service Discovery section.
+    scrape_interval: 30s                  # How often to scrape data.
+    scrape_timeout: 10s                   # Request timeout.
+    metrics_path: /metrics                # HTTP path.
+    scheme: http                          # HTTP or HTTPS.
+    # Service Discovery settings.
+    kubernetes_sd_configs:                # Get targets from Kubernetes.
+    - api_server: null                    # API server address is taken from environment variables (present in every Pod).
+      role: endpoints                     # Use endpoints as targets.
+      namespaces:
+        names:                            # Restrict the list of namespaces.
+        - foo
+        - baz
+    # Filtering settings (which endpoints to include/exclude) and relabeling (which labels to add or remove; applies to all scraped metrics).
+    relabel_configs:
+    # Filter by the value of the prometheus_custom_target label (taken from the Service associated with the endpoint).
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: .+                           # Any non-empty label.
+      action: keep
+    # Filter by port name.
+    - source_labels: [__meta_kubernetes_endpointslice_port_name]
+      regex: http-metrics                 # Only the port named http-metrics.
+      action: keep
+    # Add the job label. Use the value of the prometheus_custom_target label on the Service, prefixed with "custom-".
+    #
+    # The job label:
+    #    * defines the group name under which the target will appear;
+    #    * is added to metrics for convenient filtering in rules and dashboards.
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: (.*)
+      target_label: job
+      replacement: custom-$1
+      action: replace
+    # Add the namespace label.
+    - source_labels: [__meta_kubernetes_namespace]
+      regex: (.*)
+      target_label: namespace
+      replacement: $1
+      action: replace
+    # Add the service label.
+    - source_labels: [__meta_kubernetes_service_name]
+      regex: (.*)
+      target_label: service
+      replacement: $1
+      action: replace
+    # Add the instance label (will contain the Pod name).
+    - source_labels: [__meta_kubernetes_pod_name]
+      regex: (.*)
+      target_label: instance
+      replacement: $1
+      action: replace
 ```
 
 Thus, Prometheus automatically tracks the addition and removal of:

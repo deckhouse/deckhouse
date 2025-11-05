@@ -60,58 +60,58 @@ description: "Установка и управление системой мон
 
 ```yaml
 scrape_configs:
-# Общие настройки.
-- job_name: d8-monitoring/custom/0    # Название scrape job, показывается в разделе Service Discovery.
-scrape_interval: 30s                  # Как часто собирать данные.
-scrape_timeout: 10s                   # Таймаут на запрос.
-metrics_path: /metrics                # HTTP-путь.
-scheme: http                          # HTTP или HTTPS.
-# Настройки Service Discovery.
-kubernetes_sd_configs:                # Брать цели из Kubernetes.
-- api_server: null                    # Адрес API-сервера используется из переменных окружения (переменные есть в каждом поде).
-  role: endpoints                     # Брать цели из эндпоинтов.
-  namespaces:
-    names:                            # Ограничение спика пространств имён.
-    - foo
-    - baz
-# Настройки фильтрации (какие эндпоинты брать, а какие нет) и relabeling'а (какие лейблы добавить или удалить, распостраняется на все получаемые метрики).
-relabel_configs:
-# Фильтр по значению лейбла prometheus_custom_target (полученного из связанного с эндпоинтом сервиса).
-- source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-  regex: .+                           # Любой не пустой лейбл.
-  action: keep
-# Фильтр по имени порта.
-- source_labels: [__meta_kubernetes_endpointslice_port_name]
-  regex: http-metrics                 # Только порт с именем http-metrics.
-  action: keep
-# Добавление лейбла job. Используйте значение лейбла prometheus_custom_target у сервиса, к которому добавлен префикс "custom-".
-#
-# Лейбл job:
-#    * определяет название группы, в которой будет показываться цель мониторинга;
-#    * добавляется к метрикам для удобной фильтрации в правилах и дашбордах.
-- source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-  regex: (.*)
-  target_label: job
-  replacement: custom-$1
-  action: replace
-# Добавление лейбла namespace.
-- source_labels: [__meta_kubernetes_namespace]
-  regex: (.*)
-  target_label: namespace
-  replacement: $1
-  action: replace
-# Добавление лейбла service.
-- source_labels: [__meta_kubernetes_service_name]
-  regex: (.*)
-  target_label: service
-  replacement: $1
-  action: replace
-# Добавление лейбла instance (в котором будет имя пода).
-- source_labels: [__meta_kubernetes_pod_name]
-  regex: (.*)
-  target_label: instance
-  replacement: $1
-  action: replace
+  # Общие настройки.
+  - job_name: d8-monitoring/custom/0    # Название scrape job, показывается в разделе Service Discovery.
+    scrape_interval: 30s                  # Как часто собирать данные.
+    scrape_timeout: 10s                   # Таймаут на запрос.
+    metrics_path: /metrics                # HTTP-путь.
+    scheme: http                          # HTTP или HTTPS.
+    # Настройки Service Discovery.
+    kubernetes_sd_configs:                # Брать цели из Kubernetes.
+    - api_server: null                    # Адрес API-сервера используется из переменных окружения (переменные есть в каждом поде).
+      role: endpoints                     # Брать цели из эндпоинтов.
+      namespaces:
+        names:                            # Ограничение спика пространств имён.
+        - foo
+        - baz
+    # Настройки фильтрации (какие эндпоинты брать, а какие нет) и relabeling'а (какие лейблы добавить или удалить, распостраняется на все получаемые метрики).
+    relabel_configs:
+    # Фильтр по значению лейбла prometheus_custom_target (полученного из связанного с эндпоинтом сервиса).
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: .+                           # Любой не пустой лейбл.
+      action: keep
+    # Фильтр по имени порта.
+    - source_labels: [__meta_kubernetes_endpointslice_port_name]
+      regex: http-metrics                 # Только порт с именем http-metrics.
+      action: keep
+    # Добавление лейбла job. Используйте значение лейбла prometheus_custom_target у сервиса, к которому добавлен префикс "custom-".
+    #
+    # Лейбл job:
+    #    * определяет название группы, в которой будет показываться цель мониторинга;
+    #    * добавляется к метрикам для удобной фильтрации в правилах и дашбордах.
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: (.*)
+      target_label: job
+      replacement: custom-$1
+      action: replace
+    # Добавление лейбла namespace.
+    - source_labels: [__meta_kubernetes_namespace]
+      regex: (.*)
+      target_label: namespace
+      replacement: $1
+      action: replace
+    # Добавление лейбла service.
+    - source_labels: [__meta_kubernetes_service_name]
+      regex: (.*)
+      target_label: service
+      replacement: $1
+      action: replace
+    # Добавление лейбла instance (в котором будет имя пода).
+    - source_labels: [__meta_kubernetes_pod_name]
+      regex: (.*)
+      target_label: instance
+      replacement: $1
+      action: replace
 ```
 
 Таким образом, Prometheus автоматически отслеживает добавление и удаление:
