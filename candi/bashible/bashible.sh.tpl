@@ -58,16 +58,16 @@ bb-label-node-bashible-first-run-finished() {
 
   while [ $attempt -le $max_attempts ]; do
     if bb-kubectl-exec label nodes "$(bb-d8-node-name)" node.deckhouse.io/bashible-first-run-finished=true; then
-      bb-log-info "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       return 0
     fi
 
-    bb-log-info "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
+    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
     attempt=$((attempt + 1))
     sleep 5
   done
 
-  bb-log-error "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
   exit 1
 }
 
