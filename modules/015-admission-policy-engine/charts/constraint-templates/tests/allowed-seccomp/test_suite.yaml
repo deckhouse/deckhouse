@@ -70,6 +70,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-runtime-default-securityContext-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-deployment-runtime-default-securityContext-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-deployment-unconfined-securityContext.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-runtime-default-securityContext-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-daemonset-runtime-default-securityContext-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-daemonset-unconfined-securityContext.yaml
+        assertions:
+          - violations: no
+
   - name: pss-restricted
     template: ../../templates/security/allowed-seccomp.yaml
     constraint: constraint_pss_restricted.yaml
@@ -162,6 +190,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-localhost-verySpecialFile-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-deployment-localhost-verySpecialFile-securityContext.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-deployment-unconfined-securityContext.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-localhost-verySpecialFile-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-daemonset-localhost-verySpecialFile-securityContext.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-unconfined-securityContext
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-daemonset-unconfined-securityContext.yaml
+        assertions:
+          - violations: no
+
   - name: pss-baseline-with-exception
     template: ../../templates/security/allowed-seccomp.yaml
     constraint: constraint_pss_baseline.yaml
@@ -169,31 +225,31 @@ tests:
       - name: allowed-by-exception-unconfined
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-unconfined.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-unconfined.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-unconfined.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-unconfined.yaml
         assertions:
           - violations: no
 
       - name: allowed-by-exception-localhost-profile
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-localhost-profile.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-localhost-profile.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-localhost-profile.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-localhost-profile.yaml
         assertions:
           - violations: no
 
       - name: allowed-by-exception-mismatch-but-constraint-allows
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-unconfined.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-mismatch-but-constraint-allows.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-unconfined.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
         assertions:
           - violations: no
 
       - name: disallowed-no-exception-label
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
 

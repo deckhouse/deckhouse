@@ -33,7 +33,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        violation contains {"msg": msg, "details": {}} if {
+        violation [{"msg": msg, "details": {}}] {
           allowed_types := input.parameters.allowedServiceTypes
           actual_type := input.review.object.spec.type        
           service_name := input.review.object.metadata.name

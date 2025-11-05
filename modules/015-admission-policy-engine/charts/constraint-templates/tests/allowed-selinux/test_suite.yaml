@@ -70,6 +70,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-no-selinux
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-deployment-no-selinux.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-custom-selinux-options-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-deployment-custom-selinux-options-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-no-selinux
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-daemonset-no-selinux.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-custom-selinux-options-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-daemonset-custom-selinux-options-container.yaml
+        assertions:
+          - violations: no
+
   - name: security-policy
     template: ../../templates/security/allowed-selinux.yaml
     constraint: constraint_security_policy.yaml
@@ -130,6 +158,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-spc-t-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-deployment-spc-t-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-custom-selinux-options-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-deployment-custom-selinux-options-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-spc-t-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-daemonset-spc-t-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-custom-selinux-options-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-daemonset-custom-selinux-options-container.yaml
+        assertions:
+          - violations: no
+
   - name: pss-baseline-with-exception
     template: ../../templates/security/allowed-selinux.yaml
     constraint: constraint_pss_baseline.yaml
@@ -137,55 +193,55 @@ tests:
       - name: allowed-by-exception-spc-t-container
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-spc-t.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-spc-t-container.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-spc-t.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-spc-t-container.yaml
         assertions:
           - violations: no
 
       - name: allowed-by-exception-custom-selinux-options-container
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-custom-selinux-options.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-custom-selinux-options-container.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-custom-selinux-options.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-custom-selinux-options-container.yaml
         assertions:
           - violations: no
 
       - name: disallowed-by-exception-type-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-spc-t.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-type-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-spc-t.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-type-mismatch.yaml
         assertions:
           - violations: yes
 
       - name: disallowed-by-exception-level-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-custom-selinux-options.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-level-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-custom-selinux-options.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-level-mismatch.yaml
         assertions:
           - violations: yes
 
       - name: disallowed-no-exception-label
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
 
       - name: allowed-by-exception-mismatch-but-constraint-allows
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-spc-t.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-mismatch-but-constraint-allows.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-spc-t.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
         assertions:
           - violations: no
 
       - name: disallowed-by-exception-multiple-containers-one-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-spc-t.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-multiple-containers-one-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-spc-t.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-containers-one-mismatch.yaml
         assertions:
           - violations: yes
 

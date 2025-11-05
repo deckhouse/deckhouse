@@ -35,6 +35,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-no-capabilities
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-deployment-no-capabilities.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-net-admin
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-deployment-net-admin.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-no-capabilities
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-daemonset-no-capabilities.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-net-admin
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-daemonset-net-admin.yaml
+        assertions:
+          - violations: no
+
       - name: disallowed-sys-admin
         inventory:
           - ../common/test_samples/ns.yaml
@@ -95,6 +123,34 @@ tests:
         assertions:
           - violations: yes
 
+      - name: allowed-deployment-no-capabilities-drop-all
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-deployment-no-capabilities-drop-all.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-disallowed-capability
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-deployment-disallowed-capability.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-no-capabilities-drop-all
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/allowed-daemonset-no-capabilities-drop-all.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-disallowed-capability
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_restricted/disallowed-daemonset-disallowed-capability.yaml
+        assertions:
+          - violations: no
+
   - name: pss-baseline-with-exception
     template: ../../templates/security/allowed-capabilities.yaml
     constraint: constraint_pss_baseline.yaml
@@ -102,47 +158,47 @@ tests:
       - name: allowed-by-exception-net-admin
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-net-admin.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-net-admin.yaml
         assertions:
           - violations: no
 
       - name: allowed-by-exception-multiple-capabilities
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-multiple-capabilities.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-multiple-capabilities.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-multiple-capabilities.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-capabilities.yaml
         assertions:
           - violations: no
 
       - name: disallowed-by-exception-capability-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-capability-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-capability-mismatch.yaml
         assertions:
           - violations: yes
 
       - name: disallowed-no-exception-label
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/disallowed-no-exception-label.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
 
       - name: allowed-by-exception-mismatch-but-constraint-allows
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-mismatch-but-constraint-allows.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
         assertions:
           - violations: no
 
       - name: disallowed-by-exception-multiple-containers-one-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-multiple-containers-one-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-containers-one-mismatch.yaml
         assertions:
           - violations: yes
 
@@ -153,16 +209,16 @@ tests:
       - name: allowed-by-exception-net-admin-drop-all
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin-drop-all.yaml
-        object: test_samples/security_policy_exceptions/allowed-by-exception-net-admin-drop-all.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin-drop-all.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-net-admin-drop-all.yaml
         assertions:
           - violations: no
 
       - name: disallowed-by-exception-drop-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/allow-net-admin-drop-all.yaml
-        object: test_samples/security_policy_exceptions/disallowed-by-exception-drop-mismatch.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-net-admin-drop-all.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-drop-mismatch.yaml
         assertions:
           - violations: yes
 

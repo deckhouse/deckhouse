@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: disallowed-daemonset-net-core-rmem-max
+  namespace: testns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      securityContext:
+        sysctls:
+        - name: net.core.rmem_max
+          value: "16777216"
+      containers:
+        - name: nginx
+          image: nginx
