@@ -50,6 +50,8 @@
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
 {{- $_ := set $options "rootDiskType" .nodeGroup.instanceClass.rootDiskType -}}
 {{- $_ := set $options "subnets" .nodeGroup.instanceClass.subnets -}}
+{{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- $_ := set $options "securityGroups" .nodeGroup.instanceClass.securityGroups -}}
 {{- $_ := set $options "serverGroupID" .nodeGroup.instanceClass.serverGroupID -}}
 {{- $_ := set $options "vipAddress" .nodeGroup.instanceClass.vipAddress -}}
