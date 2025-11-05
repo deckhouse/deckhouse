@@ -42,7 +42,7 @@ Lock info:
 
 func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
