@@ -265,7 +265,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 
 			Expect(m).To(HaveLen(2))
 
-			//for metrics check
 			foundDynamicResourceAllocation := false
 			foundTestDeprecatedGate := false
 

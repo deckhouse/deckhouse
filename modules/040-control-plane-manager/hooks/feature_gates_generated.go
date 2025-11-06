@@ -3,6 +3,8 @@
 
 package hooks
 
+import "fmt"
+
 type ComponentFeatures struct {
 	Deprecated            []string
 	Forbidden             []string
@@ -15,7 +17,70 @@ type ComponentFeatures struct {
 type FeatureGateInfo struct {
 	Exists bool
 	IsDeprecated bool
-	IsForbidden bool
+	IsForbidden  bool
+}
+
+func (cf *ComponentFeatures) IsForbidden(feature string) bool {
+	for _, f := range cf.Forbidden {
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
+
+func (cf *ComponentFeatures) IsDeprecated(feature string) bool {
+	for _, f := range cf.Deprecated {
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
+
+func (cf *ComponentFeatures) ValidateFeature(feature string) error {
+	if cf.IsForbidden(feature) {
+		return fmt.Errorf("feature gate %s is forbidden", feature)
+	}
+	if cf.IsDeprecated(feature) {
+		return fmt.Errorf("feature gate %s is deprecated", feature)
+	}
+	return nil
+}
+
+func (cf *ComponentFeatures) GetFeatureGateInfo(component, featureName string) FeatureGateInfo {
+	info := FeatureGateInfo{}
+	
+	if cf.IsDeprecated(featureName) {
+		info.IsDeprecated = true
+	}
+	
+	if cf.IsForbidden(featureName) {
+		info.IsForbidden = true
+	}
+
+	var featureList []string
+	switch component {
+	case "kubelet":
+		featureList = cf.Kubelet
+	case "apiserver":
+		featureList = cf.APIServer
+	case "kubeControllerManager":
+		featureList = cf.KubeControllerManager
+	case "kubeScheduler":
+		featureList = cf.KubeScheduler
+	default:
+		return info
+	}
+	
+	for _, name := range featureList {
+		if name == featureName {
+			info.Exists = true
+			return info
+		}
+	}
+	
+	return info
 }
 
 var FeatureGatesMap = map[string]ComponentFeatures{
@@ -114,55 +179,4 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"SchedulerQueueingHints",
 		},
 	},
-}
-
-func GetFeatureGateInfo(version, component, featureName string) FeatureGateInfo {
-	info := FeatureGateInfo{}
-	
-	features, ok := FeatureGatesMap[version]
-	if !ok {
-		return info
-	}
-	
-	for _, name := range features.Deprecated {
-		if name == featureName {
-			info.IsDeprecated = true
-			break
-		}
-	}
-	
-	for _, name := range features.Forbidden {
-		if name == featureName {
-			info.IsForbidden = true
-			break
-		}
-	}
-
-	// component is empty for deprecated and forbidden checks
-	if component == "" {
-		return info
-	}
-
-	var featureList []string
-	switch component {
-	case "kubelet":
-		featureList = features.Kubelet
-	case "apiserver":
-		featureList = features.APIServer
-	case "kubeControllerManager":
-		featureList = features.KubeControllerManager
-	case "kubeScheduler":
-		featureList = features.KubeScheduler
-	default:
-		return info
-	}
-	
-	for _, name := range featureList {
-		if name == featureName {
-			info.Exists = true
-			return info
-		}
-	}
-	
-	return info
 }
