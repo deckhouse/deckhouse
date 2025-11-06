@@ -2,22 +2,29 @@
   rules:
   - alert: CronJobFailed
     expr: |
-      (
-        max by (namespace, job_name, owner_kind, owner_name) (
-          # Job has failed attempts AND no successful completions
-          (kube_job_status_failed > 0)
-          * on (namespace, job_name)
-          (kube_job_status_succeeded == 0)
-          * on (namespace, job_name) group_right()
-          # compare start time of a Job with the last schedule time of a CronJob
+      label_replace(
+        (
+          kube_cronjob_status_last_schedule_time
+          >= on(namespace, cronjob)
           (
-            kube_job_status_start_time
-            >= on (namespace, job_name) group_left(owner_name)
-            (
-              max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time, "owner_name", "$1", "cronjob", "(.*)"))
-              * on (namespace, owner_name) group_right()
-              max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
-            )
+            kube_cronjob_status_last_successful_time
+            or on(namespace, cronjob)
+            kube_cronjob_status_last_schedule_time * 0
+          )
+        ), "owner_name", "$1", "cronjob", "(.*)"
+      )
+      >= on (namespace, owner_name) group_right()
+      max by (namespace, job_name, owner_kind, owner_name) (
+        (kube_job_status_failed > 0)
+        * on (namespace, job_name) group_right()
+        # compare start time of a Job with the last schedule time of a CronJob
+        (
+          kube_job_status_start_time
+          >= on (namespace, job_name) group_left(owner_name)
+          (
+            max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time, "owner_name", "$1", "cronjob", "(.*)"))
+            * on (namespace, owner_name) group_right()
+            max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
           )
         )
       )
@@ -27,7 +34,6 @@
           label_replace((extended_monitoring_cronjob_enabled == 1), "owner_name", "$1", "cronjob", "(.*)")
         ) > 0
       )
-    for: 2m
     labels:
       severity_level: "5"
     annotations:
