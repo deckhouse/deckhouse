@@ -120,21 +120,17 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Feature gate `{{ $labels.feature_gate }}` is deprecated in current Kubernetes version `{{ $labels.current_version }}`.
+      summary: Feature gate `{{ $labels.feature_gate }}` is deprecated in current Kubernetes version `{{ $labels.current_version }}` and is not being used in the cluster control-plane.
       description: |-
-        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is already deprecated in the current Kubernetes version `{{ $labels.current_version }}`.
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is already deprecated in the current Kubernetes version `{{ $labels.current_version }}` and is not using by cluster control-plane components.
         
         **Recommended actions:**
         
-        1. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig as soon as possible:
+        1. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
         
         ```bash
         d8 k edit mc control-plane-manager
         ```
-        
-        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
-        
-        2. Review your application and ensure it works correctly without this feature gate.
         
         For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
 
@@ -162,12 +158,10 @@
         
         1. Review the usage of this feature gate in your cluster.
         2. Plan migration away from this feature gate before upgrading to version `{{ $labels.deprecated_version }}`.
-        3. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig:
+        3. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
         
         ```bash
         d8 k edit mc control-plane-manager
         ```
-        
-        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
         
         For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
