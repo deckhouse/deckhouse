@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -33,15 +34,8 @@ const (
 	DefaultLogLevel = "Info"
 )
 
-type RegistryConfigBuilder interface {
-	DeckhouseRegistrySecretData() (map[string][]byte, error)
-	RegistryInitSecretData() (map[string][]byte, error)
-	RegistryBashibleConfigSecretData() (map[string][]byte, error)
-	InclusterImagesRepo() string
-}
-
 type DeckhouseInstaller struct {
-	RegistryConfigBuilder    RegistryConfigBuilder
+	Registry                 registry.Config
 	LogLevel                 string
 	Bundle                   string
 	DevBranch                string
@@ -84,7 +78,7 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.RegistryConfigBuilder.InclusterImagesRepo(), tag)
+	return fmt.Sprintf("%s:%s", c.Registry.Builder().InclusterImagesRepo(), tag)
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -143,7 +137,9 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
-	registry, err := metaConfig.Registry.ConfigBuilder().DeckhouseSettings()
+	registrySettings, err := metaConfig.Registry.
+		Builder().
+		DeckhouseSettings()
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare registry settings for ModuleConfig deckhouse: %w", err)
 	}
@@ -167,14 +163,14 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-		mc.Spec.Settings["registry"] = registry
+		mc.Spec.Settings["registry"] = registrySettings
 	}
 
 	if deckhouseCm == nil {
 		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
-			"registry": registry,
+			"registry": registrySettings,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
@@ -184,7 +180,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
-		RegistryConfigBuilder: metaConfig.Registry.ConfigBuilder(),
+		Registry:              metaConfig.Registry,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,

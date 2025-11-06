@@ -496,7 +496,9 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	log.DebugLn("Starting registry packages proxy")
-	registryUpstreamData, err := cfg.Registry.UpstreamData()
+	registryUpstreamData, err := cfg.Registry.
+		Builder().
+		UpstreamData()
 	if err != nil {
 		return err
 	}

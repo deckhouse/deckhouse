@@ -62,13 +62,13 @@ type TerraNodeGroupSpec struct {
 type DeckhouseClusterConfig struct {
 	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
-	LogLevel          string                 `json:"logLevel,omitempty"` // Deprecated
-	ImagesRepo        string                 `json:"imagesRepo"`
-	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
-	RegistryCA        string                 `json:"registryCA,omitempty"`
-	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+	Bundle            string                 `json:"bundle,omitempty"`            // Deprecated
+	LogLevel          string                 `json:"logLevel,omitempty"`          // Deprecated
+	ImagesRepo        string                 `json:"imagesRepo"`                  // Deprecated
+	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"` // Deprecated
+	RegistryCA        string                 `json:"registryCA,omitempty"`        // Deprecated
+	RegistryScheme    string                 `json:"registryScheme,omitempty"`    // Deprecated
+	ConfigOverrides   map[string]interface{} `json:"configOverrides"`             // Deprecated
 }
 
 type VCDProviderInfo struct {
