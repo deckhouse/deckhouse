@@ -80,7 +80,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}
-
+	fmt.Println("inhook cluster_configuration")
 	// no cluster configuration — unset global value if there is one.
 	if len(currentConfig) == 0 {
 		if input.Values.Exists("global.clusterConfiguration") {
