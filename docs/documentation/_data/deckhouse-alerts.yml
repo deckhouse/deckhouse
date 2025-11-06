@@ -4937,7 +4937,7 @@ alerts:
       description: |-
         Loki is discarding samples during ingestion because they fail validation.
         Samples are being discarded because of `{{ $labels.reason }}` at a rate of {{ .Value | humanize }} samples per second.
-        For more information, refer to the [`loki` FAQ](/modules/loki/faq.html#why-is-lokidiscardedsampleswarning-alert-triggered).
+        For more information, refer to the [`loki` FAQ](/modules/loki/faq.html).
       summary: |
         Loki is discarding samples during ingestion.
       severity: "4"
