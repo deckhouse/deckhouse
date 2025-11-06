@@ -61,7 +61,8 @@ spec:
 
               allowed_by_securitypolicyexception(pod, container) if {
                 label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                namespace := pod.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 profile := canonicalize_apparmor_profile(container.securityContext.appArmorProfile)
                 profile in exception.spec.securityContext.appArmorProfile.allowedValues
               }

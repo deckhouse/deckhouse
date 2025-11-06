@@ -8,7 +8,7 @@ metadata:
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
-  scope: Cluster
+  scope: Namespaced
   names:
     plural: securitypolicyexceptions
     singular: securitypolicyexception

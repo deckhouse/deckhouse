@@ -1,6 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
+  namespace: testns
   name: allow-unmasked
 spec:
   securityContext:

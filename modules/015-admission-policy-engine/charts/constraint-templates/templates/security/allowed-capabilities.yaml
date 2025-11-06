@@ -65,7 +65,8 @@ spec:
 
               allowed_by_securitypolicyexception(container) if {
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                  exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                   allowed_add := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.add[_])}
                   allowed_drop := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.drop[_])}
                   capabilities_add := {c | c := lower(container.securityContext.capabilities.add[_])}
@@ -100,7 +101,8 @@ spec:
 
               drops_required_capabilities_by_securitypolicyexception(container) if {
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                  exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                   must_drop := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.drop[_])}
                   capabilities_drop := {c | c := lower(container.securityContext.capabilities.drop[_])}
 

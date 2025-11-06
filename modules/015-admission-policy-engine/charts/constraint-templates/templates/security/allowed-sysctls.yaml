@@ -80,7 +80,8 @@ spec:
 
               allowed_by_securitypolicyexception(sysctl) if {
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                  exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                   exception_params := exception.spec.securityContext.sysctls.allowedValues
                   sysctl in exception_params
               }

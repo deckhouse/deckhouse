@@ -131,7 +131,8 @@ spec:
 
               allowed_by_securitypolicyexception(volume) if {
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 allowedPaths := exception.spec.volumes.hostPath.allowedValues
                 input_hostpath_allowed_exact(allowedPaths, volume)
               }

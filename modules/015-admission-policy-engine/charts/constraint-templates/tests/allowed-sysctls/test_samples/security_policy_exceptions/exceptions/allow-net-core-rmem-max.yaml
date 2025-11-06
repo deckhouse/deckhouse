@@ -1,10 +1,11 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
+  namespace: testns
+
   name: allow-net-core-rmem-max
 spec:
   securityContext:
     sysctls:
       allowedValues:
       - net.core.rmem_max
-

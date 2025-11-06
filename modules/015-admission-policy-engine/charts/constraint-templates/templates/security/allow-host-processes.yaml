@@ -65,7 +65,8 @@ spec:
 
               allowed_by_securitypolicyexeption(obj, field) if {
                 label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                exception := data.inventory.cluster["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                namespace := obj.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 obj.spec[field] == exception.spec.network[field].allowedValue
               }
 
