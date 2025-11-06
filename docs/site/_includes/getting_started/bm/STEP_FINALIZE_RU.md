@@ -23,14 +23,6 @@
 <p>Кластера, состоящего из единственного узла, может быть достаточно, например, для ознакомительных целей.</p>
 <ul>
   <li>
-<p>Выполните на <strong>master-узле</strong> следующую команду, для того чтобы снять с него <i>taint</i> и разрешить остальным компонентам Deckhouse работать на master-узле:</p>
-<div markdown="1">
-```bash
-sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-</div>
-  </li>
-  <li>
 <p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell

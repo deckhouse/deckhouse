@@ -23,14 +23,6 @@ Select one of the two options below to continue installing the cluster:
 <p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
 <ul>
   <li>
-<p>Run the following command on the <strong>master node</strong>, to remove the taint from the master node and permit the other Deckhouse components to run on it:</p>
-<div markdown="1">
-```bash
-sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-</div>
-  </li>
-  <li>
 <p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```shell
