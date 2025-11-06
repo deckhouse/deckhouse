@@ -45,6 +45,7 @@ type ClearTmpParams struct {
 
 type TmpCleaner interface {
 	Cleanup()
+	DisableCleanup(msg string)
 }
 
 var (
@@ -119,9 +120,14 @@ func (d *DummyTmpCleaner) Cleanup() {
 	}
 }
 
+func (d *DummyTmpCleaner) DisableCleanup(msg string) {
+	d.msg = msg
+}
+
 type regularTmpCleaner struct {
-	params          *ClearTmpParams
-	suffixesForSkip []string
+	params            *ClearTmpParams
+	suffixesForSkip   []string
+	disableCleanupMsg string
 }
 
 func newRegularTmpCleaner(params *ClearTmpParams, suffixesForSkip []string) *regularTmpCleaner {
@@ -133,6 +139,11 @@ func newRegularTmpCleaner(params *ClearTmpParams, suffixesForSkip []string) *reg
 
 func (r *regularTmpCleaner) Cleanup() {
 	logger := safeLoggerProvider(r.params.LoggerProvider)
+
+	if r.disableCleanupMsg != "" {
+		logger.LogDebugF("Disable regular cleanup: %s\n", r.disableCleanupMsg)
+		return
+	}
 
 	tmpDir := r.params.TmpDir
 
@@ -215,6 +226,14 @@ func (r *regularTmpCleaner) Cleanup() {
 			}
 		}
 	}
+}
+
+func (r *regularTmpCleaner) DisableCleanup(msg string) {
+	if msg == "" {
+		return
+	}
+
+	r.disableCleanupMsg = msg
 }
 
 func safeLoggerProvider(provider LoggerProvider) log.Logger {

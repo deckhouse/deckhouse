@@ -168,6 +168,51 @@ func TestSortByDepthDescending(t *testing.T) {
 	}
 }
 
+func TestClearAllInSubDirDisableCleanup(t *testing.T) {
+	dirs := []fileDirToCreate{
+		{path: "outside_dir", outsideTmpRoot: true},
+		{path: "state"},
+		{path: "state/empty"},
+	}
+
+	files := []fileDirToCreate{
+		{path: "outside.file", outsideTmpRoot: true},
+		{path: "outside_dir/outside_in_sub.file", outsideTmpRoot: true},
+		{path: "in_root.txt"},
+		{path: "in_root2.txt"},
+		{path: "state/.tombstone"},
+		{path: "state/instate2.txt"},
+	}
+
+	params := testClearFuncParams{
+		testName:              "TestClearAllInSubDirDisableCleanup",
+		isDebug:               false,
+		tmpSubDir:             "disableCleaning",
+		defaultTmpDirAsSubdir: false,
+		removeTombstones:      true,
+		makeDirs:              dirs,
+		makeFiles:             files,
+	}
+
+	f := getTestClearFunc(t, params)
+
+	defer func() {
+		clearTest(t, f)
+	}()
+
+	require.IsType(t, &regularTmpCleaner{}, f.cleaner)
+
+	const disableLogMsg = "Test disable cleanup"
+
+	f.cleaner.DisableCleanup(disableLogMsg)
+	f.cleaner.Cleanup()
+
+	assertKeep(t, f, testJoinFilesDirs(files, dirs))
+	assertKeepPath(t, f.tmpDir)
+
+	assertHasEntityInLogWithSuffix(t, f, fmt.Sprintf("%s\n", disableLogMsg))
+}
+
 func TestClearAllInSubDirWithTombstone(t *testing.T) {
 	keeptDirs := []fileDirToCreate{
 		{path: "outside_dir", outsideTmpRoot: true},
@@ -581,6 +626,21 @@ func assertNoErrorsInLog(t *testing.T, f testFunc) {
 	errorMsgs, err := f.logger.AllMatches(matcher)
 	require.NoError(t, err)
 	require.Empty(t, errorMsgs, fmt.Sprintf("Expected no errors in log: %v", errorMsgs))
+}
+
+func assertHasEntityInLogWithSuffix(t *testing.T, f testFunc, msg string) {
+	t.Helper()
+
+	require.False(t, govalue.IsNil(f.logger))
+
+	matcher := &log.Match{
+		Suffix: []string{msg},
+	}
+
+	errorMsgs, err := f.logger.AllMatches(matcher)
+	require.NoError(t, err, msg)
+	require.Len(t, errorMsgs, 1, msg)
+	require.Contains(t, errorMsgs[0], msg, msg)
 }
 
 func assertIsRemovedError(t *testing.T, err error, fullPath string) {

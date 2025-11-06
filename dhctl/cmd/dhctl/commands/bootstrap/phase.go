@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -142,7 +143,15 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:        logger,
 			IsDebug:       app.IsDebug,
 		})
-		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
+
+		err = bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to abort cluster: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd
@@ -161,7 +170,15 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			Logger:  logger,
 			IsDebug: app.IsDebug,
 		})
-		return bootstraper.BaseInfrastructure(context.Background())
+
+		err := bootstraper.BaseInfrastructure(context.Background())
+		if err != nil {
+			msg := fmt.Sprintf("Failed to create base infra for cluster: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd
