@@ -37,55 +37,55 @@ type featureGatesResult struct {
 	Kubelet               []string `json:"kubelet"`
 }
 
-// Returns: -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
-func compareVersions(v1, v2 string) int {
-	parts1 := strings.Split(v1, ".")
-	parts2 := strings.Split(v2, ".")
+type KubernetesVersion string
+
+func (v KubernetesVersion) Normalize() KubernetesVersion {
+	parts := strings.Split(string(v), ".")
+	if len(parts) >= 2 {
+		return KubernetesVersion(parts[0] + "." + parts[1])
+	}
+	return v
+}
+
+func (v KubernetesVersion) IsGreaterThan(other KubernetesVersion) bool {
+	parts1 := strings.Split(string(v), ".")
+	parts2 := strings.Split(string(other), ".")
 
 	if len(parts1) < 2 || len(parts2) < 2 {
-		return 0
+		return false
 	}
 
 	major1, err := strconv.Atoi(parts1[0])
 	if err != nil {
-		return 0
+		return false
 	}
 	major2, err := strconv.Atoi(parts2[0])
 	if err != nil {
-		return 0
+		return false
 	}
 
 	if major1 != major2 {
-		if major1 < major2 {
-			return -1
-		}
-		return 1
+		return major1 > major2
 	}
 
 	minor1, err := strconv.Atoi(parts1[1])
 	if err != nil {
-		return 0
+		return false
 	}
 	minor2, err := strconv.Atoi(parts2[1])
 	if err != nil {
-		return 0
+		return false
 	}
 
-	if minor1 < minor2 {
-		return -1
-	}
-	if minor1 > minor2 {
-		return 1
-	}
-
-	return 0
+	return minor1 > minor2
 }
 
-func isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName string) (bool, string) {
+func isFeatureGateDeprecatedInFutureVersions(currentVersion KubernetesVersion, featureName string) (bool, KubernetesVersion) {
 	for version, features := range FeatureGatesMap {
-		if compareVersions(version, currentVersion) > 0 {
+		v := KubernetesVersion(version)
+		if v.IsGreaterThan(currentVersion) {
 			if features.IsDeprecated(featureName) {
-				return true, version
+				return true, v
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName string)
 }
 
 func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
-	k8sVersion := input.Values.Get("global.discovery.kubernetesVersion").String()
+	k8sVersionStr := input.Values.Get("global.discovery.kubernetesVersion").String()
 
 	result := featureGatesResult{
 		APIServer:             []string{},
@@ -102,24 +102,19 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		Kubelet:               []string{},
 	}
 
-	if k8sVersion == "" {
+	if k8sVersionStr == "" {
 		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
 		return nil
 	}
 
-	normalizedVersion := k8sVersion
-	parts := strings.Split(k8sVersion, ".")
-	if len(parts) >= 2 {
-		normalizedVersion = parts[0] + "." + parts[1]
-	}
+	normalizedVersion := KubernetesVersion(k8sVersionStr).Normalize()
 
 	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
-	// featureName -> version
-	deprecatedFeatureGates := make(map[string]string)
+	deprecatedFeatureGates := make(map[string]KubernetesVersion)
 	currentlyDeprecatedFeatureGates := make(map[string]bool)
 
-	currentFeatures, ok := FeatureGatesMap[normalizedVersion]
+	currentFeatures, ok := FeatureGatesMap[string(normalizedVersion)]
 	if !ok {
 		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
 		return nil
@@ -172,8 +167,8 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
-				"deprecated_version": normalizedVersion,
-				"current_version":    normalizedVersion,
+				"deprecated_version": string(normalizedVersion),
+				"current_version":    string(normalizedVersion),
 				"status":             "deprecated",
 			},
 		)
@@ -186,8 +181,8 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
-				"deprecated_version": deprecatedVersion,
-				"current_version":    normalizedVersion,
+				"deprecated_version": string(deprecatedVersion),
+				"current_version":    string(normalizedVersion),
 				"status":             "will_be_deprecated",
 			},
 		)
@@ -200,7 +195,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			map[string]string{
 				"feature_gate":       "",
 				"deprecated_version": "",
-				"current_version":    normalizedVersion,
+				"current_version":    string(normalizedVersion),
 				"status":             "",
 			},
 		)
