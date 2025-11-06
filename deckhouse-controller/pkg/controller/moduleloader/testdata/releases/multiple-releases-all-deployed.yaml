@@ -39,6 +39,7 @@ properties:
     - test-source
   releaseChannel: Stable
   requirements:
+    deckhouse: "> v1.63.0"
     kubernetes: "> v1.25.0"
   source: test-source
   weight: 900

@@ -55,6 +55,7 @@ spec:
     - Bump parca version
   moduleName: parca-kube-suitable
   requirements:
+    deckhouse: < v1.63.0
     kubernetes: < 1.28.11
   version: 1.4.3
   weight: 900

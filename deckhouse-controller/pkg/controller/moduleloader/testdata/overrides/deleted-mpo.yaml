@@ -40,6 +40,7 @@ properties:
     - losev-test
   releaseChannel: Stable
   requirements:
+    deckhouse: '> v1.63.0'
     kubernetes: '> v1.25.0'
   source: losev-test
   weight: 900
