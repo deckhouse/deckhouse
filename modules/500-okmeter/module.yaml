@@ -3,5 +3,3 @@ stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-okmeter
-requirements:
-  deckhouse: ">= 1.68"

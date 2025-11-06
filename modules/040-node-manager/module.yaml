@@ -9,5 +9,3 @@ description: |
 descriptions:
   en: Managing nodes
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"

@@ -3,5 +3,3 @@ stage: "General Availability"
 subsystems:
   - infrastructure
 namespace: d8-keepalived
-requirements:
-  deckhouse: ">= 1.68"
