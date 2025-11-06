@@ -107,7 +107,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		input.MetricsCollector.Expire(featureGatesMetricGroupName)
 		if kubernetesVersionFromMetaConfig == "Automatic" {
 			fmt.Println("before get")
-			_, ok := input.ConfigValues.GetOk("controlPlaneManager.enabledFeatureGates")
+			_, ok := input.Values.GetOk("controlPlaneManager.enabledFeatureGates")
 			fmt.Println("status=", ok)
 			if enabledFeatureGates, ok := input.ConfigValues.GetOk("controlPlaneManager.enabledFeatureGates"); ok {
 				defaultFeatureGates := FeatureGatesMap[hooks.DefaultKubernetesVersion]
