@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type registerOnShutdownFunc func(title string, action func())
@@ -120,8 +121,46 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		return "", err
 	}
 
+	absPath = filepath.Clean(absPath)
+
 	if fs.IsRoot(absPath) {
 		return "", fmt.Errorf("Tmp dir '%s' cannot be a root directory", tmpDir)
+	}
+
+	isSystem, systemDirs, err := fs.IsSystemDirOrUserHome(absPath)
+	if err != nil {
+		return "", err
+	}
+
+	if isSystem {
+		return "", fmt.Errorf("Tmp dir '%s' cannot be a system directory or user home %v", tmpDir, systemDirs)
+	}
+
+	const breakMsg = "DHCTL can cleanup it dir fully and it can break your system. Do you continue?"
+	canceledByUser := fmt.Errorf("Operation cancelled by user")
+
+	inSystemDirs, inSystemDirsAll := fs.IsInSystemDirs(absPath)
+	if inSystemDirs {
+		if !input.IsTerminal() {
+			return "", fmt.Errorf("Tmp dir '%s' cannot be in system directory %v", tmpDir, inSystemDirsAll)
+		}
+
+		msg := fmt.Sprintf("Passed tmp dir '%s' for dhctl in system dir '%v'. %s", tmpDir, inSystemDirsAll, breakMsg)
+		if !input.NewConfirmation().WithMessage(msg).Ask() {
+			return "", canceledByUser
+		}
+	} else {
+		osTmp := os.TempDir()
+		if absPath == osTmp {
+			if !input.IsTerminal() {
+				return "", fmt.Errorf("Tmp dir '%s' cannot be system tmp %v", tmpDir, osTmp)
+			}
+
+			msg := fmt.Sprintf("Passed tmp dir '%s' for dhctl is system tmp dir '%s'. %s", tmpDir, osTmp, breakMsg)
+			if !input.NewConfirmation().WithMessage(msg).Ask() {
+				return "", canceledByUser
+			}
+		}
 	}
 
 	return absPath, nil

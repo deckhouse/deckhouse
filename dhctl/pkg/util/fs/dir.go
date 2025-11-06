@@ -19,7 +19,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 	"github.com/google/uuid"
@@ -116,4 +118,42 @@ func FileExistsInDirAndParentsDirs(dir, fileName string) (string, error) {
 	}
 
 	return "", nil
+}
+
+var systemDirectories = []string{
+	"/bin", "/lost+found", "/run",
+	"/etc", "/sbin", "/usr",
+	"/boot", "/mnt", "/var",
+	"/cdrom", "/lib", "/opt", "/srv",
+	"/lib64", "/proc", "/sys", "/dev",
+}
+
+func GetSystemDirectories() []string {
+	dst := make([]string, len(systemDirectories))
+	copy(dst, systemDirectories)
+
+	return dst
+}
+
+// IsSystemDirOrUserHome dir must be absolute and cleaned
+func IsSystemDirOrUserHome(dir string) (bool, []string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false, nil, err
+	}
+
+	additionalSystems := []string{homeDir, "/home", "/media"}
+
+	all := append(additionalSystems, systemDirectories...)
+	return slices.Contains(all, dir), all, nil
+}
+
+func IsInSystemDirs(dir string) (bool, []string) {
+	for _, d := range systemDirectories {
+		if strings.HasPrefix(dir, d) {
+			return true, GetSystemDirectories()
+		}
+	}
+
+	return false, GetSystemDirectories()
 }
