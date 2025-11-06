@@ -196,6 +196,8 @@ github.com/flant/addon-operator v1.15.8 h1:m0yk2fegHPtTFRsA1YSCtakQIzC8HzLil+Wal
 github.com/flant/addon-operator v1.15.8/go.mod h1:WgJjgN2qTBnmsZ96qP+UwfGW4wIVQ2RsWm9ps/9hGTY=
 github.com/flant/addon-operator v1.15.10-0.20251106111337-db5cc096dd4d h1:gDKAg69bD4psCYBCO6TSctu6j6PTnyW8uPeUgyjse4g=
 github.com/flant/addon-operator v1.15.10-0.20251106111337-db5cc096dd4d/go.mod h1:Uqvw0fPpIU2MfCrO51+ks+j6Eb1zDn2dxLbsP6evpuQ=
+github.com/flant/addon-operator v1.15.10-0.20251106113629-242f8717a7dd h1:afPc+fxV9njBOIvwxvsf8nzCN7d3MFY+7hrH6HpjS0w=
+github.com/flant/addon-operator v1.15.10-0.20251106113629-242f8717a7dd/go.mod h1:Uqvw0fPpIU2MfCrO51+ks+j6Eb1zDn2dxLbsP6evpuQ=
 github.com/flant/kube-client v1.4.0 h1:1m/Hyf4KMaYi6rGyfHz0Coh44MJz2nUiitvMmrBwXwg=
 github.com/flant/kube-client v1.4.0/go.mod h1:mql6hsZMgBLAhdj3Emb8TrP5MVdXduFQ2NLjzn6IF0Y=
 github.com/flant/shell-operator v1.11.4 h1:PfLAq11RG4+gmtr5/yxBSEeuFH6btDT87oO+usph4ts=
