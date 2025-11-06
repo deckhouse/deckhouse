@@ -80,7 +80,6 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}
-	fmt.Println("inhook cluster_configuration")
 	// no cluster configuration — unset global value if there is one.
 	if len(currentConfig) == 0 {
 		if input.Values.Exists("global.clusterConfiguration") {
@@ -106,14 +105,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 		input.MetricsCollector.Expire(featureGatesMetricGroupName)
 		if kubernetesVersionFromMetaConfig == "Automatic" {
-			fmt.Println("before get")
-			_, ok := input.Values.GetOk("controlPlaneManager.enabledFeatureGates")
-			fmt.Println("status=", ok)
 			if enabledFeatureGates, ok := input.ConfigValues.GetOk("controlPlaneManager.enabledFeatureGates"); ok {
 				defaultFeatureGates := FeatureGatesMap[hooks.DefaultKubernetesVersion]
-				fmt.Printf("defaultFeature: %v",defaultFeatureGates)
 				for _, feature := range enabledFeatureGates.Array() {
-					fmt.Println("in range ",feature)
 					if err := defaultFeatureGates.ValidateFeature(feature.Str); err != nil {
 						// If moduleConfig contain featureGate which was deprecated or fordiden
 						input.MetricsCollector.Set(violateMetricName, 1, map[string]string{"feature_gate": feature.Str}, metrics.WithGroup(featureGatesMetricGroupName))
