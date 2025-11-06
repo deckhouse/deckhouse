@@ -218,7 +218,7 @@ func (l *InMemoryLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
 
 func (l *InMemoryLogger) Write(s []byte) (int, error) {
 	l.writeEntity(string(s))
-	return len(s), nil
+	return l.parent.Write(s)
 }
 
 func (l *InMemoryLogger) LogProcessStart(name string) {
