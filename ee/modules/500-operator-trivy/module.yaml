@@ -3,5 +3,3 @@ stage: "General Availability"
 subsystems:
   - security
 namespace: d8-operator-trivy
-requirements:
-  deckhouse: ">= 1.68"

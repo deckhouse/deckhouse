@@ -10,5 +10,3 @@ descriptions:
   en: |
     This module installs the reliable and highly available cert-manager
     https://github.com/jetstack/cert-manager
-requirements:
-  deckhouse: ">= 1.68"
