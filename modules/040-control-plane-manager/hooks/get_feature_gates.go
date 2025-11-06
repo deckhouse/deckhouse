@@ -82,11 +82,9 @@ func compareVersions(v1, v2 string) int {
 }
 
 func isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName string) (bool, string) {
-	for version := range FeatureGatesMap {
+	for version, features := range FeatureGatesMap {
 		if compareVersions(version, currentVersion) > 0 {
-			// passing empty string as component to check only IsDeprecated
-			info := GetFeatureGateInfo(version, "", featureName)
-			if info.IsDeprecated {
+			if features.IsDeprecated(featureName) {
 				return true, version
 			}
 		}
@@ -122,14 +120,20 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	deprecatedFeatureGates := make(map[string]string)
 	currentlyDeprecatedFeatureGates := make(map[string]bool)
 
+	currentFeatures, ok := FeatureGatesMap[normalizedVersion]
+	if !ok {
+		input.Logger.Warnf("Feature gates configuration not found for version %s", normalizedVersion)
+		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
+		return nil
+	}
+
 	for _, fg := range userFeatureGates {
 		featureName := fg.String()
 		if featureName == "" {
 			continue
 		}
 
-		currentInfo := GetFeatureGateInfo(normalizedVersion, "", featureName)
-		if currentInfo.IsDeprecated {
+		if currentFeatures.IsDeprecated(featureName) {
 			currentlyDeprecatedFeatureGates[featureName] = true
 		}
 
@@ -138,13 +142,13 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			deprecatedFeatureGates[featureName] = deprecatedVersion
 		}
 
+		if currentFeatures.IsForbidden(featureName) {
+			continue
+		}
+
 		components := []string{"apiserver", "kubeControllerManager", "kubeScheduler", "kubelet"}
 		for _, component := range components {
-			info := GetFeatureGateInfo(normalizedVersion, component, featureName)
-
-			if info.IsForbidden {
-				continue
-			}
+			info := currentFeatures.GetFeatureGateInfo(component, featureName)
 
 			if info.Exists {
 				switch component {
