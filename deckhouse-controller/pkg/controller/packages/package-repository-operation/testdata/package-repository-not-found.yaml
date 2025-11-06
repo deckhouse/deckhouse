@@ -4,16 +4,16 @@ kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
   labels:
-    packages.deckhouse.io/repository: test-repo
-  name: test-repo-scan-1571326380
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
     kind: PackageRepository
-    name: test-repo
+    name: deckhouse
     uid: ""
 spec:
-  packageRepository: test-repo
+  packageRepository: deckhouse
   type: Update
   update:
     fullScan: true
@@ -26,4 +26,4 @@ metadata:
   name: existing-repo
 spec:
   registry:
-    repo: registry.example.com/test-repo
+    repo: registry.example.com/test

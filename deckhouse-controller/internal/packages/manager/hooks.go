@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -103,7 +104,7 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, m.scheduleManager)
 
 		hook.WithHookController(hookCtrl)
-		hook.WithTmpDir(m.tmpDir)
+		hook.WithTmpDir(os.TempDir())
 	}
 
 	m.logger.Debug("enable schedule hooks", slog.String("name", name))

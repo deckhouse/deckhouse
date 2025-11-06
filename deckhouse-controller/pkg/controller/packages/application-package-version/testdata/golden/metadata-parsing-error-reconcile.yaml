@@ -5,14 +5,14 @@ metadata:
   creationTimestamp: null
   labels:
     draft: "true"
-    package: test-package
-    repository: test-repo
-  name: test-apv
+    package: test
+    repository: deckhouse
+  name: deckhouse-test-v1.0.0
   resourceVersion: "2"
 spec:
-  packageName: test-package
-  repository: test-repo
-  version: 1.0.0
+  packageName: test
+  repository: deckhouse
+  version: v1.0.0
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
@@ -27,7 +27,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   creationTimestamp: null
-  name: test-repo
+  name: deckhouse
   resourceVersion: "1"
 spec:
   registry:

@@ -19,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -33,14 +34,9 @@ func NewClientFromFlags() *Client {
 		ExtraArgs:      app.SSHExtraArgs,
 	})
 
-	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
-	for _, key := range app.SSHPrivateKeys {
-		keys = append(keys, session.AgentPrivateKey{Key: key})
-	}
-
 	return &Client{
 		Settings:    settings,
-		privateKeys: keys,
+		privateKeys: genssh.CollectDHCTLPrivateKeysFromFlags(),
 	}
 }
 

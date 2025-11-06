@@ -199,7 +199,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("successful reconcile with golden file", func() {
 		suite.setupController("successful-reconcile.yaml")
-		repo := suite.getPackageRepository("test-repo")
+		repo := suite.getPackageRepository("deckhouse")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: repo.Name},
 		})
@@ -208,7 +208,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("active operation exists", func() {
 		suite.setupController("active-operation.yaml")
-		repo := suite.getPackageRepository("test-repo")
+		repo := suite.getPackageRepository("deckhouse")
 		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: repo.Name},
 		})
@@ -219,7 +219,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("delete repository", func() {
 		suite.setupController("delete-repository.yaml")
-		repo := suite.getPackageRepository("test-repo")
+		repo := suite.getPackageRepository("deckhouse")
 
 		// Test the delete method directly
 		err := suite.ctr.delete(context.TODO(), repo)
