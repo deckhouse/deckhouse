@@ -108,14 +108,19 @@ Deckhouse Virtualization Platform (DVP) поддерживает автомат�
 1. Сделайте [резервную копию etcd](/products/virtualization-platform/documentation/admin/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
-1. Убедитесь, что очередь Deckhouse пуста.
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика DVP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:

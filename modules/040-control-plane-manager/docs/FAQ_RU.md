@@ -68,14 +68,19 @@ spec:
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
@@ -130,14 +135,19 @@ spec:
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите `1` в параметре `masterNodeGroup.replicas`:
@@ -211,7 +221,12 @@ spec:
 1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. Снимите следующие лейблы:
    * `node-role.kubernetes.io/control-plane`
    * `node-role.kubernetes.io/master`
@@ -255,14 +270,19 @@ spec:
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
@@ -871,7 +891,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 p queue main
+   d8 system queue main
    ```
 
 1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.

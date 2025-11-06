@@ -33,7 +33,7 @@ import (
 )
 
 func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, false)
@@ -80,7 +80,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 }
 
 func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, true)

@@ -1,0 +1,43 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    package: test
+    repository: deckhouse
+  name: deckhouse-test-v1.0.0
+  resourceVersion: "3"
+spec:
+  packageName: test
+  repository: deckhouse
+  version: v1.0.0
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: IsEnriched
+  metadata:
+    category: Test
+    description:
+      en: Test package
+      ru: Ru Test package
+    stage: Preview
+  packageName: test-package
+  version: 1.0.0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status:
+  syncTime: null

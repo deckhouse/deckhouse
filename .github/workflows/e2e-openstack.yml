@@ -79,7 +79,6 @@ env:
 permissions:
   contents: read
   id-token: write
-  issues: read
   pull-requests: read
 
 jobs:
@@ -249,6 +248,10 @@ jobs:
   check_e2e_labels:
     name: Check e2e labels
     runs-on: "regular"
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     outputs:
 
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
@@ -280,6 +283,7 @@ jobs:
         id: check
         uses: actions/github-script@v6.4.1
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'openstack';
             const kubernetesDefaultVersion = '1.30';

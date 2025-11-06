@@ -114,8 +114,9 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 	})
 }
 
-func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
+func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCommanderMode(commanderMode)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
@@ -418,7 +419,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -491,7 +492,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -530,7 +530,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
 		BreakIf(func(err error) bool {
 			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 		}).
@@ -545,7 +545,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 			log.DebugLn("Start execute bashible bundle routine")
 
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir, commanderMode)
 		})
 }
 

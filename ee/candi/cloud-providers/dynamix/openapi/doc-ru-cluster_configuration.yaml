@@ -12,7 +12,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      d8 p edit provider-cluster-configuration
+      d8 system edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.

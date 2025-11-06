@@ -185,40 +185,6 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
-{!{/* Autodeploy documentation to the production on push to release branch */}!}
-  deploy_release_doc_prod:
-    name: (Prod) Deploy release documentation
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-
-{!{/* Autodeploy documentation to stage envs on push to release branch */}!}
-  deploy_release_doc_stage:
-    name: (Stage) Deploy release documentation
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-
 {!{/* Autodeploy site to the production env on push to the main branch. */}!}
   deploy_latest_web_site_prod:
     name: (Prod) Deploy latest site
@@ -265,12 +231,17 @@ jobs:
         with:
           python-version: '3.12.3'
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
       - name: List changed modules from latest released version
         id: list_changed_modules
         env:
-          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
         run: |
           TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
           if [[ -n "${TAG_FROM}" ]]; then

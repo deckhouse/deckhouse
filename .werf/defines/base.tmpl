@@ -76,6 +76,7 @@ import:
   before: install
 shell:
   install:
+  - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
 ---
 image: common-base

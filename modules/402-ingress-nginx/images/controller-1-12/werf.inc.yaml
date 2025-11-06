@@ -18,7 +18,7 @@
 {{ $curlVersion := "curl-8_12_1" }}
 {{ $zlibVersion := "v1.3.1" }}
 {{ $cAresVersion := "v1.34.5" }}
-{{ $opensslVersion := "3.5.1" }}
+{{ $opensslVersion := "3.6.0" }}
 {{ $brotliVersion := "v1.1.0" }}
 {{ $libidn2Version := "v2.3.8" }}
 {{ $zstdVersion := "v1.5.7" }}
@@ -107,8 +107,8 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
   - cd /src/nginx-deps/opentelemetry-cpp-contrib
   # Remove directory for fix CVE
-  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
   - git reset --hard {{ $opentelemetryCppContribCommit }}
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
   #
   - cd /src/nginx-deps
   - git clone -b {{ $coreRulesetBranch }} $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset

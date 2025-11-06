@@ -1,6 +1,6 @@
 {{- /* Usage: {{ include "helm_lib_envs_for_proxy" . }} */ -}}
 {{- /* Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container */ -}}
-{{- /* depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) */ -}}
+{{- /* depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-proxy) */ -}}
 {{- define "helm_lib_envs_for_proxy" }}
   {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- if $context.Values.global.clusterConfiguration }}

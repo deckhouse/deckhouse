@@ -95,7 +95,6 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-
 		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig)
 	}
 

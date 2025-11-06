@@ -42,5 +42,6 @@
 {{- $_ := set $options "subnets" .nodeGroup.instanceClass.subnets -}}
 {{- $_ := set $options "securityGroups" .nodeGroup.instanceClass.securityGroups -}}
 {{- $_ := set $options "serverGroupID" .nodeGroup.instanceClass.serverGroupID -}}
+{{- $_ := set $options "vipAddress" .nodeGroup.instanceClass.vipAddress -}}
 
 {{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

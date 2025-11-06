@@ -67,7 +67,7 @@ function send_report() {
     --retry 10 \
     --retry-delay 20 \
     --retry-all-errors \
-    https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
+    ${DEFECTDOJO_URL}/api/v2/reimport-scan/ \
     -H "accept: application/json" \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
     -F "auto_create_context=True" \
@@ -105,7 +105,7 @@ function send_report() {
       --retry 10 \
       --retry-delay 20 \
       --retry-all-errors \
-      "https://${DEFECTDOJO_HOST}/api/v2/engagements/${dd_engagement_id}/" \
+      "${DEFECTDOJO_URL}/api/v2/engagements/${dd_engagement_id}/" \
       -H "accept: application/json" \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
       -H "Content-Type: application/json" \

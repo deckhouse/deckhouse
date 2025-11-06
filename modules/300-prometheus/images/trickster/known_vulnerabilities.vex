@@ -12,7 +12,7 @@
       "timestamp": "2025-10-23T15:35:52.818818+03:00",
       "products": [
         {
-          "@id": "pkg:go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace@v0.16.0"
         }
       ],
       "status": "not_affected",

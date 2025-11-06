@@ -62,7 +62,7 @@ steps:
   {!{- end }!}
   {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
@@ -201,12 +201,15 @@ steps:
     {!{- else if eq $buildType "pre-release" }!}
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
+      if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+        IMAGE_EDITION=${WERF_ENV,,}
+      fi
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       export WERF_DISABLE_META_TAGS=true
     {!{- else }!}
       # Determine image tag
       if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-      IMAGE_EDITION=${WERF_ENV,,}
+        IMAGE_EDITION=${WERF_ENV,,}
       fi
       # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
       # Use it as image tag. Add suffix to not overlap with PRs in main repo.
@@ -273,6 +276,23 @@ steps:
       EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
       ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+  {!{ if eq $buildType "release" }!}
+  - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+    with:
+      python-version: '3.12.3'
+
+  - name: Copy attestations
+    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+    env:
+      DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    run: |
+      export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
+      export IMAGES_TAGS_PATH=${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+      python .github/scripts/python/copy_attestations.py
+  {!{- end }!}
 
   - name: Save build report
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
