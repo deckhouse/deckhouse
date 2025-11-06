@@ -105,3 +105,69 @@
           audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
         EOF
         ```
+
+  - alert: D8DeprecatedFeatureGateInUse
+    for: 5m
+    expr: |
+      max by (feature_gate, deprecated_version, current_version) (
+        d8_control_plane_manager_deprecated_feature_gate{feature_gate!="", status="deprecated"} == 1
+      )
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "9"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Feature gate `{{ $labels.feature_gate }}` is deprecated in current Kubernetes version `{{ $labels.current_version }}`.
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is already deprecated in the current Kubernetes version `{{ $labels.current_version }}`.
+        
+        **Recommended actions:**
+        
+        1. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig as soon as possible:
+        
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+        
+        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
+        
+        2. Review your application and ensure it works correctly without this feature gate.
+        
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+
+  - alert: D8UsingFeatureGateWillBeDeprecated
+    for: 5m
+    expr: |
+      max by (feature_gate, deprecated_version, current_version) (
+        d8_control_plane_manager_deprecated_feature_gate{feature_gate!="", status="will_be_deprecated"} == 1
+      )
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "9"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Feature gate `{{ $labels.feature_gate }}` will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
+        
+        Current Kubernetes version: `{{ $labels.current_version }}`
+        
+        **Recommended actions:**
+        
+        1. Review the usage of this feature gate in your cluster.
+        2. Plan migration away from this feature gate before upgrading to version `{{ $labels.deprecated_version }}`.
+        3. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig:
+        
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+        
+        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
+        
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).

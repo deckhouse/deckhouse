@@ -25,9 +25,47 @@ import (
 
 func init() {
 	FeatureGatesMap = map[string]ComponentFeatures{
+		"1.30": {
+			Kubelet: []string{
+				"CPUManager",
+				"MemoryManager",
+			},
+			APIServer: []string{
+				"APIServerIdentity",
+				"StorageVersionAPI",
+			},
+			KubeControllerManager: []string{
+				"CronJobsScheduledAnnotation",
+			},
+			KubeScheduler: []string{
+				"SchedulerQueueingHints",
+			},
+		},
 		"1.31": {
 			Deprecated: []string{
 				"DynamicResourceAllocation",
+			},
+			Forbidden: []string{
+				"SomeProblematicFeature",
+			},
+			Kubelet: []string{
+				"CPUManager",
+				"MemoryManager",
+			},
+			APIServer: []string{
+				"APIServerIdentity",
+				"StorageVersionAPI",
+			},
+			KubeControllerManager: []string{
+				"CronJobsScheduledAnnotation",
+			},
+			KubeScheduler: []string{
+				"SchedulerQueueingHints",
+			},
+		},
+		"1.32": {
+			Deprecated: []string{
+				"TestDeprecatedGate",
 			},
 			Forbidden: []string{
 				"SomeProblematicFeature",
@@ -196,11 +234,126 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 		It("Non-existent feature gates must be ignored", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.enabledFeatureGates").String()).To(MatchJSON(`{
-				"apiserver": ["APIServerIdentity"],
-				"kubelet": [],
-				"kubeControllerManager": [],
-				"kubeScheduler": []
-			}`))
+			"apiserver": ["APIServerIdentity"],
+			"kubelet": [],
+			"kubeControllerManager": [],
+			"kubeScheduler": []
+		}`))
+		})
+	})
+
+	Context("Feature gates deprecated in future versions", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.30.0")
+			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
+				"DynamicResourceAllocation",
+				"TestDeprecatedGate",
+				"APIServerIdentity",
+			})
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Must set metrics for deprecated feature gates", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+
+			Expect(m).To(HaveLen(2))
+
+			//for metrics check
+			foundDynamicResourceAllocation := false
+			foundTestDeprecatedGate := false
+
+			for _, metric := range m {
+				switch metric.Labels["feature_gate"] {
+				case "DynamicResourceAllocation":
+					Expect(metric.Name).To(Equal("d8_control_plane_manager_deprecated_feature_gate"))
+					Expect(*metric.Value).To(BeNumerically("==", 1.0))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.30"))
+					Expect(metric.Labels).To(HaveKeyWithValue("status", "will_be_deprecated"))
+					foundDynamicResourceAllocation = true
+				case "TestDeprecatedGate":
+					Expect(metric.Name).To(Equal("d8_control_plane_manager_deprecated_feature_gate"))
+					Expect(*metric.Value).To(BeNumerically("==", 1.0))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.32"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.30"))
+					Expect(metric.Labels).To(HaveKeyWithValue("status", "will_be_deprecated"))
+					foundTestDeprecatedGate = true
+				}
+			}
+
+			Expect(foundDynamicResourceAllocation).To(BeTrue(), "DynamicResourceAllocation metric not found")
+			Expect(foundTestDeprecatedGate).To(BeTrue(), "TestDeprecatedGate metric not found")
+		})
+	})
+
+	Context("Feature gates already deprecated in current version", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
+			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
+				"DynamicResourceAllocation",
+				"APIServerIdentity",
+			})
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Must set metrics for currently deprecated feature gates", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+
+			Expect(m).To(HaveLen(1))
+
+			for _, metric := range m {
+				if metric.Labels["feature_gate"] == "DynamicResourceAllocation" {
+					Expect(metric.Name).To(Equal("d8_control_plane_manager_deprecated_feature_gate"))
+					Expect(*metric.Value).To(BeNumerically("==", 1.0))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("status", "deprecated"))
+				}
+			}
+		})
+	})
+
+	Context("No deprecated feature gates in use", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.0")
+			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
+				"APIServerIdentity",
+				"CPUManager",
+			})
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Must set metric to 0 when no deprecated feature gates", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+
+			Expect(m).To(HaveLen(1))
+			Expect(m[0].Name).To(Equal("d8_control_plane_manager_deprecated_feature_gate"))
+			Expect(*m[0].Value).To(BeNumerically("==", 0.0))
+			Expect(m[0].Labels).To(HaveKeyWithValue("feature_gate", ""))
+			Expect(m[0].Labels).To(HaveKeyWithValue("deprecated_version", ""))
+			Expect(m[0].Labels).To(HaveKeyWithValue("current_version", "1.32"))
+			Expect(m[0].Labels).To(HaveKeyWithValue("status", ""))
 		})
 	})
 

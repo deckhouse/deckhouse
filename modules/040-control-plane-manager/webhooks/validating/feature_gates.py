@@ -120,9 +120,9 @@ def validate(ctx: DotMap) -> List[str]:
         is_forbidden = False
         is_deprecated = False
 
-        # deprecated and forbidden are global for the version, so we check them once
+        # passing empty string as component to check only is_deprecated and is_forbidden
         try:
-            info_check = get_feature_gate_info(normalized_version, components[0], feature_gate)
+            info_check = get_feature_gate_info(normalized_version, "", feature_gate)
             is_forbidden = info_check.is_forbidden
             is_deprecated = info_check.is_deprecated
         except Exception:

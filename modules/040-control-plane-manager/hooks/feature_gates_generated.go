@@ -137,7 +137,12 @@ func GetFeatureGateInfo(version, component, featureName string) FeatureGateInfo 
 			break
 		}
 	}
-	
+
+	// component is empty for deprecated and forbidden checks
+	if component == "" {
+		return info
+	}
+
 	var featureList []string
 	switch component {
 	case "kubelet":
