@@ -154,7 +154,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	done := c.tcpCheckTaskManager.spawn(taskID(address), func() bool {
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
 		instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
-		time.Sleep(60 * time.Second)
+		time.Sleep(15 * time.Second)
 		conn, err := net.DialTimeout("tcp", address, delay)
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
