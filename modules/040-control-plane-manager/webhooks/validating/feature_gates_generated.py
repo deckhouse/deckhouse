@@ -131,6 +131,10 @@ def get_feature_gate_info(version: str, component: str, feature_name: str) -> Fe
     if "forbidden" in features and feature_name in features["forbidden"]:
         info.is_forbidden = True
     
+    # component is empty for deprecated and forbidden checks
+    if component == "":
+        return info
+    
     if component not in ["kubelet", "apiserver", "kubeControllerManager", "kubeScheduler"]:
         return info
     
