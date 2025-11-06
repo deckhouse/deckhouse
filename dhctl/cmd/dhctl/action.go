@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -29,20 +30,54 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
+
+type registerOnShutdownFunc func(title string, action func())
+
+type actionIniterParams struct {
+	tmpDirName string
+	isDebug    bool
+
+	loggerType          string
+	debugLogFilePath    string
+	doNotWriteDebugFile bool
+}
 
 type actionIniter struct {
 	logFileMutex sync.Mutex
 	logFile      string
+
+	params             *actionIniterParams
+	registerOnShutdown registerOnShutdownFunc
 }
 
 func newActionIniter() *actionIniter {
 	return &actionIniter{}
 }
 
+func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
+	paramsCopy := params
+	i.params = &paramsCopy
+	return i
+}
+
+func (i *actionIniter) setRegisterOnShutdown(f registerOnShutdownFunc) *actionIniter {
+	i.registerOnShutdown = f
+	return i
+}
+
 func (i *actionIniter) init(c *kingpin.ParseContext) error {
-	tmpDir := app.TmpDirName
+	if i.params == nil {
+		return fmt.Errorf("Internal error: action initer not initialized")
+	}
+
+	if i.registerOnShutdown == nil {
+		return fmt.Errorf("Internal error: action initer not initialized. Did not pass register on shutdown")
+	}
+
+	tmpDir := i.params.tmpDirName
+
 	dirsToInitialize := directoriesToInitialize{
 		"temp dir": tmpDir,
 	}
@@ -51,26 +86,65 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		return err
 	}
 
-	if err := i.initLogger(c); err != nil {
+	var err error
+	// first create directory because we use Abs and if directory does not exist
+	// it will return error
+	tmpDir, err = i.prepareTmpDirPath(tmpDir)
+	if err != nil {
 		return err
 	}
 
-	i.registerCleanupProviders()
+	cleanupLock, err := i.checkAndAcquireTmpLock(c, tmpDir)
+	if err != nil {
+		return err
+	}
+
+	if err := i.initLogger(c, tmpDir); err != nil {
+		return err
+	}
+
+	i.registerOnShutdown("Cleanup providers from default cache", func() {
+		infrastructureprovider.CleanupProvidersFromDefaultCache(defaultLoggerProvider)
+	})
 
 	i.registerCleanupTmp(c, tmpDir)
+
+	i.registerOnShutdown("Release dhctl temporary directory lock", cleanupLock)
 
 	return nil
 }
 
-func (i *actionIniter) registerCleanupProviders() {
-	tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
-		infrastructureprovider.CleanupProvidersFromDefaultCache(defaultLoggerProvider)
-	})
+func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
+	absPath, err := filepath.Abs(tmpDir)
+	if err != nil {
+		return "", err
+	}
+
+	if fs.IsRoot(absPath) {
+		return "", fmt.Errorf("Tmp dir '%s' cannot be a root directory", tmpDir)
+	}
+
+	return absPath, nil
+}
+
+func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (tmpLockCleanupFunc, error) {
+	cmdName := getCommandName(c)
+	if cmdName == "" || cmdName == grpcServerCmd {
+		// do not lock for grpc server because for singleshot dhctl runner we create
+		// tmp dir in sub directory of server
+		return emptyTmpLockCleanupFunc, nil
+	}
+
+	if err := wasTmpDirLockAcquired(tmpDir); err != nil {
+		return nil, err
+	}
+
+	return acquireTmpDirLock(tmpDir, cmdName)
 }
 
 func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string) {
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:        app.IsDebug,
+		IsDebug:        i.params.isDebug,
 		DefaultTmpDir:  app.GetDefaultTmpDir(),
 		TmpDir:         tmpDir,
 		LoggerProvider: defaultLoggerProvider,
@@ -79,15 +153,14 @@ func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string
 	// _server is special command for running action eg bootstrap as standalone process
 	// we need to remove all for this command because state will write in db
 	// and do not need on fs
-	if getCommandName(c) == "_server" {
-		log.DebugLn("Selected command: _server. Tombstone will be removed when temp directory remove")
+	if getCommandName(c) == oneShotDhctlServerCmd {
 		clearTmpParams.RemoveTombStone = true
 	}
 
 	cleaner := cache.NewTmpCleaner(clearTmpParams)
 	cache.SetGlobalTmpCleaner(cleaner)
 
-	tomb.RegisterOnShutdown("Clear dhctl temporary directory", func() {
+	i.registerOnShutdown("Clear dhctl temporary directory", func() {
 		cache.GetGlobalTmpCleaner().Cleanup()
 	})
 }
@@ -110,11 +183,11 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 }
 
 // empty is command not passed
-var skipTeeLoggerCommands = []string{"", "server", "_server"}
+var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
-func (i *actionIniter) initLogger(c *kingpin.ParseContext) error {
-	log.InitLogger(app.LoggerType)
-	if app.DoNotWriteDebugLogFile {
+func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) error {
+	log.InitLogger(i.params.loggerType)
+	if i.params.doNotWriteDebugFile {
 		return nil
 	}
 
@@ -124,12 +197,12 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext) error {
 		return nil
 	}
 
-	logPath := app.DebugLogFilePath
+	logPath := i.params.debugLogFilePath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
-		logPath = path.Join(app.TmpDirName, logFile)
+		logPath = path.Join(tmpDir, logFile)
 	}
 
 	outFile, err := os.Create(logPath)
@@ -144,7 +217,7 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext) error {
 
 	log.InfoF("Debug log file: %s\n", logPath)
 
-	tomb.RegisterOnShutdown("Finalize logger", func() {
+	i.registerOnShutdown("Finalize logger", func() {
 		if err := log.FlushAndClose(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
 			return

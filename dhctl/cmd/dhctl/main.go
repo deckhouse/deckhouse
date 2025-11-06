@@ -34,15 +34,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+const (
+	oneShotDhctlServerCmd = "_server"
+	grpcServerCmd         = "server"
+)
+
 var (
 	commandList = []Command{
 		{
-			Name:       "server",
+			Name:       grpcServerCmd,
 			Help:       "Start dhctl as GRPC server.",
 			DefineFunc: commands.DefineServerCommand,
 		},
 		{
-			Name:       "_server",
+			Name:       oneShotDhctlServerCmd,
 			Help:       "Start dhctl as GRPC server. Single threaded version.",
 			DefineFunc: commands.DefineSingleThreadedServerCommand,
 		},
@@ -272,6 +277,10 @@ var (
 	}
 )
 
+func registerOnShutdown(title string, action func()) {
+	tomb.RegisterOnShutdown(title, action)
+}
+
 func main() {
 	initGlobalVars()
 
@@ -281,9 +290,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	tomb.RegisterOnShutdown("Trace", tracesShutdownFn)
-	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
-	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
+	registerOnShutdown("Trace", tracesShutdownFn)
+	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
 	go tomb.WaitForProcessInterruption()
 
@@ -307,6 +316,17 @@ func runApplication(kpApp *kingpin.Application) {
 	initer := newActionIniter()
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
+		initer.setParams(actionIniterParams{
+			tmpDirName: app.TmpDirName,
+			isDebug:    app.IsDebug,
+
+			loggerType:          app.LoggerType,
+			doNotWriteDebugFile: app.DoNotWriteDebugLogFile,
+			debugLogFilePath:    app.DebugLogFilePath,
+		})
+
+		initer.setRegisterOnShutdown(registerOnShutdown)
+
 		return initer.init(c)
 	})
 
