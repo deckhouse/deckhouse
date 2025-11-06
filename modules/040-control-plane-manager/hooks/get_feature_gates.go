@@ -103,7 +103,6 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if k8sVersion == "" {
-		input.Logger.Warn("Kubernetes version not found, skipping feature gates validation")
 		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
 		return nil
 	}
@@ -122,7 +121,6 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	currentFeatures, ok := FeatureGatesMap[normalizedVersion]
 	if !ok {
-		input.Logger.Warnf("Feature gates configuration not found for version %s", normalizedVersion)
 		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
 		return nil
 	}
