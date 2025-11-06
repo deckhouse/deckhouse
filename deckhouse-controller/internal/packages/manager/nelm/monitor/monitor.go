@@ -44,13 +44,16 @@ const (
 
 	// scanInterval defines how often the monitor checks for absent resources
 	scanInterval = 4 * time.Minute
+
+	// default number of workers
+	workerNumber = 5
 )
 
 // ErrAbsentManifest is returned when one or more expected resources are missing from the cluster
 var ErrAbsentManifest = errors.New("absent manifest")
 
-// absentCallback is invoked when absent resources are detected
-type absentCallback func(name string)
+// AbsentCallback is invoked when absent resources are detected
+type AbsentCallback func(name string)
 
 // resourcesMonitor periodically checks if all Helm release resources exist in the cluster
 type resourcesMonitor struct {
@@ -136,7 +139,7 @@ func (m *resourcesMonitor) Resume() {
 }
 
 // Start creates a timer and checks if all deployed manifests are present in the cluster.
-func (m *resourcesMonitor) Start(ctx context.Context, callback absentCallback) {
+func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 	m.once.Do(func() {
 		m.logger.Info("start loop")
 
@@ -221,6 +224,8 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 
 	// Check all resources in parallel using errgroup
 	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(workerNumber)
+
 	for res := range m.resources {
 		g.Go(func() error {
 			return m.checkResource(ctx, res)

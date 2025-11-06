@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagedisable
+package packagedelete
 
 import (
 	"context"
@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	taskTracer = "packageDisable"
+	taskTracer = "packageDelete"
 )
 
 type DependencyContainer interface {
 	PackageManager() *packagemanager.Manager
+	QueueService() *queue.Service
 }
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
@@ -49,16 +50,34 @@ type task struct {
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Disable", t.packageName)
+	return fmt.Sprintf("Package:%s:Delete", t.packageName)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("disable package", slog.String("name", t.packageName))
+	t.logger.Debug("delete package", slog.String("name", t.packageName))
 
-	// stop kube monitors and schedules
-	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName, true); err != nil {
+	// get them here because manager will remove the app
+	queues := t.dc.PackageManager().GetPackageQueues(t.packageName)
+
+	// delete nelm release, stop kube monitors and schedules
+	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName, false); err != nil {
 		return fmt.Errorf("disable package '%s': %w", t.packageName, err)
 	}
+
+	t.logger.Debug("remove package queues", slog.String("name", t.packageName))
+
+	// remove package hooks queues
+	for _, q := range queues {
+		if q == "main" || q == t.packageName {
+			continue
+		}
+
+		t.logger.Debug("remove package queue", slog.String("name", t.packageName), slog.String("queue", q))
+		t.dc.QueueService().Remove(q)
+	}
+
+	// remove package queue
+	t.dc.QueueService().Remove(t.packageName)
 
 	return nil
 }

@@ -38,25 +38,21 @@ type Manager struct {
 	mtx      sync.Mutex                   // protects monitors map
 	monitors map[string]*resourcesMonitor // keyed by Helm release name
 
-	eventCh chan string
+	callback AbsentCallback
 
 	logger *log.Logger
 }
 
 // New creates a new monitor manager instance.
-func New(ctx context.Context, cache runtimecache.Cache, nelm *nelm.Client, logger *log.Logger) *Manager {
+func New(ctx context.Context, cache runtimecache.Cache, nelm *nelm.Client, cb AbsentCallback, logger *log.Logger) *Manager {
 	return &Manager{
 		ctx:      ctx,
 		cache:    cache,
 		nelm:     nelm,
 		monitors: make(map[string]*resourcesMonitor),
-		eventCh:  make(chan string),
+		callback: cb,
 		logger:   logger,
 	}
-}
-
-func (m *Manager) EventCh() <-chan string {
-	return m.eventCh
 }
 
 // CheckResources performs an immediate check of resources for a specific release.
@@ -73,24 +69,18 @@ func (m *Manager) CheckResources(ctx context.Context, name string) error {
 }
 
 // AddMonitor creates and starts a new monitor for a Helm release.
-// If a monitor already exists for this release, the call is a no-op.
+// If a monitor already exists for this release, stop it and start a new one.
 // The monitor will run in the background, checking resources every 4 minutes.
 func (m *Manager) AddMonitor(name, rendered string) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
 	if _, ok := m.monitors[name]; ok {
-		return
+		m.monitors[name].Stop()
 	}
 
 	m.monitors[name] = newMonitor(m.cache, m.nelm, name, rendered, m.logger)
-
-	m.monitors[name].Start(m.ctx, func(name string) {
-		select {
-		case m.eventCh <- name:
-		default:
-		}
-	})
+	m.monitors[name].Start(m.ctx, m.callback)
 }
 
 // RemoveMonitor stops and removes a monitor for a Helm release.
@@ -155,6 +145,4 @@ func (m *Manager) Stop() {
 		monitor.Stop()
 		delete(m.monitors, name)
 	}
-
-	close(m.eventCh)
 }
