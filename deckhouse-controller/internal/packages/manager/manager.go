@@ -96,6 +96,10 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
 
+	if len(inst.Namespace) == 0 {
+		inst.Namespace = "default"
+	}
+
 	app, err := m.loader.Load(ctx, registry, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
