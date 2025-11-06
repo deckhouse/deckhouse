@@ -241,27 +241,27 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	if err := action.ReleaseInstall(ctx, releaseName, c.namespace, action.ReleaseInstallOptions{
-		Chart:                  opts.Path,
-		DefaultChartName:       releaseName,
-		DefaultChartVersion:    "0.2.0",
-		DefaultChartAPIVersion: "v2",
-		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       c.opts.Annotations,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
-		NoInstallStandaloneCRDs: true,
-		ReleaseHistoryLimit:     int(c.opts.HistoryMax),
-		ReleaseLabels:           opts.ReleaseLabels,
-		ReleaseStorageDriver:    c.driver,
-		Timeout:                 c.opts.Timeout,
 		ValuesOptions: common.ValuesOptions{
 			ValuesFiles: opts.ValuesPaths,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
 		},
-		ForceAdoption: true,
+		Chart:                   opts.Path,
+		DefaultChartName:        releaseName,
+		DefaultChartVersion:     "0.2.0",
+		DefaultChartAPIVersion:  "v2",
+		ExtraLabels:             c.opts.Labels,
+		ExtraAnnotations:        c.opts.Annotations,
+		NoInstallStandaloneCRDs: true,
+		ReleaseHistoryLimit:     int(c.opts.HistoryMax),
+		ReleaseLabels:           opts.ReleaseLabels,
+		ReleaseStorageDriver:    c.driver,
+		Timeout:                 c.opts.Timeout,
+		ForceAdoption:           true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -294,6 +294,12 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		ValuesOptions: common.ValuesOptions{
+			ValuesFiles: opts.ValuesPaths,
+		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
@@ -301,17 +307,11 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            c.opts.Labels,
 		ExtraAnnotations:       extraAnnotations,
-		KubeConnectionOptions: common.KubeConnectionOptions{
-			KubeContextCurrent: c.kubeContext,
-		},
-		ReleaseName:          releaseName,
-		ReleaseNamespace:     c.namespace,
-		ReleaseStorageDriver: c.driver,
-		Remote:               true,
-		ValuesOptions: common.ValuesOptions{
-			ValuesFiles: opts.ValuesPaths,
-		},
-		ForceAdoption: true,
+		ReleaseName:            releaseName,
+		ReleaseNamespace:       c.namespace,
+		ReleaseStorageDriver:   c.driver,
+		Remote:                 true,
+		ForceAdoption:          true,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -356,12 +356,12 @@ func (c *Client) Delete(ctx context.Context, releaseName string) error {
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
-		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
-		ReleaseStorageDriver: c.driver,
-		Timeout:              c.opts.Timeout,
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
 		},
+		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
+		ReleaseStorageDriver: c.driver,
+		Timeout:              c.opts.Timeout,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("uninstall nelm release '%s': %w", releaseName, err)
