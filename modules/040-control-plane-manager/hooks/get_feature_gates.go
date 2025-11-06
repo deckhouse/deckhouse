@@ -107,14 +107,14 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	normalizedVersion := KubernetesVersion(k8sVersionStr).Normalize()
+	currentVersion := KubernetesVersion(k8sVersionStr).Normalize()
 
 	userFeatureGates := input.Values.Get("controlPlaneManager.enabledFeatureGates").Array()
 
 	deprecatedFeatureGates := make(map[string]KubernetesVersion)
 	currentlyDeprecatedFeatureGates := make(map[string]bool)
 
-	currentFeatures, ok := FeatureGatesMap[string(normalizedVersion)]
+	currentFeatures, ok := FeatureGatesMap[string(currentVersion)]
 	if !ok {
 		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
 		return nil
@@ -130,7 +130,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			currentlyDeprecatedFeatureGates[featureName] = true
 		}
 
-		isDeprecated, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(normalizedVersion, featureName)
+		isDeprecated, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName)
 		if isDeprecated {
 			deprecatedFeatureGates[featureName] = deprecatedVersion
 		}
@@ -167,8 +167,8 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
-				"deprecated_version": string(normalizedVersion),
-				"current_version":    string(normalizedVersion),
+				"deprecated_version": string(currentVersion),
+				"current_version":    string(currentVersion),
 				"status":             "deprecated",
 			},
 		)
@@ -182,7 +182,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			map[string]string{
 				"feature_gate":       featureName,
 				"deprecated_version": string(deprecatedVersion),
-				"current_version":    string(normalizedVersion),
+				"current_version":    string(currentVersion),
 				"status":             "will_be_deprecated",
 			},
 		)
@@ -195,7 +195,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			map[string]string{
 				"feature_gate":       "",
 				"deprecated_version": "",
-				"current_version":    string(normalizedVersion),
+				"current_version":    string(currentVersion),
 				"status":             "",
 			},
 		)
