@@ -422,6 +422,28 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 	doTest(params)
 }
 
+func TestDefaultLoggerProvider(t *testing.T) {
+	logger := safeLoggerProvider(nil)
+	require.False(t, govalue.IsNil(logger))
+
+	logger = safeLoggerProvider(func() log.Logger {
+		return nil
+	})
+	require.False(t, govalue.IsNil(logger))
+}
+
+func TestGlobalCleanerProvider(t *testing.T) {
+	cleaner := GetGlobalTmpCleaner()
+	require.False(t, govalue.IsNil(cleaner))
+
+	dummyCleaner := NewDummyTmpCleaner(nil, "")
+	SetGlobalTmpCleaner(dummyCleaner)
+
+	cleaner = GetGlobalTmpCleaner()
+	require.False(t, govalue.IsNil(cleaner))
+	require.Equal(t, cleaner, dummyCleaner)
+}
+
 type fileDirToCreate struct {
 	path           string
 	outsideTmpRoot bool
@@ -718,26 +740,4 @@ func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, k
 	assertKeep(t, f, keept)
 
 	assertNoErrorsInLog(t, f)
-}
-
-func TestDefaultLoggerProvider(t *testing.T) {
-	logger := safeLoggerProvider(nil)
-	require.False(t, govalue.IsNil(logger))
-
-	logger = safeLoggerProvider(func() log.Logger {
-		return nil
-	})
-	require.False(t, govalue.IsNil(logger))
-}
-
-func TestGlobalCleanerProvider(t *testing.T) {
-	cleaner := GetGlobalTmpCleaner()
-	require.False(t, govalue.IsNil(cleaner))
-
-	dummyCleaner := NewDummyTmpCleaner(nil, "")
-	SetGlobalTmpCleaner(dummyCleaner)
-
-	cleaner = GetGlobalTmpCleaner()
-	require.False(t, govalue.IsNil(cleaner))
-	require.Equal(t, cleaner, dummyCleaner)
 }
