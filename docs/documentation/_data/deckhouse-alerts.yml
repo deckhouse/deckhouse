@@ -1114,6 +1114,31 @@ alerts:
         Possible API server connection error in the client-go informer.
       severity: "5"
       markupFormat: markdown
+    - name: D8DeprecatedFeatureGateInUse
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is already deprecated in the current Kubernetes version `{{ $labels.current_version }}`.
+
+        **Recommended actions:**
+
+        1. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig as soon as possible:
+
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+
+        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
+
+        2. Review your application and ensure it works correctly without this feature gate.
+
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      summary: |
+        Feature gate {{ $labels.feature_gate }} is deprecated in current Kubernetes version {{ $labels.current_version }}.
+      severity: "9"
+      markupFormat: markdown
     - name: D8DexAllTargetsDown
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
       moduleUrl: 150-user-authn
@@ -3392,6 +3417,33 @@ alerts:
         ```
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8UsingFeatureGateWillBeDeprecated
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
+
+        Current Kubernetes version: `{{ $labels.current_version }}`
+
+        **Recommended actions:**
+
+        1. Review the usage of this feature gate in your cluster.
+        2. Plan migration away from this feature gate before upgrading to version `{{ $labels.deprecated_version }}`.
+        3. Remove the feature gate from the `enabledFeatureGates` list in the control-plane-manager ModuleConfig:
+
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+
+        Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates`.
+
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      summary: |
+        Feature gate {{ $labels.feature_gate }} will be deprecated in Kubernetes version {{ $labels.deprecated_version }}.
       severity: "9"
       markupFormat: markdown
     - name: D8YandexNatInstanceConnectionsQuotaUtilization
