@@ -9,5 +9,3 @@ description: |
 descriptions:
   en: Internal registry packages proxy
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"

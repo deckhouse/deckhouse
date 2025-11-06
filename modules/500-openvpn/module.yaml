@@ -3,5 +3,3 @@ stage: "General Availability"
 subsystems:
   - networking
 namespace: d8-openvpn
-requirements:
-  deckhouse: ">= 1.68"
