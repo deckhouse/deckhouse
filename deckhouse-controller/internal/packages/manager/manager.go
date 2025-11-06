@@ -90,6 +90,10 @@ func (m *Manager) LoadApplication(ctx context.Context, name string, settings add
 
 	span.SetAttributes(attribute.String("name", name))
 
+	if len(inst.Namespace) == 0 {
+		inst.Namespace = "default"
+	}
+
 	app, err := m.loader.Load(ctx, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
