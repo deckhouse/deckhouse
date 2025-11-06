@@ -56,7 +56,6 @@ spec:
   version: 1.4.3
   weight: 900
   requirements:
-    deckhouse: "< v1.63.0"
     kubernetes: "> 1.28.0"
 status:
   approved: false

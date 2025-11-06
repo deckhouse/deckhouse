@@ -54,8 +54,6 @@ spec:
     features:
     - Bump parca version
   moduleName: parca-suitable
-  requirements:
-    deckhouse: < v1.63.0
   version: 1.4.3
   weight: 900
 status:
