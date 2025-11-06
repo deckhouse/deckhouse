@@ -3,7 +3,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   creationTimestamp: null
-  name: test-repo
+  name: deckhouse
   resourceVersion: "1"
 spec:
   registry:
@@ -19,17 +19,17 @@ kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
   labels:
-    packages.deckhouse.io/repository: test-repo
-  name: test-repo-scan-1571326380
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
     kind: PackageRepository
-    name: test-repo
+    name: deckhouse
     uid: ""
   resourceVersion: "1"
 spec:
-  packageRepository: test-repo
+  packageRepository: deckhouse
   type: Update
   update:
     fullScan: true
