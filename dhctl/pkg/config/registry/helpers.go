@@ -15,8 +15,37 @@
 package registry
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strings"
+
+	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 )
+
+type Data struct {
+	ImagesRepo string     `json:"imagesRepo" yaml:"imagesRepo"`
+	Scheme     SchemeType `json:"scheme" yaml:"scheme"`
+	CA         string     `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username   string     `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string     `json:"password,omitempty" yaml:"password,omitempty"`
+}
+
+func (d *Data) AuthBase64() string {
+	if d.Username == "" {
+		return ""
+	}
+	auth := fmt.Sprintf("%s:%s", d.Username, d.Password)
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+func (d *Data) DockerCfgBase64() (string, error) {
+	address, _ := addressAndPathFromImagesRepo(d.ImagesRepo)
+	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(cfg), nil
+}
 
 func addressAndPathFromImagesRepo(imgRepo string) (string, string) {
 	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)

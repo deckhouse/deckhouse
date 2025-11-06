@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -288,16 +289,19 @@ func CreateDeckhouseManifests(
 		},
 	}
 
+	registryBulder := cfg.Registry.
+		Builder().
+		WithPKI(registry.NewPKIK8SProvider())
 	// Registry secrets
-	deckhouseRegistrySecretData, err := cfg.RegistryConfigBuilder.DeckhouseRegistrySecretData()
+	deckhouseRegistrySecretData, err := registryBulder.DeckhouseRegistrySecretData()
 	if err != nil {
 		return nil, err
 	}
-	registryInitSecretData, err := cfg.RegistryConfigBuilder.RegistryInitSecretData()
+	registryInitSecretData, err := registryBulder.RegistryInitSecretData()
 	if err != nil {
 		return nil, err
 	}
-	registryBashibleConfigSecretData, err := cfg.RegistryConfigBuilder.RegistryBashibleConfigSecretData()
+	registryBashibleConfigSecretData, err := registryBulder.RegistryBashibleConfigSecretData()
 	if err != nil {
 		return nil, err
 	}
