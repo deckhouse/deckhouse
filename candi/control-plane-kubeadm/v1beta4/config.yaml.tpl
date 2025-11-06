@@ -2,7 +2,16 @@
 RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
-{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
+{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.30 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $featureGates = append $featureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- $featureGates := join "," $featureGates -}}
+{{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
+{{- if semverCompare ">=1.30 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
+{{- end }}
+{{- $runtimeConfig := join "," $runtimeConfig -}}
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
@@ -123,10 +132,8 @@ apiServer:
         https://127.0.0.1:2379{{ if .apiserver.etcdServers }},{{ .apiserver.etcdServers | join "," }}{{ end }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
-    {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     - name: runtime-config
-      value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
-    {{- end }}
+      value: {{ $runtimeConfig }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
@@ -154,7 +161,7 @@ apiServer:
     - name: request-timeout
       value: 60s
     - name: tls-cipher-suites
-      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256    
+      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
     {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
       value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
