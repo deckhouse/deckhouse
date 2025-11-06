@@ -37,7 +37,7 @@ jobs:
   # <template: skip_tests_repos>
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -48,6 +48,9 @@ jobs:
     needs:
       - skip_tests_repos
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     steps:
 
       # <template: checkout_step>
@@ -74,6 +77,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
 
@@ -226,9 +231,9 @@ jobs:
           DECKHOUSE_CSE_REGISTRY_USER: ${{secrets.DECKHOUSE_CSE_REGISTRY_USER}}
           DECKHOUSE_CSE_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD}}
 
-          DECKHOUSE_DEV_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER: ${{secrets.DECKHOUSE_DEV_REGISTRY_USER}}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD}}
+          DECKHOUSE_DEV_REGISTRY_HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+          DECKHOUSE_DEV_REGISTRY_USER: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER}}
+          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD}}
 
           DECKHOUSE_DEV_CSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
           DECKHOUSE_CSE_DEV_REGISTRY_USER: ${{secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER}}
@@ -239,8 +244,8 @@ jobs:
           GHCR_IO_REGISTRY_PASSWORD: ${{secrets.GHCR_IO_REGISTRY_PASSWORD}}
         run: |
           rm -rf ./trivy-db
-          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{secrets.DECKHOUSE_PRIVATE_REPO}}:deckhouse/trivy-db.git trivy-db-patch
-          git clone --depth 1 --branch ${TRIVY_VERSION} ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git trivy-db-patch
+          git clone --depth 1 --branch ${TRIVY_VERSION} ${{ steps.secrets.outputs.SOURCE_REPO_GIT }}/aquasecurity/trivy-db.git
           cd trivy-db
           git apply --verbose --whitespace=fix ../trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
           cp ../.github/scripts/trivy-db-update-vulnerability-references.sh ./update-vulnerability-references.sh
@@ -248,12 +253,12 @@ jobs:
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
           ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
-          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
+          ./update.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
           ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1
 
       # <template: send_fail_report>

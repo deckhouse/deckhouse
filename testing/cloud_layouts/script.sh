@@ -265,6 +265,16 @@ function prepare_environment() {
   fi
   DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  else
+    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  fi
+
+  decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
+  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
@@ -278,7 +288,7 @@ function prepare_environment() {
     if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
       DEV_BRANCH="${INITIAL_IMAGE_TAG}"
       SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
-      update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+      update_release_channel "$(echo -n "${STAGE_DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')/${REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
       echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
     else
       echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
@@ -368,6 +378,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
+        IMAGES_REPO="$IMAGES_REPO" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
@@ -457,7 +468,7 @@ function run-test() {
 
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
-
+  wait_prom_rules_mutating_ready || return $?
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting Deckhouse update..."
     trigger_deckhouse_update || return $?
@@ -466,7 +477,33 @@ function run-test() {
     wait_cluster_ready || return $?
   fi
 }
+function wait_prom_rules_mutating_ready() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get pods -l app=prom-rules-mutating
+[[ "$(kubectl get pods -l app=prom-rules-mutating -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+END_SCRIPT
+)
 
+  testRunAttempts=60
+  for ((i=1; i<=testRunAttempts; i++)); do
+    >&2 echo "Check prom-rules-mutating pod readiness..."
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  return 1
+}
 function pre_bootstrap_static_setup() {
   cd $cwd/registry-mirror
 

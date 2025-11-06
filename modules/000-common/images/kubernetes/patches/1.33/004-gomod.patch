@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 54636c02..8541ee44 100644
+index 54636c0288a..8541ee44966 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -62,7 +62,7 @@ require (
@@ -12,7 +12,7 @@ index 54636c02..8541ee44 100644
  	go.opentelemetry.io/otel v1.33.0
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0
 diff --git a/go.sum b/go.sum
-index 3d8f7559..d4d513ea 100644
+index 3d8f7559ff5..d4d513eaae9 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -4,123 +4,6 @@ cel.dev/expr v0.19.1 h1:NciYrtDRIR0lNCnH1LFJegdjspNx9fI59O7TWcua/W4=
@@ -352,7 +352,7 @@ index 3d8f7559..d4d513ea 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.6.0/go.mod h1:XuuZiQF7WdcvZzEYyNww9A0p3LazCKeJmCjeycN8e1I=
  sigs.k8s.io/kustomize/kyaml v0.19.0 h1:RFge5qsO1uHhwJsu3ipV7RNolC7Uozc0jUBC/61XSlA=
 diff --git a/hack/tools/go.mod b/hack/tools/go.mod
-index 22d9d830..22dce23d 100644
+index 22d9d830fdd..22dce23d578 100644
 --- a/hack/tools/go.mod
 +++ b/hack/tools/go.mod
 @@ -76,11 +76,11 @@ require (
@@ -370,7 +370,7 @@ index 22d9d830..22dce23d 100644
  	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
  	github.com/golangci/go-printf-func-name v0.1.0 // indirect
 diff --git a/hack/tools/go.sum b/hack/tools/go.sum
-index 80462d11..e5ac6b02 100644
+index 80462d11a06..e5ac6b0201d 100644
 --- a/hack/tools/go.sum
 +++ b/hack/tools/go.sum
 @@ -206,8 +206,8 @@ github.com/go-toolsmith/strparse v1.1.0 h1:GAioeZUK9TGxnLS+qfdqNbA4z0SSm5zVNtCQi

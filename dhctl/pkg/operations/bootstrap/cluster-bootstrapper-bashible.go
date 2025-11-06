@@ -60,7 +60,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode); err != nil {
 		return err
 	}
 

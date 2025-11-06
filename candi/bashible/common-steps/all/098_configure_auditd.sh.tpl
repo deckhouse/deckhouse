@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
 bb-event-on 'bb-sync-file-changed' '_on_audit_rules_changed'
 _on_audit_rules_changed() {
@@ -27,16 +27,31 @@ _on_audit_rules_changed() {
 
 if [ -d /etc/audit/rules.d ]; then
   bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - << "EOF"
--a always,exit -F arch=b64 -F dir=/etc/containerd -F perm=wa -k containerd
--a always,exit -F arch=b32 -F dir=/etc/containerd -F perm=wa -k containerd
--a always,exit -F arch=b64 -F dir=/var/lib/containerd -F perm=wa -k containerd
--a always,exit -F arch=b32 -F dir=/var/lib/containerd -F perm=wa -k containerd
--a always,exit -F arch=b64 -F path=/opt/deckhouse/bin/containerd -F perm=xwa -k containerd
--a always,exit -F arch=b32 -F path=/opt/deckhouse/bin/containerd -F perm=xwa -k containerd
--a always,exit -F arch=b64 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
--a always,exit -F arch=b32 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
+
+# exclude containerd internal operations such as image unpacking and others. A large number of operations can create a heavy load on auditd.
+-a never,exit -F dir=/var/lib/containerd -F exe=/opt/deckhouse/bin/containerd
+# exclude runc internal operations such as image unpacking and others. A large number of operations can create a heavy load on auditd.
+-a never,exit -F dir=/var/lib/containerd -F exe=/opt/deckhouse/bin/runc
+# watch containerd config changes
+-w /etc/containerd/config.toml -p wa -k containerd
+# record containerd binary exec
+-a always,exit -F arch=b64 -S execve -F path=/opt/deckhouse/bin/containerd -k containerd
+# detect data modifications
+-a always,exit -F arch=b64 -F dir=/var/lib/containerd -F perm=w -k containerd
+# watch containerd binary modifications
+-w /opt/deckhouse/bin/containerd -p wa -k containerd
+# watch runc binary modifications
+-w /opt/deckhouse/bin/runc -p wa -k containerd
+
 EOF
+  bb-sync-file /etc/audit/rules.d/z99-deckhouse.rules - << "EOF"
+-b 65536
+EOF
+fi
+if command -v auditctl &>/dev/null; then
+  auditctl -b 65536 || bb-log-warning "failed to configure auditctl backlog, continuing with defaults"
+else
+  bb-log-info "auditctl is not installed, skipping backlog configuration"
 fi
 
 {{- end }}
-

@@ -220,7 +220,7 @@ Deckhouse с набором модулей `Minimal` без включения �
 
 ### Доступ к документации текущей версии
 
-Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из [параметра `modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
+Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из [параметра `modules.publicDomainTemplate`](../../reference/api/global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 
 {% alert level="warning" %}
 Документация доступна, если в кластере включен модуль [documentation](/modules/documentation/). Он включен по умолчанию, кроме [варианта поставки](/modules/deckhouse/configuration.html#parameters-bundle) `Minimal`.

@@ -15,7 +15,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_container_port_number]
       regex: "4222"
       action: keep
-    - regex: endpoint|namespace|container
+    - regex: endpoint|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
@@ -29,7 +29,7 @@ spec:
   - port: self
     path: "/metrics/hooks"
     relabelings:
-    - regex: endpoint|namespace|container
+    - regex: endpoint|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster

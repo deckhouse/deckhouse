@@ -38,7 +38,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-bullseye
+fromImage: builder/golang-bookworm
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -82,3 +82,5 @@ shell:
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

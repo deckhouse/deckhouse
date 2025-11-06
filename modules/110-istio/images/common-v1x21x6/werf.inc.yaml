@@ -24,8 +24,11 @@ shell:
   - cd /src/kiali/
   - git apply --verbose /patches/001-kiali-go-mod.patch
   - rm -rf /src/kiali/.git
+  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali-frontend-assets.git /src/kial-frontend-assets/
+  - rm -rf /src/kiali-frontend-assets/.git
 
   # getting rid of unused vulnerable code
   - rm -rf /src/istio/samples
   - rm -rf /src/istio/security/samples
   - rm -rf /src/istio/security/tools/jwt/samples
+  - rm -rf /src/kiali/frontend

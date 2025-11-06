@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        d8 p edit provider-cluster-configuration
+        d8 system edit provider-cluster-configuration
         ```
 
         > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -144,6 +144,29 @@ apiVersions:
                     The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                   additionalProperties:
                     type: string
+                affinityRule:
+                  type: object
+                  additionalProperties: false
+                  description: |
+                    Specifies the affinity rule applied to virtual machines of the master nodes within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
+                  properties:
+                    polarity:
+                      type: string
+                      description: |
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
+                      enum: [Affinity, AntiAffinity]
+                    required:
+                      type: boolean
+                      description: |
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                      x-doc-default: false
         nodeGroups:
           type: array
           description: |
@@ -270,6 +293,29 @@ apiVersions:
                       The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
+                  affinityRule:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Specifies the affinity rule applied to virtual machines of nodes of the NodeGroup within the cluster.
+                      Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                      which can help improve fault tolerance, and control the distribution of workloads.
+                      If not specified, no affinity rule will be applied by default.
+                    required: [polarity]
+                    properties:
+                      polarity:
+                        type: string
+                        description: |
+                          The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                          `Affinity` means that nodes should be placed on the same host,
+                          while `AntiAffinity` means they should be placed on different hosts.
+                        enum: [Affinity, AntiAffinity]
+                      required:
+                        type: boolean
+                        description: |
+                          Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                          If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                        x-doc-default: false
         bastion:
           type: object
           additionalProperties: false

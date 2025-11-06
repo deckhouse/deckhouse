@@ -7,7 +7,7 @@ locals {
   external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
   metadata                                 = contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}
-  bastion_ip_address                       = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "mainNetworkIPAddress") ? var.providerClusterConfiguration.bastion.ipAddress : null
+  bastion_ip_address                       = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "mainNetworkIPAddress") ? var.providerClusterConfiguration.bastion.instanceClass.mainNetworkIPAddress : null
   bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
   bastion_metadata = merge(
     (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),

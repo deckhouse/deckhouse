@@ -38,7 +38,7 @@ The Deckhouse installer runs on this machine. It can be an administrator's lapto
 
 - OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
 - Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
-- HTTPS access to the container image registry `registry.deckhouse.ru`;
+- HTTPS access to the container image registry `registry.deckhouse.io`;
 - SSH key-based access to the node that will become the cluster **master node**;
 - SSH key-based access to the node that will become the cluster **worker node** (if the cluster will contain more than one master node).
 
@@ -59,7 +59,7 @@ All cluster nodes must meet the following baseline hardware requirements:
 - **Software**:
   - Installed `cloud-init` and `cloud-utils` packages (package names may vary depending on the distribution).
 - **Networking**:
-  - HTTPS access to `registry.deckhouse.ru` and OS package repositories;
+  - HTTPS access to `registry.deckhouse.io` and OS package repositories;
   - SSH access from the installation machine on port `22/TCP` (see details in [requirements for the installation machine](#requirements-for-the-installation-machine));
   - Unique hostname across all cluster nodes.
 
@@ -118,7 +118,7 @@ For Windows family operating systems, the platform supports initialization with 
 Virtual machines use PersistentVolume resources. To manage these resources and allocate disk space within the cluster, one or more supported storage systems must be installed:
 
 | Storage System            | Disk Location             |
-| ------------------------- | ------------------------- |
+|---------------------------|---------------------------|
 | sds-local-volume          | Local                     |
 | sds-replicated-volume     | Replicas on cluster nodes |
 | Ceph Cluster              | External storage          |
@@ -126,3 +126,4 @@ Virtual machines use PersistentVolume resources. To manage these resources and a
 | TATLIN.UNIFIED (Yadro)    | External storage          |
 | Huawei Dorado             | External storage          |
 | HPE 3par                  | External storage          |
+| NetApp                    | External storage          |

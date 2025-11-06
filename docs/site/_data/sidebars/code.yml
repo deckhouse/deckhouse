@@ -99,3 +99,7 @@ entries:
           en: Search
           ru: Поиск
         url: /code/documentation/user/search.html
+      - title:
+          en: Push rules
+          ru: Правила отправки изменений
+        url: /code/documentation/user/push-rules.html

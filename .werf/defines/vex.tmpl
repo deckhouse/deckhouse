@@ -1,0 +1,80 @@
+# put image with vex mitigations to registry.
+# Mitigations can be found in the known_vulnerabilities.vex file in the image directory
+# input parameters:
+# list of $ and image name.
+# list ($ "common/kubernetes")
+{{- define "vex mitigation" }}
+  {{- $context := index . 0 }}
+  {{- $imageName := index . 1 }}
+  {{- $knownVulnPath := "" }}
+  {{- if eq $imageName "dev" }}
+    {{- $knownVulnPath = "/deckhouse-controller/known_vulnerabilities.vex" }}
+  {{- else if eq $imageName "dev/install" }}
+    {{- $knownVulnPath = "/dhctl/known_vulnerabilities.vex" }}
+  {{- else }}
+    {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- end }}
+  {{- $vexFile := false }}
+  {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
+    {{- $vexFile = true }}
+  {{- end }}
+  {{- if $vexFile }}
+---
+image: {{ $imageName }}-vex-artifact
+fromImage: base/vex
+final: true
+secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
+- id: COSIGN_VAULT_ADDRESS
+  env: COSIGN_VAULT_ADDRESS
+- id: COSIGN_VAULT_KEY
+  env: COSIGN_VAULT_KEY
+- id: COSIGN_AUTH_ROLE
+  env: COSIGN_AUTH_ROLE
+- id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+- id: ACTIONS_ID_TOKEN_REQUEST_URL
+  env: ACTIONS_ID_TOKEN_REQUEST_URL
+git:
+- add: {{ $knownVulnPath }}
+  to: /known_vulnerabilities.vex
+  stageDependencies:
+    install:
+    - "**/*"
+dependencies:
+- image: {{ $imageName }}
+  before: install
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+shell:
+  install:
+  - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
+  - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
+  - export VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)"
+  - export COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)"
+  - export COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)"
+  - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
+  - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
+  - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
+  - |
+    ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
+    VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
+    cosign attest \
+      --registry-username="${REGISTRY_USER}" \
+      --registry-password="${REGISTRY_PASSWORD}" \
+      --predicate /known_vulnerabilities.vex \
+      --type openvex \
+      --key hashivault://${COSIGN_VAULT_KEY} \
+      --tlog-upload=false \
+      -y \
+      "${IMAGE_REPO}@${IMAGE_DIGEST}"
+  {{- end }}
+{{- end }}

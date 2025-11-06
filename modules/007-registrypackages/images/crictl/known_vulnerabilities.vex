@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "k8s.io/kubernetes"
+          "@id": "pkg:golang/k8s.io/kubernetes"
         }
       ],
       "status": "not_affected",
@@ -24,7 +24,7 @@
       },
       "products": [
         {
-          "@id": "k8s.io/kubernetes"
+          "@id": "pkg:golang/k8s.io/kubernetes"
         }
       ],
       "status": "not_affected",

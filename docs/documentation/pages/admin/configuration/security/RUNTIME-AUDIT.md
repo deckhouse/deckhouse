@@ -271,7 +271,7 @@ spec:
           Check you events journal for more details.
         summary: Falco detects a critical security incident
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}
@@ -307,6 +307,7 @@ kind: ModuleConfig
 metadata:
   name: runtime-audit-engine
 spec:
+  version: 1
   enabled: true
   settings:
     debugLogging: true

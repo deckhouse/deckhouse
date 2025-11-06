@@ -11,8 +11,8 @@ import:
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-  add: /src/kiali/frontend/build
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install
 git:
@@ -43,30 +43,11 @@ shell:
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
-  - export GOOS=linux GOARCH=amd64
-  - export LDFLAGS='-X main.version=${kialiVersion}'
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export LDFLAGS='-extldflags -static -s -w -X main.version=${kialiVersion}'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-final: false
-from: {{ .Images.BASE_NODE_20_ALPINE }}
-import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
-  add: /src/kiali
-  to: /src/kiali
-  before: setup
-shell:
-  setup:
-  - cd /src/kiali/frontend
-  {{- if .DistroPackagesProxy }}
-  - yarn config set disable-self-update-check true
-  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
-  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
-  - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
-  {{- end }}
-  - yarn install --frozen-lockfile --network-timeout 300000
-  - yarn run build
-  - rm -rf node_modules .npmrc /root/.cache /usr/local/share/.cache
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -88,14 +88,14 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
 }
 
 resource "aws_security_group" "ssh-accessible" {
-  count       = var.disable_default_security_group && length(var.ssh_allow_list) == 0 ? 0 : 1
+  count  = (!var.disable_default_security_group && length(var.ssh_allow_list) > 0) ? 1 : 0
   name        = "${var.prefix}-ssh-accessible"
   vpc_id      = var.vpc_id
   tags        = var.tags
 }
 
 resource "aws_security_group_rule" "allow-ssh-for-everyone" {
-  count             = var.disable_default_security_group && length(var.ssh_allow_list) == 0 ? 0 : 1
+  count             = (!var.disable_default_security_group && length(var.ssh_allow_list) > 0) ? 1 : 0
   type              = "ingress"
   from_port         = 22
   to_port           = 22

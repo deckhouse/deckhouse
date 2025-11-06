@@ -71,6 +71,17 @@
                 </a>
               </li>
               <li>
+                <a href="/products/prompp/">
+                  <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
+                    <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
+                    <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                  </svg>
+                  <span>Prom++</span>
+                  <p>Open Source-система мониторинга</p>
+                </a>
+              </li>
+              <li>
                 <a href="/products/code/">
                   <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
@@ -82,14 +93,16 @@
                 </a>
               </li>
               <li>
-                <a href="/products/prompp/">
-                  <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
-                    <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
-                    <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                <a href="/products/development-platform/">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 165 165" fill="none">
+                    <path d="M82.2153 44.9685L49.2305 64.0212V102.127L82.2153 121.179L115.2 102.127V64.0212L82.2153 44.9685ZM99.2064 83.0407C99.2064 91.2536 92.5563 97.9038 84.3433 97.9038H69.4802V68.1776H84.3433C92.5563 68.1776 99.2064 74.8277 99.2064 83.0407Z" fill="black"/>
+                    <path d="M107.744 0.954648L94.4131 14.2859L150.959 70.832L164.29 57.5007L107.744 0.954648Z" fill="#0064FF"/>
+                    <path d="M56.6583 0.997428L0.87207 57.5483L14.2937 70.7885L70.08 14.2376L56.6583 0.997428Z" fill="#0064FF"/>
+                    <path d="M13.4451 95.2148L0.200195 108.632L56.7553 164.461L70.0002 151.044L13.4451 95.2148Z" fill="#0064FF"/>
+                    <path d="M150.99 95.1924L94.4346 151.022L107.679 164.439L164.235 108.609L150.99 95.1924Z" fill="#0064FF"/>
                   </svg>
-                  <span>Prom++</span>
-                  <p>Open Source-система мониторинга</p>
+                  <span>Development Platform</span>
+                  <p>Управление разработкой через&nbsp;единое окно</p>
                 </a>
               </li>
             </ul>
@@ -287,8 +300,19 @@
         </div>
         <ul class="nav header__nav">
           {%- for item in productMenuData.items %}
-            {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
-            <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
+            {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.title == "Возможности" %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+            <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+              <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
+                {% if item.items %}
+                  <div class="sub-menu-container">
+                    <ul class="sub-menu">
+                      {% for item in item.items %}
+                        <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+              {% endif %}
+            </li>
           {%- endfor %}
         </ul>
       </div>

@@ -12,9 +12,11 @@ spec:
               properties:
                 email:
                   description: |
-                    Email пользователя.
+                    Email пользователя. Должен быть в нижнем регистре.
 
                     **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/modules/user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+
+                    **Важно!** Email-адреса проверяются на уникальность без учёта регистра. Dex автоматически преобразует email-адреса в нижний регистр при аутентификации. Для новых пользователей заглавные буквы в email-адресах не допускаются. Существующие пользователи с заглавными буквами в email могут быть обновлены без изменения поля email.
                 password:
                   description: |
                     Хэш пароля пользователя в явном виде или закодированный в Base64.

@@ -1,0 +1,66 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 4,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-9675"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containers/buildah@v1.37.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не может быть эксплуатирована при использовании бекенда Docker, который включён по умолчанию в Delivery Kit. В этом режиме Docker-демон запрещает произвольное монтирование директорий, исключая возможность эксплуатации уязвимости. Уязвимость актуальна только при использовании бекенда Buildah, который включается установкой переменной окружения WERF_BUILDAH_MODE=on.",
+      "timestamp": "2025-10-09T14:21:14.710165495Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-0495"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/buildx@v0.13.0-rc2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не может быть эксплуатирована при использовании Delivery Kit, так как он не использует сборочный бекенд Docker BuildKit, в котором проявляется уязвимость. Delivery Kit форсирует Docker использовать бекенд по умолчанию. Уязвимость актуальна только при использовании бекенда Docker Buildkit, который включается установкой переменной окружения DOCKER_BUILDKIT=1.",
+      "timestamp": "2025-10-09T14:21:14.78894747Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется только в работе демона Docker (dockerd), который является внешней зависимостью и не входит в состав Delivery Kit. Delivery Kit взаимодействует с Docker через его API и использует пакет github.com/docker/docker исключительно как клиентскую библиотеку. Внутренние компоненты Delivery Kit не управляют сетевыми правилами и не выполняют операций, связанных с Firewalld, в котором и проявляется уязвимость.",
+      "timestamp": "2025-10-09T14:21:14.86863865Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-8869"
+      },
+      "products": [
+        {
+          "@id": "pip:25.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-09T14:31:32.069712443Z"
+    }
+  ],
+  "timestamp": "2025-10-09T14:21:14Z",
+  "last_updated": "2025-10-09T14:21:14Z"
+}

@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  labels:
+    draft: "true"
+  name: deckhouse-test-v1.0.0
+spec:
+  packageName: test
+  version: "v1.0.0"
+  repository: deckhouse
+status:
+  conditions:
+  - lastProbeTime: "2025-10-27T15:51:01Z"
+    lastTransitionTime: "2025-10-27T15:50:31Z"
+    message: 'failed to get image: image: GET https://dev-registry.deckhouse.io/v2/deckhouse/foxtrot/packages/m-s-test/version/manifests/v0.1.1000:
+      MANIFEST_UNKNOWN: manifest unknown; map[Tag:v0.1.1000]'
+    reason: GetImageError
+    status: "False"
+    type: IsEnriched
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca

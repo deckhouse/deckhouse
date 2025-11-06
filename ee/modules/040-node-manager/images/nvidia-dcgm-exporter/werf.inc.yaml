@@ -3,6 +3,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -10,12 +16,13 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $version}} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/dcgm-exporter.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - echo $(git rev-parse --short HEAD) > .GIT_HASH
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
+fromImage: {{ .ModuleName }}/builder-cuda
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -32,9 +39,6 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH

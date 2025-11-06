@@ -10,7 +10,7 @@ minimizing risks and ensuring a smooth transition.
 With Canary deployment, traffic can be shifted to the new version as confidence in its stability grows,
 with the ability to quickly roll back to the old version if issues arise.
 In Deckhouse Kubernetes Platform, Canary deployment can be implemented
-using the [`ingress-nginx`](/modules/ingress-nginx/) module or the [`istio`](/modules/istio/) module (recommended).
+using the [ingress-nginx](/modules/ingress-nginx/) module or the [istio](/modules/istio/) module (recommended).
 
 ## Example Canary deployment configuration with Ingress NGINX
 

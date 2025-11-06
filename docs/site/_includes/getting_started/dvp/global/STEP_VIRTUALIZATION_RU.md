@@ -22,3 +22,7 @@ spec:
   version: 1
 EOF
 ```
+
+{% alert level="warning" %}
+Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).
+{% endalert %}

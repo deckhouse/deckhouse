@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company GitHub
+  # Опционально: временно отключить провайдер, не удаляя CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -379,7 +381,7 @@ data:
 
 ### Создание пользователя
 
-Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
+Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
 
 Для вычисления хэш-суммы пароля воспользуйтесь командой:
 

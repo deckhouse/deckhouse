@@ -23,7 +23,7 @@ lang: ru
 ## Восстановление master-узла при ошибке загрузки компонентов control plane через kubelet
 
 Ситуация, когда kubelet не может загрузить компоненты control plane, может возникнуть, если в кластере с одним master-узлом был удалён каталог с образами (например, `/var/lib/containerd`).
-В этом случае после перезапуска kubelet не сможет загрузить образы компонентов control plane, поскольку параметры авторизации для доступа к `registry.deckhouse.io` на master-узле отсутствуют.
+В этом случае после перезапуска kubelet не сможет загрузить образы компонентов control plane, поскольку параметры авторизации для доступа к `registry.deckhouse.ru` на master-узле отсутствуют.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -34,7 +34,7 @@ lang: ru
    ```shell
    d8 k -n d8-system get secrets deckhouse-registry -o json |
    jq -r '.data.".dockerconfigjson"' | base64 -d |
-   jq -r '.auths."registry.deckhouse.io".auth'
+   jq -r '.auths."registry.deckhouse.ru".auth'
    ```
 
 1. Скопируйте вывод команды и присвойте переменной `AUTH` на поврежденном master-узле.
@@ -53,26 +53,41 @@ lang: ru
 
 ### Просмотр списка узлов кластера в etcd
 
-Ниже приведены шаги для просмотра списка узлов, которые состоят в etcd-кластере:
+#### Способ 1
 
-1. Найдите под etcd:
+Используйте команду `etcdctl member list`.
 
-   ```shell
-   d8 k -n kube-system get pods -l component=etcd,tier=control-plane
-   ```
+Пример:
 
-   Обычно имя пода содержит префикс `etcd-`.
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
 
-1. Выполните команду на любом доступном etcd-поде (предполагается, что он запущен в пространстве имён `kube-system`):
+**Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
 
-   ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-     etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
+#### Способ 2
 
-   В данной команде используется подстановка: `$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)`. Она автоматически подставит имя первого пода, соответствующего нужным лейблам.
+Используйте команду `etcdctl endpoint status`. Для лидера в столбце `IS LEADER` будет указано значение `true`.
+
+Пример:
+
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
 
 ### Восстановление кластера etcd при полной недоступности
 
@@ -98,7 +113,7 @@ lang: ru
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится read-only. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -110,7 +125,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -270,7 +285,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 - Устанавливается лейбл `node-role.kubernetes.io/control-plane=""`.
 - DaemonSet запускает поды на новых узлах.
 - DKP создает или обновляет файлы в `/etc/kubernetes`: манифесты, конфигурации, сертификаты и т.д.
-- Все модули DKP с поддержкой отказоустойчивости автоматически включают её, если значение [глобальной настройки `highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) не переопределено вручную.
+- Все модули DKP с поддержкой отказоустойчивости автоматически включают её, если значение [глобальной настройки `highAvailability`](../../../reference/api/global.html#parameters-highavailability) не переопределено вручную.
 
 Удаление узлов control plane выполняется в обратном порядке:
 

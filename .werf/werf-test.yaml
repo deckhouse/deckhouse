@@ -72,7 +72,7 @@ shell:
       {{- end }}
 imageSpec:
   config:
-    env: { "ADDON_OPERATOR_NAMESPACE": "tests", "DECKHOUSE_POD": "tests", "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PATH": "${PATH}:/usr/local/go/bin:/root/go/bin" }
+    env: { "ADDON_OPERATOR_NAMESPACE": "tests", "DECKHOUSE_POD": "tests", "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PATH": "${PATH}:/go/bin:/usr/local/go/bin:/root/go/bin" }
 ---
 image: tests
 fromImage: tests-prebuild

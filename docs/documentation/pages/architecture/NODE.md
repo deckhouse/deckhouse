@@ -7,13 +7,13 @@ permalink: en/architecture/node.html
 
 In Deckhouse, nodes are divided into the following types:
 
-- **Static**: Managed manually; `node-manager` does not scale or recreate them.
+- **Static**: Managed manually; [node-manager](/modules/node-manager/) does not scale or recreate them.
 - **CloudStatic**: Created manually or by any external tools, located in the same cloud that is integrated with one of the cloud provider modules:
   - CloudStatic nodes have several features related to integration with the cloud provider. These nodes are managed by the `cloud-controller-manager` component, resulting in:
     - Zone and region metadata being automatically added to the Node object.
     - When the virtual machine is deleted in the cloud, the corresponding Node object is also removed from the cluster.
     - CSI driver can be used to attach cloud volumes.
-- **CloudPermanent**: Persistent nodes created and updated by `node-manager`.
+- **CloudPermanent**: Persistent nodes created and updated by [node-manager](/modules/node-manager/).
 - **CloudEphemeral**: Temporary nodes, created and scaled based on demand.
 
 Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DKP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
@@ -76,7 +76,7 @@ Two node scaling modes are available:
 
 ## Working with Static nodes
 
-When working with static nodes, `node-manager` functions are limited as follows:
+When working with static nodes, [node-manager](/modules/node-manager/) functions are limited as follows:
 
 - **No node provisioning.** Resource allocation (bare-metal servers, VMs, etc.) is manual. Further configuration (joining the cluster, monitoring, etc.) can be fully or partially automated.
 - **No auto-scaling.** Maintaining node count in a group is available using Cluster API Provider Static (via the `staticInstances.count` parameter). Deckhouse tries to keep the specified node count in the group, removing excessive nodes and configuring the new ones (from StaticInstance resources in *Pending* state).

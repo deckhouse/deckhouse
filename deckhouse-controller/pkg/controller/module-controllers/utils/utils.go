@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package utils //nolint:revive
 
 import (
 	"context"
@@ -20,9 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -252,61 +249,6 @@ func GetClusterUUID(ctx context.Context, cli client.Client) string {
 
 	// generate a random UUID if the key is missing
 	return uuid.Must(uuid.NewV4()).String()
-}
-
-// GetModuleVersion gets version of the module by symlink(/downloaded/modules/{moduleName})
-func GetModuleVersion(moduleSymlink string) (string, error) {
-	downloadedModule, err := filepath.EvalSymlinks(moduleSymlink)
-	if err != nil {
-		return "", fmt.Errorf("evaluate the '%s' module symlink: %w", moduleSymlink, err)
-	}
-
-	return filepath.Base(downloadedModule), nil
-}
-
-// EnableModule deletes old symlinks and creates a new one
-func EnableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
-	// delete the old module symlink with diff version if exists
-	if oldSymlinkPath != "" {
-		if _, err := os.Lstat(oldSymlinkPath); err == nil {
-			if err = os.Remove(oldSymlinkPath); err != nil {
-				return fmt.Errorf("delete the '%s' old symlink: %w", oldSymlinkPath, err)
-			}
-		}
-	}
-
-	// delete the new module symlink
-	if _, err := os.Lstat(newSymlinkPath); err == nil {
-		if err = os.Remove(newSymlinkPath); err != nil {
-			return fmt.Errorf("delete the '%s' new symlink: %w", newSymlinkPath, err)
-		}
-	}
-
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return fmt.Errorf("the '%s' module absolute path not found", moduleAbsPath)
-	}
-
-	return os.Symlink(modulePath, newSymlinkPath)
-}
-
-// GetModuleSymlink walks over the root dir to find a module symlink by regexp
-func GetModuleSymlink(rootPath, moduleName string) (string, error) {
-	var symlinkPath string
-
-	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-
-	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, _ error) error {
-		if !moduleRegexp.MatchString(d.Name()) {
-			return nil
-		}
-		symlinkPath = path
-		return filepath.SkipDir
-	})
-
-	return symlinkPath, err
 }
 
 // EnsureModuleDocumentation creates or updates module documentation
