@@ -3,11 +3,11 @@ kind: ApplicationPackageVersion
 metadata:
   labels:
     draft: "true"
-  name: test-apv
+  name: deckhouse-test-v1.0.0
 spec:
-  packageName: test-package
-  version: "1.0.0"
-  repository: test-repo
+  packageName: test
+  version: "v1.0.0"
+  repository: deckhouse
 status:
   conditions:
   - lastProbeTime: "2025-10-27T15:51:01Z"
@@ -21,7 +21,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  name: test-repo
+  name: deckhouse
 spec:
   registry:
     scheme: https

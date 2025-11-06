@@ -3,7 +3,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   creationTimestamp: null
-  name: test-repo
+  name: deckhouse
   resourceVersion: "1"
 spec:
   registry:

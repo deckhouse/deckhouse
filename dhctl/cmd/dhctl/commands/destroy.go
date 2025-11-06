@@ -44,7 +44,7 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 )
 
 func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
