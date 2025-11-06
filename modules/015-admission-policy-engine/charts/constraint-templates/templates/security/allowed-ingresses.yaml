@@ -32,7 +32,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        violation contains {"msg": msg, "details": {}} if {
+        violation [{"msg": msg, "details": {}}] {
           ingress_name := input.review.object.metadata.name
           some i
           host := input.review.object.spec.rules[i].host

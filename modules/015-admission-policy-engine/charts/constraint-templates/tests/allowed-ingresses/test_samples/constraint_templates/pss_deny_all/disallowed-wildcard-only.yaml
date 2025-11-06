@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: disallowed-wildcard-only
+  namespace: testns
+spec:
+  rules:
+  - host: "*"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 80
+
