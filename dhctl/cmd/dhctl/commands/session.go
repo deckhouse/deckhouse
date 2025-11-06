@@ -41,7 +41,7 @@ const (
 )
 
 func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

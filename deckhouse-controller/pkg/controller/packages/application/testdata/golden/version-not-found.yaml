@@ -7,15 +7,15 @@ metadata:
   namespace: foobar
   resourceVersion: "2"
 spec:
-  applicationPackageName: test-package
-  repository: test-repo
+  applicationPackageName: test
+  repository: deckhouse
   version: v1.0.0
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'get ApplicationPackageVersion for test-app not found: applicationpackageversions.deckhouse.io
-      "test-package-v1.0.0" not found'
+      "deckhouse-test-v1.0.0" not found'
     reason: VersionNotFound
     status: "False"
     type: Processed

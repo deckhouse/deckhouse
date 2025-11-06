@@ -26,7 +26,9 @@ import (
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/taskevent"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/eventhandler"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/packagerun"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -44,7 +46,7 @@ const (
 )
 
 type Operator struct {
-	eventHandler   *taskevent.Handler      // Converts events (Kube/schedule) into tasks
+	eventHandler   *eventhandler.Handler   // Converts events (Kube/schedule) into tasks
 	packageManager *packagemanager.Manager // Manages application packages and hooks
 	queueService   *queue.Service          // Task queue for hook execution
 	nelmService    *nelm.Service           // Helm release management and monitoring
@@ -77,7 +79,7 @@ func New(ctx context.Context, logger *log.Logger) (*Operator, error) {
 
 	// Initialize foundational services
 	o.queueService = queue.NewService(ctx, logger)
-	o.scheduleManager = schedulemanager.NewScheduleManager(ctx, logger.Named("schedule-manager"))
+	o.scheduleManager = cron.NewManager(ctx, logger)
 	o.logger = logger.Named(operatorTracer)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
@@ -105,7 +107,7 @@ func New(ctx context.Context, logger *log.Logger) (*Operator, error) {
 	}, logger)
 
 	// Create event handler to orchestrate event processing
-	o.eventHandler = taskevent.NewHandler(taskevent.Config{
+	o.eventHandler = eventhandler.New(eventhandler.Config{
 		KubeEventsManager: o.kubeEventsManager,
 		ScheduleManager:   o.scheduleManager,
 		PackageManager:    o.packageManager,
@@ -157,6 +159,11 @@ func (o *Operator) ScheduleManager() schedulemanager.ScheduleManager {
 // QueueService returns the queue service for external access.
 func (o *Operator) QueueService() *queue.Service {
 	return o.queueService
+}
+
+// PackageManager returns the package manager for external access.
+func (o *Operator) PackageManager() *packagemanager.Manager {
+	return o.packageManager
 }
 
 // buildObjectPatcher creates a Kubernetes client optimized for patch operations.
@@ -250,6 +257,12 @@ func (o *Operator) buildNelmService(ctx context.Context) error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	o.nelmService = nelm.NewService(ctx, namespace, cache, o.logger)
+	// if a package has absent resource, we should rerun it(run nelm upgrade again)
+	absentCallback := func(name string) {
+		o.logger.Debug("detected package absent resources", "name", name)
+		o.queueService.Enqueue(ctx, name, packagerun.New(name, o, o.logger), queue.WithUnique())
+	}
+
+	o.nelmService = nelm.NewService(ctx, namespace, cache, absentCallback, o.logger)
 	return nil
 }

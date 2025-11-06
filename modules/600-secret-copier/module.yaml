@@ -3,5 +3,3 @@ namespace: default
 stage: "General Availability"
 subsystems:
   - security
-requirements:
-  deckhouse: ">= 1.68"

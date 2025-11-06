@@ -9,5 +9,3 @@ descriptions:
   en: |
     Ingress controller for nginx
     https://kubernetes.github.io/ingress-nginx
-requirements:
-  deckhouse: ">= 1.68"

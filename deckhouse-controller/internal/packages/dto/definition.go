@@ -15,6 +15,10 @@
 package dto
 
 import (
+	"fmt"
+
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 )
 
@@ -44,7 +48,9 @@ type Descriptions struct {
 
 // Requirements specifies dependencies required by this package.
 type Requirements struct {
-	Modules map[string]string `yaml:"modules" json:"modules"`
+	Kubernetes string            `yaml:"kubernetes,omitempty" json:"kubernetes,omitempty"`
+	Deckhouse  string            `yaml:"deckhouse,omitempty" json:"deckhouse,omitempty"`
+	Modules    map[string]string `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 // DisableOptions configures package disablement behavior.
@@ -54,7 +60,27 @@ type DisableOptions struct {
 }
 
 // ToApplication converts package definition to application definition
-func (d *Definition) ToApplication() apps.Definition {
+func (d *Definition) ToApplication() (apps.Definition, error) {
+	kubernetesConstraint, err := semver.NewConstraint(d.Version)
+	if err != nil {
+		return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+	}
+
+	deckhouseConstraint, err := semver.NewConstraint(d.Requirements.Deckhouse)
+	if err != nil {
+		return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+	}
+
+	modules := make(map[string]*semver.Constraints)
+	for _, module := range d.Requirements.Modules {
+		constraint, err := semver.NewConstraint(module)
+		if err != nil {
+			return apps.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
+		}
+
+		modules[module] = constraint
+	}
+
 	return apps.Definition{
 		Name:    d.Name,
 		Version: d.Version,
@@ -64,7 +90,9 @@ func (d *Definition) ToApplication() apps.Definition {
 			Message:      d.DisableOptions.Message,
 		},
 		Requirements: apps.Requirements{
-			Modules: d.Requirements.Modules,
+			Kubernetes: kubernetesConstraint,
+			Deckhouse:  deckhouseConstraint,
+			Modules:    modules,
 		},
-	}
+	}, nil
 }

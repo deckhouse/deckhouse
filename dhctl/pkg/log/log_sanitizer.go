@@ -24,10 +24,15 @@ var sensitiveKeywords = []string{
 	`"name":"d8-provider-cluster-configuration"`,
 	`"name":"d8-dhctl-converge-state"`,
 	`"kind":"DexProvider"`,
+	`"kind":"DexProviderList"`,
 	`"kind":"ModuleConfig"`,
+	`"kind":"ModuleConfigList"`,
 	`"kind":"Secret"`,
+	`"kind":"SecretList"`,
 	`"kind":"SSHCredentials"`,
+	`"kind":"SSHCredentialsList"`,
 	`"kind":"ClusterLogDestination"`,
+	`"kind":"ClusterLogDestinationList"`,
 }
 
 type LogSanitizer struct{}

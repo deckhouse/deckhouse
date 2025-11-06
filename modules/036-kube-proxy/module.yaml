@@ -6,5 +6,3 @@ subsystems:
   - kubernetes
   - networking
 namespace: kube-system
-requirements:
-  deckhouse: ">= 1.68"

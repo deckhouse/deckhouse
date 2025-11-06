@@ -21,7 +21,7 @@
 //
 // Thread Safety: The Handler uses sync.Once to ensure Start() can only execute once,
 // preventing goroutine leaks and race conditions from multiple Start() calls.
-package taskevent
+package eventhandler
 
 import (
 	"context"
@@ -76,7 +76,7 @@ type Handler struct {
 	logger *log.Logger
 }
 
-// NewHandler creates a new Handler with the given configuration.
+// New creates a new Handler with the given configuration.
 // The returned Handler is ready to be started with Start().
 //
 // Initializes:
@@ -84,7 +84,7 @@ type Handler struct {
 //   - sync.Once to ensure Start() executes only once
 //
 // Note: The handler's context and cancel function are set when Start() is called first time.
-func NewHandler(conf Config, logger *log.Logger) *Handler {
+func New(conf Config, logger *log.Logger) *Handler {
 	return &Handler{
 		wg:   new(sync.WaitGroup),
 		once: sync.Once{},

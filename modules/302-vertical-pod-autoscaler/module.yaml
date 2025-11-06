@@ -3,7 +3,6 @@ subsystems:
   - infrastructure
 namespace: kube-system
 requirements:
-  deckhouse: ">= 1.68"
   modules:
     prometheus: ">= 0.0.0"
     prometheus-metrics-adapter: ">= 0.0.0"

@@ -35,7 +35,7 @@ import (
 )
 
 func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -77,7 +77,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 }
 
 func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 

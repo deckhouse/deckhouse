@@ -7,5 +7,3 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-vsphere
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"

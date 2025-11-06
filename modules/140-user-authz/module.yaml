@@ -8,6 +8,3 @@ description: |
 descriptions:
   en: |
     The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
-requirements:
-  deckhouse: ">= 1.68"
-

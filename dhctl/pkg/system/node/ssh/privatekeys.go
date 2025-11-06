@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package ssh
 
 import (
@@ -21,58 +22,99 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
-	keyData, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
+func tryToExtractPassPhraseFromConfig(path string) string {
+	if path == "" {
+		return ""
 	}
 
-	keyData = append(bytes.TrimSpace(keyData), '\n')
+	l := len(app.PrivateKeysToPassPhrasesFromConfig)
+	log.DebugF("Passphrases map has %d passphrases\n", l)
 
-	var privateKey interface{}
-
-	if len(passphrase) == 0 {
-		privateKey, err = ssh.ParseRawPrivateKey(keyData)
-	} else {
-		privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+	if l == 0 {
+		return ""
 	}
 
-	return privateKey, nil
+	p, ok := app.PrivateKeysToPassPhrasesFromConfig[path]
+	if !ok || len(p) == 0 {
+		return ""
+	}
+
+	log.DebugF("Passphrase for key %s found in map!\n", path)
+
+	return p
 }
 
-func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
+func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
+	p := tryToExtractPassPhraseFromConfig(path)
+	if len(p) > 0 {
+		return p, nil
+	}
+
+	log.DebugF("Passphrase for key %s not found in map. Try to get from terminal\n", path)
+
+	enteredPassword, err := terminal.AskPassword(
+		fmt.Sprintf("Enter passphrase for ssh key %q: ", path),
+	)
+	if err != nil {
+		return "", fmt.Errorf("Getting passphrase for ssh key %q get error: %w", path, err)
+	}
+
+	if len(enteredPassword) == 0 {
+		return "", fmt.Errorf("Passphrase for ssh key %q is empty", path)
+	}
+
+	return string(enteredPassword), nil
+}
+
+func CollectDHCTLPrivateKeysFromFlags() []session.AgentPrivateKey {
+	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
+	for _, key := range app.SSHPrivateKeys {
+		keys = append(keys, session.AgentPrivateKey{Key: key})
+	}
+
+	return keys
+}
+
+func GetSSHPrivateKey(keyPath string, passphrase string) (any, error) {
+	log.DebugF("Parsing private ssh key %s\n", keyPath)
+
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
+		return nil, fmt.Errorf("Reading key file %q got error: %w", keyPath, err)
 	}
 
 	keyData = append(bytes.TrimSpace(keyData), '\n')
 
-	var passphrase []byte
-	_, err = ssh.ParseRawPrivateKey(keyData)
+	var sshKey any
+
+	if len(passphrase) > 0 {
+		sshKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
+	} else {
+		sshKey, err = ssh.ParseRawPrivateKey(keyData)
+	}
+
 	if err != nil {
 		var passphraseMissingError *ssh.PassphraseMissingError
 		switch {
 		case errors.As(err, &passphraseMissingError):
 			var err error
-			passphrase, err = terminal.AskPassword(
-				fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
+			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath); err != nil {
+				return nil, err
 			}
-			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+			sshKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))
 			if err != nil {
-				return nil, fmt.Errorf("wrong passphrase for ssh key")
+				return nil, fmt.Errorf("Wrong passphrase for ssh key")
 			}
 		default:
-			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
+			return nil, fmt.Errorf("Parsing private key %q got error: %w", keyPath, err)
 		}
 	}
 
-	return &session.AgentPrivateKey{Key: keyPath, Passphrase: string(passphrase)}, nil
+	return sshKey, nil
 }

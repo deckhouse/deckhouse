@@ -30,7 +30,6 @@ const (
 
 type DependencyContainer interface {
 	PackageManager() *packagemanager.Manager
-	QueueService() *queue.Service
 }
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
@@ -56,20 +55,10 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("disable package", slog.String("name", t.packageName))
 
-	// delete nelm release, stop kube monitors and schedules
-	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName); err != nil {
+	// stop kube monitors and schedules
+	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName, true); err != nil {
 		return fmt.Errorf("disable package '%s': %w", t.packageName, err)
 	}
-
-	t.logger.Debug("remove package queues", slog.String("name", t.packageName))
-
-	// remove package hooks queues
-	for _, q := range t.dc.PackageManager().GetPackageQueues(t.packageName) {
-		t.dc.QueueService().Remove(q)
-	}
-
-	// remove package queue
-	t.dc.QueueService().Remove(t.packageName)
 
 	return nil
 }

@@ -30,3 +30,8 @@ type nodeGroupSpec struct {
 	Replicas      int           `json:"replicas"`
 	InstanceClass instanceClass `json:"instanceClass"`
 }
+
+type withNatInstanceSpec struct {
+	InternalSubnetCIDR string `json:"internalSubnetCIDR,omitempty"`
+	InternalSubnetID   string `json:"internalSubnetID,omitempty"`
+}

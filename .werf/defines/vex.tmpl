@@ -9,6 +9,8 @@
   {{- $knownVulnPath := "" }}
   {{- if eq $imageName "dev" }}
     {{- $knownVulnPath = "/deckhouse-controller/known_vulnerabilities.vex" }}
+  {{- else if eq $imageName "dev/install" }}
+    {{- $knownVulnPath = "/dhctl/known_vulnerabilities.vex" }}
   {{- else }}
     {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
   {{- end }}

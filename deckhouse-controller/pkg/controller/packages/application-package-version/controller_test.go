@@ -258,7 +258,7 @@ version: "1.0.0"
 
 		suite.setupController("successful-reconcile.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
@@ -272,7 +272,7 @@ version: "1.0.0"
 
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
@@ -299,7 +299,7 @@ version: "1.0.0"
 
 		suite.setupController("metadata-parsing-error-reconcile.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
@@ -309,7 +309,7 @@ version: "1.0.0"
 
 	suite.Run("non-draft resource skip", func() {
 		suite.setupController("non-draft-resource.yaml")
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
@@ -323,7 +323,7 @@ version: "1.0.0"
 
 		suite.setupController("two-errors-reconcile.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
@@ -357,7 +357,7 @@ version: "1.0.0"
 
 		suite.setupController("error-to-success.yaml", withDependencyContainer(dc))
 
-		apv := suite.getApplicationPackageVersion("test-apv")
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})

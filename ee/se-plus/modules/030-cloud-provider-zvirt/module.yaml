@@ -5,5 +5,3 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-zvirt
 stage: Experimental
-requirements:
-  deckhouse: ">= 1.68"

@@ -21,10 +21,12 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -69,9 +71,35 @@ func ParseConnectionConfig(
 ) (*ConnectionConfig, error) {
 	options := applyOptions(opts...)
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
-	errs := &ValidationError{}
 	var connectionConfigDocsCount int
 	var sshHostConfigDocsCount int
+
+	errs := &ValidationError{}
+
+	appendValidationError := func(msg string, docNumber int, gvk *schema.GroupVersionKind, obj *unstructured.Unstructured) {
+		err := Error{
+			Index:    ptr.To(docNumber),
+			Messages: []string{msg},
+		}
+
+		if gvk != nil {
+			err.Group = gvk.Group
+			err.Version = gvk.Version
+			err.Kind = gvk.Kind
+		}
+
+		if obj != nil {
+			err.Name = obj.GetName()
+		}
+
+		errs.Append(ErrKindValidationFailed, err)
+	}
+
+	unmarshallError := func(err error, kind string, docNumber int) string {
+		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+	}
+
+	log.DebugF("Parsing connection config has %d documents\n", len(docs))
 
 	config := &ConnectionConfig{}
 
@@ -86,7 +114,7 @@ func ParseConnectionConfig(
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
 				Index:    ptr.To(i),
-				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+				Messages: []string{unmarshallError(err, "Unstructured", i)},
 			})
 			continue
 		}
@@ -97,43 +125,37 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		var errMessages []string
+		log.DebugF("Process validate and parse connection config document %d for index %v\n", i, index)
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
-			errMessages = append(errMessages, err.Error())
+			appendValidationError(err.Error(), i, &gvk, &obj)
+			continue
 		}
 
 		switch index.Kind {
 		case SSHConfigKind:
 			connectionConfigDocsCount++
-			var sshConfig *SSHConfig
+			var sshConfig SSHConfig
 			if err = yaml.Unmarshal([]byte(doc), &sshConfig); err != nil {
-				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
+				appendValidationError(unmarshallError(err, SSHConfigKind, i), i, &gvk, &obj)
+				continue
 			}
-			config.SSHConfig = sshConfig
+			config.SSHConfig = &sshConfig
+			log.DebugF("SSHConfig added in result config\n")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
 			if err = yaml.Unmarshal([]byte(doc), &sshHost); err != nil {
-				errMessages = append(errMessages, fmt.Errorf("unmarshal: %w", err).Error())
+				appendValidationError(unmarshallError(err, SSHConfigHostKind, i), i, &gvk, &obj)
+				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
+			log.DebugF("SSHHost added in result config, host in result config %d\n", len(config.SSHHosts))
 		default:
-			errMessages = append(errMessages, fmt.Errorf(
-				"unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind,
-			).Error())
-		}
-
-		if len(errMessages) != 0 {
-			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
-				Group:    gvk.Group,
-				Version:  gvk.Version,
-				Kind:     gvk.Kind,
-				Name:     obj.GetName(),
-				Messages: errMessages,
-			})
+			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
+			appendValidationError(msg, i, &gvk, &obj)
+			continue
 		}
 	}
 
@@ -158,13 +180,28 @@ func ParseConnectionConfig(
 
 type ConnectionConfigParser struct{}
 
+func NewConnectionConfigParser() *ConnectionConfigParser {
+	return &ConnectionConfigParser{}
+}
+
 // ParseConnectionConfigFromFile parses SSH connection config from file (app.ConnectionConfigPath)
 // and fills app.SSH* variables with corresponding data.
-func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
-	cfg, err := parseConnectionConfigFromFile(app.ConnectionConfigPath)
-	if err != nil {
-		return fmt.Errorf("parsing ssh config from file: %w", err)
+func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
+
+	if p == nil {
+		return fmt.Errorf("ConnectionConfigParser is nil")
 	}
+
+	connectionConfigPath := app.ConnectionConfigPath
+
+	log.DebugF("Connection config path: %s\n", connectionConfigPath)
+
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath)
+	if err != nil {
+		return fmt.Errorf("Parsing ssh config from file: %w", err)
+	}
+
+	pathToPassPhrase := make(app.PrivateKeyFileToPassphrase)
 
 	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
@@ -177,7 +214,13 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 			return fmt.Errorf("unable to write temp file %s: %w", f.Name(), err)
 		}
 
-		keysPaths = append(keysPaths, f.Name())
+		fullPath := f.Name()
+
+		keysPaths = append(keysPaths, fullPath)
+		if len(key.Passphrase) > 0 {
+			log.DebugF("Passphrase for key %s added in map\n", fullPath)
+			pathToPassPhrase[fullPath] = key.Passphrase
+		}
 	}
 
 	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
@@ -207,6 +250,8 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
 	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
 	app.SSHModernMode = cfg.SSHConfig.ModernMode
+	// todo it is ugly solution
+	app.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }

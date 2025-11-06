@@ -347,6 +347,22 @@ spec:
       SecRuleEngine On
 ```
 
+Пример правила для ограничения количества аргументов в URL-адресе запроса. Если количество аргументов превышает 10, сервер отклоняет запрос с кодом ошибки 400 (Bad request).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <имя_контролера>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+      SecRule &ARGS "@gt 10" "id:100100,phase:2,deny,status:400,log,auditlog,severity:WARNING,msg:\"too many args\""
+```
+
 Полный перечень и описание директив вы можете найти в [официальной документации](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
 
 На данный момент использование набора правил OWASP Core Rule Set (CRS) недоступно.

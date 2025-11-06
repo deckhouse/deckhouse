@@ -194,16 +194,12 @@ func (pc *Checker) Cloud(ctx context.Context) error {
 		return nil
 	}
 
+	// todo move to meta config preparator
 	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudMasterNodeSystemRequirements,
 			successMessage: "cloud master node system requirements are met",
 			skipFlag:       app.SystemRequirementsArgName,
-		},
-		{
-			fun:            pc.CheckYandexWithNatInstanceConfig,
-			successMessage: "Yandex NAT instance config",
-			skipFlag:       app.YandexWithNatInstance,
 		},
 	})
 	if err != nil {
@@ -224,6 +220,7 @@ func (pc *Checker) PostCloud(ctx context.Context) error {
 		return nil
 	}
 
+	// todo move to packet infrastructureprovider.cloud
 	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudAPIAccessibility,
@@ -249,6 +246,7 @@ func (pc *Checker) Global(ctx context.Context) error {
 		return nil
 	}
 
+	// todo implement another function in meta config preparator
 	err = pc.do(ctx, "Global preflight checks", []checkStep{
 		{
 			fun:            pc.CheckPublicDomainTemplate,

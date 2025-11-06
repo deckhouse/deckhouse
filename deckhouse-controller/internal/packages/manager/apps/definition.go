@@ -14,6 +14,10 @@
 
 package apps
 
+import (
+	"github.com/Masterminds/semver/v3"
+)
+
 // Definition represents application metadata.
 type Definition struct {
 	Name    string
@@ -26,7 +30,9 @@ type Definition struct {
 
 // Requirements specifies dependencies required by the application.
 type Requirements struct {
-	Modules map[string]string
+	Kubernetes *semver.Constraints
+	Deckhouse  *semver.Constraints
+	Modules    map[string]*semver.Constraints
 }
 
 // DisableOptions configures application disablement behavior.

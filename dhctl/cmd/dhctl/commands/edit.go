@@ -31,7 +31,7 @@ import (
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(parent, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(parent)
 }
 

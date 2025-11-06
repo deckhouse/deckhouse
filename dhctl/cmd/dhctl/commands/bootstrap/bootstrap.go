@@ -26,7 +26,7 @@ import (
 )
 
 func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)

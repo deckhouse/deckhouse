@@ -309,12 +309,14 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 	apv.Status.Version = pd.Version
 
 	apv.Status.Metadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Description: &v1alpha1.PackageDescription{
-			Ru: pd.Description.Ru,
-			En: pd.Description.En,
-		},
 		Category: pd.Category,
 		Stage:    pd.Stage,
+	}
+	if pd.Description != nil {
+		apv.Status.Metadata.Description = &v1alpha1.PackageDescription{
+			Ru: pd.Description.Ru,
+			En: pd.Description.En,
+		}
 	}
 	if pd.Licensing != nil {
 		apv.Status.Metadata.Licensing = &v1alpha1.PackageLicensing{

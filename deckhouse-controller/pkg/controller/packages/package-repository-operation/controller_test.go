@@ -259,7 +259,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("package repository not found", func() {
 		suite.setupController("package-repository-not-found.yaml")
-		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
@@ -278,7 +278,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		dc.CRClient = nil
 
 		suite.setupController("registry-client-failed.yaml", withDependencyContainer(dc))
-		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
@@ -296,7 +296,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		dc.CRClient.ListTagsMock.Return(nil, assert.AnError)
 
 		suite.setupController("package-listing-failed.yaml", withDependencyContainer(dc))
-		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
@@ -333,7 +333,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		dc.CRClient.ListTagsMock.Return([]string{"test-package"}, nil)
 
 		suite.setupController("successful-discovery.yaml", withDependencyContainer(dc))
-		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
@@ -370,7 +370,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		dc.CRClient.ListTagsMock.Return([]string{"v1.0.0"}, nil)
 
 		suite.setupController("successful-completion.yaml", withDependencyContainer(dc))
-		operation := suite.getPackageRepositoryOperation("test-repo-scan-1571326380")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
 			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{

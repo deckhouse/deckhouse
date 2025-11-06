@@ -7,5 +7,3 @@ description: |
 descriptions:
   en: The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"

@@ -122,14 +122,14 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "name:namespace:packageName".
+// GetName returns the full application identifier in format "namespace:name".
 func (a *Application) GetName() string {
-	return BuildName(a.name, a.namespace, a.definition.Name)
+	return BuildName(a.namespace, a.name)
 }
 
-// BuildName returns the full application identifier in format "name:namespace:packageName".
-func BuildName(name, namespace, packageName string) string {
-	return fmt.Sprintf("%s:%s:%s", name, namespace, packageName)
+// BuildName returns the full application identifier in format "namespace:name".
+func BuildName(namespace, name string) string {
+	return fmt.Sprintf("%s:%s", namespace, name)
 }
 
 // GetPath returns path to the package dir
@@ -237,7 +237,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, nil)
+	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {

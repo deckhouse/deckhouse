@@ -3,5 +3,3 @@ stage: "Preview"
 subsystems:
   - infrastructure
 namespace: d8-monitoring
-requirements:
-  deckhouse: ">= 1.68"

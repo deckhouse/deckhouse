@@ -2,20 +2,20 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  name: test-apv
+  name: deckhouse-test-v1.0.0
   labels:
-    package: test-package
-    repository: test-repo
+    package: test
+    repository: deckhouse
     draft: "false"
 spec:
-  packageName: test-package
-  version: "1.0.0"
-  repository: test-repo
+  packageName: test
+  version: "v1.0.0"
+  repository: deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  name: test-repo
+  name: deckhouse
 spec:
   registry:
     scheme: https

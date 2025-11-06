@@ -6,5 +6,3 @@ namespace: d8-csi-vsphere
 stage: General Availability
 descriptions:
   en: CSI vSphere Driver
-requirements:
-  deckhouse: ">= 1.68"

@@ -15,6 +15,7 @@
 package values
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -109,6 +110,10 @@ func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
 	if err := s.validateConfigValues(settings); err != nil {
 		return fmt.Errorf("validate config values: %w", err)
 	}
@@ -197,6 +202,10 @@ func (s *Storage) validateValues(values addonutils.Values) error {
 
 func (s *Storage) validateConfigValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
+
+	if s.schemaStorage.Schemas[validation.ConfigValuesSchema] == nil && len(values) > 0 {
+		return errors.New("config schema is not defined but config values were provided")
+	}
 
 	return s.schemaStorage.ValidateConfigValues(s.name, validatableValues)
 }

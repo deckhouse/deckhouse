@@ -32,7 +32,7 @@ import (
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -72,7 +72,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var Data string
 	var Direction string
 
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
@@ -146,7 +146,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
 
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
 		StringVar(&ScriptPath)
@@ -191,7 +191,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptName string
 	var BundleDir string
 
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("bundle-dir", "path of a bundle root directory").
 		Short('d').

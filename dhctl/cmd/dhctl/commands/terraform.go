@@ -38,7 +38,7 @@ import (
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -61,7 +61,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

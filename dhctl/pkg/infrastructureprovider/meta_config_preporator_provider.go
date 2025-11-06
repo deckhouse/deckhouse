@@ -57,7 +57,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator(true)
+			return yandex.NewMetaConfigPreparator(true).WithLogger(logger)
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig:     true,

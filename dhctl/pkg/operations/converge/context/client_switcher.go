@@ -212,9 +212,9 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	var pkeys []session.AgentPrivateKey
 
 	if sshclient.IsLegacyMode() {
-		pkeys = append(pkeys, session.AgentPrivateKey(privateKey))
+		pkeys = append(pkeys, privateKey)
 	} else {
-		pkeys = append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
+		pkeys = append(sshCl.PrivateKeys(), privateKey)
 	}
 	newSSHClient := sshclient.NewClient(sess, pkeys)
 

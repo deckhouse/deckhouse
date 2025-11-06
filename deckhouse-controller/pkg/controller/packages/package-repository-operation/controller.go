@@ -573,12 +573,11 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 }
 
 func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
-	// Generate resource name: <repo>-<package>-<version>
-	resourceName := fmt.Sprintf("%s-%s-%s", repositoryName, packageName, strings.TrimPrefix(version, "v"))
+	apvName := v1alpha1.MakeApplicationPackageVersionName(repositoryName, packageName, version)
 
 	switch packageType {
 	case packageTypeApplication:
-		return r.ensureApplicationPackageVersion(ctx, resourceName, packageName, version, repositoryName)
+		return r.ensureApplicationPackageVersion(ctx, apvName, packageName, version, repositoryName)
 	default:
 		return fmt.Errorf("unsupported package type: %s", packageType)
 	}

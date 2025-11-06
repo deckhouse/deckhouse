@@ -57,19 +57,23 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(ctx context.Context, namespace string, cache runtimecache.Cache, logger *log.Logger) *Service {
+func NewService(ctx context.Context, namespace string, cache runtimecache.Cache, cb monitor.AbsentCallback, logger *log.Logger) *Service {
 	nelmClient := nelm.New(namespace, logger)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(ctx, cache, nelmClient, logger),
+		monitorManager: monitor.New(ctx, cache, nelmClient, cb, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
 
 func (s *Service) HasMonitor(name string) bool {
 	return s.monitorManager.HasMonitor(name)
+}
+
+func (s *Service) RemoveMonitor(name string) {
+	s.monitorManager.RemoveMonitor(name)
 }
 
 func (s *Service) PauseMonitor(name string) {
@@ -140,8 +144,6 @@ func (s *Service) Delete(ctx context.Context, name string) error {
 
 	s.logger.Debug("delete nelm release", slog.String("name", name))
 
-	defer s.monitorManager.RemoveMonitor(name)
-
 	return s.client.Delete(ctx, name)
 }
 
@@ -210,7 +212,9 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	}
 
 	if !shouldUpgrade {
+		s.monitorManager.AddMonitor(app.GetName(), renderedManifests)
 		s.logger.Debug("no need to upgrade", slog.String("name", app.GetName()))
+
 		return nil
 	}
 

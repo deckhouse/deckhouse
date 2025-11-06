@@ -228,6 +228,11 @@ locals {
 
   root_volume_size = lookup(local.instance_class, "diskSizeGb", 20)
   root_volume_type = lookup(local.instance_class, "diskType", "gp2")
+  bastion_sg_from_module = local.disable_default_sg ? [] : compact([
+    coalesce(module.security-groups.security_group_id_node, ""),
+    coalesce(module.security-groups.security_group_id_ssh_accessible, "")
+  ])
+  bastion_vpc_sg_ids = concat(local.bastion_sg_from_module, local.additional_security_groups)
 }
 
 resource "aws_instance" "bastion" {
@@ -236,7 +241,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = compact(concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups))
+  vpc_security_group_ids = local.bastion_vpc_sg_ids
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 

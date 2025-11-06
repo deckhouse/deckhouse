@@ -92,7 +92,7 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---
@@ -144,7 +144,7 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---

@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  name: test-repo
+  name: deckhouse
 spec:
   registry:
     scheme: https

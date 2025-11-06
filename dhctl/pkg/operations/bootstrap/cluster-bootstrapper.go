@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/google/uuid"
@@ -255,7 +254,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 	}
 
-
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
@@ -265,7 +263,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
-	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
+	if govalue.IsNil(b.Params.NodeInterface) {
 		log.DebugLn("NodeInterface is nil")
 		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
@@ -295,7 +293,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				}
 			}
 
-			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
+			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
