@@ -90,6 +90,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 
 	if !ctx.CommanderMode() {
 		sshClient := ctx.KubeClient().NodeInterfaceAsSSHClient()
+		log.DebugF("sshClient: %v\n", sshClient)
 		if sshClient != nil {
 			availableHosts := sshClient.Session().AvailableHosts()
 			needReconnect := false
