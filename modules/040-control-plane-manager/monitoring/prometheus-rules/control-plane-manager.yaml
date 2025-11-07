@@ -138,7 +138,7 @@
     for: 5m
     expr: |
       max by (feature_gate, deprecated_version, current_version) (
-        d8_control_plane_manager_deprecated_feature_gate{feature_gate!="", status="will_be_deprecated"} == 1
+        d8_control_plane_manager_problematic_feature_gate{feature_gate!="", status="will_be_deprecated"} == 1
       )
     labels:
       d8_component: control-plane-manager
