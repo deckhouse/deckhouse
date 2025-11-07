@@ -62,40 +62,6 @@ metadata:
   name: d8-admission-policy-engine-config
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 webhooks:
-  {{- if include "trivy.provider.enabled" . }}
-- name: trivy-provider.deckhouse.io
-  namespaceSelector:
-    matchLabels:
-      security.deckhouse.io/trivy-provider: ""
-  rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments", "daemonsets", "statefulsets"]
-    apiVersions: ["*"]
-    operations: ["CREATE", "UPDATE", "DELETE"]
-  - apiGroups: ["apps.kruise.io"]
-    apiVersions: ["*"]
-    resources: ["daemonsets"]
-    operations: ["CREATE", "UPDATE", "DELETE"]
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods"]
-    operations: ["CREATE", "DELETE"]
-
-  {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
-  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
-
-  {{/* Always validate CONNECT for exec/attach subresources */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/exec", "pods/attach"]
-    operations: ["CONNECT"]
-
-  {{/* Increase timeout for trivy-provider */}}
-  timeoutSeconds: 30
-
-  {{- include "validating.webhook.config" . | nindent 2 }}
-  {{- end }} # End of trivy-provider.deckhouse.io config
-
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
   namespaceSelector:
