@@ -35,7 +35,6 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName      = "deckhouse-registry"
-	registryInitSecretName           = "registry-init"
 	registryBashibleConfigSecretName = "registry-bashible-config"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
@@ -550,22 +549,6 @@ func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 				"meta.helm.sh/release-name":      "deckhouse",
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
-		},
-		Data: data,
-	}
-	return ret
-}
-
-func RegistryInitSecret(data map[string][]byte) *apiv1.Secret {
-	ret := &apiv1.Secret{
-		Type: apiv1.SecretTypeOpaque,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: registryInitSecretName,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"app":      "registry",
-			},
-			Annotations: map[string]string{},
 		},
 		Data: data,
 	}
