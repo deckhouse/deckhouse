@@ -20,7 +20,7 @@ from typing import Optional, List
 from deckhouse import hook
 from dotmap import DotMap
 
-from feature_gates_generated import get_feature_gate_info
+from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up_to_version
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
@@ -87,9 +87,6 @@ def main(ctx: hook.Context):
 
 
 def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
-    if not secret_data:
-        return None
-    
     encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
     if not encoded_version:
         return None
@@ -98,16 +95,13 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
         decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
         if decoded_version:
             return decoded_version
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"Failed to decode deckhouse default Kubernetes version from base64: {e}")
     
     return None
 
 
 def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
-    if not secret_data:
-        return None
-    
     encoded_config = secret_data.get('cluster-configuration.yaml')
     if not encoded_config:
         return None
@@ -119,8 +113,8 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
             kubernetes_version = config_dict.get('kubernetesVersion')
             if kubernetes_version and isinstance(kubernetes_version, str):
                 return kubernetes_version
-    except Exception:
-        pass
+        except Exception as e:
+            logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
     
     return None
 
@@ -149,32 +143,6 @@ def normalize_version(version: str) -> str:
     if len(version_parts) < 2:
         return version
     return f"{version_parts[0]}.{version_parts[1]}"
-
-# Return -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
-def compare_versions(v1: str, v2: str) -> int:
-    try:
-        major1, minor1 = map(int, v1.split('.'))
-        major2, minor2 = map(int, v2.split('.'))
-        
-        if (major1, minor1) < (major2, minor2):
-            return -1
-        elif (major1, minor1) > (major2, minor2):
-            return 1
-        return 0
-    except Exception:
-        return 0
-
-def is_feature_gate_deprecated_up_to_version(feature_gate: str, target_version: str, component: str) -> bool:
-    from feature_gates_generated import versions
-    
-    for version in versions.keys():
-        if compare_versions(version, target_version) <= 0:
-            info = get_feature_gate_info(version, component, feature_gate)
-            if info.is_deprecated:
-                return True
-    
-    return False
-
 
 def validate(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
@@ -218,14 +186,13 @@ def validate(ctx: DotMap) -> Optional[str]:
         return None
     
     deprecated_feature_gates = []
-    components = ['apiserver', 'kubelet', 'kubeControllerManager', 'kubeScheduler']
     
     for feature_gate in enabled_feature_gates:
         if not feature_gate:
             continue
         
         try:
-            if is_feature_gate_deprecated_up_to_version(feature_gate, normalized_version, components[0]):
+            if is_feature_gate_deprecated_up_to_version(feature_gate, normalized_version):
                 deprecated_feature_gates.append(feature_gate)
         except Exception:
             continue

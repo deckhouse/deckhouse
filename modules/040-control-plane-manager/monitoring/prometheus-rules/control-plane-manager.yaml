@@ -106,11 +106,11 @@
         EOF
         ```
 
-  - alert: D8DeprecatedFeatureGateInUse
+  - alert: D8ProblematicFeatureGateInUse
     for: 5m
     expr: |
-      max by (feature_gate, deprecated_version, current_version) (
-        d8_control_plane_manager_deprecated_feature_gate{feature_gate!="", status="deprecated"} == 1
+      max by (feature_gate, deprecated_version, current_version, status) (
+        d8_control_plane_manager_problematic_feature_gate{feature_gate!="", status=~"deprecated|forbidden"} == 1
       )
     labels:
       d8_component: control-plane-manager
@@ -120,9 +120,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Feature gate `{{ $labels.feature_gate }}` is deprecated in current Kubernetes version `{{ $labels.current_version }}` and is not being used in the cluster control-plane.
+      summary: Feature gate `{{ $labels.feature_gate }}` is {{ $labels.status }} in current Kubernetes version `{{ $labels.current_version }}` and should be removed from the configuration. Is not using in the cluster control-plane.
       description: |-
-        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is already deprecated in the current Kubernetes version `{{ $labels.current_version }}` and is not using by cluster control-plane components.
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is {{ $labels.status }} in the current Kubernetes version `{{ $labels.current_version }}`.
         
         **Recommended actions:**
         

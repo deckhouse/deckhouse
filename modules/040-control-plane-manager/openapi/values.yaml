@@ -81,7 +81,7 @@ properties:
             caData:
               type: string
         default: []
-      enabledFeatureGates:
+      allowedFeatureGates:
         type: object
         default: {}
         properties:
