@@ -155,5 +155,8 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 		}
 	}
 
+	input.Logger.Debug("remove list: %v", removeList)
+	input.Logger.Debug("snapshots: %v", snaps)
+
 	return nil
 }
