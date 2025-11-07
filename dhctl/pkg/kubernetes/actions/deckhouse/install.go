@@ -197,7 +197,8 @@ func CreateDeckhouseManifests(
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				return nil
+				_, err := kubeCl.CoreV1().Namespaces().Update(ctx, manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
