@@ -1,13 +1,41 @@
+diff --git a/business/authentication/openid_auth_controller.go b/business/authentication/openid_auth_controller.go
+index 4f210c4bf..09724d486 100644
+--- a/business/authentication/openid_auth_controller.go
++++ b/business/authentication/openid_auth_controller.go
+@@ -17,8 +17,8 @@ import (
+ 
+ 	"github.com/gorilla/mux"
+ 	"golang.org/x/sync/singleflight"
+-	"gopkg.in/square/go-jose.v2"
+-	"gopkg.in/square/go-jose.v2/jwt"
++	"gopkg.in/go-jose/go-jose.v2"
++	"gopkg.in/go-jose/go-jose.v2/jwt"
+ 	"k8s.io/client-go/tools/clientcmd/api"
+ 
+ 	"github.com/kiali/kiali/business"
+diff --git a/business/authentication/token_auth_controller.go b/business/authentication/token_auth_controller.go
+index b382b2645..faba3c5e7 100644
+--- a/business/authentication/token_auth_controller.go
++++ b/business/authentication/token_auth_controller.go
+@@ -7,7 +7,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
+-	"gopkg.in/square/go-jose.v2/jwt"
++	"gopkg.in/go-jose/go-jose.v2/jwt"
+ 	"k8s.io/client-go/tools/clientcmd/api"
+ 
+ 	"github.com/kiali/kiali/business"
 diff --git a/go.mod b/go.mod
-index ec0368b5f..e9861db80 100644
+index ec0368b5f..58b41aba2 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,10 +1,10 @@
  module github.com/kiali/kiali
-
+ 
 -go 1.19
 +go 1.23.0
-
+ 
  require (
  	github.com/NYTimes/gziphandler v1.1.1
 -	github.com/golang/protobuf v1.5.2
@@ -15,7 +43,7 @@ index ec0368b5f..e9861db80 100644
  	github.com/gorilla/mux v1.8.0
  	github.com/mitchellh/mapstructure v1.4.3
  	github.com/nitishm/engarde v0.1.1
-@@ -12,17 +12,17 @@ require (
+@@ -12,18 +12,18 @@ require (
  	github.com/prometheus/client_golang v1.11.1
  	github.com/prometheus/common v0.26.0
  	github.com/rs/zerolog v1.20.0
@@ -34,13 +62,15 @@ index ec0368b5f..e9861db80 100644
 -	google.golang.org/genproto v0.0.0-20220628213854-d9e0b6570c03
 -	google.golang.org/grpc v1.47.0
 -	google.golang.org/protobuf v1.28.0
+-	gopkg.in/square/go-jose.v2 v2.5.1
 +	golang.org/x/sync v0.11.0
 +	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 +	google.golang.org/grpc v1.56.3
 +	google.golang.org/protobuf v1.33.0
- 	gopkg.in/square/go-jose.v2 v2.5.1
++	gopkg.in/go-jose/go-jose.v2 v2.6.3
  	gopkg.in/yaml.v2 v2.4.0
  	istio.io/api v0.0.0-20221005164339-97dc20dc0ff3
+ 	istio.io/client-go v1.15.2
 @@ -37,18 +37,19 @@ require (
  	github.com/PuerkitoBio/purell v1.1.1 // indirect
  	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
@@ -92,7 +122,7 @@ index ec0368b5f..e9861db80 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/klog/v2 v2.60.1 // indirect
 diff --git a/go.sum b/go.sum
-index bc1095377..56da709f8 100644
+index bc1095377..38447476e 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -57,7 +57,6 @@ github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuy
@@ -386,7 +416,17 @@ index bc1095377..56da709f8 100644
  gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-@@ -727,7 +736,6 @@ gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkep
+@@ -719,15 +728,14 @@ gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f h1:BLraFXnmrev5lT+xlilqcH8X
+ gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
+ gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
++gopkg.in/go-jose/go-jose.v2 v2.6.3 h1:nt80fvSDlhKWQgSWyHyy5CfmlQr+asih51R8PTWNKKs=
++gopkg.in/go-jose/go-jose.v2 v2.6.3/go.mod h1:zzZDPkNNw/c9IE7Z9jr11mBZQhKQTMzoEEIoEdZlFBI=
+ gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
+ gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
+-gopkg.in/square/go-jose.v2 v2.5.1 h1:7odma5RETjNHWJnR32wx8t+Io4djHE1PqxCFx3iiZ2w=
+-gopkg.in/square/go-jose.v2 v2.5.1/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
+ gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
  gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
  gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
@@ -394,3 +434,16 @@ index bc1095377..56da709f8 100644
  gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+diff --git a/kubernetes/kubetest/mock.go b/kubernetes/kubetest/mock.go
+index be2cf323d..7c334f077 100644
+--- a/kubernetes/kubetest/mock.go
++++ b/kubernetes/kubetest/mock.go
+@@ -5,7 +5,7 @@ import (
+ 
+ 	osapps_v1 "github.com/openshift/api/apps/v1"
+ 	"github.com/stretchr/testify/mock"
+-	"gopkg.in/square/go-jose.v2/jwt"
++	"gopkg.in/go-jose/go-jose.v2/jwt"
+ 	istio_fake "istio.io/client-go/pkg/clientset/versioned/fake"
+ 	apps_v1 "k8s.io/api/apps/v1"
+ 	batch_v1 "k8s.io/api/batch/v1"
