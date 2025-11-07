@@ -207,7 +207,6 @@ async function getLicenseToken(token = '', revision = '') {
     const span = $($('#enter-license-key-' + revision).next('span'));
     const input = $('[license-token-' + revision + ']');
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
-    console.log(revision)
     console.log(response)
     if(response.ok) {
       const data = await response.json();
