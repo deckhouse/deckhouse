@@ -36,7 +36,7 @@ webhooks:
         name: deckhouse
         namespace: d8-system
         port: 4223
-        path: /validate/v1/dechouse-registry-secret
+        path: /validate/v1/deckhouse-registry-secret
   - name: modules.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

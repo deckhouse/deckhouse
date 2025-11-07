@@ -94,7 +94,7 @@ func RegistrySecretHandler() http.Handler {
 				login := parts[0]
 				password := parts[1]
 
-				if login == "" || containsWhitespace(password) {
+				if login == "" || containsWhitespace(login) {
 					return rejectResult(fmt.Sprintf("Login for registry '%s' contains spaces, tabs, newlines or empty.", registry))
 				}
 
