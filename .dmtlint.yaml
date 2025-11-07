@@ -16,7 +16,7 @@ global:
           impact: warn
         read-only-root-filesystem:
           impact: warn
-    image:
+    images:
       rules:
         werf:
           impact: warn
