@@ -55,30 +55,39 @@ type LokiAuth struct {
 	User     string `json:"user,omitempty"`
 }
 
-func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
+func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Loki {
 	spec := cspec.Loki
 
-	// default labels
-	//
-	// Asterisk is required here to expand all pod labels
-	// See https://github.com/vectordotdev/vector/pull/12041
-	labels := map[string]string{
-		// Kubernetes logs labels
-		"namespace":    "{{ namespace }}",
-		"container":    "{{ container }}",
-		"image":        "{{ image }}",
-		"pod":          "{{ pod }}",
-		"node":         "{{ node }}",
-		"pod_ip":       "{{ pod_ip }}",
-		"stream":       "{{ stream }}",
-		"pod_labels_*": "{{ pod_labels }}",
-		"node_group":   "{{ node_group }}",
-		"pod_owner":    "{{ pod_owner }}",
-		// File labels
-		// TODO(nabokihms): think about removing this label and always use the `node` labels.
-		//   If we do this right now, it will break already working setups.
-		"host": "{{ host }}",
-		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
+	// default labels based on source type
+	// Different source types provide different fields, so we need different labels
+	var labels map[string]string
+
+	switch sourceType {
+	case v1alpha1.SourceKubernetesPods:
+		// Kubernetes logs have rich metadata from the API
+		// Asterisk is required here to expand all pod labels
+		// See https://github.com/vectordotdev/vector/pull/12041
+		labels = map[string]string{
+			"namespace":    "{{ namespace }}",
+			"container":    "{{ container }}",
+			"image":        "{{ image }}",
+			"pod":          "{{ pod }}",
+			"node":         "{{ node }}",
+			"pod_ip":       "{{ pod_ip }}",
+			"stream":       "{{ stream }}",
+			"pod_labels_*": "{{ pod_labels }}",
+			"node_group":   "{{ node_group }}",
+			"pod_owner":    "{{ pod_owner }}",
+		}
+	case v1alpha1.SourceFile:
+		// File logs only have the host field (node hostname)
+		labels = map[string]string{
+			"host": "{{ host }}",
+			// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
+		}
+	default:
+		// Fallback to empty labels if source type is unknown
+		labels = map[string]string{}
 	}
 
 	var dataField string
@@ -114,7 +123,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 
 	return &Loki{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "loki",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

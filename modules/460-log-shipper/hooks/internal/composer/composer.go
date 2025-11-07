@@ -79,11 +79,6 @@ func customResourceMetric(input *go_hook.HookInput, kind, name, namespace, _type
 }
 
 func (c *Composer) Do() ([]byte, error) {
-	destinationRefs, err := c.composeDestinations()
-	if err != nil {
-		return nil, err
-	}
-
 	file := NewVectorFile()
 
 	for _, s := range c.Source {
@@ -106,7 +101,11 @@ func (c *Composer) Do() ([]byte, error) {
 		var destinations []PipelineDestination
 
 		for _, ref := range s.Spec.DestinationRefs {
-			dst := destinationRefs[destination.ComposeName(ref)]
+			// Create destination with source type awareness
+			dst, err := c.composeDestination(ref, s.Spec.Type)
+			if err != nil {
+				return nil, err
+			}
 
 			if dst.Destination != nil {
 				destinations = append(destinations, dst)
@@ -127,24 +126,27 @@ func (c *Composer) Do() ([]byte, error) {
 	return file.ConvertToJSON()
 }
 
-func (c *Composer) composeDestinations() (map[string]PipelineDestination, error) {
-	destinationByName := make(map[string]PipelineDestination)
-
+// composeDestination creates a PipelineDestination for the given destination name and source type
+func (c *Composer) composeDestination(destName string, sourceType string) (PipelineDestination, error) {
+	// Find the destination spec by name
 	for _, d := range c.Dest {
-		dest := newLogDest(d.Spec.Type, d.Name, d.Spec)
+		if d.Name == destName {
+			dest := newLogDest(d.Spec.Type, d.Name, d.Spec, sourceType)
 
-		transforms, err := transform.CreateLogDestinationTransforms(d.Name, d)
-		if err != nil {
-			return nil, err
-		}
+			transforms, err := transform.CreateLogDestinationTransforms(d.Name, d)
+			if err != nil {
+				return PipelineDestination{}, err
+			}
 
-		destinationByName[dest.GetName()] = PipelineDestination{
-			Destination: dest,
-			Transforms:  transforms,
+			return PipelineDestination{
+				Destination: dest,
+				Transforms:  transforms,
+			}, nil
 		}
 	}
 
-	return destinationByName, nil
+	// Destination not found, return empty (will be filtered out later)
+	return PipelineDestination{}, nil
 }
 
 func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis.LogSource {
@@ -157,22 +159,22 @@ func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis
 	return nil
 }
 
-func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) apis.LogDestination {
+func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec, sourceType string) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
-		return destination.NewLoki(name, spec)
+		return destination.NewLoki(name, spec, sourceType)
 	case v1alpha1.DestElasticsearch:
-		return destination.NewElasticsearch(name, spec)
+		return destination.NewElasticsearch(name, spec, sourceType)
 	case v1alpha1.DestLogstash:
-		return destination.NewLogstash(name, spec)
+		return destination.NewLogstash(name, spec, sourceType)
 	case v1alpha1.DestVector:
-		return destination.NewVector(name, spec)
+		return destination.NewVector(name, spec, sourceType)
 	case v1alpha1.DestKafka:
-		return destination.NewKafka(name, spec)
+		return destination.NewKafka(name, spec, sourceType)
 	case v1alpha1.DestSplunk:
-		return destination.NewSplunk(name, spec)
+		return destination.NewSplunk(name, spec, sourceType)
 	case v1alpha1.DestSocket:
-		return destination.NewSocket(name, spec)
+		return destination.NewSocket(name, spec, sourceType)
 	}
 	return nil
 }

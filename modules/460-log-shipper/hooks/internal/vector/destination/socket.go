@@ -36,12 +36,12 @@ type Socket struct {
 	TLS CommonTLS `json:"tls,omitempty"`
 }
 
-func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
+func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Socket {
 	spec := cspec.Socket
 
 	result := &Socket{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "socket",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
