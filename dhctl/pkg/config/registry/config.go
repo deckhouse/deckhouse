@@ -43,7 +43,7 @@ const (
 
 type Config struct {
 	ModuleConfig ModuleConfig
-	CRI          string
+	DefaultCRI   CRIType
 }
 
 type InitConfig struct {
@@ -79,12 +79,12 @@ type UnmanagedModeConfig struct {
 
 type SchemeType = string
 
-type CRIType string
+type CRIType = string
 
 func NewConfig(
 	moduleConfig *ModuleConfig,
 	initConfig *InitConfig,
-	cri string,
+	defaultCRI string,
 ) (Config, error) {
 	var finalModuleConfig ModuleConfig
 
@@ -113,7 +113,7 @@ func NewConfig(
 
 	config := Config{
 		ModuleConfig: finalModuleConfig,
-		CRI:          cri,
+		DefaultCRI:   defaultCRI,
 	}
 	if err := config.Validate(); err != nil {
 		return Config{}, fmt.Errorf("Invalid registry config: %w", err)
@@ -172,17 +172,17 @@ func (cfg Config) isModuleEnable() bool {
 	// If cri int allowed list -> use module registry
 	return slices.Contains(
 		[]CRIType{CRIContainerdV1, CRIContainerdV2},
-		CRIType(cfg.CRI))
+		CRIType(cfg.DefaultCRI))
 }
 
 func (cfg Config) Validate() error {
 	return validation.ValidateStruct(&cfg,
 		validation.Field(&cfg.ModuleConfig),
-		validation.Field(&cfg.CRI,
+		validation.Field(&cfg.DefaultCRI,
 			validation.When(
 				slices.Contains([]registry_const.ModeType{registry_const.ModeDirect}, cfg.ModuleConfig.Mode),
 				validation.In(CRIContainerdV1, CRIContainerdV2).
-					Error("Invalid CRI; only 'Containerd' and 'ContainerdV2' are supported for 'Direct' mode"),
+					Error(fmt.Sprintf("unable to use defaultCRI '%s'; only 'Containerd' and 'ContainerdV2' are supported for 'Direct' mode", cfg.DefaultCRI)),
 			),
 		),
 	)
