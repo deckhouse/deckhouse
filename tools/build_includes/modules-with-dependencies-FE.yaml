@@ -389,44 +389,6 @@
   stageDependencies:
     install:
         - '**/*.go'
-- add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
-  to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
-- add: /ee/modules/015-admission-policy-engine/hooks/common_test.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:
@@ -938,29 +900,6 @@
         - '**/*.go'
 - add: /ee/modules/450-network-gateway
   to: /deckhouse/modules/450-network-gateway
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
-- add: /ee/modules/500-operator-trivy
-  to: /deckhouse/modules/500-operator-trivy
   excludePaths:
     - images
     - templates
