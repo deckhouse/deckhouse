@@ -15,7 +15,6 @@
 package registry
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -141,12 +140,7 @@ func (cb *BuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, erro
 
 	address, path := addressAndPathFromImagesRepo(data.ImagesRepo)
 
-	dockerCfgEncoded, err := data.DockerCfgBase64()
-	if err != nil {
-		return nil, err
-	}
-
-	dockerCfgDecoded, err := base64.StdEncoding.DecodeString(dockerCfgEncoded)
+	dockerCfgDecoded, err := data.DockerCfg()
 	if err != nil {
 		return nil, err
 	}
