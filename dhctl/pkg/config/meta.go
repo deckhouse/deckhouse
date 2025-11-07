@@ -317,13 +317,9 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.
+	registryData := m.Registry.
 		Builder().
-		WithPKI(registry.NewPKIGenerator()).
-		BashibleTplCtx()
-	if err != nil {
-		return nil, err
-	}
+		KubeadmTplCtx()
 
 	result["registry"] = registryData
 
@@ -373,9 +369,13 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData := m.Registry.
+	registryData, err := m.Registry.
 		Builder().
-		KubeadmTplCtx()
+		WithPKI(registry.NewPKIGenerator()).
+		BashibleTplCtx()
+	if err != nil {
+		return nil, err
+	}
 
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
