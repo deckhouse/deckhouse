@@ -218,7 +218,6 @@ async function getLicenseToken(token = '', revision = '') {
           handlerRejectData(token, span, input);
           return;
         }
-        console.log(`Revision "${revision}" найден в redactions:`, data.redactions);
       }
       handlerResolveData(data, token, span, input);
     } else {
