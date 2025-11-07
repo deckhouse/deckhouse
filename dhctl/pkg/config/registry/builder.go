@@ -155,26 +155,6 @@ func (cb *BuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, erro
 	return ret.ToMap(), nil
 }
 
-func (cb *BuilderWithPKI) RegistryInitSecretData() (bool, map[string][]byte, error) {
-	if !cb.cfg.isModuleEnable() {
-		return false, nil, nil
-	}
-	isExist := true
-
-	var cfg registry_init.Config
-	cfg, err := cb.initConfig()
-	if err != nil {
-		return isExist, nil, err
-	}
-
-	cfgYaml, err := yaml.Marshal(cfg)
-	if err != nil {
-		return isExist, nil, err
-	}
-	data := map[string][]byte{"config": cfgYaml}
-	return isExist, data, nil
-}
-
 func (cb *BuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
 	if !cb.cfg.isModuleEnable() {
 		return false, nil, nil
@@ -202,7 +182,24 @@ func (cb *BuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ctx.ToMap()
+
+	mapCtx, err := ctx.ToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	initCfg, err := cb.initConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	mapInitCfg, err := initCfg.ToMap()
+	if err != nil {
+		return nil, err
+	}
+
+	mapCtx["init"] = mapInitCfg
+	return mapCtx, nil
 }
 
 func (cb *BuilderWithPKI) initConfig() (registry_init.Config, error) {

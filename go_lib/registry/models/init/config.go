@@ -17,6 +17,9 @@ limitations under the License.
 package init
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
@@ -29,4 +32,17 @@ type Config struct {
 type CertKey struct {
 	Cert string `json:"cert" yaml:"cert"`
 	Key  string `json:"key" yaml:"key"`
+}
+
+func (c Config) ToMap() (map[string]interface{}, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Config: %w", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal Config into map: %w", err)
+	}
+	return result, nil
 }
