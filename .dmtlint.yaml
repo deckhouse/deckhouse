@@ -14,3 +14,9 @@ global:
       rules:
         no-new-privileges:
           impact: warn
+        read-only-root-filesystem:
+          impact: warn
+    image:
+      rules:
+        werf:
+          impact: warn
