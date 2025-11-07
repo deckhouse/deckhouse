@@ -113,8 +113,8 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
             kubernetes_version = config_dict.get('kubernetesVersion')
             if kubernetes_version and isinstance(kubernetes_version, str):
                 return kubernetes_version
-        except Exception as e:
-            logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
+    except Exception as e:
+        logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
     
     return None
 
