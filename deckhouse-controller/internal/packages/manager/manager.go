@@ -84,20 +84,13 @@ func New(conf Config, logger *log.Logger) *Manager {
 
 // LoadApplication loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
-func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationInstance, settings addonutils.Values) error {
+func (m *Manager) LoadApplication(ctx context.Context, name string, settings addonutils.Values) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadApplication")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", inst.Name))
-	span.SetAttributes(attribute.String("namespace", inst.Namespace))
-	span.SetAttributes(attribute.String("version", inst.Version))
-	span.SetAttributes(attribute.String("package", inst.Package))
+	span.SetAttributes(attribute.String("name", name))
 
-	if len(inst.Namespace) == 0 {
-		inst.Namespace = "default"
-	}
-
-	app, err := m.loader.Load(ctx, inst)
+	app, err := m.loader.Load(ctx, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("load application: %w", err)
@@ -111,7 +104,7 @@ func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationIn
 		return fmt.Errorf("apply settings: %w", err)
 	}
 
-	m.apps[app.GetName()] = app
+	m.apps[name] = app
 
 	return nil
 }

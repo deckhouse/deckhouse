@@ -28,10 +28,15 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/eventhandler"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/appload"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/packagerun"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -50,6 +55,7 @@ type Operator struct {
 	packageManager *packagemanager.Manager // Manages application packages and hooks
 	queueService   *queue.Service          // Task queue for hook execution
 	nelmService    *nelm.Service           // Helm release management and monitoring
+	installer      *installer.Installer    // Package installer
 
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
@@ -74,13 +80,14 @@ type Operator struct {
 //   - NELM monitor: Tuned QPS for Helm resource monitoring
 //
 // The event handler starts immediately to begin processing events.
-func New(ctx context.Context, logger *log.Logger) (*Operator, error) {
+func New(ctx context.Context, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
 	// Initialize foundational services
-	o.queueService = queue.NewService(ctx, logger)
-	o.scheduleManager = cron.NewManager(ctx, logger)
 	o.logger = logger.Named(operatorTracer)
+	o.queueService = queue.NewService(ctx, o.logger)
+	o.scheduleManager = cron.NewManager(ctx, o.logger)
+	o.installer = installer.New(dc, o.logger)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := o.buildNelmService(ctx); err != nil {
@@ -104,7 +111,7 @@ func New(ctx context.Context, logger *log.Logger) (*Operator, error) {
 		KubeObjectPatcher: o.objectPatcher,
 		ScheduleManager:   o.scheduleManager,
 		KubeEventsManager: o.kubeEventsManager,
-	}, logger)
+	}, o.logger)
 
 	// Create event handler to orchestrate event processing
 	o.eventHandler = eventhandler.New(eventhandler.Config{
@@ -112,12 +119,31 @@ func New(ctx context.Context, logger *log.Logger) (*Operator, error) {
 		ScheduleManager:   o.scheduleManager,
 		PackageManager:    o.packageManager,
 		QueueService:      o.queueService,
-	}, logger)
+	}, o.logger)
 
 	// Start the event processing loop immediately
 	o.eventHandler.Start(ctx)
 
 	return o, nil
+}
+
+type AppInstance struct {
+	Name       string
+	Namespace  string
+	Definition apps.Definition
+	Settings   map[string]interface{}
+}
+
+func (o *Operator) AddPackage(ctx context.Context, repo *v1alpha1.PackageRepository, inst AppInstance) {
+	name := apps.BuildName(inst.Namespace, inst.Name)
+
+	o.queueService.Enqueue(ctx, name, appload.New(appload.Config{
+		AppName:    name,
+		Package:    inst.Definition.Name,
+		Version:    inst.Definition.Version,
+		Settings:   inst.Settings,
+		Repository: repo,
+	}, o, o.logger))
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
@@ -144,6 +170,10 @@ func (o *Operator) Stop() {
 
 	// Clean up resource monitors
 	o.nelmService.StopMonitors()
+}
+
+func (o *Operator) Installer() *installer.Installer {
+	return o.installer
 }
 
 // KubeEventsManager returns the Kubernetes events manager for external access.
