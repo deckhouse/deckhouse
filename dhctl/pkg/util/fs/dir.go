@@ -23,8 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 	"github.com/google/uuid"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 func IsDirExists(dir string) bool {
