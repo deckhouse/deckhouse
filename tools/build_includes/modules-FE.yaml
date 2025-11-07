@@ -314,11 +314,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/650-runtime-audit-engine
-  to: /deckhouse/modules/650-runtime-audit-engine
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:

@@ -314,8 +314,3 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/650-runtime-audit-engine
-  to: /deckhouse/modules/650-runtime-audit-engine
-  stageDependencies:
-    install:
-        - '**/*'
