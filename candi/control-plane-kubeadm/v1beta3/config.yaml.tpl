@@ -10,11 +10,11 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- end }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- if lt $nodesCount 100 }}
-    {{- $nodesCount = 1000 }}
+    {{- $gcThresholdCount = 1000 }}
 {{- else if lt $nodesCount 300 }}
-    {{- $nodesCount = 3000 }}
+    {{- $gcThresholdCount = 3000 }}
 {{- else }}
-    {{- $nodesCount = 6000 }}
+    {{- $gcThresholdCount = 6000 }}
 {{- end }}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
@@ -164,7 +164,7 @@ controllerManager:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "false"
-    terminated-pod-gc-threshold: {{ $nodesCount | quote }}
+    terminated-pod-gc-threshold: {{ $gcThresholdCount | quote }}
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
