@@ -119,6 +119,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 	"1.31": {
 		Deprecated: []string{
 			"DynamicResourceAllocation",
+			"NewDeprecatedGate",
 		},
 		Forbidden: []string{
 			"SomeProblematicFeature",
@@ -140,7 +141,8 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 	},
 	"1.32": {
 		Deprecated: []string{
-			"New123",
+			"SomeNewDeprecatedGate",
+			"SomeNewDeprecatedGateTwo",
 		},
 		Forbidden: []string{
 			"SomeProblematicFeature",

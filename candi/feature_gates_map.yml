@@ -27,6 +27,7 @@
 "1.31":
   deprecated:
     - DynamicResourceAllocation
+    - NewDeprecatedGate
   forbidden:
     - SomeProblematicFeature
   kubelet:
@@ -41,7 +42,8 @@
     - SchedulerQueueingHints
 "1.32":
   deprecated:
-    - New123
+    - SomeNewDeprecatedGate
+    - SomeNewDeprecatedGateTwo
   forbidden:
     - SomeProblematicFeature
   kubelet:

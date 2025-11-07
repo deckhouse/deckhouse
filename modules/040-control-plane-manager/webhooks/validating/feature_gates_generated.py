@@ -37,6 +37,7 @@ versions = {
     "1.31": {
         "deprecated": [
             "DynamicResourceAllocation",
+            "NewDeprecatedGate",
         ],
         "forbidden": [
             "SomeProblematicFeature",
@@ -58,7 +59,8 @@ versions = {
     },
     "1.32": {
         "deprecated": [
-            "New123",
+            "SomeNewDeprecatedGate",
+            "SomeNewDeprecatedGateTwo",
         ],
         "forbidden": [
             "SomeProblematicFeature",
