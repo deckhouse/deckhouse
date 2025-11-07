@@ -1,5 +1,0 @@
-name: operator-trivy
-stage: "General Availability"
-subsystems:
-  - security
-namespace: d8-operator-trivy
