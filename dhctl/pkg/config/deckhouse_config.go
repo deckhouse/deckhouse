@@ -137,7 +137,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
-	registrySettings, err := metaConfig.Registry.
+	hasRegistryCfg, registryCfg, err := metaConfig.Registry.
 		Builder().
 		DeckhouseSettings()
 	if err != nil {
@@ -163,15 +163,22 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-		mc.Spec.Settings["registry"] = registrySettings
+		if hasRegistryCfg {
+			mc.Spec.Settings["registry"] = registryCfg
+		} else {
+			delete(mc.Spec.Settings, "registry")
+		}
 	}
 
 	if deckhouseCm == nil {
-		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
+		settings := map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
-			"registry": registrySettings,
-		})
+		}
+		if hasRegistryCfg {
+			settings["registry"] = registryCfg
+		}
+		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, settings)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
 		}
