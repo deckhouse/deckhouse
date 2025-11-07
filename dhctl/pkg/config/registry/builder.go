@@ -42,17 +42,22 @@ type BuilderWithPKI struct {
 	pkiProvider PKIProvider
 }
 
-func (cb *Builder) DeckhouseSettings() (map[string]interface{}, error) {
+func (cb *Builder) DeckhouseSettings() (bool, map[string]interface{}, error) {
+	if !cb.cfg.isModuleEnable() {
+		return false, nil, nil
+	}
+	isExist := true
+
 	data, err := json.Marshal(cb.cfg.ModuleConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
+		return isExist, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
 	}
 
 	var ret map[string]interface{}
 	if err := json.Unmarshal(data, &ret); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
+		return isExist, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
 	}
-	return ret, nil
+	return isExist, ret, nil
 }
 
 func (cb *Builder) KubeadmTplCtx() map[string]interface{} {
@@ -156,38 +161,45 @@ func (cb *BuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, erro
 	return ret.ToMap(), nil
 }
 
-func (cb *BuilderWithPKI) RegistryInitSecretData() (map[string][]byte, error) {
+func (cb *BuilderWithPKI) RegistryInitSecretData() (bool, map[string][]byte, error) {
+	if !cb.cfg.isModuleEnable() {
+		return false, nil, nil
+	}
+	isExist := true
+
 	var cfg registry_init.Config
 	cfg, err := cb.initConfig()
 	if err != nil {
-		return nil, err
+		return isExist, nil, err
 	}
 
 	cfgYaml, err := yaml.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return isExist, nil, err
 	}
-
-	return map[string][]byte{
-		"config": cfgYaml,
-	}, nil
+	data := map[string][]byte{"config": cfgYaml}
+	return isExist, data, nil
 }
 
-func (cb *BuilderWithPKI) RegistryBashibleConfigSecretData() (map[string][]byte, error) {
+func (cb *BuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
+	if !cb.cfg.isModuleEnable() {
+		return false, nil, nil
+	}
+	isExist := true
+
 	var cfg bashible.Config
 	_, cfg, err := cb.bashibleContextAndConfig()
 	if err != nil {
-		return nil, err
+		return isExist, nil, err
 	}
 
 	cfgYaml, err := yaml.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return isExist, nil, err
 	}
 
-	return map[string][]byte{
-		"config": cfgYaml,
-	}, nil
+	data := map[string][]byte{"config": cfgYaml}
+	return isExist, data, nil
 }
 
 func (cb *BuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {

@@ -289,19 +289,12 @@ func CreateDeckhouseManifests(
 		},
 	}
 
+	// Registry secrets
 	registryBulder := cfg.Registry.
 		Builder().
 		WithPKI(registry.NewPKIK8SProvider())
-	// Registry secrets
+
 	deckhouseRegistrySecretData, err := registryBulder.DeckhouseRegistrySecretData()
-	if err != nil {
-		return nil, err
-	}
-	registryInitSecretData, err := registryBulder.RegistryInitSecretData()
-	if err != nil {
-		return nil, err
-	}
-	registryBashibleConfigSecretData, err := registryBulder.RegistryBashibleConfigSecretData()
 	if err != nil {
 		return nil, err
 	}
@@ -317,32 +310,60 @@ func CreateDeckhouseManifests(
 			return err
 		},
 	})
-	tasks = append(tasks, actions.ManifestTask{
-		Name:     `Secret "registry-init"`,
-		Manifest: func() interface{} { return manifests.RegistryInitSecret(registryInitSecretData) },
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
-			return err
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
-			return err
-		},
-	})
-	tasks = append(tasks, actions.ManifestTask{
-		Name: `Secret "registry-bashible-config"`,
-		Manifest: func() interface{} {
-			return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData)
-		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
-			return err
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
-			return err
-		},
-	})
+
+	isExist, registryInitSecretData, err := registryBulder.RegistryInitSecretData()
+	if err != nil {
+		return nil, err
+	}
+	if isExist {
+		tasks = append(tasks, actions.ManifestTask{
+			Name:     `Secret "registry-init"`,
+			Manifest: func() interface{} { return manifests.RegistryInitSecret(registryInitSecretData) },
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+				return err
+			},
+		})
+	}
+
+	isExist, registryBashibleConfigSecretData, err := registryBulder.RegistryBashibleConfigSecretData()
+	if err != nil {
+		return nil, err
+	}
+	if isExist {
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `Secret "registry-bashible-config"`,
+			Manifest: func() interface{} {
+				return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData)
+			},
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+				return err
+			},
+		})
+	}
 
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
