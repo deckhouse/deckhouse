@@ -276,18 +276,19 @@ func extractUnmanagedMirrors(cfg *UnmanagedModeConfig) (string, []bashible.Conte
 	host, _ := addressAndPathFromImagesRepo(cfg.ImagesRepo)
 	username, password := cfg.UsernamePassword()
 	scheme := strings.ToLower(string(cfg.Scheme))
+	ca := cfg.CA
 
 	ctx := []bashible.ContextMirrorHost{{
 		Host:   host,
 		Scheme: scheme,
-		CA:     cfg.CA,
+		CA:     ca,
 		Auth:   bashible.ContextAuth{Username: username, Password: password},
 	}}
 
 	cfgMirrors := []bashible.ConfigMirrorHost{{
 		Host:   host,
 		Scheme: scheme,
-		CA:     cfg.CA,
+		CA:     ca,
 		Auth:   bashible.ConfigAuth{Username: username, Password: password},
 	}}
 
