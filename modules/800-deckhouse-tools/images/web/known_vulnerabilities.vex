@@ -60,7 +60,7 @@
       "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
       "timestamp": "2025-11-07T00:00:00Z"
     },
-        {
+    {
       "vulnerability": {
         "name": "CVE-2025-52881"
       },
@@ -74,7 +74,7 @@
       "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
       "timestamp": "2025-11-07T00:00:00Z"
     },
-        {
+    {
       "vulnerability": {
         "name": "CVE-2025-52565"
       },
@@ -88,7 +88,7 @@
       "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при bind-mounting /dev/pts/$n to /dev/console, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
       "timestamp": "2025-11-07T00:00:00Z"
     },
-        {
+    {
       "vulnerability": {
         "name": "CVE-2025-31133"
       },
