@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if k8sVersionStr == "" {
-		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
+		input.Values.Set("controlPlaneManager.internal.allowedFeatureGates", result)
 		return nil
 	}
 
@@ -113,10 +113,11 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	deprecatedFeatureGates := make(map[string]KubernetesVersion)
 	currentlyDeprecatedFeatureGates := make(map[string]bool)
+	currentlyForbiddenFeatureGates := make(map[string]bool)
 
 	currentFeatures, ok := FeatureGatesMap[string(currentVersion)]
 	if !ok {
-		input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
+		input.Values.Set("controlPlaneManager.internal.allowedFeatureGates", result)
 		return nil
 	}
 
@@ -136,6 +137,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		if currentFeatures.IsForbidden(featureName) {
+			currentlyForbiddenFeatureGates[featureName] = true
 			continue
 		}
 
@@ -158,12 +160,12 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set("controlPlaneManager.internal.enabledFeatureGates", result)
+	input.Values.Set("controlPlaneManager.internal.allowedFeatureGates", result)
 
 	// Metric for feature gates that are already deprecated in current version
 	for featureName := range currentlyDeprecatedFeatureGates {
 		input.MetricsCollector.Set(
-			"d8_control_plane_manager_deprecated_feature_gate",
+			"d8_control_plane_manager_problematic_feature_gate",
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
@@ -177,7 +179,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Metric for feature gates that will be deprecated in future versions
 	for featureName, deprecatedVersion := range deprecatedFeatureGates {
 		input.MetricsCollector.Set(
-			"d8_control_plane_manager_deprecated_feature_gate",
+			"d8_control_plane_manager_problematic_feature_gate",
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
@@ -188,9 +190,23 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		)
 	}
 
-	if len(deprecatedFeatureGates) == 0 && len(currentlyDeprecatedFeatureGates) == 0 {
+	// Metric for feature gates that are forbidden in current version
+	for featureName := range currentlyForbiddenFeatureGates {
 		input.MetricsCollector.Set(
-			"d8_control_plane_manager_deprecated_feature_gate",
+			"d8_control_plane_manager_problematic_feature_gate",
+			1.0,
+			map[string]string{
+				"feature_gate":       featureName,
+				"deprecated_version": string(currentVersion),
+				"current_version":    string(currentVersion),
+				"status":             "forbidden",
+			},
+		)
+	}
+
+	if len(deprecatedFeatureGates) == 0 && len(currentlyDeprecatedFeatureGates) == 0 && len(currentlyForbiddenFeatureGates) == 0 {
+		input.MetricsCollector.Set(
+			"d8_control_plane_manager_problematic_feature_gate",
 			0.0,
 			map[string]string{
 				"feature_gate":       "",

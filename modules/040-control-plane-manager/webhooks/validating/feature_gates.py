@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2024 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
 # limitations under the License.
 
 import base64
+import logging
 from typing import Optional, List
 from deckhouse import hook
 from dotmap import DotMap
 
-from feature_gates_generated import get_feature_gate_info
+from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 
@@ -86,8 +87,8 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
         decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
         if decoded_version:
             return decoded_version
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"Failed to decode Kubernetes version from base64: {e}")
     
     return None
 
@@ -113,39 +114,20 @@ def validate(ctx: DotMap) -> List[str]:
     components = ['apiserver', 'kubelet', 'kubeControllerManager', 'kubeScheduler']
     
     for feature_gate in enabled_feature_gates:
-        if not feature_gate:
-            continue
-        
-        found_in_any_component = False
-        is_forbidden = False
-        is_deprecated = False
-
-        # passing empty string as component to check only is_deprecated and is_forbidden
-        try:
-            info_check = get_feature_gate_info(normalized_version, "", feature_gate)
-            is_forbidden = info_check.is_forbidden
-            is_deprecated = info_check.is_deprecated
-        except Exception:
-            pass
-        
-        for component_name in components:
-            try:
-                info = get_feature_gate_info(normalized_version, component_name, feature_gate)
-                if info.exists:
-                    found_in_any_component = True
-                    break
-            except Exception:
-                continue
-        
-        if is_forbidden:
+        if is_forbidden(normalized_version, feature_gate):
             warning_msg = f"'{feature_gate}' is forbidden for Kubernetes version {normalized_version} and will not be applied"
             warnings.append(warning_msg)
-        elif is_deprecated:
+        elif is_deprecated(normalized_version, feature_gate):
             warning_msg = f"'{feature_gate}' is deprecated for Kubernetes version {normalized_version} and will not be applied"
             warnings.append(warning_msg)
-        elif not found_in_any_component:
-            warning_msg = f"'{feature_gate}' is unknown or enabled by default FeatureGate for Kubernetes version {normalized_version} and will not be applied"
-            warnings.append(warning_msg)
+        else:
+            found_in_any_component = any(
+                exists_in_component(normalized_version, component, feature_gate)
+                for component in components
+            )
+            if not found_in_any_component:
+                warning_msg = f"'{feature_gate}' is unknown or enabled by default FeatureGate for Kubernetes version {normalized_version} and will not be applied"
+                warnings.append(warning_msg)
     
     return warnings
 
