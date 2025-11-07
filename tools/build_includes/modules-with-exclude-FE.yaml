@@ -226,19 +226,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
-  to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:
@@ -538,8 +525,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/500-operator-trivy
-  to: /deckhouse/modules/500-operator-trivy
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
   excludePaths:
     - docs
     - README.md
@@ -551,8 +538,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/610-service-with-healthchecks
-  to: /deckhouse/modules/610-service-with-healthchecks
+- add: /ee/modules/650-runtime-audit-engine
+  to: /deckhouse/modules/650-runtime-audit-engine
   excludePaths:
     - docs
     - README.md
