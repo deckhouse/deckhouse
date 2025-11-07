@@ -213,7 +213,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs
+generate: generate-kubernetes generate-tools
 
 .PHONY: generate-tools
 generate-tools:
