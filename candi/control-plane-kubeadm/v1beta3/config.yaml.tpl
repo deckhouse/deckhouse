@@ -9,6 +9,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "StructuredAuthenticationConfiguration=true" | join "," }}
 {{- end }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
+{{- gcThresholdCount := 1000}}
 {{- if lt $nodesCount 100 }}
     {{- $gcThresholdCount = 1000 }}
 {{- else if lt $nodesCount 300 }}
