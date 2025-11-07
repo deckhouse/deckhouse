@@ -1,0 +1,16 @@
+global:
+  linters-settings:
+    documentation:
+      impact: warn
+    module:
+      rules:
+        license:
+          impact: warn
+    templates:
+      rules:
+        grafana-dashboards:
+          impact: warn
+    container:
+      rules:
+        no-new-privileges:
+          impact: warn
