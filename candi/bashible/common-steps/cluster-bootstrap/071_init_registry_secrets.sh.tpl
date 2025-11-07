@@ -20,6 +20,9 @@ bb-sync-file $INIT_CONFIG_PATH - << "EOF"
 {{ . | toYaml }}
 EOF
 
+# Create d8-system namespace
+bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system
+
 # Upload init registry secret
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-init || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-init \
