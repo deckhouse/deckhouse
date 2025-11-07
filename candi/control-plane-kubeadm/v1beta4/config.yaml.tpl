@@ -5,11 +5,11 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- if lt $nodesCount 100 }}
-    {{- $nodesCount = 1000 }}
+    {{- $gcThresholdCount = 1000 }}
 {{- else if lt $nodesCount 300 }}
-    {{- $nodesCount = 3000 }}
+    {{- $gcThresholdCount = 3000 }}
 {{- else }}
-    {{- $nodesCount = 6000 }}
+    {{- $gcThresholdCount = 6000 }}
 {{- end }}
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
@@ -184,7 +184,7 @@ controllerManager:
     - name: profiling
       value: "false"
     - name: terminated-pod-gc-threshold
-      value: {{ $nodesCount | quote }}
+      value: {{ $gcThresholdCount | quote }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
     - name: node-cidr-mask-size
