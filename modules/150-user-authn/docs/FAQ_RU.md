@@ -121,6 +121,21 @@ title: "Модуль user-authn: FAQ"
 Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
 {% endraw %}
 
+## Как включить SSO по Kerberos (SPNEGO) для LDAP?
+
+Если на стороне клиента настроено доменное SSO (браузер доверяет домену Dex), Dex может принимать Kerberos‑билеты по заголовку `Authorization: Negotiate` и пускать без формы логин/пароль.
+
+Шаги:
+
+1. В инфраструктуре клиента должен быть задан SPN `HTTP/<fqdn-dex>` для сервисного аккаунта и сгенерирован keytab.
+2. В кластере создайте Secret в `d8-user-authn` с ключом `krb5.keytab`.
+3. В `DexProvider` (тип LDAP) включите блок `spec.ldap.kerberos`:
+   - `enabled: true`
+   - `keytabSecretName: <имя секрета>`
+   - (опц.) `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+
+Dex автоматически смонтирует keytab и начнёт принимать SPNEGO. `krb5.conf` на сервере не обязателен — билеты проверяются по keytab.
+
 ### Настройка kube-apiserver
 
 С помощью функций модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.

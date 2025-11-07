@@ -71,6 +71,20 @@ spec:
       - name: tls
         secret:
           secretName: dex-tls
+      {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
+      {{- range $p := .Values.userAuthn.internal.providers }}
+      {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
+      {{- if not $p.ldap.kerberos.keytabSecretName }}
+        {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
+      {{- end }}
+      {{- if $p.ldap.kerberos.keytabSecretName }}
+      - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+        secret:
+          secretName: {{ $p.ldap.kerberos.keytabSecretName | quote }}
+      {{- end }}
+      {{- /* krb5.conf is not required for offline AP-REQ validation */}}
+      {{- end }}
+      {{- end }}
       {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
       - name: whitelabel-logo
         configMap:
@@ -121,6 +135,20 @@ spec:
           mountPath: /etc/dex/config
         - name: tls
           mountPath: /etc/dex/certs
+        {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
+        {{- range $p := .Values.userAuthn.internal.providers }}
+        {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
+        {{- if not $p.ldap.kerberos.keytabSecretName }}
+          {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
+        {{- end }}
+        {{- if $p.ldap.kerberos.keytabSecretName }}
+        - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+          mountPath: {{ printf "/etc/dex/kerberos/%s" $p.id | quote }}
+          readOnly: true
+        {{- end }}
+        {{- /* krb5.conf is not required for offline AP-REQ validation */}}
+        {{- end }}
+        {{- end }}
         {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
         - mountPath: /web/static/img/deckhouse-logo-icon.svg
           name: whitelabel-logo
