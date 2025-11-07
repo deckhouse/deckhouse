@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -29,7 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const errorPrefix = "Error during cleanup tmp dir:"
+const cleanupErrorPrefix = "Error during cleanup tmp dir:"
 
 type LoggerProvider func() log.Logger
 
@@ -144,20 +145,36 @@ func (r *regularTmpCleaner) Cleanup() {
 	logger := safeLoggerProvider(r.params.LoggerProvider)
 
 	if r.disableCleanup {
-		logger.LogDebugF("Disable regular cleanup: %s\n", r.disableCleanupMsg)
+		// lock file will deleted by callback returned from AcquireTmpDirLock
+		logger.LogDebugF(
+			"Cleanup tmp dir '%s' was skipped with reason: %s\n",
+			r.params.TmpDir,
+			r.disableCleanupMsg,
+		)
 		return
 	}
 
 	tmpDir := r.params.TmpDir
 
-	logger.LogDebugF("Clear temp dir: %s\n", tmpDir)
+	logger.LogDebugF("Clean temp dir '%s' started\n", tmpDir)
+	defer func() {
+		logger.LogDebugF("Clean temp dir '%s' was finished\n", tmpDir)
+	}()
+
 	// do not clean tmp dir, because user may need temporary files to debug infra
 	dirsForDeletion := make([]string, 0)
 	keepFiles := make([]string, 0)
+	removeFiles := make([]string, 0)
+	lockFiles := make([]string, 0)
+
+	skipDirs := []string{
+		tmpDir,
+		r.params.DefaultTmpDir,
+	}
 
 	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.DebugF("%s %s because walk returns err: %v\n", errorPrefix, fullPath, err)
+			logger.LogDebugF("%s %s because walk returns err: %v\n", cleanupErrorPrefix, fullPath, err)
 			return nil
 		}
 
@@ -172,12 +189,17 @@ func (r *regularTmpCleaner) Cleanup() {
 				return filepath.SkipDir
 			}
 
-			if fullPath == r.params.DefaultTmpDir {
-				logger.LogDebugF("Skip cleaning default temp dir '%s'\n", fullPath)
+			if slices.Contains(skipDirs, fullPath) {
+				logger.LogDebugF("Skip cleaning dir '%s'\n", fullPath)
 				return nil
 			}
 
 			dirsForDeletion = append(dirsForDeletion, fullPath)
+			return nil
+		}
+
+		if strings.HasSuffix(fullPath, lockTmpDirFile) {
+			lockFiles = append(lockFiles, fullPath)
 			return nil
 		}
 
@@ -188,19 +210,26 @@ func (r *regularTmpCleaner) Cleanup() {
 			}
 		}
 
-		logger.LogDebugF("Delete tmp file '%s'\n", fullPath)
-		err = os.Remove(fullPath)
-		if err != nil {
-			logger.LogDebugF("%s file did not deleted '%s': %v\n", errorPrefix, fullPath, err)
-		}
+		removeFiles = append(removeFiles, fullPath)
+
 		return nil
 	})
 
 	if err != nil {
-		logger.LogDebugF("%s walking '%s' got error: %v\n", errorPrefix, tmpDir, err)
+		logger.LogDebugF("%s walking '%s' got error: %v\n", cleanupErrorPrefix, tmpDir, err)
+		return
 	}
 
-	sortByDepthDescending(dirsForDeletion)
+	// lock file will delete after all
+	if len(lockFiles) > 1 {
+		logger.LogWarnF("%s found multiple lock files: %v. Skip cleaning %s\n", cleanupErrorPrefix, lockFiles, tmpDir)
+		return
+	}
+
+	sortByDepthDescending(removeFiles)
+	for _, fullPath := range removeFiles {
+		remove(fullPath, logger, "Delete tmp file")
+	}
 
 	skipDeleteDir := func(dir string) bool {
 		for _, keep := range keepFiles {
@@ -214,20 +243,27 @@ func (r *regularTmpCleaner) Cleanup() {
 		return false
 	}
 
-	log.DebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
+	logger.LogDebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
 
+	sortByDepthDescending(dirsForDeletion)
 	for _, dir := range dirsForDeletion {
 		if skipDeleteDir(dir) {
 			logger.LogDebugF("Skip cleaning temp sub dir '%s'\n", dir)
 			continue
 		}
 
-		err := os.Remove(dir)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				logger.LogDebugF("%s directory '%s' deleting returns error: %v\n", errorPrefix, dir, err)
-			}
-		}
+		remove(dir, logger, "Delete tmp sub dir")
+	}
+
+	// we have one or nothing lock files here
+	if len(lockFiles) != 0 {
+		remove(lockFiles[0], logger, "Delete tmp dir lock file")
+	}
+
+	if len(keepFiles) == 0 && tmpDir != r.params.DefaultTmpDir {
+		remove(tmpDir, logger, "Delete tmp dir")
+	} else {
+		logger.LogDebugF("Cleaning temp dir '%s' skipeed because it default or have keept files %d\n", tmpDir, len(keepFiles))
 	}
 }
 
@@ -269,4 +305,12 @@ func sortByDepthDescending(paths []string) {
 
 		return paths[i] > paths[j]
 	})
+}
+
+func remove(fullPath string, logger log.Logger, msg string) {
+	logger.LogDebugF("%s: '%s'\n", msg, fullPath)
+	err := os.Remove(fullPath)
+	if err != nil && !os.IsNotExist(err) {
+		logger.LogInfoF("%s % did not success'%s': %v\n", cleanupErrorPrefix, msg, fullPath, err)
+	}
 }

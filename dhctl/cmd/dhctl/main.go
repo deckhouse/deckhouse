@@ -277,7 +277,7 @@ var (
 	}
 )
 
-func registerOnShutdown(title string, action func()) {
+func registerOnShutdown(title string, action onShutdownFunc) {
 	tomb.RegisterOnShutdown(title, action)
 }
 
@@ -294,7 +294,9 @@ func main() {
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
 	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
-	go tomb.WaitForProcessInterruption()
+	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
+		disableCleanupOnInterrupted,
+	})
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')

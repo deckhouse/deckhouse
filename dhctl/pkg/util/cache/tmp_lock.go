@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cache
 
 import (
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-const dhctlLockTmpFile = ".dhctl-tmp-dir.lock"
+const (
+	lockTmpDirFile = ".dhctl-tmp-dir.lock"
+)
 
-type tmpLockCleanupFunc func()
+type ReleaseLockFunc func()
 
-func emptyTmpLockCleanupFunc() {}
+func getLockFullPath(dir string) string {
+	return filepath.Join(dir, lockTmpDirFile)
+}
 
 func getTmpLockedByErr(existsIn string, tmpDir string) error {
-	lockFullPath := filepath.Join(existsIn, dhctlLockTmpFile)
+	lockFullPath := getLockFullPath(existsIn)
 	lockedBy, err := os.ReadFile(lockFullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -46,21 +50,41 @@ func getTmpLockedByErr(existsIn string, tmpDir string) error {
 	return fmt.Errorf(msg, lockFullPath, tmpDir, string(lockedBy))
 }
 
-// wasTmpLockAcquired returns nil if lock free
-func wasTmpDirLockAcquired(tmpDir string) error {
-	existsIn, err := fs.FileExistsInDirAndParentsDirs(tmpDir, dhctlLockTmpFile)
+// findLockInSubDirs returns nil if not found
+func findLockInSubDirs(tmpDir string) error {
+	return filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// If tmp folder doesn't exist or dir
+		if info == nil || info.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(fullPath, lockTmpDirFile) {
+			return getTmpLockedByErr(filepath.Dir(fullPath), tmpDir)
+		}
+
+		return nil
+	})
+}
+
+// TmpDirLockAlreadyAcquired returns nil if lock free
+func TmpDirLockAlreadyAcquired(tmpDir string) error {
+	existsIn, err := fs.FileExistsInDirAndParentsDirs(tmpDir, lockTmpDirFile)
 	if err != nil {
 		return err
 	}
 
 	if existsIn == "" {
-		return nil
+		return findLockInSubDirs(tmpDir)
 	}
 
 	return getTmpLockedByErr(existsIn, tmpDir)
 }
 
-func acquireTmpDirLock(tmpDir string, cmdName string) (tmpLockCleanupFunc, error) {
+func AcquireTmpDirLock(tmpDir string, loggerProvider LoggerProvider, cmdName string) (ReleaseLockFunc, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
@@ -74,7 +98,7 @@ func acquireTmpDirLock(tmpDir string, cmdName string) (tmpLockCleanupFunc, error
 
 	acquireBy := fmt.Sprintf("%s@%s $ dhctl %s", username, hostname, cmdName)
 
-	lockFullPath := filepath.Join(tmpDir, dhctlLockTmpFile)
+	lockFullPath := getLockFullPath(tmpDir)
 	err = os.WriteFile(lockFullPath, []byte(acquireBy), 0644)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot acquire tmp dir lock '%s': %w", lockFullPath, err)
@@ -83,7 +107,7 @@ func acquireTmpDirLock(tmpDir string, cmdName string) (tmpLockCleanupFunc, error
 	return func() {
 		err := os.Remove(lockFullPath)
 		if err != nil && !os.IsNotExist(err) {
-			log.GetDefaultLogger().LogWarnF("Cannot remove tmp dir lock '%s': %v\n", lockFullPath, err)
+			safeLoggerProvider(loggerProvider).LogWarnF("Cannot remove tmp dir lock '%s': %v\n", lockFullPath, err)
 		}
 	}, nil
 }

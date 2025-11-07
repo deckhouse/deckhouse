@@ -34,7 +34,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-type registerOnShutdownFunc func(title string, action func())
+type (
+	onShutdownFunc func()
+
+	registerOnShutdownFunc func(title string, action onShutdownFunc)
+)
+
+func doNothingOnShutdownFunc() {}
 
 type actionIniterParams struct {
 	tmpDirName string
@@ -95,22 +101,30 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		return err
 	}
 
-	cleanupLock, err := i.checkAndAcquireTmpLock(c, tmpDir)
+	releaseTmpDirLock, err := i.checkAndAcquireTmpLock(c, tmpDir)
 	if err != nil {
 		return err
 	}
 
-	if err := i.initLogger(c, tmpDir); err != nil {
+	finalizeLogger, err := i.initLogger(c, tmpDir)
+	if err != nil {
+		releaseTmpDirLock()
 		return err
 	}
+
+	runTmpCleaner := i.initTmpDirCleaner(c, tmpDir)
+
+	// shutdown funcs called in reverse order
+
+	i.registerOnShutdown("Finalize logger", finalizeLogger)
+
+	i.registerOnShutdown("Release dhctl temporary directory lock", releaseTmpDirLock)
+
+	i.registerOnShutdown("Clear dhctl temporary directory", runTmpCleaner)
 
 	i.registerOnShutdown("Cleanup providers from default cache", func() {
 		infrastructureprovider.CleanupProvidersFromDefaultCache(defaultLoggerProvider)
 	})
-
-	i.registerCleanupTmp(c, tmpDir)
-
-	i.registerOnShutdown("Release dhctl temporary directory lock", cleanupLock)
 
 	return nil
 }
@@ -166,22 +180,27 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 	return absPath, nil
 }
 
-func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (tmpLockCleanupFunc, error) {
+func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
 	cmdName := getCommandName(c)
 	if cmdName == "" || cmdName == grpcServerCmd {
 		// do not lock for grpc server because for singleshot dhctl runner we create
 		// tmp dir in sub directory of server
-		return emptyTmpLockCleanupFunc, nil
+		return doNothingOnShutdownFunc, nil
 	}
 
-	if err := wasTmpDirLockAcquired(tmpDir); err != nil {
+	if err := cache.TmpDirLockAlreadyAcquired(tmpDir); err != nil {
 		return nil, err
 	}
 
-	return acquireTmpDirLock(tmpDir, cmdName)
+	releaseLock, err := cache.AcquireTmpDirLock(tmpDir, defaultLoggerProvider, cmdName)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() { releaseLock() }, nil
 }
 
-func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string) {
+func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string) onShutdownFunc {
 	clearTmpParams := cache.ClearTmpParams{
 		IsDebug:        i.params.isDebug,
 		DefaultTmpDir:  app.GetDefaultTmpDir(),
@@ -199,9 +218,9 @@ func (i *actionIniter) registerCleanupTmp(c *kingpin.ParseContext, tmpDir string
 	cleaner := cache.NewTmpCleaner(clearTmpParams)
 	cache.SetGlobalTmpCleaner(cleaner)
 
-	i.registerOnShutdown("Clear dhctl temporary directory", func() {
+	return func() {
 		cache.GetGlobalTmpCleaner().Cleanup()
-	})
+	}
 }
 
 type directoriesToInitialize map[string]string
@@ -224,16 +243,16 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 // empty is command not passed
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
-func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) error {
+func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
 	log.InitLogger(i.params.loggerType)
 	if i.params.doNotWriteDebugFile {
-		return nil
+		return doNothingOnShutdownFunc, nil
 	}
 
 	commandName := getCommandName(c)
 
 	if slices.Contains(skipTeeLoggerCommands, commandName) {
-		return nil
+		return doNothingOnShutdownFunc, nil
 	}
 
 	logPath := i.params.debugLogFilePath
@@ -246,29 +265,27 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) error 
 
 	outFile, err := os.Create(logPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = log.WrapWithTeeLogger(outFile, 1024)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.InfoF("Debug log file: %s\n", logPath)
-
-	i.registerOnShutdown("Finalize logger", func() {
-		if err := log.FlushAndClose(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-			return
-		}
-	})
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()
 
 	i.logFile = logPath
 
-	return nil
+	return func() {
+		if err := log.FlushAndClose(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+			return
+		}
+	}, nil
 }
 
 func (i *actionIniter) getLoggerPath() string {
@@ -288,4 +305,12 @@ func getCommandName(c *kingpin.ParseContext) string {
 
 func defaultLoggerProvider() log.Logger {
 	return log.GetDefaultLogger()
+}
+
+func disableCleanupOnInterrupted(s os.Signal) {
+	if !input.IsTerminal() {
+		return
+	}
+	// disable tmp cleaning if user pass ctrl + c
+	cache.GetGlobalTmpCleaner().DisableCleanup("Interrupted by signal " + s.String())
 }

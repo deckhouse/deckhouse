@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"testing"
 
@@ -190,14 +191,16 @@ func TestClearAllInSubDirDisableCleanup(t *testing.T) {
 		tmpSubDir:             "disableCleaning",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      true,
-		makeDirs:              dirs,
-		makeFiles:             files,
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  dirs,
+			makeFiles: files,
+		},
 	}
 
 	f := getTestClearFunc(t, params)
 
 	defer func() {
-		clearTest(t, f)
+		clearTmpCleanTest(t, f)
 	}()
 
 	require.IsType(t, &regularTmpCleaner{}, f.cleaner)
@@ -207,10 +210,12 @@ func TestClearAllInSubDirDisableCleanup(t *testing.T) {
 	f.cleaner.DisableCleanup(disableLogMsg)
 	f.cleaner.Cleanup()
 
-	assertKeep(t, f, testJoinFilesDirs(files, dirs))
+	assertKeep(t, f, testJoinFilesDirs(files, dirs), true)
 	assertKeepPath(t, f.tmpDir)
 
-	assertHasEntityInLogWithSuffix(t, f, fmt.Sprintf("%s\n", disableLogMsg))
+	assertHasEntityInLogWithMatcher(t, f, &log.Match{
+		Suffix: []string{fmt.Sprintf("%s\n", disableLogMsg)},
+	}, 1)
 }
 
 func TestClearAllInSubDirWithTombstone(t *testing.T) {
@@ -232,6 +237,8 @@ func TestClearAllInSubDirWithTombstone(t *testing.T) {
 	}
 
 	filesToRemove := []fileDirToCreate{
+		// lock should removed
+		{path: ".dhctl-tmp-dir.lock"},
 		{path: "in_root.txt"},
 		{path: "in_root2.txt"},
 		{path: "state/instate.txt"},
@@ -248,14 +255,16 @@ func TestClearAllInSubDirWithTombstone(t *testing.T) {
 		tmpSubDir:             "allInSubDir",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      true,
-		makeDirs:              testJoinFilesDirs(keeptDirs, dirsForRemove),
-		makeFiles:             testJoinFilesDirs(keeptFiles, filesToRemove),
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  testJoinFilesDirs(keeptDirs, dirsForRemove),
+			makeFiles: testJoinFilesDirs(keeptFiles, filesToRemove),
+		},
 	}
 
 	f := getTestClearFunc(t, params)
 
 	defer func() {
-		clearTest(t, f)
+		clearTmpCleanTest(t, f)
 	}()
 
 	f.cleaner.Cleanup()
@@ -274,12 +283,18 @@ func TestClearAllInSubDirWithoutTombstoneWithDefaultDir(t *testing.T) {
 	dirs := []fileDirToCreate{
 		{path: "state"},
 		{path: "state/empty"},
+		{path: "state/sub/"},
+		{path: "state/loooooooooooong/"},
 	}
 
 	files := []fileDirToCreate{
+		// lock should removed
+		{path: ".dhctl-tmp-dir.lock"},
 		{path: "in_root.txt"},
 		{path: "state/instate.txt"},
 		{path: "state/.hidden"},
+		{path: "state/sub/file.txt"},
+		{path: "state/loooooooooooong/loooooooong_file.json"},
 	}
 
 	params := testClearFuncParams{
@@ -288,20 +303,69 @@ func TestClearAllInSubDirWithoutTombstoneWithDefaultDir(t *testing.T) {
 		tmpSubDir:             "allInSubDirWithDefault",
 		defaultTmpDirAsSubdir: true,
 		removeTombstones:      true,
-		makeDirs:              dirs,
-		makeFiles:             files,
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  dirs,
+			makeFiles: files,
+		},
 	}
 
 	f := getTestClearFunc(t, params)
 
 	defer func() {
-		clearTest(t, f)
+		clearTmpCleanTest(t, f)
 	}()
 
 	f.cleaner.Cleanup()
 
 	assertRemoved(t, f, testJoinFilesDirs(files, dirs))
-	// assert removing tmp dir because it is not default
+	assertKeepPath(t, f.tmpDir)
+}
+
+func TestMultipleLocksKeeptAll(t *testing.T) {
+	dirs := []fileDirToCreate{
+		{path: "state"},
+		{path: "state/empty"},
+		{path: "state/sub/"},
+		{path: "state/loooooooooooong/"},
+		{path: "another_instance/"},
+	}
+
+	files := []fileDirToCreate{
+		{path: ".dhctl-tmp-dir.lock"},
+		{path: "in_root.txt"},
+		{path: "state/instate.txt"},
+		{path: "state/.hidden"},
+		{path: "state/sub/file.txt"},
+		{path: "state/loooooooooooong/loooooooong_file.json"},
+		{path: "another_instance/.dhctl-tmp-dir.lock"},
+	}
+
+	params := testClearFuncParams{
+		testName:              "TestMultipleLocksKeeptAll",
+		isDebug:               false,
+		tmpSubDir:             "testMultipleLocksKeeptAll",
+		defaultTmpDirAsSubdir: false,
+		removeTombstones:      true,
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  dirs,
+			makeFiles: files,
+		},
+	}
+
+	f := getTestClearFunc(t, params)
+
+	defer func() {
+		clearTmpCleanTest(t, f)
+	}()
+
+	f.cleaner.Cleanup()
+
+	assertKeep(t, f, testJoinFilesDirs(files, dirs), false)
+	assertHasEntityInLogWithMatcher(t, f, &log.Match{
+		Regex: []*regexp.Regexp{
+			regexp.MustCompile(".+found multiple lock files.+"),
+		},
+	}, 1)
 	assertKeepPath(t, f.tmpDir)
 }
 
@@ -329,6 +393,8 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 	}
 
 	filesForRemove := []fileDirToCreate{
+		// lock should removed
+		{path: ".dhctl-tmp-dir.lock"},
 		{path: "in_root.txt"},
 		{path: "in_root2.txt"},
 		{path: "state/instate.txt"},
@@ -346,14 +412,16 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 		tmpSubDir:             "keepLogsAndTombstounes",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      false,
-		makeDirs:              testJoinFilesDirs(keeptDirs, dirsForRemove),
-		makeFiles:             testJoinFilesDirs(keeptFiles, filesForRemove),
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  testJoinFilesDirs(keeptDirs, dirsForRemove),
+			makeFiles: testJoinFilesDirs(keeptFiles, filesForRemove),
+		},
 	}
 
 	f := getTestClearFunc(t, params)
 
 	defer func() {
-		clearTest(t, f)
+		clearTmpCleanTest(t, f)
 	}()
 
 	f.cleaner.Cleanup()
@@ -364,10 +432,13 @@ func TestKeepLogsAndTombstounes(t *testing.T) {
 		f,
 		testJoinFilesDirs(keeptDirs, keeptFiles),
 	)
+	assertKeepPath(t, f.tmpDir)
 }
 
 func TestSkipIncorrectAndDebug(t *testing.T) {
 	files := []fileDirToCreate{
+		// lock should keept
+		{path: ".dhctl-tmp-dir.lock"},
 		{path: "in_root.txt"},
 		{path: "in_root2.txt"},
 		{path: "state/instate.txt"},
@@ -381,13 +452,12 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 	doTest := func(p testClearFuncParams) {
 		f := getTestClearFunc(t, p)
 		defer func() {
-			clearTest(t, f)
+			clearTmpCleanTest(t, f)
 		}()
 
 		f.cleaner.Cleanup()
 
-		assertKeep(t, f, testJoinFilesDirs(files, dirs))
-		assertNoErrorsInLog(t, f)
+		assertKeep(t, f, testJoinFilesDirs(files, dirs), true)
 	}
 
 	params := testClearFuncParams{
@@ -396,9 +466,11 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 		tmpSubDir:             "skipLogsAndTombstones",
 		defaultTmpDirAsSubdir: false,
 		removeTombstones:      true,
-		makeDirs:              dirs,
-		makeFiles:             files,
-		rewriteTmpDirTo:       pointer.String(""),
+		makeDirsFiles: makeDirsFiles{
+			makeDirs:  dirs,
+			makeFiles: files,
+		},
+		rewriteTmpDirTo: pointer.String(""),
 	}
 
 	// empty dir
@@ -473,6 +545,36 @@ func sortFileDirToCreate(l []fileDirToCreate) []fileDirToCreate {
 	return dst
 }
 
+type makeDirsFiles struct {
+	makeDirs  []fileDirToCreate
+	makeFiles []fileDirToCreate
+}
+
+func (m *makeDirsFiles) makeAll(t *testing.T, root string, logger log.Logger, tmpDir string) {
+	fullPathToCreate := func(f fileDirToCreate) string {
+		fullPath := filepath.Join(tmpDir, f.path)
+		if f.outsideTmpRoot {
+			fullPath = filepath.Join(root, f.path)
+		}
+
+		return fullPath
+	}
+
+	makeDirs := sortFileDirToCreate(m.makeDirs)
+	for _, dir := range makeDirs {
+		fullPath := fullPathToCreate(dir)
+		logger.LogInfoF("Create dir %s\n", fullPath)
+		testMkDir(t, fullPath)
+	}
+
+	makeFiles := sortFileDirToCreate(m.makeFiles)
+	for _, file := range makeFiles {
+		fullPath := fullPathToCreate(file)
+		logger.LogInfoF("Create file %s\n", fullPath)
+		testMkFile(t, fullPath)
+	}
+}
+
 type testClearFuncParams struct {
 	testName              string
 	isDebug               bool
@@ -481,8 +583,7 @@ type testClearFuncParams struct {
 	removeTombstones      bool
 	rewriteTmpDirTo       *string
 
-	makeDirs  []fileDirToCreate
-	makeFiles []fileDirToCreate
+	makeDirsFiles
 }
 
 type testFunc struct {
@@ -553,28 +654,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 		testMkDir(t, tmpDir)
 	}
 
-	fullPathToCreate := func(f fileDirToCreate) string {
-		fullPath := filepath.Join(tmpDir, f.path)
-		if f.outsideTmpRoot {
-			fullPath = filepath.Join(testTmpDir, f.path)
-		}
-
-		return fullPath
-	}
-
-	makeDirs := sortFileDirToCreate(params.makeDirs)
-	for _, dir := range makeDirs {
-		fullPath := fullPathToCreate(dir)
-		logger.Parent().LogInfoF("Create dir %s\n", fullPath)
-		testMkDir(t, fullPath)
-	}
-
-	makeFiles := sortFileDirToCreate(params.makeFiles)
-	for _, file := range makeFiles {
-		fullPath := fullPathToCreate(file)
-		logger.Parent().LogInfoF("Create file %s\n", fullPath)
-		testMkFile(t, fullPath)
-	}
+	params.makeAll(t, testTmpDir, logger.Parent(), tmpDir)
 
 	defaultTmpDir := testTmpDir
 	if params.defaultTmpDirAsSubdir {
@@ -605,7 +685,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 	}
 }
 
-func clearTest(t *testing.T, params testFunc) {
+func clearTmpCleanTest(t *testing.T, params testFunc) {
 	t.Helper()
 
 	require.False(t, govalue.IsNil(params.logger))
@@ -642,7 +722,7 @@ func assertNoErrorsInLog(t *testing.T, f testFunc) {
 	require.False(t, govalue.IsNil(f.logger))
 
 	matcher := &log.Match{
-		Prefix: []string{loggerErrorPrefix, errorPrefix},
+		Prefix: []string{loggerErrorPrefix, cleanupErrorPrefix},
 	}
 
 	errorMsgs, err := f.logger.AllMatches(matcher)
@@ -650,19 +730,15 @@ func assertNoErrorsInLog(t *testing.T, f testFunc) {
 	require.Empty(t, errorMsgs, fmt.Sprintf("Expected no errors in log: %v", errorMsgs))
 }
 
-func assertHasEntityInLogWithSuffix(t *testing.T, f testFunc, msg string) {
+func assertHasEntityInLogWithMatcher(t *testing.T, f testFunc, match *log.Match, countMatches int) {
 	t.Helper()
 
 	require.False(t, govalue.IsNil(f.logger))
+	require.NotNil(t, match)
 
-	matcher := &log.Match{
-		Suffix: []string{msg},
-	}
-
-	errorMsgs, err := f.logger.AllMatches(matcher)
-	require.NoError(t, err, msg)
-	require.Len(t, errorMsgs, 1, msg)
-	require.Contains(t, errorMsgs[0], msg, msg)
+	errorMsgs, err := f.logger.AllMatches(match)
+	require.NoError(t, err)
+	require.Len(t, errorMsgs, countMatches)
 }
 
 func assertIsRemovedError(t *testing.T, err error, fullPath string) {
@@ -715,7 +791,7 @@ func assertRemoved(t *testing.T, f testFunc, l []fileDirToCreate) {
 	assertNoErrorsInLog(t, f)
 }
 
-func assertKeep(t *testing.T, f testFunc, l []fileDirToCreate) {
+func assertKeep(t *testing.T, f testFunc, l []fileDirToCreate, noErrorsInLog bool) {
 	t.Helper()
 
 	tmpDir := f.tmpDir
@@ -727,7 +803,9 @@ func assertKeep(t *testing.T, f testFunc, l []fileDirToCreate) {
 		assertKeepOne(t, f, e)
 	}
 
-	assertNoErrorsInLog(t, f)
+	if noErrorsInLog {
+		assertNoErrorsInLog(t, f)
+	}
 }
 
 func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, keept []fileDirToCreate) {
@@ -737,7 +815,7 @@ func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, k
 	require.NotEmpty(t, keept)
 
 	assertRemoved(t, f, removed)
-	assertKeep(t, f, keept)
+	assertKeep(t, f, keept, true)
 
 	assertNoErrorsInLog(t, f)
 }
