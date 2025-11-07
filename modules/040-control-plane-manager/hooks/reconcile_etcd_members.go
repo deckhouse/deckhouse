@@ -95,6 +95,8 @@ type recicleEtcdNode struct {
 func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
 	snap := input.Snapshots["master_nodes"]
 
+	input.Logger.Debug("my snap: %v", snap)
+
 	if len(snap) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
@@ -138,6 +140,8 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 			removeList = append(removeList, mem.ID)
 		}
 	}
+
+	input.Logger.Debug("my remove list: %v", removeList)
 
 	if len(removeList) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
