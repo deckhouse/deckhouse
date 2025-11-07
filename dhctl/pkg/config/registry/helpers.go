@@ -39,12 +39,17 @@ func (d *Data) AuthBase64() string {
 }
 
 func (d *Data) DockerCfgBase64() (string, error) {
-	address, _ := addressAndPathFromImagesRepo(d.ImagesRepo)
-	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
+	cfg, err := d.DockerCfg()
 	if err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(cfg), nil
+}
+
+func (d *Data) DockerCfg() ([]byte, error) {
+	address, _ := addressAndPathFromImagesRepo(d.ImagesRepo)
+	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
+	return cfg, err
 }
 
 func addressAndPathFromImagesRepo(imgRepo string) (string, string) {

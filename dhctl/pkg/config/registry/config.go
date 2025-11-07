@@ -140,7 +140,13 @@ func (cfg *ModuleConfig) unmanagedFromInitConfig(initConfig InitConfig) error {
 	if err != nil {
 		return err
 	}
-	username, password, err := registry_docker.CredsFromDockerCfg([]byte(initConfig.RegistryDockerCfg), address)
+
+	dockerCfgDecode, err := base64.StdEncoding.DecodeString(initConfig.RegistryDockerCfg)
+	if err != nil {
+		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
+	}
+
+	username, password, err := registry_docker.CredsFromDockerCfg(dockerCfgDecode, address)
 	if err != nil {
 		return err
 	}
