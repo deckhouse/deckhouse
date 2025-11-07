@@ -66,6 +66,12 @@ type Values struct {
 	State State  `json:"state,omitempty"`
 }
 
+type InitSecretSnap struct {
+	Exist   bool
+	Applied bool
+	Config  []byte
+}
+
 func (p Params) Validate() error {
 	if p.Mode == registry_const.ModeUnmanaged && p.ImagesRepo == "" {
 		// Skip validation for Unmanaged mode if it's not configurable

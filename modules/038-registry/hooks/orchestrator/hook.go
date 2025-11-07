@@ -51,12 +51,13 @@ const (
 	initSnapName             = "init"
 	registrySecretSnapName   = "registry-secret"
 	pkiSnapName              = "pki"
-	secretsSnapName          = "secrets"
 	usersSnapName            = "users"
 	inClusterProxySnapName   = "incluster-proxy"
 	registryServiceSnapName  = "registry-service"
 	bashibleSnapName         = "bashible"
 	registrySwitcherSnapName = "registry-switcher"
+
+	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -136,7 +137,14 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 					return nil, nil
 				}
 
-				return config, nil
+				_, applied := secret.Annotations[initSecretAppliedAnnotation]
+
+				ret := InitSecretSnap{
+					Exist:   true,
+					Applied: applied,
+					Config:  config,
+				}
+				return ret, nil
 			},
 		},
 		{
@@ -186,22 +194,18 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		err    error
 	)
 
-	var (
-		initConfig    registry_init.Config
-		hasInitSecret bool
-	)
+	var initConfig registry_init.Config
 
-	initConfigRaw, err := helpers.SnapshotToSingle[[]byte](input, initSnapName)
+	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {
-		input.Logger.Info("Init secret snapshot found, trying to load init state")
-		hasInitSecret = true
-		if err = yaml.Unmarshal(initConfigRaw, &initConfig); err != nil {
+		input.Logger.Info("Init secret snapshot found, trying to load init config")
+		if err = yaml.Unmarshal(initSecret.Config, &initConfig); err != nil {
 			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
 		}
 	}
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		input.Logger.Warn(
-			"Cannot get init state, the state will be processed without it",
+			"Cannot get init config, the state will be processed without it",
 			"error", err,
 		)
 	}
@@ -289,13 +293,15 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Initialize state with init config
-	if initConfig.CA != nil {
-		values.State.PKI.CA = &pki.CertModel{}
-		values.State.PKI.CA.Cert = initConfig.CA.Cert
-		values.State.PKI.CA.Key = initConfig.CA.Key
-	}
-	if initConfig.UserRO != nil {
-		values.State.Users.RO = initConfig.UserRO
+	if initSecret.Exist && !initSecret.Applied {
+		if initConfig.CA != nil {
+			values.State.PKI.CA = &pki.CertModel{}
+			values.State.PKI.CA.Cert = initConfig.CA.Cert
+			values.State.PKI.CA.Key = initConfig.CA.Key
+		}
+		if initConfig.UserRO != nil {
+			values.State.Users.RO = initConfig.UserRO
+		}
 	}
 
 	// Initialize RegistrySecret before processing
@@ -326,11 +332,18 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 
-	// Remove init secret if exist
-	if hasInitSecret {
-		input.Logger.Debug("Removing init secret")
-		input.PatchCollector.Delete(
-			"v1", "Secret", "d8-system", "registry-init")
+	// Patch init secret if exist
+	if initSecret.Exist && !initSecret.Applied {
+		input.Logger.Debug("Patch init secret")
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					initSecretAppliedAnnotation: "",
+				},
+			},
+		}
+		input.PatchCollector.PatchWithMerge(
+			patch, "v1", "Secret", "d8-system", "registry-init")
 	}
 	return nil
 }
