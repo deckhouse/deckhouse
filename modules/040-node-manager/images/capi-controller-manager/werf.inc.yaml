@@ -1,4 +1,4 @@
-{{- $version := include "get_oss_version_by_id" (list "cluster-api" $ )  -}}
+{{- $version := "1.11.2" }}
 ---
 image: {{ .ModuleName }}/capi-controller-manager
 fromImage: common/distroless
