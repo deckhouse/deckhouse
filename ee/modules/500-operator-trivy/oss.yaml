@@ -1,5 +1,0 @@
-- name: Trivy Operator
-  link: https://github.com/aquasecurity/trivy-operator
-  description: The Trivy-Operator leverages trivy security tools by incorporating their outputs into Kubernetes CRDs (Custom Resource Definitions) and from there, making security reports accessible through the Kubernetes API. This way users can find and view the risks that relate to different resources in what we call a Kubernetes-native way.
-  logo: /images/logos/trivy.svg
-  license: <a href="https://github.com/aquasecurity/trivy-operator/blob/v0.11.1/LICENSE" target="_blank">Apache License 2.0</a>
