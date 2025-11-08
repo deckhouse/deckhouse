@@ -70,6 +70,10 @@ spec:
           env:
           - name: VECTOR_CONFIG
             value: "/etc/vector/**/*.json"
+          - name: POD_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
           {{- include "vectorEnv" . | nindent 10 }}
           readinessProbe:
             failureThreshold: 3
