@@ -57,3 +57,9 @@ type Args map[string]interface{}
 func Combine(r1, r2 Rule) Rule {
 	return Rule(strings.TrimSpace(string(r1)) + "\n\n" + strings.TrimSpace(string(r2)))
 }
+
+// FileSourceHostRule sets the .host field to the POD_NODE_NAME environment variable for File sources.
+// This overrides the default hostname with the actual node name from Kubernetes.
+const FileSourceHostRule Rule = `
+."host" = "$POD_NODE_NAME"
+`

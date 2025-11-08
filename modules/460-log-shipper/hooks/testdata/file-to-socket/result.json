@@ -11,7 +11,7 @@
     "transform/destination/test-socket1-dest/00_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/source/test-source/02_clean_up"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
@@ -19,7 +19,7 @@
     "transform/destination/test-socket2-dest/00_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/source/test-source/02_clean_up"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
@@ -35,7 +35,7 @@
     "transform/destination/test-socket3-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/source/test-source/02_clean_up"
       ],
       "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.cef.name=\"d8\" \n .cef.severity=\"1\"",
       "type": "remap"
@@ -51,7 +51,7 @@
     "transform/destination/test-socket4-dest/00_cef_values": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/source/test-source/02_clean_up"
       ],
       "source": "if !exists(.cef) {\n  .cef = {};\n};\n\nif !exists(.cef.name) {\n  .cef.name = \"Deckhouse Event\";\n};\n\nif !exists(.cef.severity) {\n  .cef.severity = \"5\";\n} else if is_string(.cef.severity) {\n  if .cef.severity == \"Debug\" {\n    .cef.severity = \"0\";\n  };\n  if .cef.severity == \"Informational\" {\n    .cef.severity = \"3\";\n  };\n  if .cef.severity == \"Notice\" {\n    .cef.severity = \"4\";\n  };\n  if .cef.severity == \"Warning\" {\n    .cef.severity = \"6\";\n  };\n  if .cef.severity == \"Error\" {\n    .cef.severity = \"7\";\n  };\n  if .cef.severity == \"Critical\" {\n    .cef.severity = \"8\";\n  };\n  if .cef.severity == \"Emergency\" {\n    .cef.severity = \"10\";\n  };\n};",
       "type": "remap"
@@ -64,25 +64,33 @@
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "transform/source/test-source/00_local_timezone": {
+    "transform/source/test-source/00_file_source_host": {
       "drop_on_abort": false,
       "inputs": [
         "cluster_logging_config/test-source"
       ],
+      "source": ".\"host\" = \"$POD_NODE_NAME\"",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_file_source_host"
+      ],
       "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
       "type": "remap"
     },
-    "transform/source/test-source/01_clean_up": {
+    "transform/source/test-source/02_clean_up": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/00_local_timezone"
+        "transform/source/test-source/01_local_timezone"
       ],
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
       "type": "remap"
     }
   },
   "sinks": {
-    "destination/cluster/test-socket1-dest": {
+    "destination/cluster/test-socket1-dest/File": {
       "type": "socket",
       "inputs": [
         "transform/destination/test-socket1-dest/00_del_parsed_data"
@@ -101,7 +109,7 @@
         "verify_certificate": true
       }
     },
-    "destination/cluster/test-socket2-dest": {
+    "destination/cluster/test-socket2-dest/File": {
       "type": "socket",
       "inputs": [
         "transform/destination/test-socket2-dest/01_syslog_encoding"
@@ -116,7 +124,7 @@
       "mode": "udp",
       "address": "192.168.1.1:3000"
     },
-    "destination/cluster/test-socket3-dest": {
+    "destination/cluster/test-socket3-dest/File": {
       "type": "socket",
       "inputs": [
         "transform/destination/test-socket3-dest/01_del_parsed_data"
@@ -135,7 +143,7 @@
         "verify_certificate": true
       }
     },
-    "destination/cluster/test-socket4-dest": {
+    "destination/cluster/test-socket4-dest/File": {
       "type": "socket",
       "inputs": [
         "transform/destination/test-socket4-dest/01_del_parsed_data"

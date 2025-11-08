@@ -11,7 +11,7 @@
     "transform/destination/test-es-dest/00_elastic_dedot": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/source/test-source/02_clean_up"
       ],
       "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
@@ -24,25 +24,33 @@
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "transform/source/test-source/00_local_timezone": {
+    "transform/source/test-source/00_file_source_host": {
       "drop_on_abort": false,
       "inputs": [
         "cluster_logging_config/test-source"
       ],
+      "source": ".\"host\" = \"$POD_NODE_NAME\"",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_file_source_host"
+      ],
       "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
       "type": "remap"
     },
-    "transform/source/test-source/01_clean_up": {
+    "transform/source/test-source/02_clean_up": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/00_local_timezone"
+        "transform/source/test-source/01_local_timezone"
       ],
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
       "type": "remap"
     }
   },
   "sinks": {
-    "destination/cluster/test-es-dest": {
+    "destination/cluster/test-es-dest/File": {
       "type": "elasticsearch",
       "inputs": [
         "transform/destination/test-es-dest/01_del_parsed_data"
