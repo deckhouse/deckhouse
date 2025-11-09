@@ -172,13 +172,8 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		})
 
 		err := bootstraper.BaseInfrastructure(context.Background())
-		if err != nil {
-			msg := fmt.Sprintf("Failed to create base infra for cluster: %v", err)
-			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
-			return err
-		}
-
-		return nil
+		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
+		return err
 	})
 
 	return cmd
