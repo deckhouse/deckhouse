@@ -11,7 +11,7 @@ weight: 50
 The Security Credentials section provides a comprehensive overview of all tokens (personal, group, project) and keys (SSH, GPG) on the Code platform.
 Administrators can switch tabs of different credential types, apply filters and sorting options, and delete or revoke any credential to limit user access and enhance security.
 
-## Purpose 
+## Purpose
 
 Security credentials section is used for:
 
