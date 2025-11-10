@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -31,6 +32,7 @@ const (
 type DependencyContainer interface {
 	PackageManager() *packagemanager.Manager
 	QueueService() *queue.Service
+	Installer() *installer.Installer
 }
 
 func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
@@ -79,5 +81,5 @@ func (t *task) Execute(ctx context.Context) error {
 	// remove package queue
 	t.dc.QueueService().Remove(t.packageName)
 
-	return nil
+	return t.dc.Installer().Uninstall(ctx, t.packageName)
 }
