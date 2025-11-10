@@ -23,15 +23,15 @@ spec:
     name: geoproxy
   updatePolicy:
     updateMode: "Auto"
-resourcePolicy:
-  containerPolicies:
-    - containerName: geoproxy
-      minAllowed:
-        {{- include "geoproxy_resources" . | nindent 10 }}
-      maxAllowed:
-        cpu: 200m
-        memory: 100Mi
-  {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  resourcePolicy:
+    containerPolicies:
+      - containerName: geoproxy
+        minAllowed:
+          {{- include "geoproxy_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 200m
+          memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
 {{- end }}
 
 ---
@@ -175,7 +175,12 @@ spec:
       serviceAccountName: geoproxy
       terminationGracePeriodSeconds: 0
 
-{{- $storageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
+{{- $effectiveStorageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
+{{- $storageClass := $effectiveStorageClass }}
+{{- $customStorageClass := .Values.ingressNginx.internal.customStorageClass }}
+{{- if $customStorageClass }}
+{{- $storageClass = $customStorageClass }}
+{{- end }}
 {{- if not $storageClass }}
       volumes:
         - name: geo-data
