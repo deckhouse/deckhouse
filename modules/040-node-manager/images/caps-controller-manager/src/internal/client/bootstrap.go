@@ -87,7 +87,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		return ctrl.Result{}, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending ||
+		instanceScope.MachineScope.StaticMachine.Spec.ProviderID == "" {
 		result, err := c.setStaticInstancePhaseToBootstrapping(ctx, instanceScope)
 		if err != nil {
 			return result, err
