@@ -124,7 +124,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	cancel, exists := w.nsWatchers[ns.Name]
 	w.mu.Unlock()
 
-	if enabled && exists {
+	if !enabled && exists {
 		cancel()
 		w.mu.Lock()
 		delete(w.nsWatchers, ns.Name)
