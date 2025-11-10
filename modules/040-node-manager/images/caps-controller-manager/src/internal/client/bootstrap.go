@@ -151,13 +151,35 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 }
 
 func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (result ctrl.Result, err error) {
+	instanceScope.Logger.Info("Starting reservation process",
+		"instance", instanceScope.Instance.Name,
+		"machine", instanceScope.MachineScope.StaticMachine.Name,
+		"machineUID", instanceScope.MachineScope.StaticMachine.UID,
+		"address", instanceScope.Instance.Spec.Address,
+	)
+
 	err = c.reserveStaticInstance(ctx, instanceScope)
 	if err != nil {
+		instanceScope.Logger.Error(err, "Failed to reserve StaticInstance",
+			"instance", instanceScope.Instance.Name,
+			"machine", instanceScope.MachineScope.StaticMachine.Name,
+		)
 		return ctrl.Result{}, err
 	}
 
+	instanceScope.Logger.Info("StaticInstance successfully reserved",
+		"instance", instanceScope.Instance.Name,
+		"machine", instanceScope.MachineScope.StaticMachine.Name,
+		"machineUID", instanceScope.MachineScope.StaticMachine.UID,
+	)
+
 	defer func() {
 		if err != nil {
+			instanceScope.Logger.Info("Releasing StaticInstance reservation due to error",
+				"instance", instanceScope.Instance.Name,
+				"machine", instanceScope.MachineScope.StaticMachine.Name,
+				"error", err.Error(),
+			)
 			c.releaseStaticInstance(ctx, instanceScope)
 		}
 	}()
@@ -173,6 +195,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
 
 	tcpTaskID := fmt.Sprintf("%s:%s", instanceScope.MachineScope.StaticMachine.UID, address)
+	instanceScope.Logger.Info("Scheduling TCP check",
+		"address", address,
+		"timeout", delay,
+		"taskID", tcpTaskID,
+		"machine", instanceScope.MachineScope.StaticMachine.Name,
+	)
 	done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
 		start := time.Now()
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
@@ -199,11 +227,20 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
 			}
 		}
-		instanceScope.Logger.Info("TCP connection check completed", "address", address, "elapsed", time.Since(start))
+		instanceScope.Logger.Info("TCP connection check completed successfully",
+			"address", address,
+			"machine", instanceScope.MachineScope.StaticMachine.Name,
+			"elapsed", time.Since(start),
+		)
 		return true
 	})
 	if done == nil {
-		instanceScope.Logger.Info("TCP check still running, requeueing", "address", address, "requeueAfter", delay)
+		instanceScope.Logger.Info("TCP check still running, requeueing",
+			"address", address,
+			"machine", instanceScope.MachineScope.StaticMachine.Name,
+			"requeueAfter", delay,
+			"taskID", tcpTaskID,
+		)
 		return ctrl.Result{RequeueAfter: delay}, nil
 	}
 	if !*done {
