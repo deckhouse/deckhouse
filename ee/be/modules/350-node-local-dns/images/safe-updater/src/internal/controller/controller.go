@@ -150,16 +150,16 @@ ExtLoop:
 		podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
 		if podRevision != currentRevision {
 			for _, check := range externalChecks {
-				switch check.GetCheckResult(&pod) {
+				checkRes := check.GetCheckResult(&pod)
+				klog.V(5).Infof("Update is %s by the %s check", checkRes, check.GetName())
+
+				switch checkRes {
 				case checks.Allowed:
-					klog.V(5).Infof("Update is allowed by the %s check", check.GetName())
 
 				case checks.Denied:
-					klog.V(5).Infof("Update is denied by the %s check", check.GetName())
 					continue ExtLoop
 
 				case checks.Abort:
-					klog.V(5).Infof("Update is aborted by the %s check", check.GetName())
 					return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
 				}
 			}
@@ -186,16 +186,16 @@ ExtLoop:
 			podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
 			if podRevision != currentRevision {
 				for _, check := range externalChecks {
-					switch check.GetCheckResult(&pod) {
+					checkRes := check.GetCheckResult(&pod)
+					klog.V(5).Infof("Update is %s by the %s check", checkRes, check.GetName())
+
+					switch checkRes {
 					case checks.Allowed:
-						klog.V(5).Infof("Update is allowed by the %s check", check.GetName())
 
 					case checks.Denied:
-						klog.V(5).Infof("Update is denied by the %s check", check.GetName())
 						continue ExtLoop
 
 					case checks.Abort:
-						klog.V(5).Infof("Update is aborted by the %s check", check.GetName())
 						return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
 					}
 				}

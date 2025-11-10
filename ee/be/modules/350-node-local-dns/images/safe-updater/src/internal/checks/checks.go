@@ -23,7 +23,7 @@ type checkResult string
 const (
 	Allowed checkResult = "allowed"
 	Denied  checkResult = "denied"
-	Abort   checkResult = "abort"
+	Abort   checkResult = "aborted"
 )
 
 type ExternalCheck interface {
