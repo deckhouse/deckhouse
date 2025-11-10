@@ -28,6 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -150,16 +151,16 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 }
 
 func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (result ctrl.Result, err error) {
-	// err = c.reserveStaticInstance(ctx, instanceScope)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	err = c.reserveStaticInstance(ctx, instanceScope)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// defer func() {
-	// 	if err != nil {
-	// 		c.releaseStaticInstance(ctx, instanceScope)
-	// 	}
-	// }()
+	defer func() {
+		if err != nil {
+			c.releaseStaticInstance(ctx, instanceScope)
+		}
+	}()
 
 	address := net.JoinHostPort(instanceScope.Instance.Spec.Address, strconv.Itoa(instanceScope.Credentials.Spec.SSHPort))
 
@@ -171,9 +172,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
 
-	done := c.tcpCheckTaskManager.spawn(taskID(address), func() bool {
+	tcpTaskID := fmt.Sprintf("%s:%s", instanceScope.MachineScope.StaticMachine.UID, address)
+	done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
 		start := time.Now()
-		time.Sleep(15 * time.Second)
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
 		instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
 		conn, err := net.DialTimeout("tcp", address, delay)
@@ -213,7 +214,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	c.tcpCheckRateLimiter.Forget(address)
 
-	check := c.checkTaskManager.spawn(taskID(address), func() bool {
+	sshTaskID := fmt.Sprintf("%s:%s", instanceScope.MachineScope.StaticMachine.UID, address)
+	check := c.checkTaskManager.spawn(taskID(sshTaskID), func() bool {
 		start := time.Now()
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
 		var sshCl ssh.SSH
@@ -271,28 +273,14 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	instanceScope.Logger.Info("Connectivity checks passed", "address", address)
 
-	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
+	if instanceScope.MachineScope.StaticMachine.Spec.ProviderID == "" {
+		providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
+		instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
 
-	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
-
-	if patchErr := instanceScope.MachineScope.Patch(ctx); patchErr != nil {
-		err = errors.Wrapf(patchErr, "failed to set StaticMachine provider id to '%s'", providerID)
-		return ctrl.Result{}, err
-	}
-
-	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
-		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
-		Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
-		Name:       instanceScope.MachineScope.StaticMachine.Name,
-		UID:        instanceScope.MachineScope.StaticMachine.UID,
-	}
-
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
-
-	err = instanceScope.Patch(ctx)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
+		if patchErr := instanceScope.MachineScope.Patch(ctx); patchErr != nil {
+			err = errors.Wrapf(patchErr, "failed to set StaticMachine provider id to '%s'", providerID)
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -312,6 +300,10 @@ func (c *Client) reserveStaticInstance(ctx context.Context, instanceScope *scope
 		return nil
 	}
 
+	if currentRef != nil && currentRef.UID != instanceScope.MachineScope.StaticMachine.UID {
+		return errors.Errorf("StaticInstance already reserved for another StaticMachine: %s", currentRef.Name)
+	}
+
 	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
 		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
 		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
@@ -323,6 +315,9 @@ func (c *Client) reserveStaticInstance(ctx context.Context, instanceScope *scope
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
 
 	if err := instanceScope.Patch(ctx); err != nil {
+		if apierrors.IsConflict(err) {
+			return errors.Wrap(err, "StaticInstance already reserved by another machine")
+		}
 		return errors.Wrap(err, "failed to reserve StaticInstance for StaticMachine")
 	}
 
