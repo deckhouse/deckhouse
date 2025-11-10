@@ -253,34 +253,6 @@ jobs:
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 
-  list_changed_modules:
-    name: List changed modules
-    needs:
-      - git_info
-      - build_fe
-    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-      - uses: {!{ index (ds "actions") "actions/setup-python" }!}
-        with:
-          python-version: '3.12.3'
-      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
-      {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-      - name: List changed modules from latest released version
-        id: list_changed_modules
-        env:
-          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
-        run: |
-          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
-          if [[ -n "${TAG_FROM}" ]]; then
-            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
-            python .github/scripts/python/compare_version_modules.py
-          else
-            echo "No released versions exist. Skipping."
-          fi
-      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
   compare_internal_modules:
     name: Compare internal modules
     needs:
