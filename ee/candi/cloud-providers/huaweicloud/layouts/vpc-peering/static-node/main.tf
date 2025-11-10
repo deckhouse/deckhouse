@@ -32,7 +32,8 @@ module "node" {
   volume_zone           = module.volume_zone.zone
   server_group          = local.server_group
   node_group_name       = var.nodeGroupName
-  subnet                = local.subnet
+  subnet                = local.main_network_id
+  additional_networks   = local.additional_network_ids
   enterprise_project_id = local.enterprise_project_id
 }
 
