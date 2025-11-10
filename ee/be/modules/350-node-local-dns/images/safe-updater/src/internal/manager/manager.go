@@ -96,7 +96,7 @@ func NewManager(ctx context.Context, pprofEnabled bool) (*Manager, error) {
 							LabelSelector: constant.NodeLocalDNSPodLabelSelector,
 						},
 						constant.CiliumNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "agent", "module": "cni-cilium"}),
+							LabelSelector: labels.SelectorFromSet(map[string]string{"app": constant.CiliumDaemonSet, "module": "cni-cilium"}),
 						},
 					},
 				},
@@ -106,7 +106,7 @@ func NewManager(ctx context.Context, pprofEnabled bool) (*Manager, error) {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"app": constant.NodeLocalDNSDaemonSet, "module": constant.NodeLocalDNSDaemonSet}),
 						},
 						constant.CiliumNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "agent", "module": "cni-cilium"}),
+							LabelSelector: labels.SelectorFromSet(map[string]string{"app": constant.CiliumDaemonSet, "module": "cni-cilium"}),
 						},
 					},
 				},

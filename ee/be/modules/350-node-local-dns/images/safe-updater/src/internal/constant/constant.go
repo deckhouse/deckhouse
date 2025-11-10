@@ -16,6 +16,7 @@ const (
 	HealthProbeBindAddress     = ":4264"
 	NodeLocalDNSDaemonSet      = "node-local-dns"
 	NodeLocalDNSNamespace      = "kube-system"
+	CiliumDaemonSet            = "agent"
 	CiliumNamespace            = "d8-cni-cilium"
 	ControllerName             = "node-local-dns-safe-updater"
 	PodTemplateGenerationLabel = "pod-template-generation"

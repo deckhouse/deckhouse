@@ -10,7 +10,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
@@ -19,64 +18,76 @@ import (
 	"safe-updater/internal/constant"
 )
 
-type CheckResult string
+type checkResult string
 
 const (
-	Allowed = "allowed"
-	Denied  = "denied"
-	Abort   = "abort"
+	Allowed checkResult = "allowed"
+	Denied  checkResult = "denied"
+	Abort   checkResult = "abort"
 )
 
 type ExternalCheck interface {
-	GetCheckResult(*corev1.Pod) bool
+	GetCheckResult(*corev1.Pod) checkResult
 }
 
-type CniCiliumCheck struct {
-	pods      *corev1.PodList
-	daemonSet *appsv1.DaemonSet
+type cniCiliumCheck struct {
+	podsByNodes map[string][]*corev1.Pod
+	daemonSet   *appsv1.DaemonSet
 }
 
-func NewCniCiliumCheck(ctx context.Context, klient client.Client, nodeName string) (*CniCiliumCheck, error) {
+func NewCniCiliumCheck(ctx context.Context, klient client.Client) (*cniCiliumCheck, error) {
 	pods := new(corev1.PodList)
 	if err := klient.List(ctx, pods, &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{
 			"app":    "agent",
 			"module": "cni-cilium",
 		}),
-		FieldSelector: fields.SelectorFromSet(fields.Set{
-			"spec.nodeName": nodeName,
-		}),
 		Namespace: constant.CiliumNamespace,
 	}); err != nil {
 		return nil, err
 	}
 
-	daemonSet := new(appsv1.DaemonSet)
+	podsByNodeNames := make(map[string][]*corev1.Pod, len(pods.Items))
+	for _, pod := range pods.Items {
+		podsByNodeName, found := podsByNodeNames[pod.Spec.NodeName]
+		if !found {
+			podsByNodeName = make([]*corev1.Pod, 0, 1)
+		}
+		podsByNodeName = append(podsByNodeName, &pod)
+		podsByNodeNames[pod.Spec.NodeName] = podsByNodeName
+	}
 
-	return &CniCiliumCheck{
-		pods:      pods,
-		daemonSet: daemonSet,
+	daemonSet := new(appsv1.DaemonSet)
+	if err := klient.Get(ctx, client.ObjectKey{Name: constant.CiliumDaemonSet, Namespace: constant.CiliumNamespace}, daemonSet); err != nil {
+		return nil, err
+	}
+
+	return &cniCiliumCheck{
+		podsByNodes: podsByNodeNames,
+		daemonSet:   daemonSet,
 	}, nil
 }
 
-func (c *CniCiliumCheck) GetCheckResult(pod *corev1.Pod) CheckResult {
+func (c *cniCiliumCheck) GetCheckResult(pod *corev1.Pod) checkResult {
 	if !DaemonSetIsUpToDate(c.daemonSet) {
 		return Abort
 	}
 
-	if len(c.pods.Items) != 1 {
-		klog.Warningf("there are %d cilium pods on the %s node", len(c.pods.Items), pod.Spec.NodeName)
+	pods := c.podsByNodes[pod.Spec.NodeName]
+
+	if len(pods) != 1 {
+		klog.Warningf("there are %d cilium pods on the %s node", len(pods), pod.Spec.NodeName)
 		return Denied
 	}
 
-	ciliumPod := c.pods.Items[0]
+	ciliumPod := pods[0]
 
-	if !PodIsReadyAndRunning(&ciliumPod) {
+	if !PodIsReadyAndRunning(ciliumPod) {
 		klog.Warningf("the %s cilium pod on the %s node is not up and running", ciliumPod.Name, pod.Spec.NodeName)
 		return Denied
 	}
 
-	if !pod.DeletionTimestamp.IsZero() {
+	if !ciliumPod.DeletionTimestamp.IsZero() {
 		klog.Warningf("the %s cilium pod on the %s node is terminating", ciliumPod.Name, pod.Spec.NodeName)
 		return Denied
 	}

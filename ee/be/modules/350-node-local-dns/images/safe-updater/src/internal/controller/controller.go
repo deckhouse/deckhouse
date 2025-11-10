@@ -145,17 +145,26 @@ func (r *reconciler) getNodeLocalDNSPods(ctx context.Context) (*corev1.PodList, 
 }
 
 func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
+ExtLoop:
 	for _, pod := range pods.Items {
 		podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
 		if podRevision != currentRevision {
 			for _, check := range externalChecks {
-			}
+				switch check.GetCheckResult(&pod) {
+				case checks.Allowed:
+					if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
+						return ctrl.Result{}, fmt.Errorf("failed to delete the %s ready pod", pod.Name)
+					}
+					klog.V(5).Infof("Deleted the %s ready pod", pod.Name)
+					break ExtLoop
 
-			if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete the %s ready pod", pod.Name)
+				case checks.Denied:
+					continue ExtLoop
+
+				case checks.Abort:
+					return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
+				}
 			}
-			klog.V(5).Infof("Deleted the %s ready pod", pod.Name)
-			break
 		}
 	}
 
@@ -163,6 +172,7 @@ func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodLis
 }
 
 func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
+ExtLoop:
 	for _, pod := range pods.Items {
 		if !checks.PodIsReadyAndRunning(&pod) {
 			if !pod.DeletionTimestamp.IsZero() {
@@ -172,13 +182,21 @@ func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.Pod
 			podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
 			if podRevision != currentRevision {
 				for _, check := range externalChecks {
-				}
+					switch check.GetCheckResult(&pod) {
+					case checks.Allowed:
+						if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
+							return ctrl.Result{}, fmt.Errorf("failed to delete the %s not ready pod", pod.Name)
+						}
+						klog.V(5).Infof("Deleted the %s not ready pod", pod.Name)
+						break ExtLoop
 
-				if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
-					return ctrl.Result{}, fmt.Errorf("failed to delete the %s not ready pod", pod.Name)
+					case checks.Denied:
+						continue ExtLoop
+
+					case checks.Abort:
+						return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
+					}
 				}
-				klog.V(5).Infof("Deleted the %s not ready pod", pod.Name)
-				break
 			}
 		}
 	}
@@ -203,11 +221,16 @@ func (r *reconciler) reconcileDaemonSet(ctx context.Context, ds *appsv1.DaemonSe
 	}
 	klog.V(5).Infof("current controller revision is %s", currentControllerRevision)
 
-	if r.daemonSetIsStable(pods) {
-		return r.updateNextReadyPod(ctx, pods, currentControllerRevision)
+	ciliumCheck, err := checks.NewCniCiliumCheck(ctx, r.client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get a new cilium check: %w", err)
 	}
 
-	return r.updateNextNotReadyPod(ctx, pods, currentControllerRevision)
+	if r.daemonSetIsStable(pods) {
+		return r.updateNextReadyPod(ctx, pods, currentControllerRevision, ciliumCheck)
+	}
+
+	return r.updateNextNotReadyPod(ctx, pods, currentControllerRevision, ciliumCheck)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
