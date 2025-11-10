@@ -298,7 +298,7 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/15911
     - summary: Make deckhouse privileged and run as root.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15664
-      impact: Deckhouse how has privileged mode and runs as root.
+      impact: Deckhouse now has privileged mode and runs as root.
     - summary: Added alert for deprecated modules.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15483
     - summary: Added Deckhouse release information status.

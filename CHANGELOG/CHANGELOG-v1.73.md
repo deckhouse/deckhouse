@@ -4,7 +4,7 @@
 
 
  - ALL pods of the ingress-nginx module will be restarted.
- - Deckhouse how has privileged mode and runs as root.
+ - Deckhouse now has privileged mode and runs as root.
  - Fixed multiple security vulnerabilities that could affect authentication components.
  - The runtime-audit-engine module has been moved to external. All pods of the module will be restarted.
  - This update fixes a security vulnerability in the `user-authn` module (CVE-2025-22868) that could potentially allow bypass of authentication validation.
@@ -30,7 +30,7 @@
  - **[cloud-provider-zvirt]** Added support zvirt cloud provider to cse. [#14683](https://github.com/deckhouse/deckhouse/pull/14683)
  - **[control-plane-manager]** Added extra claim `user-authn.deckhouse.io/dex-provider` (from `federated_claims.connector_id`) Request `federated:id` scope in Dex Authenticator, Basic Auth Proxy, and kubeconfig generator to populate. `federated_claims.connector_id` [#15816](https://github.com/deckhouse/deckhouse/pull/15816)
  - **[deckhouse]** Make deckhouse privileged and run as root. [#15664](https://github.com/deckhouse/deckhouse/pull/15664)
-    Deckhouse how has privileged mode and runs as root.
+    Deckhouse now has privileged mode and runs as root.
  - **[deckhouse]** Added alert for deprecated modules. [#15483](https://github.com/deckhouse/deckhouse/pull/15483)
  - **[deckhouse]** Added Deckhouse release information status. [#15458](https://github.com/deckhouse/deckhouse/pull/15458)
  - **[deckhouse]** Made the module source `deckhouse` the default source. [#15437](https://github.com/deckhouse/deckhouse/pull/15437)
