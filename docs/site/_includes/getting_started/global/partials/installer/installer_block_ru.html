@@ -111,7 +111,7 @@ chmod +x d8install-linux-amd64
           </div>
           <div id="tab-windows" class="tab-content">
 {% alert level="info" %}
-Перед запуском контейнера убедитесь, что у вас установлен Docker Desktop и [включена подсистема WSL2](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
+Перед запуском контейнера убедитесь, что у вас установлен [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) и [включена подсистема WSL2](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
 {% endalert %}
             <p>Выполните команду. Если вы работаете в командной строке:</p>
 {% capture command %}
@@ -130,6 +130,19 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
           </div>
         </li>
         <li>Откройте <a>http://localhost:8080</a></li>
+        <li>
+          <p>Выполните следующие шаги:<p>
+          <div class="tabs">
+            <button id="tab-button-bare-metal" class="tab-button active" onclick="openInstallerTypeTab(event, 'tab-bare-metal-content');">Для bare-metal</button>
+            <button id="tab-button-cloud" class="tab-button" onclick="openInstallerTypeTab(event, 'tab-cloud-content');">Для облачного кластера</button>
+          </div>
+          <div id="tab-bare-metal-content" class="tab-content active">
+            {%- include getting_started/global/partials/installer/installer-steps-bare-metal.html %}
+          </div>
+          <div id="tab-cloud-content" class="tab-content">
+            {%- include getting_started/global/partials/installer/installer-steps-cloud.html %}
+          </div>
+        </li>
       </ol>
     </div>
   </div>
@@ -170,6 +183,17 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
       document.getElementById("tab-buttons-linux-container").classList.remove("active");
       document.getElementById("tab-buttons-linux-script").classList.remove("active");
       document.getElementById("tab-buttons-linux-file").classList.remove("active");
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openInstallerTypeTab(evt, subTabName) {
+      document.getElementById("tab-bare-metal-content").classList.remove("active");
+      document.getElementById("tab-cloud-content").classList.remove("active");
+
+      document.getElementById("tab-button-bare-metal").classList.remove("active");
+      document.getElementById("tab-button-cloud").classList.remove("active");
 
       document.getElementById(subTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
