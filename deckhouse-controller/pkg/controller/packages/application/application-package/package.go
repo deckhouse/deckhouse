@@ -18,6 +18,7 @@ package applicationpackage
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -39,6 +40,17 @@ type PackageRemover interface {
 	RemoveApplication(ctx context.Context, app *v1alpha1.Application)
 	RemoveClusterApplication(ctx context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus)
 	RemoveModule(ctx context.Context, metadata *v1alpha1.ModuleReleaseSpec)
+}
+
+type PackageStatus struct {
+	Type    string
+	Status  bool
+	Reason  string
+	Message string
+}
+
+type PackageStatusOperator interface {
+	GetApplicationStatus(ctx context.Context, packageName, appName, namespace string) ([]PackageStatus, error)
 }
 
 type PackageOperator struct {
@@ -73,4 +85,13 @@ func (o *PackageOperator) RemoveClusterApplication(_ context.Context, capvStatus
 
 func (o *PackageOperator) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	o.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
+}
+
+func (o *PackageOperator) GetApplicationStatus(ctx context.Context, packageName, appName, namespace string) ([]PackageStatus, error) {
+	o.logger.Debug("getting application status",
+		slog.String("package", packageName),
+		slog.String("app", appName),
+		slog.String("namespace", namespace),
+	)
+	return nil, fmt.Errorf("package status operator: not implemented")
 }

@@ -73,6 +73,14 @@ const (
 	ModuleSizeBytesTotal       = "{PREFIX}module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "{PREFIX}module_update_policy_not_found"
 	ModuleConfigurationError   = "{PREFIX}module_configuration_error"
+
+	// ============================================================================
+	// Package Status Service Metrics
+	// ============================================================================
+	// Package status service operation metrics
+	PackageStatusEventsTotal        = "{PREFIX}packagestatus_events_total"
+	PackageStatusStatusFetchSeconds = "{PREFIX}packagestatus_status_fetch_seconds"
+	PackageStatusPatchesTotal       = "{PREFIX}packagestatus_patches_total"
 )
 
 // ============================================================================
@@ -108,6 +116,10 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 
 	if err := RegisterModuleControllerMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register module controller metrics: %w", err)
+	}
+
+	if err := RegisterPackageStatusServiceMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register package status service metrics: %w", err)
 	}
 
 	return nil
@@ -318,6 +330,40 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", D8ModuleUpdatingBrokenSequence, err)
+	}
+
+	return nil
+}
+
+// RegisterPackageStatusServiceMetrics registers metrics for package status service,
+// including event processing, status fetching, and patch operations.
+func RegisterPackageStatusServiceMetrics(metricStorage metricsstorage.Storage) error {
+	_, err := metricStorage.RegisterCounter(
+		PackageStatusEventsTotal,
+		[]string{"result"},
+		options.WithHelp("Counter of package status events processed"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", PackageStatusEventsTotal, err)
+	}
+
+	_, err = metricStorage.RegisterHistogram(
+		PackageStatusStatusFetchSeconds,
+		[]string{},
+		[]float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0},
+		options.WithHelp("Histogram of package status fetch duration in seconds"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", PackageStatusStatusFetchSeconds, err)
+	}
+
+	_, err = metricStorage.RegisterCounter(
+		PackageStatusPatchesTotal,
+		[]string{"result"},
+		options.WithHelp("Counter of application status patch operations"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", PackageStatusPatchesTotal, err)
 	}
 
 	return nil

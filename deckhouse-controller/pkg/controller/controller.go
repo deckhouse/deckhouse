@@ -62,6 +62,7 @@ import (
 	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/packagestatusservice"
 	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
 	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
@@ -356,7 +357,33 @@ func NewDeckhouseController(
 		}
 
 		packageOperator := applicationpackage.NewPackageOperator(logger.Named("package-operator"))
-		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
+
+		var packageStatusEvents chan packagestatusservice.PackageEvent
+		if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_STATUS_SERVICE") == "true" {
+			logger.Info("Package status service is enabled")
+
+			packageStatusEvents = make(chan packagestatusservice.PackageEvent, 100)
+
+			// Register package status service
+			err = packagestatusservice.RegisterService(
+				runtimeManager,
+				packageOperator,
+				packageStatusEvents,
+				operator.MetricStorage,
+				logger.Named("package-status-service"),
+				2,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("register package status service: %w", err)
+			}
+		}
+		err = packageapplication.RegisterControllerWithEvents(
+			runtimeManager,
+			dc,
+			packageOperator,
+			packageStatusEvents,
+			logger.Named("application-controller"),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}

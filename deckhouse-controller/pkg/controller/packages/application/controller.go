@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/packagestatusservice"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -45,10 +46,11 @@ const (
 )
 
 type reconciler struct {
-	client client.Client
-	dc     dependency.Container
-	pm     applicationpackage.PackageManager
-	logger *log.Logger
+	client  client.Client
+	dc      dependency.Container
+	pm      applicationpackage.PackageManager
+	logger  *log.Logger
+	eventCh chan<- packagestatusservice.PackageEvent // optional channel for package status events
 }
 
 func RegisterController(
@@ -57,11 +59,24 @@ func RegisterController(
 	pm applicationpackage.PackageManager,
 	logger *log.Logger,
 ) error {
+	return RegisterControllerWithEvents(runtimeManager, dc, pm, nil, logger)
+}
+
+// RegisterControllerWithEvents registers Application controller with optional event channel.
+// If eventCh is provided, controller will send PackageEvent when Application is processed.
+func RegisterControllerWithEvents(
+	runtimeManager manager.Manager,
+	dc dependency.Container,
+	pm applicationpackage.PackageManager,
+	eventCh chan<- packagestatusservice.PackageEvent,
+	logger *log.Logger,
+) error {
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		dc:     dc,
-		pm:     pm,
-		logger: logger,
+		client:  runtimeManager.GetClient(),
+		dc:      dc,
+		pm:      pm,
+		logger:  logger,
+		eventCh: eventCh,
 	}
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -168,6 +183,22 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
+	}
+
+	// Send event to package status service if channel is provided
+	if r.eventCh != nil {
+		select {
+		case r.eventCh <- packagestatusservice.PackageEvent{
+			PackageName: app.Spec.ApplicationPackageName,
+			Name:        app.Name,
+			Namespace:   app.Namespace,
+			Version:     app.Spec.Version,
+			Type:        "Updated",
+		}:
+		default:
+			// Channel is full, log but don't block
+			logger.Warn("package status event channel is full, dropping event")
+		}
 	}
 
 	// add finalizer
