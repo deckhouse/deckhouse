@@ -18,6 +18,10 @@ data:
         prefetch 10 1m 25%
         serve_stale 1h immediate
         servfail 0 # disable caching servfail
+{{- range $zone := .Values.nodeLocalDns.internal.disabledCache.zones }}
+        disable success {{ $zone }}
+        disable denial {{ $zone }}
+{{- end }}
       }
       kubeforward {
         namespace kube-system
