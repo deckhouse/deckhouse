@@ -1,3 +1,4 @@
+---
 - name: d8.loki.discards
   rules:
   - alert: LokiDiscardedSamplesWarning
