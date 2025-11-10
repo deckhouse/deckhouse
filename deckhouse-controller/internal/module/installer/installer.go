@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
@@ -93,11 +93,11 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 }
 
 func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
-	return i.registry.GetImageDigest(ctx, source, moduleName, version)
+	return i.registry.GetImageDigest(ctx, registry.CredentialBySource(source), moduleName, version)
 }
 
 func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
-	return i.registry.Download(ctx, source, moduleName, version)
+	return i.registry.Download(ctx, registry.CredentialBySource(source), moduleName, version)
 }
 
 // Install creates an erofs module image and enables the module(mount the image)
@@ -279,7 +279,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>/<version>.erofs
 	imagePath := filepath.Join(modulePath, image)
 
-	rootHash, err := i.registry.GetImageRootHash(ctx, ms, module, version)
+	rootHash, err := i.registry.GetImageRootHash(ctx, registry.CredentialBySource(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("get image root hash: %w", err)
@@ -313,7 +313,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Warn("verify module failed", log.Err(err))
 
-	img, err := i.registry.GetImageReader(ctx, ms, module, version)
+	img, err := i.registry.GetImageReader(ctx, registry.CredentialBySource(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("download module image: %w", err)
