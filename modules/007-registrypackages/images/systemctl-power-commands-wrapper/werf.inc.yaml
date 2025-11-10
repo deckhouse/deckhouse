@@ -12,9 +12,45 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src/wrapper
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  - 'Makefile'
   stageDependencies:
+    install:
+    - 'go.mod'
+    - 'go.sum'
     setup:
-    - '**/*'
+    - '**/*.go'
+    - 'Makefile'
+shell:
+  install:
+  - cd /src/wrapper
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  install:
+  - cd /src/wrapper
+  # - make
+  - CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o systemctl-power-commands-wrapper main.go
+  - mv ./systemctl-power-commands-wrapper /
+  - mv /src/scripts/* /
+  - chmod +x /systemctl-power-commands-wrapper /install /uninstall
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: builder/scratch
@@ -35,22 +71,3 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-final: false
-from: {{ $.Images.BASE_ALPINE }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gcc musl-dev
-  setup:
-    - cd /src/wrapper
-    - make
-    - mv ./systemctl-power-commands-wrapper /
-    - mv /src/scripts/* /
-    - chmod +x /systemctl-power-commands-wrapper /install /uninstall
