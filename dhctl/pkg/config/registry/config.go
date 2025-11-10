@@ -168,7 +168,7 @@ func (cfg *Config) ConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{cfg: cfg}
 }
 
-func (cfg Config) isModuleEnable() bool {
+func (cfg Config) isModuleEnabled() bool {
 	// If cri int allowed list -> use module registry
 	return slices.Contains(
 		[]CRIType{CRIContainerdV1, CRIContainerdV2},
