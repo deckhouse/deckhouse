@@ -32,9 +32,23 @@ func boolToFloat64(b bool) float64 {
 	return 0
 }
 
-func enabledLabel(labels map[string]string) bool {
+func enabledOnNamespace(labels map[string]string) bool {
 	_, ok := labels[namespacesEnabledLabel]
 	return ok
+}
+
+func enabledLabel(labels map[string]string) bool {
+	val, ok := labels[namespacesEnabledLabel]
+
+	if !ok {
+		return true
+	}
+
+	if b, err := strconv.ParseBool(val); err == nil {
+		return b
+	}
+
+	return true
 }
 
 func thresholdLabel(labels map[string]string, threshold string, def float64) float64 {

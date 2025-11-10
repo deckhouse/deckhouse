@@ -95,7 +95,7 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 }
 
 func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
-	enabled := enabledLabel(ns.Labels)
+	enabled := enabledOnNamespace(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NS ADD] %s", ns.Name)
 
