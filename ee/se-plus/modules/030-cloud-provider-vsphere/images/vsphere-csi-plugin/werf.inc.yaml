@@ -44,7 +44,7 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $$src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git /src
   - git clone --depth 1 --branch v0.2.0 $(cat /run/secrets/SOURCE_REPO)/gofsutil.git /src/gofsutil
   - cd /src
   {{- if $patch}}
