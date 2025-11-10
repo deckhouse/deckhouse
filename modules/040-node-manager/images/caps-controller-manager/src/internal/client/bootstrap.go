@@ -47,7 +47,6 @@ import (
 
 const (
 	RequeueForStaticInstanceBootstrapping = 60 * time.Second
-	connectivityCheckTimeout              = 1 * time.Minute
 )
 
 // Bootstrap runs the bootstrap script on StaticInstance.
@@ -187,11 +186,6 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	address := net.JoinHostPort(instanceScope.Instance.Spec.Address, strconv.Itoa(instanceScope.Credentials.Spec.SSHPort))
 
 	delay := c.tcpCheckRateLimiter.When(address)
-	if delay > connectivityCheckTimeout {
-		instanceScope.Logger.Info("Capping TCP check delay", "address", address, "originalDelay", delay, "cap", connectivityCheckTimeout)
-		delay = connectivityCheckTimeout
-	}
-
 	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
 
 	tcpTaskID := fmt.Sprintf("%s", address)
@@ -308,17 +302,30 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		return ctrl.Result{}, err
 	}
 
-	instanceScope.Logger.Info("Connectivity checks passed", "address", address)
+	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
 
-	if instanceScope.MachineScope.StaticMachine.Spec.ProviderID == "" {
-		providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
-		instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
+	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
 
-		if patchErr := instanceScope.MachineScope.Patch(ctx); patchErr != nil {
-			err = errors.Wrapf(patchErr, "failed to set StaticMachine provider id to '%s'", providerID)
-			return ctrl.Result{}, err
-		}
+	err = instanceScope.MachineScope.Patch(ctx)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
 	}
+
+	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
+		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
+		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
+		Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
+		Name:       instanceScope.MachineScope.StaticMachine.Name,
+		UID:        instanceScope.MachineScope.StaticMachine.UID,
+	}
+
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
+
+	err = instanceScope.Patch(ctx)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
+	}
+
 
 	return ctrl.Result{}, nil
 }
