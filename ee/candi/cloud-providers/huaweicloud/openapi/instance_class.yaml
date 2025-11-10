@@ -54,7 +54,7 @@ spec:
 
                     For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
 
-                    **By default**, either the `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
+                    **By default**, either the `HuaweiCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
                   x-doc-examples: ['ubuntu-18-04-cloud-amd64']
                   type: string
@@ -72,15 +72,30 @@ spec:
 
                     The parameter is used to specify the type of a volume that will be used for the root disk.
 
-                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    **By default**, the value from `HuaweiCloudDiscoveryData` is used.
                   x-doc-examples: ['GPSSD']
                   type: string
                   x-doc-required: false
-                subnets:
+                mainNetwork:
+                  type: string
+                  x-doc-required: false
                   description: |
-                    Paths to networks that the secondary VirtualMachines NICs will connect to.
+                    ID of the primary network for the VM's main NIC.
 
-                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    **By default**, the value from 'HuaweiCloudDiscoverData' is used.
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                  description: |
+                    List of networks IDs (subnets) for secondary NICs.
+                subnets:
+                  deprecated: true
+                  description: |
+                    > Use the [additionalNetworks](#huaweicloudinstanceclass-v1-spec-additionalnetworks) field instead.
+
+                    Paths to networks that the secondary VirtualMachines NICs will connect to.
                   x-doc-examples:
                   - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
@@ -114,6 +129,9 @@ spec:
                   pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^Auto$
                   x-doc-examples: ['Auto']
                   x-doc-required: false
+              x-kubernetes-validations:
+                - message: "Fields 'subnets' and 'mainNetwork'/'additionalNetworks' are exclusive. Specify only one."
+                  rule: "!(has(self.subnets) && (has(self.mainNetwork) || has(self.additionalNetworks)))"
             status:
               type: object
               properties:

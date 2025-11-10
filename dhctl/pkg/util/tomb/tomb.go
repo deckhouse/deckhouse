@@ -22,9 +22,8 @@ import (
 	"sync"
 	"syscall"
 
-	terminal "golang.org/x/term"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var callbacks teardownCallbacks
@@ -144,15 +143,26 @@ func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
 	buf := make([]byte, 20971520) // 20 mb
 	l := runtime.Stack(buf, true)
 	buf = buf[:l]
-	fd := int(os.Stdin.Fd())
-	if shouldAlwaysPrint || terminal.IsTerminal(fd) {
+	if shouldAlwaysPrint || input.IsTerminal() {
 		log.InfoF("\n%sGorutines stack for debug:\n%s\n", msg, string(buf))
 	}
 
 	buf = nil
 }
 
-func WaitForProcessInterruption() {
+type BeforeInterrupted []func(sig os.Signal)
+
+func (b BeforeInterrupted) Handle(sig os.Signal) {
+	if len(b) == 0 {
+		return
+	}
+
+	for _, action := range b {
+		action(sig)
+	}
+}
+
+func WaitForProcessInterruption(beforeInterrupted BeforeInterrupted) {
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 
@@ -172,6 +182,8 @@ func WaitForProcessInterruption() {
 		case syscall.SIGTERM, syscall.SIGINT:
 			exitCode = 0
 		default:
+			// will not exec anytime because we handle all
+			beforeInterrupted.Handle(s)
 			os.Exit(1)
 			return
 		}
@@ -180,6 +192,7 @@ func WaitForProcessInterruption() {
 			continue
 		}
 
+		beforeInterrupted.Handle(s)
 		graceShutdownForSignal(interruptCh, exitCode, s)
 		return
 	}

@@ -119,7 +119,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:         logger,
 			IsDebug:        isDebug,
 		})
-		return converger.AutoConverge()
+		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
 	return cmd
 }
