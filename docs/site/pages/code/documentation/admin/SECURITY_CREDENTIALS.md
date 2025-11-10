@@ -25,7 +25,7 @@ To access security credentials, switch to the admin mode and select "Security cr
 The section consists of 4 tabs:
 
 - **Personal Access Tokens**: List of tokens which belong to real users.
-- **SSH Keys**: List of SSH keys belong to rela users.
+- **SSH Keys**: List of SSH keys belong to real users.
 - **GPG Keys**: List of GPG keys belong to real users.
 - **Group/Project Access Keys**: List of tokens which belong to top-level groups or projects.
 
