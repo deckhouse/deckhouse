@@ -194,7 +194,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
 
-	tcpTaskID := fmt.Sprintf("%s:%s", instanceScope.MachineScope.StaticMachine.UID, address)
+	tcpTaskID := fmt.Sprintf("%s", address)
 	instanceScope.Logger.Info("Scheduling TCP check",
 		"address", address,
 		"timeout", delay,
@@ -251,7 +251,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	c.tcpCheckRateLimiter.Forget(address)
 
-	sshTaskID := fmt.Sprintf("%s:%s", instanceScope.MachineScope.StaticMachine.UID, address)
+	sshTaskID := fmt.Sprintf("%s",address)
 	check := c.checkTaskManager.spawn(taskID(sshTaskID), func() bool {
 		start := time.Now()
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
