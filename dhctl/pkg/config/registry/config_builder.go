@@ -42,10 +42,10 @@ type ConfigBuilderWithPKI struct {
 }
 
 func (cb *ConfigBuilder) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	if !cb.cfg.isModuleEnable() {
+	isExist := cb.cfg.isModuleEnabled()
+	if !isExist {
 		return false, nil, nil
 	}
-	isExist := true
 
 	data, err := json.Marshal(cb.cfg.ModuleConfig)
 	if err != nil {
@@ -156,10 +156,10 @@ func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte
 }
 
 func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
-	if !cb.cfg.isModuleEnable() {
+	isExist := cb.cfg.isModuleEnabled()
+	if !isExist {
 		return false, nil, nil
 	}
-	isExist := true
 
 	var cfg bashible.Config
 	_, cfg, err := cb.bashibleContextAndConfig()
@@ -236,7 +236,7 @@ func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig() (bashible.Context, ba
 	ctx := bashible.Context{
 		Mode:                 cb.cfg.ModuleConfig.Mode,
 		ImagesBase:           imagesBase,
-		RegistryModuleEnable: cb.cfg.isModuleEnable(),
+		RegistryModuleEnable: cb.cfg.isModuleEnabled(),
 		Hosts:                map[string]bashible.ContextHosts{mirrorHost: {Mirrors: ctxHosts}},
 	}
 
