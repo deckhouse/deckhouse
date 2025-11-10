@@ -144,6 +144,8 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 	}
 
+	input.Logger.Debugf("etcd members to remove: %v", removeList)
+
 	if len(removeList) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
