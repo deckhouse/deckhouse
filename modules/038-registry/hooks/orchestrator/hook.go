@@ -132,17 +132,11 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 					return nil, fmt.Errorf("failed to convert init secret to struct: %v", err)
 				}
 
-				config, ok := secret.Data["config"]
-				if !ok {
-					return nil, nil
-				}
-
 				_, applied := secret.Annotations[initSecretAppliedAnnotation]
-
 				ret := InitSecretSnap{
-					Exist:   true,
+					IsExist: true,
 					Applied: applied,
-					Config:  config,
+					Config:  secret.Data["config"],
 				}
 				return ret, nil
 			},
@@ -293,7 +287,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Initialize state with init config
-	if initSecret.Exist && !initSecret.Applied {
+	if initSecret.IsExist && !initSecret.Applied {
 		if initConfig.CA != nil {
 			values.State.PKI.CA = &pki.CertModel{}
 			values.State.PKI.CA.Cert = initConfig.CA.Cert
@@ -332,9 +326,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 
-	// Patch init secret if exist
-	if initSecret.Exist && !initSecret.Applied {
-		input.Logger.Debug("Patch init secret")
+	// Patch init secret
+	if initSecret.IsExist && !initSecret.Applied {
+		input.Logger.Debug("Marking init secret as applied by setting annotation")
 		patch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]interface{}{
