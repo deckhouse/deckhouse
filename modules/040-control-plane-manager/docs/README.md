@@ -64,6 +64,15 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically. Please note that when scaling from any number of master nodes to one, sooner or later at the last step, the situation of scaling nodes from two to one will arise.
 {% endalert %}
 
+### Dynamic terminated pod garbage collection threshold
+
+Automatically configures the optimal `--terminated-pod-gc-threshold` based on cluster size:
+- **Small clusters** (nodes <100): 1000 terminated Pods
+- **Medium clusters** (100≤ nodes <300): 3000 terminated Pods  
+- **Large clusters** (nodes ≥300): 6000 terminated Pods
+
+*Note: This feature only takes effect in environments where the `terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
+
 ## Version control
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.30.13` to `1.30.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
