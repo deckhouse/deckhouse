@@ -671,7 +671,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 
 	deployTimeResult = timeChecker.CalculateMinorDeployTime(dr, metricLabels)
 
-	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyTime, metricLabels)
 	if notifyErr != nil {
 		r.logger.Warn("send minor release notification", log.Err(notifyErr))
 

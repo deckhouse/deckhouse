@@ -57,3 +57,9 @@ Passed the trivy-operator's HTTP(S)_PROXY and NO_PROXY environment variables to 
 ### 013-fix-cve.patch
 
 Updated some operator dependencies.
+
+### 014-fix-cve2.patch
+
+Fixes CVEs:
+- CVE-2025-52881
+- CVE-2024-25621

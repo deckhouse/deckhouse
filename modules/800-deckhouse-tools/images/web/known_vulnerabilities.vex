@@ -48,16 +48,72 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2025-8869"
+        "name": "CVE-2025-52881"
       },
       "products": [
         {
-          "@id": "pip:25.0.1"
+          "@id": "pkg:golang/github.com/opencontainers/selinux@v1.11.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.0.1 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при bind-mounting /dev/pts/$n to /dev/console, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при недостаточной верификации bind-mount /dev/null, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-8869"
+      },
+      "products": [
+        {
+          "@id": "pip:25.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-09T14:31:32.069712443Z"
     }
   ],

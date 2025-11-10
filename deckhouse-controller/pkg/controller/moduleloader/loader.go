@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -87,6 +88,8 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
+	installer *installer.Installer
+
 	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
@@ -94,7 +97,6 @@ type Loader struct {
 
 	downloadedModulesDir string
 	symlinksDir          string
-	clusterUUID          string
 }
 
 func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
@@ -104,6 +106,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		installer:            installer.New(dc, logger),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),
@@ -116,23 +119,23 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 
 // Sync syncs fs and cluster, restores or deletes modules
 func (l *Loader) Sync(ctx context.Context) error {
-	l.clusterUUID = d8utils.GetClusterUUID(ctx, l.client)
+	l.installer.SetClusterUUID(d8utils.GetClusterUUID(ctx, l.client))
 
 	l.logger.Debug("init module loader")
 
-	l.logger.Debug("restore absent modules from overrides")
-	if err := l.restoreAbsentModulesFromOverrides(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from overrides: %w", err)
+	l.logger.Debug("delete orphan modules")
+	if err := l.deleteOrphanModules(ctx); err != nil {
+		return fmt.Errorf("delete orphan modules: %w", err)
 	}
 
-	l.logger.Debug("restore absent modules from releases")
-	if err := l.restoreAbsentModulesFromReleases(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from releases: %w", err)
+	l.logger.Debug("restore modules by overrides")
+	if err := l.restoreModulesByOverrides(ctx); err != nil {
+		return fmt.Errorf("restore modules by overrides: %w", err)
 	}
 
-	l.logger.Debug("delete modules with absent release")
-	if err := l.deleteModulesWithAbsentRelease(ctx); err != nil {
-		return fmt.Errorf("delete modules with absent releases: %w", err)
+	l.logger.Debug("restore modules by releases")
+	if err := l.restoreModulesByReleases(ctx); err != nil {
+		return fmt.Errorf("restore modules by releases: %w", err)
 	}
 
 	go l.runDeleteStaleModuleReleasesLoop(ctx)
@@ -140,6 +143,11 @@ func (l *Loader) Sync(ctx context.Context) error {
 	l.logger.Debug("module loader initialized")
 
 	return nil
+}
+
+// Installer returns installer instance
+func (l *Loader) Installer() *installer.Installer {
+	return l.installer
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator

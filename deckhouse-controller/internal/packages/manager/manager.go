@@ -19,11 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
@@ -44,34 +44,39 @@ const (
 
 var ErrPackageNotFound = errors.New("package not found")
 
-// DependencyContainer provides access to shared infrastructure services.
-type DependencyContainer interface {
-	KubeObjectPatcher() *objectpatch.ObjectPatcher
-	ScheduleManager() schedulemanager.ScheduleManager
-	KubeEventsManager() kubeeventsmanager.KubeEventsManager
-}
-
 // Manager manages the lifecycle of application packages.
 type Manager struct {
-	mu     sync.Mutex                   // Protects apps map
-	apps   map[string]*apps.Application // Loaded applications by name
-	tmpDir string                       // Temporary directory for hook execution
+	mu   sync.Mutex                   // Protects apps map
+	apps map[string]*apps.Application // Loaded applications by name
 
-	loader *loader.ApplicationLoader // Loads packages from filesystem
-	nelm   *nelm.Service             // nelm service to install/uninstall releases
-	dc     DependencyContainer       // Access to shared services
+	loader            *loader.ApplicationLoader // Loads packages from filesystem
+	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	kubeObjectPatcher *objectpatch.ObjectPatcher
+	scheduleManager   schedulemanager.ScheduleManager
+	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
 	logger *log.Logger
 }
 
-// New creates a new package manager with the specified apps directory.
-func New(appsDir string, dc DependencyContainer, logger *log.Logger) *Manager {
-	return &Manager{
-		apps:   make(map[string]*apps.Application),
-		tmpDir: os.TempDir(),
+type Config struct {
+	AppsDir string
 
-		loader: loader.NewApplicationLoader(appsDir, logger),
-		dc:     dc,
+	NelmService       *nelm.Service
+	KubeObjectPatcher *objectpatch.ObjectPatcher
+	ScheduleManager   schedulemanager.ScheduleManager
+	KubeEventsManager kubeeventsmanager.KubeEventsManager
+}
+
+// New creates a new package manager with the specified apps directory.
+func New(conf Config, logger *log.Logger) *Manager {
+	return &Manager{
+		apps: make(map[string]*apps.Application),
+
+		loader:            loader.NewApplicationLoader(conf.AppsDir, logger),
+		nelm:              conf.NelmService,
+		kubeEventsManager: conf.KubeEventsManager,
+		kubeObjectPatcher: conf.KubeObjectPatcher,
+		scheduleManager:   conf.ScheduleManager,
 
 		logger: logger.Named(managerTracer),
 	}
@@ -79,7 +84,7 @@ func New(appsDir string, dc DependencyContainer, logger *log.Logger) *Manager {
 
 // LoadApplication loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
-func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationInstance) error {
+func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationInstance, settings addonutils.Values) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadApplication")
 	defer span.End()
 
@@ -87,6 +92,10 @@ func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationIn
 	span.SetAttributes(attribute.String("namespace", inst.Namespace))
 	span.SetAttributes(attribute.String("version", inst.Version))
 	span.SetAttributes(attribute.String("package", inst.Package))
+
+	if len(inst.Namespace) == 0 {
+		inst.Namespace = "default"
+	}
 
 	app, err := m.loader.Load(ctx, inst)
 	if err != nil {
@@ -97,9 +106,24 @@ func (m *Manager) LoadApplication(ctx context.Context, inst loader.ApplicationIn
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err = app.ApplySettings(settings); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("apply settings: %w", err)
+	}
+
 	m.apps[app.GetName()] = app
 
 	return nil
+}
+
+// ApplySettings validates and apply setting to application
+func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
+	app, err := m.getApp(name)
+	if err != nil {
+		return err
+	}
+
+	return app.ApplySettings(settings)
 }
 
 // StartupPackage runs OnStartup hooks for a package.
@@ -109,7 +133,6 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("tmpDir", m.tmpDir))
 
 	m.logger.Debug("startup package", slog.String("name", name))
 
@@ -119,7 +142,7 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run startup hooks: %w", err)
 	}
@@ -155,7 +178,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 		defer m.nelm.ResumeMonitor(name)
 	}
 
-	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run before helm hooks: %w", err)
 	}
@@ -167,7 +190,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
-	if err = app.RunHooksByBinding(ctx, addontypes.AfterHelm, m.dc); err != nil {
+	if err = app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("run after helm hooks: %w", err)
 	}
@@ -182,33 +205,48 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 	return nil
 }
 
-// DisablePackage stops monitoring and disables all hooks for a package.
+// DisablePackage stops monitoring, uninstalls helm release and disables all hooks for a package.
 //
 // Process:
 //  1. Stop Helm resource monitoring
 //  2. Uninstall Helm release
-//  3. Disable all schedule hooks
-//  4. Stop all Kubernetes event monitors
-//  5. Clean up state (TODO: not yet implemented)
-func (m *Manager) DisablePackage(ctx context.Context, name string) error {
-	_, span := otel.Tracer(managerTracer).Start(ctx, "DisablePackage")
+//  3. Run AfterDeleteHelm hooks
+//  4. Disable all schedule hooks
+//  5. Stop all Kubernetes event monitors
+//  6. Remove package from manager store
+func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) error {
+	_, span := otel.Tracer(managerTracer).Start(ctx, "DeletePackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	m.logger.Debug("disable package", slog.String("name", name))
+	m.logger.Debug("delete package", slog.String("name", name))
 
 	app, err := m.getApp(name)
 	if err != nil {
 		return nil
 	}
 
-	if err = m.nelm.Delete(ctx, name); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
+	// app should not get absent events
+	m.nelm.RemoveMonitor(name)
 
-	// after delete helm hooks
+	if !keep {
+		// Delete package release
+		if err = m.nelm.Delete(ctx, name); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return err
+		}
+
+		// Run after delete helm hooks
+		if err = app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("run after delete helm hooks: %w", err)
+		}
+
+		m.mu.Lock()
+		delete(m.apps, name)
+		m.mu.Unlock()
+	}
 
 	// Disable all schedule-based hooks
 	schHooks := app.GetHooksByBinding(shtypes.Schedule)
@@ -221,8 +259,6 @@ func (m *Manager) DisablePackage(ctx context.Context, name string) error {
 	for _, hook := range kubeHooks {
 		hook.GetHookController().StopMonitors()
 	}
-
-	// TODO(ipaqsa): clean un state
 
 	return nil
 }

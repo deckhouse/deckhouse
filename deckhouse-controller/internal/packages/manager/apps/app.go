@@ -49,8 +49,9 @@ type Application struct {
 	name      string // Application instance name
 	namespace string // Kubernetes namespace where app is deployed
 
-	path        string
-	packageName string // Package name in values key format (e.g., "my-package")
+	path string // path to the package dir on fs
+
+	definition Definition // Application definition
 
 	hooks  *hooks.Storage  // Hook storage with indices
 	values *values.Storage // Values storage with layering
@@ -60,8 +61,8 @@ type Application struct {
 type ApplicationConfig struct {
 	StaticValues addonutils.Values // Static values from values.yaml files
 
-	Namespace   string // Kubernetes namespace
-	PackageName string // Package name
+	Namespace  string     // Kubernetes namespace
+	Definition Definition // Application definition
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -78,7 +79,7 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 
 	a.name = name
 	a.namespace = cfg.Namespace
-	a.packageName = addonutils.ModuleNameToValuesKey(cfg.PackageName)
+	a.definition = cfg.Definition
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -104,7 +105,6 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 
 		// Configure logging and metrics labels for Kubernetes event hooks
 		for _, kubeCfg := range hook.GetHookConfig().OnKubernetesEvents {
-			kubeCfg.Monitor.Metadata.LogLabels["package"] = a.packageName
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
@@ -122,9 +122,14 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "namespace:name:packageName".
+// GetName returns the full application identifier in format "namespace:name".
 func (a *Application) GetName() string {
-	return fmt.Sprintf("%s:%s:%s", a.namespace, a.name, a.packageName)
+	return BuildName(a.namespace, a.name)
+}
+
+// BuildName returns the full application identifier in format "namespace:name".
+func BuildName(namespace, name string) string {
+	return fmt.Sprintf("%s:%s", namespace, name)
 }
 
 // GetPath returns path to the package dir
@@ -135,14 +140,17 @@ func (a *Application) GetPath() string {
 // GetValuesChecksum returns a checksum of the current values.
 // Used to detect if values changed after hook execution.
 func (a *Application) GetValuesChecksum() string {
-	return a.values.GetValues().Checksum()
+	return a.values.GetValuesChecksum()
 }
 
-// GetHelmValues returns values for rendering
-func (a *Application) GetHelmValues() addonutils.Values {
-	return addonutils.Values{
-		a.packageName: a.values.GetValues(),
-	}
+// GetValues returns values for rendering
+func (a *Application) GetValues() addonutils.Values {
+	return a.values.GetValues()
+}
+
+// ApplySettings apply setting values to application
+func (a *Application) ApplySettings(settings addonutils.Values) error {
+	return a.values.ApplyConfigValues(settings)
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.
@@ -225,17 +233,11 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //
 // Returns error if hook execution or patch application fails.
 func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
-	hookConfigValues := addonutils.Values{
-		a.packageName: a.values.GetConfigValues(),
-	}
-
-	hookValues := addonutils.Values{
-		a.packageName: a.values.GetValues(),
-	}
-
+	hookConfigValues := a.values.GetConfigValues()
+	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.packageName, hookConfigValues, hookValues, nil)
+	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {

@@ -15,7 +15,7 @@ import:
 ---
 image: install-standalone-builder
 final: false
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 import:
 - image: install-standalone-builder-content
   add: /

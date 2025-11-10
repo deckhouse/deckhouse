@@ -56,14 +56,14 @@ type Service struct {
 	logger *log.Logger
 }
 
-// New creates a new nelm service for managing Helm releases.
-func New(namespace, tmpDir string, cache runtimecache.Cache, logger *log.Logger) *Service {
+// NewService creates a new nelm service for managing Helm releases.
+func NewService(ctx context.Context, namespace string, cache runtimecache.Cache, cb monitor.AbsentCallback, logger *log.Logger) *Service {
 	nelmClient := nelm.New(namespace, logger)
 
 	return &Service{
-		tmpDir:         tmpDir,
+		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(cache, nelmClient, logger),
+		monitorManager: monitor.New(ctx, cache, nelmClient, cb, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -72,12 +72,20 @@ func (s *Service) HasMonitor(name string) bool {
 	return s.monitorManager.HasMonitor(name)
 }
 
+func (s *Service) RemoveMonitor(name string) {
+	s.monitorManager.RemoveMonitor(name)
+}
+
 func (s *Service) PauseMonitor(name string) {
 	s.monitorManager.PauseMonitor(name)
 }
 
 func (s *Service) ResumeMonitor(name string) {
 	s.monitorManager.ResumeMonitor(name)
+}
+
+func (s *Service) StopMonitors() {
+	s.monitorManager.Stop()
 }
 
 // Render renders a Helm chart with the provided values and returns the manifests.
@@ -136,8 +144,6 @@ func (s *Service) Delete(ctx context.Context, name string) error {
 
 	s.logger.Debug("delete nelm release", slog.String("name", name))
 
-	defer s.monitorManager.RemoveMonitor(name)
-
 	return s.client.Delete(ctx, name)
 }
 
@@ -178,7 +184,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		return ErrPackageNotHelm
 	}
 
-	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetHelmValues())
+	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create values file: %w", err)
@@ -206,7 +212,9 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	}
 
 	if !shouldUpgrade {
+		s.monitorManager.AddMonitor(app.GetName(), renderedManifests)
 		s.logger.Debug("no need to upgrade", slog.String("name", app.GetName()))
+
 		return nil
 	}
 
@@ -223,7 +231,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		return fmt.Errorf("install nelm release: %w", err)
 	}
 
-	s.monitorManager.AddMonitor(ctx, app.GetName(), renderedManifests)
+	s.monitorManager.AddMonitor(app.GetName(), renderedManifests)
 
 	return nil
 }
