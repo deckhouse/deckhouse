@@ -230,7 +230,7 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 		err := os.MkdirAll(dir, 0o755)
 		if err != nil {
 			if os.IsExist(err) {
-				return nil
+				continue
 			}
 
 			return fmt.Errorf("Cannot create %s '%s': %w", name, dir, err)
