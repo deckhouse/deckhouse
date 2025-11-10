@@ -101,3 +101,11 @@ func (u *User) DecodeSecretData(data map[string][]byte) error {
 
 	return nil
 }
+
+func (u User) DeepCopy() User {
+	return User{
+		UserName:       u.UserName,
+		Password:       u.Password,
+		HashedPassword: u.HashedPassword,
+	}
+}

@@ -15,83 +15,124 @@
 package registry
 
 import (
+	"context"
+	"fmt"
+	"sync"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
+
+	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 	registry_users "github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 const (
-	roUser       = "ro"
-	rwUser       = "rw"
-	CACommonName = "registry-ca"
+	readOnlyUser          = "ro"
+	readWriteUser         = "rw"
+	certificateCommonName = "registry-ca"
+	secretNamespace       = "d8-system"
+	secretName            = "registry-init"
 )
 
-var (
-	pkiGenerator = &PKIGenerator{}
-)
+type PKI = registry_init.Config
 
-type PKIK8SProvider struct {
-	pki *PKI
+type ClusterPKIManager struct {
+	kubeClient client.KubeClient
+	once       once[PKI]
 }
 
 type PKIGenerator struct {
-	pki *PKI
+	once once[PKI]
 }
 
-type PKI struct {
-	CA     CertKey             `json:"ca" yaml:"ca"`
-	UserRW registry_users.User `json:"userRW" yaml:"userRW"`
-	UserRO registry_users.User `json:"userRO" yaml:"userRO"`
+type once[T any] struct {
+	ret  T
+	err  error
+	once sync.Once
 }
 
-type CertKey struct {
-	Cert string `json:"cert" yaml:"cert"`
-	Key  string `json:"key" yaml:"key"`
+func (li *once[T]) do(initFunc func() (T, error)) (T, error) {
+	li.once.Do(func() {
+		li.ret, li.err = initFunc()
+	})
+	return li.ret, li.err
+}
+
+func (generator *PKIGenerator) Get() (PKI, error) {
+	ret, err := generator.once.do(func() (PKI, error) {
+		return generatePKI()
+	})
+
+	if err != nil {
+		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", err)
+	}
+	return ret.DeepCopy(), nil
+}
+
+func (manager *ClusterPKIManager) Get() (PKI, error) {
+	ret, err := manager.once.do(func() (PKI, error) {
+		return fetchPKIFromCluster(context.TODO(), manager.kubeClient)
+	})
+
+	if err != nil {
+		return PKI{}, fmt.Errorf("failed to retrieve registry PKI from cluster: %w", err)
+	}
+	return ret.DeepCopy(), nil
 }
 
 func NewPKIGenerator() *PKIGenerator {
-	return pkiGenerator
+	return &PKIGenerator{}
 }
 
-func NewPKIK8SProvider() *PKIGenerator {
-	return pkiGenerator
+func NewClusterPKIManager(kubeClient client.KubeClient) *ClusterPKIManager {
+	return &ClusterPKIManager{kubeClient: kubeClient}
 }
 
-func (provider *PKIGenerator) Get() (PKI, error) {
-	if provider.pki == nil {
-		pki := PKI{}
-		if err := pki.process(); err != nil {
-			return pki, err
-		}
-		provider.pki = &pki
-	}
-	// TODO: deepcopy
-	return *provider.pki, nil
-}
+func generatePKI() (PKI, error) {
+	ret := PKI{}
 
-func (provider *PKIK8SProvider) Get() (PKI, error) {
-	// TODO: get from cluster
-	return NewPKIGenerator().Get()
-}
-
-func (pki *PKI) process() error {
-	certKey, err := registry_pki.GenerateCACertificate(CACommonName)
+	certKey, err := registry_pki.GenerateCACertificate(certificateCommonName)
 	if err != nil {
-		return err
+		return ret, err
 	}
+
 	cert, key, err := registry_pki.EncodeCertKey(certKey)
 	if err != nil {
-		return err
+		return ret, err
 	}
-	rw, err := registry_users.New(rwUser)
+
+	rw, err := registry_users.New(readWriteUser)
 	if err != nil {
-		return err
+		return ret, err
 	}
-	ro, err := registry_users.New(roUser)
+
+	ro, err := registry_users.New(readOnlyUser)
 	if err != nil {
-		return err
+		return ret, err
 	}
-	pki.CA = CertKey{Cert: string(cert), Key: string(key)}
-	pki.UserRW = rw
-	pki.UserRO = ro
-	return nil
+
+	ret.CA = &registry_init.CertKey{
+		Cert: string(cert),
+		Key:  string(key),
+	}
+	ret.UserRW = &rw
+	ret.UserRO = &ro
+
+	return ret, nil
+}
+
+func fetchPKIFromCluster(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
+	var ret PKI
+	secret, err := kubeClient.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return ret, err
+	}
+
+	if err := yaml.Unmarshal(secret.Data["config"], &ret); err != nil {
+		return ret, fmt.Errorf("failed to unmarshal: %w", err)
+	}
+	return ret, nil
 }
