@@ -90,11 +90,14 @@ If you need to remove a node from the set of master nodes but keep it in the clu
    Example:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 After completing these steps, the node will no longer be considered a master node, but it will remain part of the cluster and can be used for other tasks.
@@ -104,7 +107,12 @@ After completing these steps, the node will no longer be considered a master nod
 1. Create a [backup of etcd](/products/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
-1. Ensure the DVP queue is empty.
+1. Ensure the DVP queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):
 
    ```bash
@@ -154,11 +162,14 @@ After completing these steps, the node will no longer be considered a master nod
 1. Verify that the etcd node appears in the cluster node list:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Make sure that [`control-plane-manager`](/modules/control-plane-manager/) is running on the node:

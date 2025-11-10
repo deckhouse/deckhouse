@@ -3,9 +3,8 @@
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
 {{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromCacheVersion: "2025-06-10"
 fromImage: common/src-artifact
 secrets:
 - id: SOURCE_REPO
@@ -18,23 +17,23 @@ git:
     - '**/*'
 shell:
   install:
-  - mkdir -p /usr/src/app
-  - cd /usr/src/app
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana.git .
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana.git /src/grafana
+  - cd /src/grafana
   - git apply /patches/*.patch --verbose
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /grafana-public
-  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /grafana-plugins
-  - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git /usr/src/app/scripts /usr/src/app/devenv/docker
+  - rm -rf .git scripts devenv/docker
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /src/grafana-public
+  - rm -rf /src/grafana-public/.git
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /src/grafana-plugins
+  - rm -rf /src/grafana-plugins/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
-fromCacheVersion: "2025-10-03"
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace-1.25" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/grafana
   to: /usr/src/app
   before: install
 secrets:
@@ -45,13 +44,10 @@ secrets:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get -y --no-install-recommends install gcc musl musl-tools git
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v0.7.0 $(cat /run/secrets/SOURCE_REPO)/google/wire.git /src/wire
+  - apt-get -y --no-install-recommends install gcc musl musl-tools
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc GRAFANA_VERSION={{ $grafanaVersion }}
-  - cd /src/wire/cmd/wire && go install
-  - rm -rf /src/wire
+  - go install github.com/google/wire/cmd/wire@v0.7.0
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
   - |
@@ -87,16 +83,16 @@ import:
   add: /usr/src/app/bin/linux-amd64/grafana
   to: /usr/share/grafana/bin/grafana
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /grafana-public/public
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/grafana-public/public
   to: /usr/share/grafana/public
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app/conf
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/grafana/conf
   to: /usr/share/grafana/conf
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /grafana-plugins
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/grafana-plugins
   to: /grafana-plugins
   before: install
 git:
@@ -173,7 +169,7 @@ import:
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
-git:  
+git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -181,3 +177,5 @@ imageSpec:
     workingDir: "/usr/share/grafana"
     env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "{{ $gfPathPlugins }}", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "{{ $gfPathPlugins }}" }
     expose: ["3000"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

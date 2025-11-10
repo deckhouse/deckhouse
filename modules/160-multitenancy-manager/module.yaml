@@ -3,5 +3,3 @@ stage: "Preview"
 subsystems:
   - deckhouse
 namespace: d8-multitenancy-manager
-requirements:
-  deckhouse: ">= 1.68"

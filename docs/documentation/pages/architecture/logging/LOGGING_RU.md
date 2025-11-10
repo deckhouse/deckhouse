@@ -9,8 +9,8 @@ lang: ru
 ## Механизм сбора и доставки логов
 
 Для сбора и доставки логов в DKP используется [модуль `log-shipper`](/modules/log-shipper/).
-На каждом узле кластера запускается отдельный экземпляр `log-shipper`, который настраивается на основе ресурсов DKP.
-Модуль `log-shipper` использует [Vector](https://vector.dev/) в качестве агента логирования.
+На каждом узле кластера запускается отдельный экземпляр [log-shipper](/modules/log-shipper/), который настраивается на основе ресурсов DKP.
+Модуль [log-shipper](/modules/log-shipper/) использует [Vector](https://vector.dev/) в качестве агента логирования.
 Комбинация настроек для сбора и доставки логов образует *pipeline*.
 
 ![Архитектура log-shipper](../../images/log-shipper/log_shipper_architecture.svg)
@@ -26,7 +26,7 @@ lang: ru
    - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
 1. На основе заданных параметров DKP автоматически создаёт конфигурационный файл и сохраняет его в Secret в Kubernetes.
-1. Secret монтируется на все поды агентов `log-shipper`.
+1. Secret монтируется на все поды агентов [log-shipper](/modules/log-shipper/).
    При изменении конфигурации обновление происходит автоматически с помощью сайдкар-контейнера `reloader`.
 
 ## Схемы доставки логов
@@ -36,7 +36,7 @@ lang: ru
 
 ### Распределенная
 
-Агенты `log-shipper` отправляют логи напрямую в хранилище, например, Loki или Elasticsearch.
+Агенты [log-shipper](/modules/log-shipper/) отправляют логи напрямую в хранилище, например, Loki или Elasticsearch.
 
 ![log-shipper distributed](../../images/log-shipper/log_shipper_distributed.svg)
 
@@ -96,7 +96,7 @@ lang: ru
 
 Перед отправкой логов DKP может отфильтровывать ненужные записи,
 чтобы снизить количество сообщений, отправляемых в хранилище.
-Для этого задействуются фильтры `labelFilter` и `logFilter` модуля `log-shipper`.
+Для этого задействуются фильтры [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter) и [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter) модуля [log-shipper](/modules/log-shipper/).
 
 ![log-shipper pipeline](../../images/log-shipper/log_shipper_pipeline.svg)
 
@@ -131,7 +131,7 @@ lang: ru
 
 ### Метаданные
 
-При обработке логов `log-shipper` автоматически обогащает сообщения метаданными в зависимости от их источника.
+При обработке логов [log-shipper](/modules/log-shipper/) автоматически обогащает сообщения метаданными в зависимости от их источника.
 Обогащение происходит на этапе `Source`.
 
 #### Kubernetes

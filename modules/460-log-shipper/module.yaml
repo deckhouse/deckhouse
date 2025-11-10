@@ -8,5 +8,3 @@ description: |
 descriptions:
   en: |
     Collecting logs in the Kubernetes cluster
-requirements:
-  deckhouse: ">= 1.68"

@@ -16,7 +16,7 @@ spec:
       insecureSkipVerify: true
     honorLabels: true
     relabelings:
-    - regex: endpoint|namespace|pod|service
+    - regex: endpoint|pod|service
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
       targetLabel: node
@@ -24,6 +24,8 @@ spec:
       replacement: kubelet
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: namespace
+      replacement: kube-system
   # CRI metrics
   - port: https-metrics
     scheme: https

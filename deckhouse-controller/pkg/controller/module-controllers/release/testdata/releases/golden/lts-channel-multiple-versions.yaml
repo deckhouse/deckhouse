@@ -70,7 +70,7 @@ status:
   approved: false
   message: ""
   phase: Superseded
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -98,7 +98,7 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---

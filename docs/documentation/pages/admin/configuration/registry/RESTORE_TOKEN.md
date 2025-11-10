@@ -42,7 +42,7 @@ If, after the license token expired, the Deckhouse Kubernetes Platform (DKP) pod
 
    ```shell
    d8 k get pods -n d8-system -o wide
-   d8 k delete pod -n d8-system -o deckhouse-<id>
+   d8 k delete pod -n d8-system deckhouse-<id>
    ```
 
 1. Make sure the new `deckhouse` Pod has started successfully:

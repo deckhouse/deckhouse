@@ -62,6 +62,7 @@ type Script interface {
 	WithTimeout(timeout time.Duration)
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
+	WithCommanderMode(enabled bool)
 }
 
 type Tunnel interface {
@@ -115,6 +116,9 @@ type Check interface {
 type SSHLoopHandler func(s SSHClient) error
 
 type SSHClient interface {
+	// 	BeforeStart safe starting without create session. Should safe for next Start call
+	OnlyPreparePrivateKeys() error
+
 	Start() error
 
 	// Tunnel is used to open local (L) and remote (R) tunnels

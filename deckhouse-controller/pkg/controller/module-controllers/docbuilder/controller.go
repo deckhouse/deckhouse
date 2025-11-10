@@ -230,7 +230,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 
 	b := new(bytes.Buffer)
 
-	r.logger.Debug("Getting module's documentation locally", slog.String("moduleName", moduleName))
+	r.logger.Debug("Getting module's documentation locally", slog.String("module_name", moduleName))
 	fetchModuleErr := r.getDocumentationFromModuleDir(md.Spec.Path, b)
 
 	var rendered int

@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company Github
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -374,7 +376,7 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 ### Creating a user
 
-Create a password and enter its hash encoded in base64 in the `password` field.
+Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 

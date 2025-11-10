@@ -318,26 +318,6 @@ entries:
                         ru: Обзор
                       url: /admin/integrations/virtualization/overview.html
                     - title:
-                        en: Integration with VMware vSphere
-                        ru: Интеграция с VMware vSphere
-                      folders:
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/vsphere/authorization.html
-                        - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vsphere/layout.html
-                        - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/vsphere/storage.html
-                        - title:
-                            en: Integration with VMware vSphere services
-                            ru: Интеграция со службами VMware vSphere
-                          url: /admin/integrations/virtualization/vsphere/services.html
-                    - title:
                         en: Integration with DVP
                         ru: Интеграция с DVP
                       folders:
@@ -365,6 +345,26 @@ entries:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vsphere/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vsphere/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/vsphere/storage.html
+                        - title:
+                            en: Integration with VMware vSphere services
+                            ru: Интеграция со службами VMware vSphere
+                          url: /admin/integrations/virtualization/vsphere/services.html
                     - title:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
@@ -730,6 +730,10 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /admin/configuration/storage/external/huawei.html
                     - title:
+                        en: NetApp data storage
+                        ru: Хранилище данных NetApp
+                      url: /admin/configuration/storage/external/netapp.html
+                    - title:
                         en: NFS storage
                         ru: Сетевое файловое хранилище NFS
                       url: /admin/configuration/storage/external/nfs.html
@@ -800,7 +804,7 @@ entries:
                     - title:
                         en: Configuring monitoring of network interaction and cluster nodes
                         ru: Настройка мониторинга сетевого взаимодействия и узлов кластера
-                      url: /admin/configuration/monitoring/configuring/network-and-pods.html
+                      url: /admin/configuration/monitoring/configuring/network-and-nodes.html
                     - title:
                         en: Writing Prometheus data to longterm storage
                         ru: Запись данных Prometheus в долговременное хранилище
@@ -1025,8 +1029,8 @@ entries:
                 ru: Обзор
               url: /user/monitoring/
             - title:
-                en: Monitoring settings
-                ru: Настройки мониторинга
+                en: Configuring application monitoring
+                ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
         - title:
             en: Logging settings

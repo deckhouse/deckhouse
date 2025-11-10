@@ -61,6 +61,12 @@ data:
           include /app/channels-data/channels.conf;
       }
 
+      # Map installer channel names to versions
+      map $installer_channel_name $installer_channel_version {
+          default "v0.4.1";
+          include /app/installer-versions-nginx.include;
+      }
+
       server {
         listen   8080;
         server_name _;
@@ -110,7 +116,10 @@ data:
 
         # Redirect for installer
         location /downloads/installer   {
-            rewrite ^/downloads/installer/latest/(?<filename>.+)$ /v0.4.0/$filename  break;
+            # $installer_channel_name is mapped to $installer_channel_version (see map above)
+            set $installer_channel_name "latest";
+
+            rewrite ^/downloads/installer/latest/(?<filename>.+)$ /$installer_channel_version/$filename  break;
             rewrite ^ /get  break;
 
             proxy_cache             dcache;

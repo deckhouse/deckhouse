@@ -25,8 +25,6 @@ on:
       - reopened
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "dmt_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -36,6 +34,7 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  pull-requests: read
 
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
@@ -115,17 +114,25 @@ jobs:
     needs:
       - build_fe
     steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_USER" "SVACE_ANALYZE_SSH_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_URL" "SVACER_URL" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_USER" "SVACER_IMPORT_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_PASSWORD" "SVACER_IMPORT_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: "DKP"
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
           ci_commit_hash: ${{ github.event.pull_request.head.sha }}
-          svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
-          svace_analyze_ssh_user: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-          svacer_url: "${{ secrets.SVACER_URL }}"
-          svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
-          svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
-          svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+          svace_analyze_host: "${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}"
+          svace_analyze_ssh_user: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_USER }}"
+          svacer_url: "${{ steps.secrets.outputs.SVACER_URL }}"
+          svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
+          svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
+          svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
   doc_web_build:
     name: Doc web build
@@ -232,7 +239,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

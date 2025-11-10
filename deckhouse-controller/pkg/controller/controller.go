@@ -59,6 +59,13 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
+	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
+	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
+	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -127,7 +134,7 @@ func NewDeckhouseController(
 	// but otherwise we get a warning from the controller-runtime.
 	controllerruntime.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
-	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), controllerruntime.Options{
+	opts := controllerruntime.Options{
 		Scheme: scheme,
 		BaseContext: func() context.Context {
 			return ctx
@@ -186,7 +193,21 @@ func NewDeckhouseController(
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
-	})
+	}
+
+	// Package system controllers (feature flag)
+	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplication{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
@@ -290,12 +311,12 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, loader.Installer(), dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
@@ -303,6 +324,42 @@ func NewDeckhouseController(
 	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
+	}
+
+	// Package system controllers (feature flag)
+	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+		logger.Info("Package system controllers are enabled")
+
+		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository controller: %w", err)
+		}
+
+		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository operation controller: %w", err)
+		}
+
+		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("cluster-application-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
+		}
+
+		err = packageclusterapplication.RegisterController(runtimeManager, logger.Named("cluster-application-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register cluster application controller: %w", err)
+		}
+
+		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application package version controller: %w", err)
+		}
+
+		packageOperator := applicationpackage.NewPackageOperator(logger.Named("package-operator"))
+		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application controller: %w", err)
+		}
 	}
 
 	validation.RegisterAdmissionHandlers(
@@ -402,7 +459,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = c.defaultReleaseChannel
-			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
+			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release_channel", settings.ReleaseChannel))
 		}
 
 		c.embeddedPolicy.Set(settings)

@@ -20,6 +20,10 @@ import (
 )
 
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
+	if len(input.Snapshots.Get("provider_cluster_configuration")) == 0 {
+		input.Values.Set("cloudProviderOpenstack.internal.hybridMode", true)
+	}
+
 	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
 		p = metaCfg.ProviderClusterConfig

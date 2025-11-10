@@ -531,7 +531,7 @@ capiEmergencyBrake: true
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы компонентов control plane (например, удалена директория `/var/lib/containerd`).
-В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
+В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.ru`.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -542,7 +542,7 @@ capiEmergencyBrake: true
 ```shell
 d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
+jq -r '.auths."registry.deckhouse.ru".auth'
 ```
 
 Вывод команды нужно скопировать и присвоить переменной `AUTH` на поврежденном master-узле.
@@ -597,6 +597,51 @@ spec:
 {% endalert %}
 
 После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
+
+## Почему изменение CRI могло не примениться?
+
+При попытке сменить CRI изменения могут не вступить в силу. Наиболее частая причина — наличие на узлах специальных меток (лейблов) `node.deckhouse.io/containerd-v2-unsupported` и `node.deckhouse.io/containerd-config=custom`.
+
+Метка `node.deckhouse.io/containerd-v2-unsupported` выставляется, если узел не соответствует хотя бы одному из следующих требований:
+
+- Версия ядра — не ниже 5.8;
+- Версия systemd — не ниже 244;
+- Активирован cgroup v2;
+- Доступна файловая система EROFS.
+
+Метка `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `conf.d` или `conf2.d`. В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+
+Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
+
+Если нет возможности удалить ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), вносящий изменения в конфигурацию containerd и несовместимый с версией containerd v2, используйте универсальный шаблон:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Скрипт для изменения конфигурации для ContainerdV2>
+    {{- else }}
+  # <Скрипт для изменения конфигурации для ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Кроме того, для смены CRI может понадобиться снять пользовательскую метку `node.deckhouse.io/containerd-config=custom`. Сделать это можно с помощью команды:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGroup, где меняется CRI>=); do d8 k label $node node.deckhouse.io/containerd-config-; done
+```
 
 ## Как изменить CRI для всего кластера?
 
@@ -944,12 +989,56 @@ spec:
 crictl pull private.registry.example/image/repo:tag
 ```
 
+##### Как настроить зеркало для доступа к публичным registries (устаревший способ)?
+
+Пример настройки зеркала к публичным registries при использовании **устаревшего** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    sed -i '/endpoint = \["https:\/\/registry-1.docker.io"\]/d' /var/lib/bashible/bundle_steps/032_configure_containerd.sh
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/mirror-to-harbor.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry.private.network/v2/dockerhub-proxy/"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+              endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
+    EOF
+```
+
 #### Новый способ
 
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1033,7 +1122,7 @@ spec:
 
 ##### Как настроить сертификат для дополнительного registry (актуальный способ)?
 
-Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
+Пример настройки сертификата для дополнительного registry при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1137,6 +1226,52 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 
 # Через ctr для http репозитория.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+```
+
+##### Как настроить зеркало для доступа к публичным registries (актуальный способ)?
+
+Пример настройки зеркала к публичным registries при использовании **актуального** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY1_URL=docker.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY1_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY1_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
+    REGISTRY2_URL=gcr.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY2_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY2_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
 ```
 
 ## Как использовать NodeGroup с приоритетом?

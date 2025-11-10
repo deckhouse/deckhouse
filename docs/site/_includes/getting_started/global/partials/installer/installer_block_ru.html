@@ -10,6 +10,8 @@
   * VMware vCloud Director.
 
   Поддерживаются **все редакции** от CE до EE, включая Deckhouse Certified Security Edition (bare metal).
+
+  **Внимание.** Установка Deckhouse Certified Security Edition с помощью графического установщика не сертифицирована и  допускается **только** для целей тестирования.
   {% endalert %}
   <div class="installer_two-columns">
     <div>
@@ -29,10 +31,19 @@
               <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
             </div>
             <div id="tab-mac-content-container" class="tab-content active">
+{% alert level="info" %}
+Если у вас компьютер на базе Apple Silicon, то перед запуском контейнера убедитесь, что в настройках Docker Desktop включена Rosetta.
+{% offtopic title="Как включить Rosetta..." %}
+1. Перейдите в настройки Docker Desktop, нажав на значок шестерёнки в правом верхнем углу главного окна программы.
+1. На вкладке «General» найдите раздел «Virtual Machine Options».
+1. Включите пункт «Use Rosetta for x86_64/amd64 emulation on Apple Silicon».
+   <img src="/images/gs/installer/enable-rosetta.png" alt="Включение Rosetta в настройках Docker Desktop">
+{% endofftopic %}
+{% endalert %}
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -72,7 +83,7 @@ xattr -c d8install-darwin-arm64
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -99,16 +110,39 @@ chmod +x d8install-linux-amd64
             </div>
           </div>
           <div id="tab-windows" class="tab-content">
-            <p>Выполните команду:</p>
+{% alert level="info" %}
+Перед запуском контейнера убедитесь, что у вас установлен [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) и [включена подсистема WSL2](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
+{% endalert %}
+            <p>Выполните команду. Если вы работаете в командной строке:</p>
 {% capture command %}
 ```bash
-docker run --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/c/Users/%USERNAME%/.d8installer
+docker run --rm --pull always -v /mnt/host/c/Users/%USERNAME%/.d8installer:/mnt/host/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/%USERNAME%/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            <p>Если вы работаете в Power Shell:</p>
+{% capture command %}
+```bash
+docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/mnt/host/c/Users/$env:USERNAME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/$env:USERNAME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
           </div>
         </li>
         <li>Откройте <a>http://localhost:8080</a></li>
+        <li>
+          <p>Выполните следующие шаги:<p>
+          <div class="tabs">
+            <button id="tab-button-bare-metal" class="tab-button active" onclick="openInstallerTypeTab(event, 'tab-bare-metal-content');">Для bare-metal</button>
+            <button id="tab-button-cloud" class="tab-button" onclick="openInstallerTypeTab(event, 'tab-cloud-content');">Для облачного кластера</button>
+          </div>
+          <div id="tab-bare-metal-content" class="tab-content active">
+            {%- include getting_started/global/partials/installer/installer-steps-bare-metal.html %}
+          </div>
+          <div id="tab-cloud-content" class="tab-content">
+            {%- include getting_started/global/partials/installer/installer-steps-cloud.html %}
+          </div>
+        </li>
       </ol>
     </div>
   </div>
@@ -149,6 +183,17 @@ docker run --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%U
       document.getElementById("tab-buttons-linux-container").classList.remove("active");
       document.getElementById("tab-buttons-linux-script").classList.remove("active");
       document.getElementById("tab-buttons-linux-file").classList.remove("active");
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openInstallerTypeTab(evt, subTabName) {
+      document.getElementById("tab-bare-metal-content").classList.remove("active");
+      document.getElementById("tab-cloud-content").classList.remove("active");
+
+      document.getElementById("tab-button-bare-metal").classList.remove("active");
+      document.getElementById("tab-button-cloud").classList.remove("active");
 
       document.getElementById(subTabName).classList.add("active");
       evt.currentTarget.classList.add("active");

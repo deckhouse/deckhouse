@@ -1,0 +1,241 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $ctx := . }!}
+
+name: Build and test for main branch
+
+# On every push to main branch.
+on:
+  push:
+    branches:
+      - 'main'
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Cancel in-progress jobs for the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+
+jobs:
+{!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_fe:
+    name: Build FE
+    needs:
+      - git_info
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_ee:
+    name: Build EE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "EE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_se:
+    name: Build SE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_se_plus:
+    name: Build SE-plus
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "SE-plus"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_be:
+    name: Build BE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "BE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  build_ce:
+    name: Build CE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "CE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  doc_web_build:
+    name: Doc web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
+
+  main_web_build:
+    name: Main web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
+
+  tests:
+    name: Tests
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
+
+  tests_python_webhooks:
+    name: Tests python webhooks
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
+
+  tests_dmt_lint:
+    name: Tests DMT lint
+    needs:
+    - git_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
+
+  dhctl_tests:
+    name: Dhctl Tests
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
+
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
+
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    runs-on: [self-hosted, large]
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "main") | strings.Indent 4 }!}
+
+  web_links_test:
+    name: Web links test
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
+
+  validators:
+    name: Validators
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
+
+{!{/* Autodeploy site to the production env on push to the main branch. */}!}
+  deploy_latest_web_site_prod:
+    name: (Prod) Deploy latest site
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
+
+{!{/* Autodeploy docs to the production env on push to the main branch. */}!}
+  deploy_latest_web_doc_prod:
+    name: (Prod) Deploy latest doc
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+
+  compare_internal_modules:
+    name: Compare internal modules
+    needs:
+      - build_fe
+      - build_ee
+      - build_ce
+      - build_be
+      - build_se
+      - build_se_plus
+    if: ${{ always() && needs.build_fe.result == 'success' }}
+    runs-on: regular
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Get artifacts
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+      - name: Compare modules
+        run: python .github/scripts/python/compare_internal_modules.py

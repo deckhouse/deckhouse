@@ -524,7 +524,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if source.Status.Phase != v1alpha1.ModuleSourcePhaseTerminating {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseTerminating
 		if err := r.client.Status().Update(ctx, source); err != nil {
-			r.logger.Warn("failed to set terminating to the source", slog.String("moduleSource", source.GetName()), log.Err(err))
+			r.logger.Warn("failed to set terminating to the source", slog.String("module_source", source.GetName()), log.Err(err))
 
 			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
@@ -535,7 +535,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 			// list deployed ModuleReleases associated with the ModuleSource
 			releases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, releases, client.MatchingLabels{"source": source.Name, "status": "deployed"}); err != nil {
-				r.logger.Warn("failed to list releases", slog.String("moduleSource", source.GetName()), log.Err(err))
+				r.logger.Warn("failed to list releases", slog.String("module_source", source.GetName()), log.Err(err))
 
 				return ctrl.Result{}, fmt.Errorf("list: %w", err)
 			}

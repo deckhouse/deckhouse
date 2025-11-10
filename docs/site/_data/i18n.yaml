@@ -21,6 +21,10 @@ ee: Enterprise Edition
 kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
+dkp-ce: DKP CE
+dkp-se-plus: DKP SE+
+dkp-ee: DKP EE
+dvp-ee: DVP EE
 
 common:
   of:
@@ -248,6 +252,33 @@ common:
   role:
     en: role
     ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module `XXXX` parameters
+    ru: Параметры модуля `XXXX`
+  module_x_crds:
+    en: Module `XXXX` custom resources
+    ru: Кастомные ресурсы модуля `XXXX`
+  module_x_documentation:
+    en: Module `XXXX` documentation
+    ru: Документация модуля `XXXX`
+  module_x_cluster_configuration:
+    en: Module `XXXX` provider configuration
+    ru: Настройки провайдера модуля `XXXX`
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -263,6 +294,12 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  show_details:
+    en: Show details...
+    ru: Показать подробности...
+  hide_details:
+    en: Hide details
+    ru: Скрыть подробности
   guides_description:
     en: Helping you achieve a goal or solve a problem with Deckhouse.
     ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.

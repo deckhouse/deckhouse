@@ -16,7 +16,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
     Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
 * `d8 dk` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
-    Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
+    Например, вместо `werf plan --repo registry.deckhouse.ru` можно выполнить `d8 d plan --repo registry.deckhouse.ru`.
 
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
@@ -25,8 +25,9 @@ Deckhouse CLI — это интерфейс командной строки дл
 
   Сценарии использования:
 
-  - [ручная загрузка образов в изолированный приватный registry](../../installing/#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-dkp-в-приватный-registry).
-  - Обновление дополнительных образов модулей (например, баз данных уязвимостей): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`
+  - [ручная загрузка образов в изолированный приватный registry](../../installing/#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-dkp-в-приватный-registry);
+  - обновление дополнительных образов модулей (например, баз данных уязвимостей): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`;
+  - [обновление платформы, модулей и баз данных уязвимостей в закрытом окружении](/products/kubernetes-platform/guides/airgapped-update.html#пример-сценария-обновления-платформы-модулей-и-баз-данных-уязвимостей).
 
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.

@@ -100,6 +100,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -113,6 +122,15 @@
     "tags": [
       "storage"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -135,6 +153,15 @@
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -224,6 +251,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "security"
     ],
@@ -272,6 +308,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "delivery"
     ],
@@ -291,6 +336,16 @@
     ],
     "external": "true",
     "path": "/modules/pod-reloader/stable/"
+  },
+  "payload-registry": {
+    "tags": [
+      "registry"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
   },
   "runtime-audit-engine": {
     "tags": [

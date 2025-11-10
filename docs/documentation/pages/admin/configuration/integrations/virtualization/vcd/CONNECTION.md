@@ -240,6 +240,18 @@ In the dialog window, leave only the checkbox for `OVF: Reads data from OVF tran
 
 ![Template setup, OVF](../../../../images/cloud-provider-vcd/template/OVF.png)
 
+Make sure that the `datasource_list` parameter is specified in the `cloud-init` configuration. You can verify this using the following command:
+
+```shell
+cat /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+```
+
+If the output is empty, execute the following command:
+
+```shell
+echo "datasource_list: [ OVF, VMware, None ]" > /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+```
+
 Run the remaining commands:
 
 ```shell
@@ -299,3 +311,13 @@ shutdown -P now
 * VCD supports CSI. Disks are created as VCD Independent Disks.
 * The guest property `disk.EnableUUID` must be enabled for the VM templates in use.
 * Deckhouse Kubernetes Platform supports disk resizing starting from version v1.59.1.
+
+## Using the LoadBalancer
+
+- DKP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
+- VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used as the load balancer.
+- Support is available **only** when using the `NSX-T` network virtualization platform.
+- The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under Edge Gateway → Load Balancer → General Settings — the `State` parameter must be `Active`.
+- If the load balancer was enabled after the DKP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
+- For each open port, a Pool + Virtual Service pair is created.
+- If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.

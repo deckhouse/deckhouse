@@ -115,6 +115,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/infra-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/infra-controller-manager-legacy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/040-node-manager/images/d8-shutdown-inhibitor/src"
   labels:
   - "type/dependencies"
@@ -287,6 +305,24 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/002-deckhouse/images/webhook-handler/src/label-converter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/containerd/pidumount/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/systemctl-power-commands-wrapper/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

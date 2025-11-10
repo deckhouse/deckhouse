@@ -16,7 +16,7 @@ Here are credentials **generated** in the previous steps:
 - Username — `admin@deckhouse.io`
 - Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `resource.yml` file)
 
-Use them to access the web interface of the components.
+Open `https://stronghold.example.com` in your browser and sign in via Dex using the provided username and password.
 </div>
 
 {% include getting_started/stronghold/global/partials/FINISH_CARDS.md %}

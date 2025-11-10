@@ -70,6 +70,7 @@ The installation configuration YAML file contains parameters for several resourc
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
    * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration) — Huawei Cloud;
    * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
    * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
    * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
@@ -471,7 +472,7 @@ During installation, DKP can be configured to work with an external registry (e.
 Set the following parameters in the `InitConfiguration` resource:
 
 - `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — the path to the DKP EE image in the external registry.  
-  Example: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
+  Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
 - `registryDockerCfg: <BASE64>` — base64-encoded Docker config with access credentials to the external registry.
 
 If anonymous access is allowed to DKP images in the external registry, the `registryDockerCfg` should look like this:
@@ -534,13 +535,13 @@ When using the [Nexus](https://github.com/sonatype/nexus-public) repository mana
 
 Setup Steps:
 
-1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse registry](https://registry.deckhouse.ru/):  
+1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse registry](https://registry.deckhouse.io/):  
    ![Create Proxy Docker Repository](../images/registry/nexus/nexus-repository.png)
 
 1. Fill out the repository creation form with the following values:
    * `Name`: the desired repository name, e.g., `d8-proxy`.
    * `Repository Connectors / HTTP` or `HTTPS`: a dedicated port for the new repository, e.g., `8123` or another.
-   * `Remote storage`: must be set to `https://registry.deckhouse.ru/`.
+   * `Remote storage`: must be set to `https://registry.deckhouse.io/`.
    * `Auto blocking enabled` and `Not found cache enabled`: can be disabled for debugging; otherwise, enable them.
    * `Maximum Metadata Age`: must be set to `0`.
    * If using a commercial edition of Deckhouse Kubernetes Platform, enable the `Authentication` checkbox and fill in the following:
@@ -572,7 +573,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
   * Go to `Administration` → `Registries` → `New Endpoint`.
   * `Provider`: Docker Registry.
   * `Name`: arbitrary value of your choice.
-  * `Endpoint URL`: `https://registry.deckhouse.ru`.
+  * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Set `Access ID` and `Access Secret` (your Deckhouse Kubernetes Platform license key).
 
     ![Registry Configuration](../images/registry/harbor/harbor1.png)
@@ -609,19 +610,21 @@ You can check the current status of versions in the release channels at [release
 
    ```shell
    d8 mirror pull \
-     --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
+     --source='registry.deckhouse.io/deckhouse/<EDITION>' \
      --license='<LICENSE_KEY>' /home/user/d8-bundle
    ```
 
    where:
 
-   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted;
-   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key;
+   - `--source` — address of the Deckhouse Kubernetes Platform container registry.
+   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
+   - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
+   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — directory where the image packages will be placed. It will be created if it does not exist.
 
    > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
 
-   You can also use the following command options:
+   {% offtopic title="Other command parameters available for use:" %}
 
    - `--no-pull-resume` — force the download to start from the beginning;
    - `--no-platform` — skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`);
@@ -635,24 +638,27 @@ You can check the current status of versions in the release channels at [release
      - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
      - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
    - `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
-   - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.ru/deckhouse/EDITION/modules`);
+   - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`);
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
    - `--deckhouse-tag` — download only the specific DKP version (regardless of update channels). Cannot be used with `--since-version`;
    - `--gost-digest` — calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball;
-   - `--source` — specify the source image registry address (default: `registry.deckhouse.ru/deckhouse/ee`);
-   - use the `--license` parameter with a valid license key to authenticate with the official DKP image registry;
    - use the `--source-login` and `--source-password` parameters to authenticate with an external image registry;
    - `--images-bundle-chunk-size=N` — set the maximum file size (in GB) to split the image archive. As a result, instead of one image archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (e.g., `d8.tar` for files `d8.tar.NNNN.chunk`);
    - `--tmp-dir` — path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
+  
+   {% endofftopic %}
 
-   Additional configuration parameters for the `d8 mirror` command family are available as environment variables:
+   Additional configuration parameters for the `d8 mirror` command family are available as environment variables.
 
-   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable;
-   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying;
-   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used;
-   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
-   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry;
+   {% offtopic title="More details:" %}
 
+   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable.
+   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying.
+   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used.
+   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
+   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry.
+
+   {% endofftopic %}
 
    Example command to download all DKP EE versions starting from version 1.59 (specify your license key):
 
@@ -667,7 +673,7 @@ You can check the current status of versions in the release channels at [release
    ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
-   --source='registry.deckhouse.ru/deckhouse/se' \
+   --source='registry.deckhouse.io/deckhouse/se' \
    /home/user/d8-bundle
    ```
 
@@ -759,7 +765,7 @@ You can check the current status of versions in the release channels at [release
 
 1. After uploading the images to the registry, you can proceed with installing DKP. Use the [Quick Start Guide](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-   When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+   When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
    In the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
 

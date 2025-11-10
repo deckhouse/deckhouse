@@ -83,24 +83,17 @@ type dependencyContainer struct {
 	k8sClient     k8s.Client
 	vsphereClient vsphere.Client
 
-	m          sync.RWMutex
 	isTestEnv  *bool
 	helmClient clients
+	isTestOnce sync.Once
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
-	dc.m.RLock()
-	if dc.isTestEnv != nil {
-		defer dc.m.RUnlock()
-		return *dc.isTestEnv
-	}
-	dc.m.RUnlock()
-
-	isTestEnvStr := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
-	isTestEnv, _ := strconv.ParseBool(isTestEnvStr)
-	dc.m.Lock()
-	dc.isTestEnv = &isTestEnv
-	dc.m.Unlock()
+	dc.isTestOnce.Do(func() {
+		isTestEnvStr := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
+		isTestEnv, _ := strconv.ParseBool(isTestEnvStr)
+		dc.isTestEnv = &isTestEnv
+	})
 
 	return *dc.isTestEnv
 }
@@ -271,7 +264,7 @@ type MockedContainer struct {
 	VsphereClient *vsphere.ClientMock
 	clock         clockwork.FakeClock
 
-	mu sync.Mutex
+	clockOnce sync.Once
 }
 
 func (c *MockedContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
@@ -294,11 +287,13 @@ func (c *MockedContainer) GetK8sClient(_ ...k8s.Option) (k8s.Client, error) {
 	if c.K8sClient != nil {
 		return c.K8sClient, nil
 	}
+
 	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client, nil
 }
 
 func (c *MockedContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
 	k, _ := c.GetK8sClient(options...)
+
 	return k
 }
 
@@ -312,6 +307,7 @@ func (c *MockedContainer) GetRegistryClient(path string, _ ...cr.Option) (cr.Cli
 	if c.CRClient != nil {
 		return c.CRClient, nil
 	}
+
 	return nil, fmt.Errorf("no CR client")
 }
 
@@ -319,6 +315,7 @@ func (c *MockedContainer) GetVsphereClient(_ *vsphere.ProviderClusterConfigurati
 	if c.VsphereClient != nil {
 		return c.VsphereClient, nil
 	}
+
 	return nil, fmt.Errorf("no Vsphere client")
 }
 
@@ -343,20 +340,17 @@ func (c *MockedContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 }
 
 func (c *MockedContainer) GetClock() clockwork.Clock {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	return c.GetFakeClock()
 }
 
 func (c *MockedContainer) GetFakeClock() clockwork.FakeClock {
-	if c.clock != nil {
-		return c.clock
-	}
+	c.clockOnce.Do(func() {
+		t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
+		cc := clockwork.NewFakeClockAt(t)
+		c.clock = cc
+	})
 
-	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
-	cc := clockwork.NewFakeClockAt(t)
-	c.clock = cc
-	return cc
+	return c.clock
 }
 
 func NewMockedContainer() *MockedContainer {

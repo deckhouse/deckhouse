@@ -184,8 +184,8 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var (
 		configPaths             []string

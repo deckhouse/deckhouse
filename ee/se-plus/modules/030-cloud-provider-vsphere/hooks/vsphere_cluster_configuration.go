@@ -53,6 +53,17 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 			return fmt.Errorf("from unstructured: %w", err)
 		}
 	}
+
+	providerDiscoveryDataValuesJSON, ok := input.Values.GetOk("cloudProviderVsphere.internal.providerDiscoveryData")
+	if ok && len(providerDiscoveryDataValuesJSON.String()) != 0 {
+		var providerDiscoveryDataValues cloudDataV1.VsphereCloudDiscoveryData
+		err = json.Unmarshal([]byte(providerDiscoveryDataValuesJSON.String()), &providerDiscoveryDataValues)
+		if err != nil {
+			return err
+		}
+
+		discoveryData = mergeDiscoveryData(discoveryData, providerDiscoveryDataValues)
+	}
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
@@ -155,4 +166,24 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		p.Nsxt = m.Nsxt
 	}
 	return nil
+}
+
+func mergeDiscoveryData(newValue cloudDataV1.VsphereCloudDiscoveryData, currentValue cloudDataV1.VsphereCloudDiscoveryData) cloudDataV1.VsphereCloudDiscoveryData {
+	result := currentValue
+	if newValue.APIVersion != "" && currentValue.APIVersion == "" {
+		result.APIVersion = newValue.APIVersion
+	}
+	if newValue.Kind != "" && currentValue.Kind == "" {
+		result.Kind = newValue.Kind
+	}
+	if newValue.VMFolderPath != "" && currentValue.VMFolderPath == "" {
+		result.VMFolderPath = newValue.VMFolderPath
+	}
+	if newValue.ResourcePoolPath != "" && currentValue.ResourcePoolPath == "" {
+		result.ResourcePoolPath = newValue.ResourcePoolPath
+	}
+	if len(newValue.Zones) > 0 && len(currentValue.Zones) == 0 {
+		result.Zones = newValue.Zones
+	}
+	return result
 }

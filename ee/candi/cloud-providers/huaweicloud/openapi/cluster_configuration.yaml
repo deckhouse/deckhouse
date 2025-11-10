@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      d8 p edit provider-cluster-configuration
+      d8 system edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -221,6 +221,21 @@ apiVersions:
                 Partial contents of the fields.
               properties:
                 <<: *instanceClassProperties
+
+                mainNetwork:
+                  type: string
+                  x-doc-required: false
+                  description: |
+                    Primary network ID for the VM's main NIC.
+                    **By default**, the value from 'HuaweiCloudDiscoverData' is used.
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                  description: |
+                    List of network IDs (subnets) for secondary NICs.
+
             volumeTypeMap:
               description: |
                 A dictionary mapping availability zones to disk types for the group’s worker nodes.
