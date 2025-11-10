@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -143,6 +144,8 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 			removeList = append(removeList, mem.ID)
 		}
 	}
+
+	input.Logger.Debug("etcd members to remove", slog.Any("removeList", removeList))
 
 	if len(removeList) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
