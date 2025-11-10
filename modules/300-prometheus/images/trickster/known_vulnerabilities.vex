@@ -17,7 +17,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Уязвимость CVE-2023-45142 невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах группы monitoring необходимо деплоить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Так как у пользователя нет возможности применять кастомные конфиги для monitoring компонентов, возможности включить openTelemetry нет."
+      "impact_statement": "Уязвимость CVE-2023-45142 связана с компонентом Trickster и его интеграцией с OpenTelemetry. В Deckhouse Kubernetes Platform Trickster используется как прокси для Prometheus, однако в поставляемых в составе Deckhouse компонентах Prometheus и Trickster интеграция с OpenTelemetry полностью отключена. Пользователи платформы не имеют возможности самостоятельно включить или сконфигурировать поддержку OpenTelemetry для данных компонентов. В связи с отсутствием поддержки и недоступностью функционала OpenTelemetry в Trickster и Prometheus под управлением Deckhouse, соответствующие уязвимые участки кода остаются недостижимыми для пользователей и приложений внутри кластера. Таким образом, эксплуатация уязвимости CVE-2023-45142 в Deckhouse Kubernetes Platform невозможна."
     }
   ]
 }
