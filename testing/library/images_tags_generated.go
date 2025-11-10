@@ -312,7 +312,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cniV1x25x2":                 "imageHash-istio-cniV1x25x2",
 		"kialiV1x19x7":               "imageHash-istio-kialiV1x19x7",
 		"kialiV1x21x6":               "imageHash-istio-kialiV1x21x6",
-		"kialiV1x21x6VexArtifact":    "imageHash-istio-kialiV1x21x6VexArtifact",
 		"kialiV1x25x2":               "imageHash-istio-kialiV1x25x2",
 		"metadataExporter":           "imageHash-istio-metadataExporter",
 		"metricsExporter":            "imageHash-istio-metricsExporter",
