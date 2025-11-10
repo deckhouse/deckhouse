@@ -1009,12 +1009,24 @@ spec:
                   type: object
                   description: GeoIP2 activation options.
                   properties:
-                    accountID:
+                    maxmindMirror:
+                      type: string
+                      description: |
+                        Custom URL address for download GeoIP DB, by default https://download.maxmind.com.
+
+                        **Be aware if using Self-Signed TLS certificate set optinons skip-tls-verification to "true" value.**
+                      x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
+                    maxmindMirrorSkipTLSVerify:
+                      type: boolean
+                      description: |
+                        If you are using a self-signed certificate for your mirror, we can skip its validation to avoid errors when downloading GeoIP databases.
+                    maxmindAccountID:
                       type: integer
                       description: |
                         MaxMind Account ID used to authenticate GeoIP2 database downloads.
 
                         Required when `licenseKey` is set. If `accountID` parameter is provided, downloads are performed using the official library `geoipupdate`.
+                        [https://github.com/maxmind/geoipupdate]
                     maxmindLicenseKey:
                       type: string
                       description: |
