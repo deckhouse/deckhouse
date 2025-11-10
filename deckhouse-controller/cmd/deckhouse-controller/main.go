@@ -107,9 +107,6 @@ func main() {
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp, logger)
 
-	// deckhouse-controller collect-debug-info
-	debug.DefineCollectDebugInfoCommand(kpApp)
-
 	// deckhouse-controller requirements
 	debug.DefineRequirementsCommands(kpApp)
 

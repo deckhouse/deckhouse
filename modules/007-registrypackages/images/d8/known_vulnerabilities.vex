@@ -48,6 +48,62 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux@v1.11.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при использовании racing containers с shared mounts для перенаправления записей в /proc, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при bind-mounting /dev/pts/$n to /dev/console, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется в runc при недостаточной верификации bind-mount /dev/null, что требует специфических условий, не выполняемых в стандартных операциях Delivery Kit. Delivery Kit взаимодействует с контейнерами через Docker API и не использует runc напрямую для таких манипуляций.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2025-8869"
       },
       "products": [

@@ -45,6 +45,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "CVE-2023-45142 - уязвимость серверного otelhttp, которая осуществляется через отправклу запросов с высококардинальными HTTP-метаданными. Функциональность OpenTelemetry в cluster-autoscaler отсутствует, в коде отсутствуют вызовы otelhttp",
       "timestamp": "2025-10-10T11:41:31.811482Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
+      "timestamp": "2025-11-07T09:55:00Z"
     }
   ],
   "timestamp": "2025-10-10T11:41:47Z"
