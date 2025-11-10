@@ -3288,7 +3288,7 @@ jobs:
 
             if (versionTags.length === 0) {
               console.log('No tags found for this version, not skipping');
-              return true;
+              return false;
             }
 
             const compareTags = (a, b) => {
