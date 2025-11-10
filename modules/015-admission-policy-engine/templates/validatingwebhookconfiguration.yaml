@@ -70,10 +70,6 @@ webhooks:
       operator: NotIn
       values:
         - deckhouse
-  {{- if include "trivy.provider.enabled" . }}
-    - key: security.deckhouse.io/trivy-provider
-      operator: DoesNotExist
-  {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
   {{/* Always validate CONNECT for exec/attach subresources */}}
