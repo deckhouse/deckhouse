@@ -100,8 +100,6 @@ linters:
           - staticcheck
         path: hooks/purge_orphan_resources.go
         text: 'is deprecated: use Info instead'
-      - linters:
-          - wrapcheck
     paths:
       - go_lib/dependency/k8s/drain
       - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
