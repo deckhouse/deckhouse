@@ -51,7 +51,7 @@ shell:
   - git apply /patches/*.patch --verbose
   {{- end}}
   - sed -i -e 's# ../gofsutil# /src/gofsutil#g' go.mod
-  - rm -rf .git
+  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
