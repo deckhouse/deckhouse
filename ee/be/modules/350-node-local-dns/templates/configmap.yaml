@@ -5,7 +5,9 @@ metadata:
   name: node-local-dns
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-{{- $disabledCache := (default (dict) (dig "nodeLocalDns" "internal" "disabledCache" .Values)) }}
+{{- $nodeLocalDns := (default (dict) (get .Values "nodeLocalDns")) }}
+{{- $internal := (default (dict) (get $nodeLocalDns "internal")) }}
+{{- $disabledCache := (default (dict) (get $internal "disabledCache")) }}
 data:
   Corefile: |
     .:53 {
