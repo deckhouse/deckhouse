@@ -343,15 +343,6 @@
   with:
     result-encoding: string
     script: |
-      const branch = context.ref.replace('refs/heads/', '');
-      const match = branch.match(/^release-(\d+\.\d+)$/);
-      if (!match) {
-        console.log('Not a release branch, skipping by condition');
-        return false;
-      }
-      const version = match[1];
-      console.log(`Release branch version: ${version}`);
-
       const { data: tags } = await github.rest.repos.listTags({
         owner: context.repo.owner,
         repo: context.repo.repo,
@@ -363,7 +354,7 @@
       console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
 
       if (versionTags.length === 0) {
-        console.log('No tags found for this version, not skipping');
+        console.log('No tags found for this version, skipping');
         return false;
       }
 
