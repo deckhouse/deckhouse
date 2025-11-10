@@ -30,3 +30,12 @@ The section consists of 4 tabs:
 - **Group/Project Access Keys**: List of tokens which belong to top-level groups or projects.
 
 ![Security credentials table](/images/code/security_credentials_table_en.png)
+
+### Available actions
+
+The set of actions that can be performed on an access key depends on its type. The table shows the relationship between actions and the key type.
+
+| Action\Credential type | Personal Access Token | SSH Key | GPG Key | Group/Project Access Token |
+|------------------------|-----------------------|---------|---------|----------------------------|
+| Removal                | Yes                   | Yes     | Yes     | Yes                        |
+| Revocation             | Yes                   | No      | No      | No                         |
