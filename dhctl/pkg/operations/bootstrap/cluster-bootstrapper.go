@@ -18,12 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
-	"golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -240,10 +238,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	// Check if static cluster without ssh-host
 	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
-		fd := int(os.Stdin.Fd())
-		isTerminal := term.IsTerminal(fd)
-
-		if isTerminal {
+		if input.IsTerminal() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
 			if !confirmation.Ask() {

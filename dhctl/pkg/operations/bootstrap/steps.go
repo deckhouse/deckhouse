@@ -463,12 +463,11 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
-			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
+			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; touch %s", DHCTLEndBootstrapBashiblePipeline))
 			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}
-
 			return nil
 		})
 	})

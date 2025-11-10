@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -54,7 +55,11 @@ func TestExporterGetStatistic(t *testing.T) {
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		exporter.recordStatistic(exporter.getStatistic(context.Background()))
+		loggerProvider := func() log.Logger {
+			return log.GetDefaultLogger()
+		}
+		dummyCleaner := cache.NewDummyTmpCleaner(loggerProvider, "")
+		exporter.recordStatistic(exporter.getStatistic(context.Background(), dummyCleaner))
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})
 		require.NoError(t, err)

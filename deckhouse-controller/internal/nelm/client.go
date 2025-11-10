@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/werf/nelm/pkg/action"
+	"github.com/werf/nelm/pkg/common"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -145,7 +146,9 @@ func (c *Client) ListCharts(ctx context.Context) ([]string, error) {
 	defer span.End()
 
 	res, err := action.ReleaseList(ctx, action.ReleaseListOptions{
-		KubeContext:          c.kubeContext,
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
 		OutputNoPrint:        true,
 		ReleaseStorageDriver: c.driver,
 	})
@@ -238,21 +241,27 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	if err := action.ReleaseInstall(ctx, releaseName, c.namespace, action.ReleaseInstallOptions{
-		Chart:                  opts.Path,
-		DefaultChartName:       releaseName,
-		DefaultChartVersion:    "0.2.0",
-		DefaultChartAPIVersion: "v2",
-		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       c.opts.Annotations,
-		KubeContext:            c.kubeContext,
-		NoInstallCRDs:          true,
-		ReleaseHistoryLimit:    int(c.opts.HistoryMax),
-		ReleaseLabels:          opts.ReleaseLabels,
-		ReleaseStorageDriver:   c.driver,
-		Timeout:                c.opts.Timeout,
-		ValuesFilesPaths:       opts.ValuesPaths,
-		ForceAdoption:          true,
-		NoPodLogs:              true,
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		ValuesOptions: common.ValuesOptions{
+			ValuesFiles: opts.ValuesPaths,
+		},
+		TrackingOptions: common.TrackingOptions{
+			NoPodLogs: true,
+		},
+		Chart:                   opts.Path,
+		DefaultChartName:        releaseName,
+		DefaultChartVersion:     "0.2.0",
+		DefaultChartAPIVersion:  "v2",
+		ExtraLabels:             c.opts.Labels,
+		ExtraAnnotations:        c.opts.Annotations,
+		NoInstallStandaloneCRDs: true,
+		ReleaseHistoryLimit:     int(c.opts.HistoryMax),
+		ReleaseLabels:           opts.ReleaseLabels,
+		ReleaseStorageDriver:    c.driver,
+		Timeout:                 c.opts.Timeout,
+		ForceAdoption:           true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release '%s': %w", releaseName, err)
@@ -285,6 +294,12 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		ValuesOptions: common.ValuesOptions{
+			ValuesFiles: opts.ValuesPaths,
+		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
@@ -292,12 +307,10 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            c.opts.Labels,
 		ExtraAnnotations:       extraAnnotations,
-		KubeContext:            c.kubeContext,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       c.namespace,
 		ReleaseStorageDriver:   c.driver,
 		Remote:                 true,
-		ValuesFilesPaths:       opts.ValuesPaths,
 		ForceAdoption:          true,
 	})
 	if err != nil {
@@ -340,11 +353,15 @@ func (c *Client) Delete(ctx context.Context, releaseName string) error {
 	}
 
 	if err := action.ReleaseUninstall(ctx, releaseName, c.namespace, action.ReleaseUninstallOptions{
-		KubeContext:          c.kubeContext,
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		TrackingOptions: common.TrackingOptions{
+			NoPodLogs: true,
+		},
 		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
 		ReleaseStorageDriver: c.driver,
 		Timeout:              c.opts.Timeout,
-		NoPodLogs:            true,
 	}); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("uninstall nelm release '%s': %w", releaseName, err)
@@ -357,7 +374,9 @@ func (c *Client) Delete(ctx context.Context, releaseName string) error {
 // Converts nelm's ReleaseNotFoundError to ErrReleaseNotFound for consistent error handling
 func (c *Client) getRelease(ctx context.Context, releaseName string) (*action.ReleaseGetResultV1, error) {
 	res, err := action.ReleaseGet(ctx, releaseName, c.namespace, action.ReleaseGetOptions{
-		KubeContext:          c.kubeContext,
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
 		OutputNoPrint:        true,
 		ReleaseStorageDriver: c.driver,
 	})

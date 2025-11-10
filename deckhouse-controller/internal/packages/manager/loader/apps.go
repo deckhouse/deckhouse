@@ -40,8 +40,6 @@ const (
 var (
 	// ErrPackageNotFound is returned when the requested package directory doesn't exist
 	ErrPackageNotFound = errors.New("package not found")
-	// ErrVersionNotFound is returned when the requested package version directory doesn't exist
-	ErrVersionNotFound = errors.New("package version not found")
 )
 
 // ApplicationLoader loads application packages from the filesystem.
@@ -81,55 +79,41 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
 // Returns ErrVersionNotFound if version directory doesn't exist.
-func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) (*apps.Application, error) {
+func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Application, error) {
 	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", inst.Name))
-	span.SetAttributes(attribute.String("namespace", inst.Namespace))
-	span.SetAttributes(attribute.String("package", inst.Package))
-	span.SetAttributes(attribute.String("version", inst.Version))
+	span.SetAttributes(attribute.String("name", name))
 
-	logger := l.logger.With(
-		slog.String("name", inst.Name),
-		slog.String("namespace", inst.Namespace),
-		slog.String("package", inst.Package),
-		slog.String("version", inst.Version))
+	logger := l.logger.With(slog.String("name", name))
 
 	logger.Debug("load application from directory", slog.String("path", l.appsDir))
 
 	// Verify package directory exists: <apps>/<package>
-	pkgPath := filepath.Join(l.appsDir, inst.Package)
-	if _, err := os.Stat(pkgPath); os.IsNotExist(err) {
+	path := filepath.Join(l.appsDir, name)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
-	// Verify package version directory exists: <apps>/<package>/<version>
-	pkgVersionPath := filepath.Join(pkgPath, inst.Version)
-	if _, err := os.Stat(pkgVersionPath); os.IsNotExist(err) {
-		span.SetStatus(codes.Error, ErrVersionNotFound.Error())
-		return nil, ErrVersionNotFound
-	}
-
-	span.SetAttributes(attribute.String("path", pkgVersionPath))
+	span.SetAttributes(attribute.String("path", path))
 
 	// Load package definition (package.yaml)
-	def, err := loadDefinition(pkgVersionPath)
+	def, err := loadDefinition(path)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("load package '%s': %w", pkgVersionPath, err)
+		return nil, fmt.Errorf("load package from '%s': %w", path, err)
 	}
 
 	// Load values from values.yaml and openapi schemas
-	static, config, values, err := loadValues(inst.Name, pkgVersionPath)
+	static, config, values, err := loadValues(def.Name, path)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
 	// Discover and load hooks (shell and batch)
-	hooksLoader := newHookLoader(inst.Name, pkgVersionPath, shapp.DebugKeepTmpFiles, l.logger)
+	hooksLoader := newHookLoader(name, path, shapp.DebugKeepTmpFiles, l.logger)
 	hooks, err := hooksLoader.load(ctx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -144,8 +128,6 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 
 	// Build application configuration
 	conf := apps.ApplicationConfig{
-		Namespace: inst.Namespace,
-
 		Definition: appDef,
 
 		StaticValues: static,
@@ -155,7 +137,7 @@ func (l *ApplicationLoader) Load(ctx context.Context, inst ApplicationInstance) 
 		Hooks: hooks,
 	}
 
-	app, err := apps.NewApplication(inst.Name, conf)
+	app, err := apps.NewApplication(name, conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("create new application: %w", err)

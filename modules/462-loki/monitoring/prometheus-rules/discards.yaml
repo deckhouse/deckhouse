@@ -1,4 +1,3 @@
----
 - name: d8.loki.discards
   rules:
   - alert: LokiDiscardedSamplesWarning
@@ -13,10 +12,7 @@
         For more information, refer to the [`loki` FAQ](/modules/loki/faq.html).
       summary: Loki is discarding samples during ingestion.
     expr: |
-      sum by(reason) (
-        rate(loki_discarded_samples_total[5m])
-      )
-      > 0
+      sum by(reason) (rate(loki_discarded_samples_total[5m])) > 0
     for: 5m
     labels:
       severity_level: "4"

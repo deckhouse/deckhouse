@@ -322,6 +322,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/systemctl-power-commands-wrapper/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/007-registrypackages/images/toml-merge/src"
   labels:
   - "type/dependencies"

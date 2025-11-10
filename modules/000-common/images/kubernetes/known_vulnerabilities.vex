@@ -17,6 +17,62 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "CVE-2024-28180 описывает переполнение ресурсов в go-jose, возникающее при попытке распаковать зашифрованные сообщения JWE (JSON Web Encryption - формат JOSE для шифрования полезной нагрузки). Kubernetes не создает и не обрабатывает JWE, используя библиотеку только для подписанных JWT, что подтверждено в обсуждении: https://github.com/kubernetes/kubernetes/pull/123253#issuecomment-1940379993 https://github.com/kubernetes/sig-security/issues/116#issuecomment-2197995745",
       "timestamp": "2025-10-10T08:22:16.678302Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
+      "timestamp": "2025-10-10T08:22:16.678302Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
+      "timestamp": "2025-10-10T08:22:16.678302Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
+      "timestamp": "2025-10-10T08:22:16.678302Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
+      "timestamp": "2025-10-10T08:22:16.678302Z"
     }
   ],
   "timestamp": "2025-10-10T08:22:16Z"

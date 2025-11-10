@@ -140,6 +140,17 @@
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
    {% offtopic title="Требования..." %}
+   {% alert level="warning" %}
+   На следующем шаге данного руководства в качестве container runtime по умолчанию на узлах кластера указан `ContainerdV2`.
+   Чтобы использовать `ContainerdV2` в качестве container runtime на узлах кластера, они должны соответствовать следующим требованиям:
+   
+   - поддержка `CgroupsV2`;
+   - systemd версии `244`;
+   - поддержка модуля ядра `erofs`.
+
+   Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Kubernetes Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+   {% endalert %}
+
    - не менее 4 ядер CPU;
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);

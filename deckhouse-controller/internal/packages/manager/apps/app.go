@@ -61,7 +61,6 @@ type Application struct {
 type ApplicationConfig struct {
 	StaticValues addonutils.Values // Static values from values.yaml files
 
-	Namespace  string     // Kubernetes namespace
 	Definition Definition // Application definition
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
@@ -78,7 +77,6 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
 
 	a.name = name
-	a.namespace = cfg.Namespace
 	a.definition = cfg.Definition
 
 	a.hooks = hooks.NewStorage()

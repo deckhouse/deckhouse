@@ -25,6 +25,16 @@
   {{- $subnets = .nodeGroup.instanceClass.subnets }}
 {{- end }}
 
+{{- $mainNetwork := .nil }}
+{{- if .nodeGroup.instanceClass.mainNetwork }}
+  {{- $mainNetwork = .nodeGroup.instanceClass.mainNetwork }}
+{{- end }}
+
+{{- $additionalNetworks := .nil }}
+{{- if .nodeGroup.instanceClass.additionalNetworks }}
+  {{- $additionalNetworks = .nodeGroup.instanceClass.additionalNetworks }}
+{{- end }}
+
 {{- $securityGroups := .nil }}
 {{- if .nodeGroup.instanceClass.securityGroups }}
   {{- $securityGroups = .nodeGroup.instanceClass.securityGroups }}
@@ -40,6 +50,8 @@
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
 {{- $_ := set $options "rootDiskType" .nodeGroup.instanceClass.rootDiskType -}}
 {{- $_ := set $options "subnets" .nodeGroup.instanceClass.subnets -}}
+{{- $_ := set $options "mainNetwork" .nodeGroup.instanceClass.mainNetwork -}}
+{{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- $_ := set $options "securityGroups" .nodeGroup.instanceClass.securityGroups -}}
 {{- $_ := set $options "serverGroupID" .nodeGroup.instanceClass.serverGroupID -}}
 {{- $_ := set $options "vipAddress" .nodeGroup.instanceClass.vipAddress -}}

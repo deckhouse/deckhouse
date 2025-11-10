@@ -68,3 +68,22 @@ func Sha256EncodeBytes(input []byte) string {
 
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
+
+func TrimLeftChars(s string, n int) string {
+	if s == "" {
+		return ""
+	}
+
+	if n <= 0 {
+		return s
+	}
+
+	m := 0
+	for i := range s {
+		if m >= n {
+			return s[i:]
+		}
+		m++
+	}
+	return s[:0]
+}

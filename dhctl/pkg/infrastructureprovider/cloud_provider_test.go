@@ -410,7 +410,11 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 
 	assertProvidersCacheHasCountOfKeys(t, defaultProvidersCache, 2)
 
-	CleanupProvidersFromDefaultCache(params.Logger)
+	loggerProvider := func() log.Logger {
+		return params.Logger
+	}
+
+	CleanupProvidersFromDefaultCache(loggerProvider)
 
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
@@ -440,7 +444,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 
 	// double cleanup cache does not panic
-	CleanupProvidersFromDefaultCache(params.Logger)
+	CleanupProvidersFromDefaultCache(loggerProvider)
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 }
 

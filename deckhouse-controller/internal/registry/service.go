@@ -63,75 +63,73 @@ func (s *Service) SetClusterUUID(id string) {
 	s.clusterUUID = id
 }
 
-// GetImageReader downloads the module image and extracts it.
+// GetImageReader downloads the package image and extracts it.
 // IMPORTANT do not forget to close reader
-// <registry>/modules/<module>:<tag>
-func (s *Service) GetImageReader(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string) (io.ReadCloser, error) {
+// <registry>/<packageName>:<tag>
+func (s *Service) GetImageReader(ctx context.Context, cred Credential, packageName, tag string) (io.ReadCloser, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageReader")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("tag", tag))
-	span.SetAttributes(attribute.String("source", ms.GetName()))
 
-	logger := s.logger.With("module", module, "tag", tag)
+	logger := s.logger.With("package", packageName, "tag", tag)
 
-	logger.Debug("download module image")
+	logger.Debug("download package image")
 
-	// <registry>/modules/<module>
-	cli, err := s.buildRegistryClient(ms, module)
+	// <registry>/<packageName>
+	cli, err := s.buildRegistryClient(cred, packageName)
 	if err != nil {
 		return nil, fmt.Errorf("build registry client: %w", err)
 	}
 
-	// get <registry>/modules/<module>:<tag>
+	// get <registry>/<packageName>:<tag>
 	img, err := cli.Image(ctx, tag)
 	if err != nil {
-		return nil, fmt.Errorf("get module image: %w", err)
+		return nil, fmt.Errorf("get package image: %w", err)
 	}
 
 	size, err := img.Size()
 	if err != nil {
-		return nil, fmt.Errorf("get module image size: %w", err)
+		return nil, fmt.Errorf("get package image size: %w", err)
 	}
 
 	span.SetAttributes(attribute.Int64("size", size))
 
 	digest, err := img.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("get module image digest: %w", err)
+		return nil, fmt.Errorf("get package image digest: %w", err)
 	}
 
 	span.SetAttributes(attribute.String("digest", digest.String()))
 
-	logger.Debug("extract module image",
+	logger.Debug("extract package image",
 		slog.String("digest", digest.String()),
 		slog.Int64("size", size))
 
 	return mutate.Extract(img), nil
 }
 
-// GetImageDigest downloads module image and returns its digest
-// <registry>/modules/<module>:<tag>
-func (s *Service) GetImageDigest(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string) (string, error) {
+// GetImageDigest downloads package image and returns its digest
+// <registry>/<package>:<tag>
+func (s *Service) GetImageDigest(ctx context.Context, cred Credential, packageName, tag string) (string, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageDigest")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("tag", tag))
-	span.SetAttributes(attribute.String("source", ms.GetName()))
 
-	logger := s.logger.With("module", module, "tag", tag)
+	logger := s.logger.With("package", packageName, "tag", tag)
 
-	logger.Debug("download module image")
+	logger.Debug("download package image")
 
-	// <registry>/modules/<module>
-	cli, err := s.buildRegistryClient(ms, module)
+	// <registry>/<packageName>
+	cli, err := s.buildRegistryClient(cred, packageName)
 	if err != nil {
 		return "", fmt.Errorf("build registry client: %w", err)
 	}
 
-	// get <registry>/modules/<module>:<tag>
+	// get <registry>/<packageName>:<tag>
 	img, err := cli.Image(ctx, tag)
 	if err != nil {
 		return "", fmt.Errorf("get image: %w", err)
@@ -139,33 +137,32 @@ func (s *Service) GetImageDigest(ctx context.Context, ms *v1alpha1.ModuleSource,
 
 	digest, err := img.Digest()
 	if err != nil {
-		return "", fmt.Errorf("get module image digest: %w", err)
+		return "", fmt.Errorf("get package image digest: %w", err)
 	}
 
 	return digest.String(), nil
 }
 
-// GetImageRootHash downloads module manifest to parse rootHash from manifest annotations
-// <registry>/modules/<module>:<tag>
-func (s *Service) GetImageRootHash(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string) (string, error) {
+// GetImageRootHash downloads package manifest to parse rootHash from manifest annotations
+// <registry>/<package>:<tag>
+func (s *Service) GetImageRootHash(ctx context.Context, cred Credential, packageName, tag string) (string, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageRootHash")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("tag", tag))
-	span.SetAttributes(attribute.String("source", ms.GetName()))
 
-	logger := s.logger.With("module", module, "tag", tag)
+	logger := s.logger.With("package", packageName, "tag", tag)
 
-	logger.Debug("download module image")
+	logger.Debug("download package image")
 
-	// <registry>/modules/<module>
-	cli, err := s.buildRegistryClient(ms, module)
+	// <registry>/<packageName>
+	cli, err := s.buildRegistryClient(cred, packageName)
 	if err != nil {
 		return "", fmt.Errorf("build registry client: %w", err)
 	}
 
-	// get <registry>/modules/<module>:<tag>
+	// get <registry>/<packageName>:<tag>
 	img, err := cli.Image(ctx, tag)
 	if err != nil {
 		return "", fmt.Errorf("get image: %w", err)
@@ -184,27 +181,26 @@ func (s *Service) GetImageRootHash(ctx context.Context, ms *v1alpha1.ModuleSourc
 	return rootHash, nil
 }
 
-// Download downloads module on temp fs and returns path to it
-// <registry>/modules/<module>:<tag>
-func (s *Service) Download(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string) (string, error) {
+// Download downloads package on temp fs and returns path to it
+// <registry>/<package>:<tag>
+func (s *Service) Download(ctx context.Context, cred Credential, packageName, tag string) (string, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("tag", tag))
-	span.SetAttributes(attribute.String("source", ms.GetName()))
 
-	logger := s.logger.With("module", module, "tag", tag)
+	logger := s.logger.With("package", packageName, "tag", tag)
 
-	logger.Debug("download module image")
+	logger.Debug("download package image")
 
-	// <registry>/modules/<module>
-	cli, err := s.buildRegistryClient(ms, module)
+	// <registry>/<packageName>
+	cli, err := s.buildRegistryClient(cred, packageName)
 	if err != nil {
 		return "", fmt.Errorf("build registry client: %w", err)
 	}
 
-	// get <registry>/modules/<module>:<tag>
+	// get <registry>/<packageName>:<tag>
 	img, err := cli.Image(ctx, tag)
 	if err != nil {
 		return "", fmt.Errorf("get image: %w", err)
@@ -224,14 +220,14 @@ func (s *Service) Download(ctx context.Context, ms *v1alpha1.ModuleSource, modul
 
 	span.SetAttributes(attribute.String("digest", digest.String()))
 
-	tmp, err := os.MkdirTemp("", "module*")
+	tmp, err := os.MkdirTemp("", "package*")
 	if err != nil {
 		return "", fmt.Errorf("create tmp directory: %w", err)
 	}
 
 	span.SetAttributes(attribute.String("path", tmp))
 
-	logger.Debug("copy module to temp",
+	logger.Debug("copy package to temp",
 		slog.String("digest", digest.String()),
 		slog.Int64("size", size),
 		slog.String("path", tmp))
@@ -240,12 +236,12 @@ func (s *Service) Download(ctx context.Context, ms *v1alpha1.ModuleSource, modul
 }
 
 // download copies tar to path
-func (s *Service) download(_ context.Context, img crv1.Image, modulePath string) (string, error) {
+func (s *Service) download(_ context.Context, img crv1.Image, output string) (string, error) {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
-	if err := os.MkdirAll(modulePath, 0o700); err != nil {
-		return "", fmt.Errorf("create module path: %w", err)
+	if err := os.MkdirAll(output, 0o700); err != nil {
+		return "", fmt.Errorf("create output path: %w", err)
 	}
 
 	tr := tar.NewReader(rc)
@@ -261,10 +257,10 @@ func (s *Service) download(_ context.Context, img crv1.Image, modulePath string)
 
 		if strings.Contains(hdr.Name, "..") {
 			// CWE-22 check, prevents path traversal
-			return "", fmt.Errorf("path traversal detected in the module archive: malicious path %v", hdr.Name)
+			return "", fmt.Errorf("path traversal detected in the package archive: malicious path %v", hdr.Name)
 		}
 
-		target := filepath.Join(modulePath, hdr.Name)
+		target := filepath.Join(output, hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err = os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
@@ -296,13 +292,13 @@ func (s *Service) download(_ context.Context, img crv1.Image, modulePath string)
 			}
 
 		case tar.TypeLink:
-			if err = os.Link(path.Join(modulePath, hdr.Linkname), target); err != nil {
+			if err = os.Link(path.Join(output, hdr.Linkname), target); err != nil {
 				return "", fmt.Errorf("create hardlink: %w", err)
 			}
 		}
 	}
 
-	return modulePath, nil
+	return output, nil
 }
 
 func isRel(candidate, target string) bool {
@@ -321,15 +317,40 @@ func isRel(candidate, target string) bool {
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
-func (s *Service) buildRegistryClient(ms *v1alpha1.ModuleSource, path string) (cr.Client, error) {
+type Credential struct {
+	Repository   string
+	DockerConfig string
+	CA           string
+	Scheme       string
+}
+
+func CredentialBySource(source *v1alpha1.ModuleSource) Credential {
+	return Credential{
+		Repository:   source.Spec.Registry.Repo,
+		DockerConfig: source.Spec.Registry.DockerCFG,
+		CA:           source.Spec.Registry.CA,
+		Scheme:       source.Spec.Registry.Scheme,
+	}
+}
+
+func CredentialByRepository(repo *v1alpha1.PackageRepository) Credential {
+	return Credential{
+		Repository:   repo.Spec.Registry.Repo,
+		DockerConfig: repo.Spec.Registry.DockerCFG,
+		CA:           repo.Spec.Registry.CA,
+		Scheme:       repo.Spec.Registry.Scheme,
+	}
+}
+
+func (s *Service) buildRegistryClient(cred Credential, path string) (cr.Client, error) {
 	opts := []cr.Option{
-		cr.WithAuth(ms.Spec.Registry.DockerCFG),
+		cr.WithAuth(cred.DockerConfig),
 		cr.WithUserAgent(s.clusterUUID),
-		cr.WithCA(ms.Spec.Registry.CA),
-		cr.WithInsecureSchema(strings.ToLower(ms.Spec.Registry.Scheme) == "http"),
+		cr.WithCA(cred.CA),
+		cr.WithInsecureSchema(strings.ToLower(cred.Scheme) == "http"),
 	}
 
-	cli, err := s.dc.GetRegistryClient(filepath.Join(ms.Spec.Registry.Repo, path), opts...)
+	cli, err := s.dc.GetRegistryClient(filepath.Join(cred.Repository, path), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}

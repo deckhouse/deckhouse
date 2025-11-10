@@ -95,11 +95,11 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 }
 
 func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
-	enabled := enabledLabel(ns.Labels)
-	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(enabled)
+	enabled := enabledOnNamespace(ns.Labels)
+	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NS ADD] %s", ns.Name)
 
-	if enabled == 1 {
+	if enabled {
 		nsCtx, cancel := context.WithCancel(ctx)
 		w.mu.Lock()
 		w.nsWatchers[ns.Name] = cancel
@@ -117,14 +117,14 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledLabel(ns.Labels)
-	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(enabled)
+	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NS UPDATE] %s", ns.Name)
 
 	w.mu.Lock()
 	cancel, exists := w.nsWatchers[ns.Name]
 	w.mu.Unlock()
 
-	if enabled == 0 && exists {
+	if !enabled && exists {
 		cancel()
 		w.mu.Lock()
 		delete(w.nsWatchers, ns.Name)
@@ -135,7 +135,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 		log.Printf("[NS DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
 	}
 
-	if enabled == 1 && !exists {
+	if enabled && !exists {
 		nsCtx, cancel := context.WithCancel(ctx)
 		w.mu.Lock()
 		w.nsWatchers[ns.Name] = cancel
@@ -327,7 +327,7 @@ func (w *Watcher) StartCronJobWatcher(ctx context.Context, namespace string) {
 
 func (w *Watcher) updateCronJob(job *batchv1.CronJob) {
 	enabled := enabledLabel(job.Labels)
-	w.metrics.CronJobEnabled.WithLabelValues(job.Namespace, job.Name).Set(enabled)
+	w.metrics.CronJobEnabled.WithLabelValues(job.Namespace, job.Name).Set(boolToFloat64(enabled))
 	log.Printf("[CRONJOB UPDATE] %s/%s", job.Namespace, job.Name)
 	met.UpdateLastObserved()
 }
