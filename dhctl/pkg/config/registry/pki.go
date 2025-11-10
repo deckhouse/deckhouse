@@ -54,11 +54,11 @@ type once[T any] struct {
 	once sync.Once
 }
 
-func (li *once[T]) do(initFunc func() (T, error)) (T, error) {
-	li.once.Do(func() {
-		li.ret, li.err = initFunc()
+func (o *once[T]) do(initFunc func() (T, error)) (T, error) {
+	o.once.Do(func() {
+		o.ret, o.err = initFunc()
 	})
-	return li.ret, li.err
+	return o.ret, o.err
 }
 
 func (generator *PKIGenerator) Get() (PKI, error) {
