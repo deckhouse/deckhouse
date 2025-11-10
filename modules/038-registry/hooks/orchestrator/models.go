@@ -67,7 +67,7 @@ type Values struct {
 }
 
 type InitSecretSnap struct {
-	Exist   bool
+	IsExist bool
 	Applied bool
 	Config  []byte
 }
