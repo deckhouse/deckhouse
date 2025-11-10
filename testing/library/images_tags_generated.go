@@ -297,6 +297,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"iptablesWrapperInit":      "imageHash-ingressNginx-iptablesWrapperInit",
 		"kruise":                   "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":       "imageHash-ingressNginx-kruiseStateMetrics",
+		"kruiseVexArtifact":        "imageHash-ingressNginx-kruiseVexArtifact",
 		"kubeRbacProxy":            "imageHash-ingressNginx-kubeRbacProxy",
 		"kubeRbacProxyVexArtifact": "imageHash-ingressNginx-kubeRbacProxyVexArtifact",
 		"nginxExporter":            "imageHash-ingressNginx-nginxExporter",
