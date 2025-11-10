@@ -152,19 +152,23 @@ ExtLoop:
 			for _, check := range externalChecks {
 				switch check.GetCheckResult(&pod) {
 				case checks.Allowed:
-					if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
-						return ctrl.Result{}, fmt.Errorf("failed to delete the %s ready pod", pod.Name)
-					}
-					klog.V(5).Infof("Deleted the %s ready pod", pod.Name)
-					break ExtLoop
+					klog.V(5).Infof("Update is allowed by the %s check", check.GetName())
 
 				case checks.Denied:
+					klog.V(5).Infof("Update is denied by the %s check", check.GetName())
 					continue ExtLoop
 
 				case checks.Abort:
+					klog.V(5).Infof("Update is aborted by the %s check", check.GetName())
 					return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
 				}
 			}
+
+			if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete the %s ready pod", pod.Name)
+			}
+			klog.V(5).Infof("Deleted the %s ready pod", pod.Name)
+			break ExtLoop
 		}
 	}
 
@@ -184,19 +188,23 @@ ExtLoop:
 				for _, check := range externalChecks {
 					switch check.GetCheckResult(&pod) {
 					case checks.Allowed:
-						if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
-							return ctrl.Result{}, fmt.Errorf("failed to delete the %s not ready pod", pod.Name)
-						}
-						klog.V(5).Infof("Deleted the %s not ready pod", pod.Name)
-						break ExtLoop
+						klog.V(5).Infof("Update is allowed by the %s check", check.GetName())
 
 					case checks.Denied:
+						klog.V(5).Infof("Update is denied by the %s check", check.GetName())
 						continue ExtLoop
 
 					case checks.Abort:
+						klog.V(5).Infof("Update is aborted by the %s check", check.GetName())
 						return ctrl.Result{RequeueAfter: defaultRequeueInterval}, nil
 					}
 				}
+
+				if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to delete the %s not ready pod", pod.Name)
+				}
+				klog.V(5).Infof("Deleted the %s not ready pod", pod.Name)
+				break ExtLoop
 			}
 		}
 	}

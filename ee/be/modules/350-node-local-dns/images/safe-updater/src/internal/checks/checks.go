@@ -28,6 +28,7 @@ const (
 
 type ExternalCheck interface {
 	GetCheckResult(*corev1.Pod) checkResult
+	GetName() string
 }
 
 type cniCiliumCheck struct {
@@ -66,6 +67,10 @@ func NewCniCiliumCheck(ctx context.Context, klient client.Client) (*cniCiliumChe
 		podsByNodes: podsByNodeNames,
 		daemonSet:   daemonSet,
 	}, nil
+}
+
+func (c *cniCiliumCheck) GetName() string {
+	return "cilium"
 }
 
 func (c *cniCiliumCheck) GetCheckResult(pod *corev1.Pod) checkResult {
