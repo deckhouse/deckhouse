@@ -247,7 +247,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - check_changelog
+      # - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2530,6 +2530,157 @@ jobs:
           svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
           svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+
+  list_changed_modules:
+    name: List changed modules
+    continue-on-error: true
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build_fe.result == 'success' }}
+    needs:
+      - git_info
+      - build_fe
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # </template: check-tag-for-release-branch>
+      - name: Check tag for release branch
+        id: check-tag-for-release-branch
+        uses: actions/github-script@v6.4.1
+        with:
+          result-encoding: string
+          script: |
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const prefix = `v${version}.`;
+            const versionTags = tags.filter(tag => tag.name.startsWith(prefix));
+            console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
+
+            if (versionTags.length === 0) {
+              console.log('No tags found for this version, skipping');
+              return false;
+            }
+
+            const compareTags = (a, b) => {
+              const aVersion = a.name.split('.').map(Number);
+              const bVersion = b.name.split('.').map(Number);
+              for (let i = 0; i < 3; i++) {
+                if (aVersion[i] !== bVersion[i]) {
+                  return bVersion[i] - aVersion[i];
+                }
+              }
+              return 0;
+            };
+
+            versionTags.sort(compareTags);
+            const latestTag = versionTags[0];
+            console.log(`Latest tag for ${version}: ${latestTag.name}`);
+
+            const patchVersion = latestTag.name.split('.')[2];
+            const patchNumber = parseInt(patchVersion);
+            console.log(`Patch version: ${patchNumber}`);
+            return patchNumber >= 1;
+      # example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+      # </template: check-tag-for-release-branch>
+      - name: List changed modules from latest released version
+        id: list_changed_modules
+        if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+        env:
+          IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          COMPARE_MAX_ATTEMPTS: 10
+          COMPARE_RETRY_DELAY: 30
+        run: |
+          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
+          if [[ -n "${TAG_FROM}" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+            python .github/scripts/python/compare_version_modules.py
+          else
+            echo "No released versions exist. Skipping."
+          fi
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
 
   compare_internal_modules:
     name: Compare internal modules

@@ -118,7 +118,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - check_changelog
+      # - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -209,6 +209,44 @@ jobs:
           svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
           svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+
+  list_changed_modules:
+    name: List changed modules
+    continue-on-error: true
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build_fe.result == 'success' }}
+    needs:
+      - git_info
+      - build_fe
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: {!{ index (ds "actions") "actions/setup-python" }!}
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+      {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "check_tag_for_release_branch" $ctx | strings.Indent 6 }!}
+      - name: List changed modules from latest released version
+        id: list_changed_modules
+        if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+        env:
+          IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          COMPARE_MAX_ATTEMPTS: 10
+          COMPARE_RETRY_DELAY: 30
+        run: |
+          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
+          if [[ -n "${TAG_FROM}" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+            python .github/scripts/python/compare_version_modules.py
+          else
+            echo "No released versions exist. Skipping."
+          fi
+      {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   compare_internal_modules:
     name: Compare internal modules
