@@ -78,6 +78,10 @@ def generate_html_header(title: str = "Extracted content") -> str:
         body {
             font-size: 200%;
         }
+        a, a:link, a:visited, a:hover, a:active {
+            color: black;
+            text-decoration: none;
+        }
         table {
             border-collapse: collapse;
             border: 1px solid black;
@@ -287,6 +291,95 @@ def process_menu_and_extract_content(yaml_file_path: str) -> None:
                             div.decompose()
                             break
                 
+                # Remove span elements with plus-icon and minus-icon classes
+                plus_icon_spans = soup.find_all("span", class_="plus-icon")
+                for span in plus_icon_spans:
+                    span.decompose()
+                
+                minus_icon_spans = soup.find_all("span", class_="minus-icon")
+                for span in minus_icon_spans:
+                    span.decompose()
+                
+                # Remove div blocks with details class containing specified link text
+                details_divs = soup.find_all("div", class_="details")
+                for div in details_divs:
+                    # Check if div contains an 'a' tag with target text
+                    links = div.find_all("a")
+                    for link in links:
+                        link_text = ' '.join(link.get_text().split())
+                        target_text = 'Как явно включить или отключить модуль…'
+                        if target_text in link_text:
+                            div.decompose()
+                            break
+                
+                # Wrap divs containing span with class="ancestors" in bold text
+                ancestor_spans = soup.find_all("span", class_="ancestors")
+                for span in ancestor_spans:
+                    # Find the parent div
+                    parent_div = span.find_parent("div")
+                    if parent_div:
+                        # Wrap the div in a <b> tag
+                        parent_div.wrap(soup.new_tag("b"))
+                
+                # Increase font size in <font size="-1"> blocks to normal
+                font_tags = soup.find_all("font", {"size": "-1"})
+                for font_tag in font_tags:
+                    # Remove the size attribute to make it normal size
+                    font_tag.attrs.pop("size", None)
+                    # If font tag has no other attributes, unwrap it to remove the tag entirely
+                    if not font_tag.attrs:
+                        font_tag.unwrap()
+                
+                # Process tabs: find active tab and remove inactive ones
+                tabs_divs = soup.find_all("div", class_="tabs")
+                for tabs_div in tabs_divs:
+                    # Find the parent container to search for corresponding content divs
+                    parent = tabs_div.find_parent()
+                    if not parent:
+                        continue
+                    
+                    # Find all divs with tabs__content class in the parent
+                    # They can be siblings or descendants of the parent
+                    content_divs = parent.find_all("div", class_=lambda x: x and "tabs__content" in x)
+                    
+                    # Find the active content div (check both "active" and "activ" classes)
+                    active_content_div = None
+                    active_id = None
+                    
+                    for content_div in content_divs:
+                        classes = content_div.get("class", [])
+                        if "active" in classes or "activ" in classes:
+                            active_content_div = content_div
+                            active_id = content_div.get("id")
+                            break
+                    
+                    if not active_id:
+                        # If no active div found, skip this tabs block
+                        continue
+                    
+                    # Remove inactive content divs
+                    for content_div in content_divs:
+                        if content_div.get("id") != active_id:
+                            content_div.decompose()
+                    
+                    # Remove inactive tab links
+                    tab_links = tabs_div.find_all("a", class_=lambda x: x and "tabs__btn" in x)
+                    for link in tab_links:
+                        # Extract the tab id from onclick attribute
+                        onclick = link.get("onclick", "")
+                        # Parse onclick to get the id (last parameter in quotes)
+                        # Find all quoted strings and take the last one (which is the tab id)
+                        matches = re.findall(r"['\"]([^'\"]+)['\"]", onclick)
+                        if matches:
+                            link_id = matches[-1]  # Last parameter is the tab id
+                            if link_id != active_id:
+                                link.decompose()
+                        else:
+                            # If we can't parse onclick, check if link has "active" class
+                            classes = link.get("class", [])
+                            if "active" not in classes and "activ" not in classes:
+                                link.decompose()
+                
                 content = str(soup)
                 
                 # Fix image paths
@@ -315,6 +408,8 @@ if __name__ == "__main__":
         "--margin-top", "1cm",
         "--margin-bottom", "1cm",
         "--enable-local-file-access",
+        "--disable-external-links",
+        "--disable-internal-links",
         "--outline",
         "--outline-depth", "3",
         "--header-left", "Deckhouse Kubernetes Platform CSE. Справочник администратора - [section]",
@@ -326,7 +421,7 @@ if __name__ == "__main__":
         "--footer-spacing", "3",
         "--footer-line",
         "toc",
-        "--toc-header-text", "Deckhouse Kubernetes Platform CSE: Справочник администратора",
+        "--toc-header-text", "Содержание",
         "--toc-text-size-shrink", "1",
         "--toc-level-indentation", "20",
         INTERMEDIATE_HTML_FILE,
