@@ -2,7 +2,8 @@
 title: "Модуль loki: FAQ"
 type:
   - instruction
-search: Loki
+search: Loki, LokiDiscardedSamplesWarning
+description: "FAQ по модулю Loki: устранение проблем с алертом LokiDiscardedSamplesWarning, решение проблем с приёмом логов и настройка лимитов Loki"
 ---
 
 {% raw %}

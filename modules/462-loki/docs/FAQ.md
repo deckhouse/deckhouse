@@ -2,7 +2,8 @@
 title: "The loki module: FAQ"
 type:
   - instruction
-search: Loki
+search: Loki, LokiDiscardedSamplesWarning
+description: "FAQ about the Loki module: troubleshooting LokiDiscardedSamplesWarning alert, resolving log ingestion issues, and configuring Loki limits"
 ---
 
 {% raw %}
