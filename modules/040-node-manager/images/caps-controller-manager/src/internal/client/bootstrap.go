@@ -311,22 +311,6 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		return ctrl.Result{}, errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
 	}
 
-	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
-		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
-		Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
-		Name:       instanceScope.MachineScope.StaticMachine.Name,
-		UID:        instanceScope.MachineScope.StaticMachine.UID,
-	}
-
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
-
-	err = instanceScope.Patch(ctx)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
-	}
-
-
 	return ctrl.Result{}, nil
 }
 
