@@ -40,8 +40,10 @@ import (
 // }
 
 type Account struct {
-	AccountID int      `json:"accountID,omitempty"`
+	AccountID int      `json:"maxmindAccountID,omitempty"`
 	Editions  []string `json:"editions,omitempty"`
+	Mirror    string   `json:"maxmindMirror,omitempty"`
+	SkipTLS   bool     `json:"maxmindMirrorSkipTLSVerify,omitempty"`
 }
 
 type LicenseEditions map[string]Account

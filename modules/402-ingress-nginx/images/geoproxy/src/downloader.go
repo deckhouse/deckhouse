@@ -92,7 +92,7 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
 			md5 := d.md5[edition]
 			d.mu.Unlock()
 
-			if clientInitialized {
+			if clientInitialized && account.Mirror == "" {
 				downloadResp, err := client.Download(ctx, edition, md5)
 				if err != nil {
 					// Record the error and fallback to legacy method below.
@@ -119,9 +119,9 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
 			}
 
 			// Try download as legacy option
-			url := fmt.Sprintf(maxmindURL, licenseKey, edition)
+			url := createURL(account.Mirror, licenseKey, edition)
 			log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
-			dataDB, err := downloadDB(url)
+			dataDB, err := downloadDB(url, account.SkipTLS)
 			if err != nil {
 				incrementError(err)
 				log.Error(fmt.Sprintf("Error downloading data from %v: %v", edition, err))
@@ -141,13 +141,21 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
 	return nil
 }
 
-func downloadDB(url string) (io.ReadCloser, error) {
+func downloadDB(url string, skipTLSverify bool) (io.ReadCloser, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if skipTLSverify {
+		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
+	}
+
+	client := &http.Client{Transport: transport}
+
 	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -338,4 +346,11 @@ func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition str
 	d.mu.Unlock()
 
 	return absFilePath, nil
+}
+
+func createURL(mirror, licenseKey, dbName string) string {
+	if mirror != "" {
+		return fmt.Sprintf("%s/%s.%s", mirror, dbName, dbExtension)
+	}
+	return fmt.Sprintf(maxmindURL, licenseKey, dbName)
 }

@@ -21,7 +21,7 @@ import (
 )
 
 var _ = storage_class_change.RegisterHook(storage_class_change.Args{
-	ModuleName:         "ingress-nginx",
+	ModuleName:         "ingressNginx",
 	Namespace:          "d8-ingress-nginx",
 	LabelSelectorKey:   "app",
 	LabelSelectorValue: "geoproxy",
