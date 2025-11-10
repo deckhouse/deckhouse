@@ -29,15 +29,15 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {%- else %}
 Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}{%- if page.platform_code == "gcp" %} Ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.{%- endif %}
 {%- endif %}
-
 {% endalert %}
+
 {% alert level="warning" %}
 {%- if page.lang == "ru" %}
 Чтобы использовать `ContainerdV2` в качестве container runtime на узлах кластера, ОС на виртуальных машинах должны соответствовать следующим требованиям:
 
-* ядро Linux версии 5.8 и новее,
-* поддержка `CgroupsV2`,
-* systemd версии `244`,
+* ядро Linux версии 5.8 и новее;
+* поддержка `CgroupsV2`;
+* systemd версии `244`;
 * поддержка модуля ядра `erofs`.
 
 Подробнее — в [документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
@@ -48,9 +48,9 @@ Before starting the installation, ensure you have the cloud provider quotas requ
 {%- else %}
 To use `ContainerdV2` as the container runtime on cluster nodes, the operating systems on virtual machines must meet the following requirements:
 
-* Linux kernel version 5.8 or newer,
-* `CgroupsV2` support,
-* systemd version `244`,
+* Linux kernel version 5.8 or newer.
+* `CgroupsV2` support.
+* Systemd version `244`.
 * `erofs` kernel module support.
 
 For more information, see the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
