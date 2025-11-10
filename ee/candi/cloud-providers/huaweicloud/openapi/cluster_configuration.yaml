@@ -227,7 +227,7 @@ apiVersions:
                   x-doc-required: false
                   description: |
                     Primary network ID for the VM's main NIC.
-                    If empty, the discovered subnet from the layout is used.
+                    **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
                   type: array
                   items:

@@ -131,7 +131,7 @@ apiVersions:
                   type: string
                   x-doc-required: false
                   description: |
-                    ID основной сети для основного сетевого интерфейса виртуальной машины.
+                    ID основной сети для основного сетевого интерфейса (NIC) виртуальной машины.
 
                      **По умолчанию** используется значение из `HuaweiCloudDiscoveryData`.
 
@@ -141,7 +141,7 @@ apiVersions:
                     type: string
                   x-doc-required: false
                   description: |
-                    Список ID сетей для дополнительных сетевых интерфейсов (NIC)
+                    Список ID сетей (подсетей) для дополнительных сетевых интерфейсов (NIC).
 
             volumeTypeMap:
               description: |

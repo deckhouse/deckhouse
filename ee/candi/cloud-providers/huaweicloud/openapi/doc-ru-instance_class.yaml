@@ -42,7 +42,7 @@ spec:
                     **По умолчанию** используется значение `HuaweiCloudDiscoveryData`.
                 mainNetwork:
                   description: |
-                    ID основной сети для основного сетевого интерфейса виртуальной машины.
+                    ID основной сети для основного сетевого интерфейса (NIC) виртуальной машины.
 
                     **По умолчанию** используется значение из `HuaweiCloudDiscoveryData`.
                   type: string
@@ -50,7 +50,7 @@ spec:
 
                 additionalNetworks:
                   description: |
-                    Список ID сетей для дополнительных сетевых интерфейсов.
+                    Список ID сетей (подсетей) для дополнительных сетевых интерфейсов (NIC).
                   type: array
                   items:
                     type: string
@@ -58,7 +58,7 @@ spec:
 
                 subnets:
                   description: |
-                    **УСТАРЕВШЕE.** Используйте поле `additionalNetworks`.
+                    > Используйте поле [additionalNetworks](#huaweicloudinstanceclass-v1-spec-additionalnetworks) вместо этого параметра.
 
                     Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
                 securityGroups:
