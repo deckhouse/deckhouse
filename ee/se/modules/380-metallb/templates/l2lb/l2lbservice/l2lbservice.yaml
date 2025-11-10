@@ -7,13 +7,13 @@ metadata:
   namespace: {{ $l2lbservice.namespace }}
   {{- include "helm_lib_module_labels" (list $ (dict "parent-service" $l2lbservice.serviceName)) | nindent 2 }}
   annotations:
-    metallb.universe.tf/preferredL2SpeakerNode: {{ $l2lbservice.preferredNode }}
-    metallb.universe.tf/address-pool: {{ $l2lbservice.mlbcName }}
+    metallb.io/preferredL2SpeakerNode: {{ $l2lbservice.preferredNode }}
+    metallb.io/address-pool: {{ $l2lbservice.mlbcName }}
     {{- if $l2lbservice.desiredIP }}
-    metallb.universe.tf/loadBalancerIPs: {{ $l2lbservice.desiredIP }}
+    metallb.io/loadBalancerIPs: {{ $l2lbservice.desiredIP }}
     {{- end }}
     {{- if $l2lbservice.lbAllowSharedIP }}
-    metallb.universe.tf/allow-shared-ip: {{ $l2lbservice.lbAllowSharedIP }}
+    metallb.io/allow-shared-ip: {{ $l2lbservice.lbAllowSharedIP }}
     {{- end }}
 spec:
   clusterIP: {{ $l2lbservice.clusterIP }}

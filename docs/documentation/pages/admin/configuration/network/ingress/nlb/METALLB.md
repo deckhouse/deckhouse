@@ -12,7 +12,7 @@ where built-in load balancers by providers are unavailable.
 Two operating modes are supported:
 
 - **Layer 2**: An enhanced version of the standard L2 mode in MetalLB, allowing multiple public addresses to be used for services.
-- **BGP**: Fully based on the [MetalLB](https://metallb.universe.tf/) solution and available only in DKP Enterprise Edition.
+- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DKP Enterprise Edition.
 
 ## Layer 2 mode
 

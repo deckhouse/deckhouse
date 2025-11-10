@@ -31,7 +31,7 @@ properties:
     description: |
       Список внешних BGP-роутеров, которые будут работать с этим модулем.
 
-      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
+      Формат — массив, [как у оригинального MetalLB](https://metallb.io/configuration/#bgp-configuration).
     items:
       properties:
         peer-address:
@@ -72,7 +72,7 @@ properties:
     description: |
       Список диапазонов IP, которые будут выдаваться сервисам.
 
-      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+      Формат — массив, [как у оригинального MetalLB](https://metallb.io/configuration/#advanced-address-pool-configuration).
     items:
       properties:
         name:

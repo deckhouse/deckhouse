@@ -4,19 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: servicel2statuses.metallb.io
+  name: servicebgpstatuses.metallb.io
 spec:
   group: metallb.io
   names:
-    kind: ServiceL2Status
-    listKind: ServiceL2StatusList
-    plural: servicel2statuses
-    singular: servicel2status
+    kind: ServiceBGPStatus
+    listKind: ServiceBGPStatusList
+    plural: servicebgpstatuses
+    singular: servicebgpstatus
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.node
-      name: Allocated Node
+      name: Node
       type: string
     - jsonPath: .status.serviceName
       name: Service Name
@@ -27,8 +27,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: ServiceL2Status reveals the actual traffic status of loadbalancer
-          services in layer2 mode.
+        description: ServiceBGPStatus exposes the BGP peers a service is configured
+          to be advertised to, per relevant node.
         properties:
           apiVersion:
             description: |-
@@ -48,36 +48,32 @@ spec:
           metadata:
             type: object
           spec:
-            description: ServiceL2StatusSpec defines the desired state of ServiceL2Status.
+            description: ServiceBGPStatusSpec defines the desired state of ServiceBGPStatus.
             type: object
           status:
-            description: MetalLBServiceL2Status defines the observed state of ServiceL2Status.
+            description: MetalLBServiceBGPStatus defines the observed state of ServiceBGPStatus.
             properties:
-              interfaces:
-                description: Interfaces indicates the interfaces that receive the
-                  directed traffic
-                items:
-                  description: InterfaceInfo defines interface info of layer2 announcement.
-                  properties:
-                    name:
-                      description: Name the name of network interface card
-                      type: string
-                  type: object
-                type: array
               node:
-                description: Node indicates the node that receives the directed traffic
+                description: Node indicates the node announcing the service.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              peers:
+                description: |-
+                  Peers indicate the BGP peers for which the service is configured to be advertised to.
+                  The service being actually advertised to a given peer depends on the session state and is not indicated here.
+                items:
+                  type: string
+                type: array
               serviceName:
-                description: ServiceName indicates the service this status represents
+                description: ServiceName indicates the service this status represents.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
               serviceNamespace:
-                description: ServiceNamespace indicates the namespace of the service
+                description: ServiceNamespace indicates the namespace of the service.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable

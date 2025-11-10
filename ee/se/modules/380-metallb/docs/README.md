@@ -8,7 +8,7 @@ This module implements the `LoadBalancer` mechanism for services in bare metal c
 Supports the following operating modes:
 
 - **Layer 2 Mode** – introduces an improved load-balancing mechanism for bare metal clusters (compared to the standard L2 mode in MetalLB), enabling the use of multiple "public" IP addresses for cluster services.
-- **BGP Mode**  – fully based on the [MetalLB](https://metallb.universe.tf/) solution.
+- **BGP Mode**  – fully based on the [MetalLB](https://metallb.io/) solution.
 
 ## Layer 2 mode
 

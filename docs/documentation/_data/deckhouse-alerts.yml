@@ -2060,10 +2060,10 @@ alerts:
         The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
 
         The following service annotations are no longer effective:
-        - `metallb.universe.tf/ip-allocated-from-pool`: Remove this annotation.
-        - `metallb.universe.tf/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
-        - `metallb.universe.tf/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
-        - `metallb.universe.tf/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
+        - `metallb.io/ip-allocated-from-pool`: Remove this annotation.
+        - `metallb.io/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
+        - `metallb.io/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
+        - `metallb.io/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
 
         **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
       summary: |
