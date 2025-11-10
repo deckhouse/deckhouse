@@ -42,8 +42,8 @@ shell:
   - apk add --no-cache bash git binutils
   setup:
   - cd /src/kiali/
-  - echo {{ $kialiVersion }} > version
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - echo {{ $kialiVersion }} > version
   - export LDFLAGS='-extldflags -static -s -w -X main.version=${kialiVersion}'
   - go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/
