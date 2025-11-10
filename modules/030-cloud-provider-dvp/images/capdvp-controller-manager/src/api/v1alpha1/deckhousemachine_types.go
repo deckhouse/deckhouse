@@ -19,13 +19,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1b1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1b2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 const MachineFinalizer = "deckhousemachine.infrastructure.cluster.x-k8s.io"
 
 const (
-	VMReadyCondition clusterv1b1.ConditionType = "VirtualMachineReady"
+	VMReadyCondition clusterv1b2.ConditionType = "VirtualMachineReady"
 )
 
 const (
@@ -63,7 +63,7 @@ type DiskImageRef struct {
 
 type VMAddress struct {
 	// Type of address.
-	Type clusterv1b1.MachineAddressType `json:"type"`
+	Type clusterv1b2.MachineAddressType `json:"type"`
 	// Address in IPv4 or IPv6 notation.
 	Address string `json:"address"`
 }
@@ -135,7 +135,7 @@ type DeckhouseMachineStatus struct {
 
 	// Conditions defines current service state of the ZvirtMachine.
 	// +optional
-	Conditions clusterv1b1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -151,12 +151,12 @@ type DeckhouseMachine struct {
 }
 
 // GetConditions gets the DeckhouseMachine status conditions
-func (r *DeckhouseMachine) GetConditions() clusterv1b1.Conditions {
+func (r *DeckhouseMachine) GetConditions() []metav1.Condition {
 	return r.Status.Conditions
 }
 
 // SetConditions sets the DeckhouseMachine status conditions
-func (r *DeckhouseMachine) SetConditions(conditions clusterv1b1.Conditions) {
+func (r *DeckhouseMachine) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
 }
 
