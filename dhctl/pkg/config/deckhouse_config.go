@@ -78,7 +78,7 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Builder().InclusterImagesRepo(), tag)
+	return fmt.Sprintf("%s:%s", c.Registry.ConfigBuilder().InclusterImagesRepo(), tag)
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -137,8 +137,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
-	hasRegistryCfg, registryCfg, err := metaConfig.Registry.
-		Builder().
+	hasRegistrySettings, registrySettings, err := metaConfig.Registry.
+		ConfigBuilder().
 		DeckhouseSettings()
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare registry settings for ModuleConfig deckhouse: %w", err)
@@ -163,8 +163,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-		if hasRegistryCfg {
-			mc.Spec.Settings["registry"] = registryCfg
+		if hasRegistrySettings {
+			mc.Spec.Settings["registry"] = registrySettings
 		} else {
 			delete(mc.Spec.Settings, "registry")
 		}
@@ -175,8 +175,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		}
-		if hasRegistryCfg {
-			settings["registry"] = registryCfg
+		if hasRegistrySettings {
+			settings["registry"] = registrySettings
 		}
 		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, settings)
 		if err != nil {

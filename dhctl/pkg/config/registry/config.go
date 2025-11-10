@@ -164,8 +164,8 @@ func (cfg *ModuleConfig) unmanagedFromInitConfig(initConfig InitConfig) error {
 	return nil
 }
 
-func (cfg *Config) Builder() *Builder {
-	return &Builder{cfg: cfg}
+func (cfg *Config) ConfigBuilder() *ConfigBuilder {
+	return &ConfigBuilder{cfg: cfg}
 }
 
 func (cfg Config) isModuleEnable() bool {

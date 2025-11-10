@@ -32,16 +32,16 @@ type PKIProvider interface {
 	Get() (PKI, error)
 }
 
-type Builder struct {
+type ConfigBuilder struct {
 	cfg *Config
 }
 
-type BuilderWithPKI struct {
-	*Builder
+type ConfigBuilderWithPKI struct {
+	*ConfigBuilder
 	pkiProvider PKIProvider
 }
 
-func (cb *Builder) DeckhouseSettings() (bool, map[string]interface{}, error) {
+func (cb *ConfigBuilder) DeckhouseSettings() (bool, map[string]interface{}, error) {
 	if !cb.cfg.isModuleEnable() {
 		return false, nil, nil
 	}
@@ -59,7 +59,7 @@ func (cb *Builder) DeckhouseSettings() (bool, map[string]interface{}, error) {
 	return isExist, ret, nil
 }
 
-func (cb *Builder) KubeadmTplCtx() map[string]interface{} {
+func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
 	address, path := addressAndPathFromImagesRepo(cb.InclusterImagesRepo())
 	return map[string]interface{}{
 		"address": address,
@@ -67,18 +67,18 @@ func (cb *Builder) KubeadmTplCtx() map[string]interface{} {
 	}
 }
 
-func (cb *Builder) InclusterImagesRepo() string {
+func (cb *ConfigBuilder) InclusterImagesRepo() string {
 	if cb.cfg.ModuleConfig.Unmanaged != nil {
 		return cb.cfg.ModuleConfig.Unmanaged.ImagesRepo
 	}
 	return registry_const.HostWithPath
 }
 
-func (cb *Builder) WithPKI(pkiProvider PKIProvider) *BuilderWithPKI {
-	return &BuilderWithPKI{Builder: cb, pkiProvider: pkiProvider}
+func (cb *ConfigBuilder) WithPKI(pkiProvider PKIProvider) *ConfigBuilderWithPKI {
+	return &ConfigBuilderWithPKI{ConfigBuilder: cb, pkiProvider: pkiProvider}
 }
 
-func (cb *Builder) UpstreamData() (Data, error) {
+func (cb *ConfigBuilder) UpstreamData() (Data, error) {
 	switch cfg := cb.cfg.ModuleConfig; {
 	case cfg.Unmanaged != nil:
 		username, password := cfg.Unmanaged.UsernamePassword()
@@ -103,7 +103,7 @@ func (cb *Builder) UpstreamData() (Data, error) {
 	}
 }
 
-func (cb *BuilderWithPKI) InclusterData() (Data, error) {
+func (cb *ConfigBuilderWithPKI) InclusterData() (Data, error) {
 	switch cfg := cb.cfg.ModuleConfig; {
 	case cfg.Unmanaged != nil:
 		username, password := cfg.Unmanaged.UsernamePassword()
@@ -132,7 +132,7 @@ func (cb *BuilderWithPKI) InclusterData() (Data, error) {
 	}
 }
 
-func (cb *BuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, error) {
+func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, error) {
 	data, err := cb.InclusterData()
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (cb *BuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, erro
 	return ret.ToMap(), nil
 }
 
-func (cb *BuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
+func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
 	if !cb.cfg.isModuleEnable() {
 		return false, nil, nil
 	}
@@ -176,7 +176,7 @@ func (cb *BuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][
 	return isExist, data, nil
 }
 
-func (cb *BuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {
+func (cb *ConfigBuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {
 	var ctx bashible.Context
 	ctx, _, err := cb.bashibleContextAndConfig()
 	if err != nil {
@@ -202,7 +202,7 @@ func (cb *BuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {
 	return mapCtx, nil
 }
 
-func (cb *BuilderWithPKI) initConfig() (registry_init.Config, error) {
+func (cb *ConfigBuilderWithPKI) initConfig() (registry_init.Config, error) {
 	pki, err := cb.pkiProvider.Get()
 	if err != nil {
 		return registry_init.Config{}, err
@@ -219,7 +219,7 @@ func (cb *BuilderWithPKI) initConfig() (registry_init.Config, error) {
 	return cfg, nil
 }
 
-func (cb *BuilderWithPKI) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
+func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
 	var (
 		imagesBase string
 		ctxHosts   []bashible.ContextMirrorHost
