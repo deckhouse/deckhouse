@@ -46,3 +46,30 @@ func (c Config) ToMap() (map[string]interface{}, error) {
 	}
 	return result, nil
 }
+
+func (c Config) DeepCopy() Config {
+	ret := Config{}
+
+	if c.CA != nil {
+		ca := c.CA.DeepCopy()
+		ret.CA = &ca
+	}
+
+	if c.UserRW != nil {
+		userRW := c.UserRW.DeepCopy()
+		ret.UserRW = &userRW
+	}
+
+	if c.UserRO != nil {
+		userRO := c.UserRO.DeepCopy()
+		ret.UserRO = &userRO
+	}
+	return ret
+}
+
+func (ck CertKey) DeepCopy() CertKey {
+	return CertKey{
+		Cert: ck.Cert,
+		Key:  ck.Key,
+	}
+}

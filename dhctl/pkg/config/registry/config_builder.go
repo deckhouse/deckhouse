@@ -207,16 +207,7 @@ func (cb *ConfigBuilderWithPKI) initConfig() (registry_init.Config, error) {
 	if err != nil {
 		return registry_init.Config{}, err
 	}
-
-	cfg := registry_init.Config{
-		CA: &registry_init.CertKey{
-			Cert: pki.CA.Cert,
-			Key:  pki.CA.Key,
-		},
-		UserRO: &pki.UserRO,
-		UserRW: &pki.UserRW,
-	}
-	return cfg, nil
+	return registry_init.Config(pki), nil
 }
 
 func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
