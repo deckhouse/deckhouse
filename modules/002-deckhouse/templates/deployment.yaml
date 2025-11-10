@@ -184,6 +184,8 @@ spec:
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: USE_NELM
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
