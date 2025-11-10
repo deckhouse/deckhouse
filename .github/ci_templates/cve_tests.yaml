@@ -111,7 +111,7 @@ remove_labels:
     echo "Cloning CVE scan script from private GitLab..."
     
     mkdir -p ${{ env.WORKDIR }}/scripts
-    git clone ${{ needs.secrets.outputs.CVE_TESTS_REPO_GIT }} ${{ env.WORKDIR }}/scripts
+    git clone ${{ steps.secrets.outputs.CVE_TESTS_REPO_GIT }} ${{ env.WORKDIR }}/scripts
     chmod +x "${{ env.WORKDIR }}/scripts/cve_scan.sh"
     
     echo "CVE scan script cloned successfully"
