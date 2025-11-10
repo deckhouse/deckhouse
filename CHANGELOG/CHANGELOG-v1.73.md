@@ -155,6 +155,7 @@
  - **[documentation]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[extended-monitoring]** Init extended-monitoring-exporter on unavailable API. [#15529](https://github.com/deckhouse/deckhouse/pull/15529)
  - **[extended-monitoring]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[ingress-nginx]** CVEs fixed [#16340](https://github.com/deckhouse/deckhouse/pull/16340)
  - **[ingress-nginx]** Fixed CVEs, found in auxiliary source code. [#16069](https://github.com/deckhouse/deckhouse/pull/16069)
  - **[ingress-nginx]** Fixed CVE CVE-2025-5187. [#15906](https://github.com/deckhouse/deckhouse/pull/15906)
  - **[ingress-nginx]** Fixed CVE's. [#15776](https://github.com/deckhouse/deckhouse/pull/15776)
@@ -177,6 +178,7 @@
  - **[monitoring-kubernetes]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[monitoring-kubernetes-control-plane]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[monitoring-ping]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[multitenancy-manager]** fix CVE-2024-25621  CVE-2025-64329 [#16360](https://github.com/deckhouse/deckhouse/pull/16360)
  - **[multitenancy-manager]** Patched critical CVEs in dependencies. [#15312](https://github.com/deckhouse/deckhouse/pull/15312)
     Users should update to this patch release to mitigate known security vulnerabilities. No breaking changes expected.
  - **[multitenancy-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
