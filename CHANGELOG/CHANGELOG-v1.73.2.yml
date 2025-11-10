@@ -1,3 +1,15 @@
+ingress-nginx:
+  fixes:
+    - summary: CVEs fixed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16340
+istio:
+  fixes:
+    - summary: Kiali's CVE-2024-28180 is fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16344
+multitenancy-manager:
+  fixes:
+    - summary: fix CVE-2024-25621  CVE-2025-64329
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16360
 node-manager:
   fixes:
     - summary: fix cve and vex
