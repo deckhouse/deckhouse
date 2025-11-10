@@ -198,7 +198,7 @@ spec:
   template: *!CHANGE_TEMPLATE_NAME*
   mainNetwork: *!CHANGE_NETWORK_NAME*
   # [<en>] Specify the path to a Datastore (relative to the datacenter) in which VirtualMachines will be cloned. Example: clStorage/LUN-3.
-  # [<ru>] Укажите путь до Datastore (относительно датацентра), на котором будут созданы склонированные виртуальные машины. Пример: clStorage/LUN-3.
+  # [<ru>] Укажите путь до Datastore (относительно дата-центра), на котором будут созданы склонированные виртуальные машины. Пример: clStorage/LUN-3.
   datastore: *!CHANGE_PATH_TO_DATASTORE*
 ---
 # [<en>] Section containing the parameters of worker node group.
