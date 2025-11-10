@@ -25,13 +25,16 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func enabledLabel(labels map[string]string) float64 {
-	if val, ok := labels[namespacesEnabledLabel]; ok {
-		if b, err := strconv.ParseBool(val); err == nil && !b {
-			return 0
-		}
+func boolToFloat64(b bool) float64 {
+	if b {
+		return 1
 	}
-	return 1
+	return 0
+}
+
+func enabledLabel(labels map[string]string) bool {
+	_, ok := labels[namespacesEnabledLabel]
+	return ok
 }
 
 func thresholdLabel(labels map[string]string, threshold string, def float64) float64 {
@@ -73,9 +76,9 @@ func (w *Watcher) updateMetrics(
 	labelValues ...string,
 ) {
 	enabled := enabledLabel(labels)
-	enabledMetric(labelValues...).Set(enabled)
+	enabledMetric(labelValues...).Set(boolToFloat64(enabled))
 
-	if enabled == 1 {
+	if enabled {
 		for key, def := range thresholds {
 			thresholdMetric(append(labelValues, key)...).
 				Set(thresholdLabel(labels, key, def))
