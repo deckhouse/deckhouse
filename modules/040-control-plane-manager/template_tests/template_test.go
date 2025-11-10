@@ -1055,7 +1055,7 @@ internal:
 			})
 		}
 
-		// Test cases for different node counts with Kubernetes 1.32
+		// Test cases for different node counts with Kubernetes-1.32
 		testTerminatedPodGcThreshold(0, "1000") // default value
 		testTerminatedPodGcThreshold(50, "1000")
 		testTerminatedPodGcThreshold(99, "1000")
