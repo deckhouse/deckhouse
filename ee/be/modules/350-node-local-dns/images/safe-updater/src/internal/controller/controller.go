@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"safe-updater/internal/checks"
 	"safe-updater/internal/constant"
 )
 
@@ -101,28 +102,9 @@ func RegisterController(runtimeManager manager.Manager) error {
 		Complete(c)
 }
 
-func (r *reconciler) daemonSetIsUpToDate(ds *appsv1.DaemonSet) bool {
-	return ds.GetGeneration() == ds.Status.ObservedGeneration &&
-		ds.Status.DesiredNumberScheduled == ds.Status.UpdatedNumberScheduled
-}
-
-func (r *reconciler) podIsReadyAndRunning(pod *corev1.Pod) bool {
-	if pod.Status.Phase != corev1.PodRunning {
-		return false
-	}
-
-	for _, c := range pod.Status.Conditions {
-		if c.Type == corev1.PodReady && c.Status != corev1.ConditionTrue {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (r *reconciler) daemonSetIsStable(pods *corev1.PodList) bool {
 	for _, pod := range pods.Items {
-		if !r.podIsReadyAndRunning(&pod) || !pod.DeletionTimestamp.IsZero() {
+		if !checks.PodIsReadyAndRunning(&pod) || !pod.DeletionTimestamp.IsZero() {
 			return false
 		}
 	}
@@ -152,7 +134,7 @@ func (r *reconciler) getCurrentControllerRevision(ctx context.Context) (string, 
 	return strconv.FormatInt(currentRevision, 10), nil
 }
 
-func (r *reconciler) getDaemonSetPods(ctx context.Context) (*corev1.PodList, error) {
+func (r *reconciler) getNodeLocalDNSPods(ctx context.Context) (*corev1.PodList, error) {
 	podList := new(corev1.PodList)
 	err := r.client.List(ctx, podList, &client.ListOptions{LabelSelector: constant.NodeLocalDNSPodLabelSelector, Namespace: constant.NodeLocalDNSNamespace})
 	if err != nil {
@@ -162,10 +144,13 @@ func (r *reconciler) getDaemonSetPods(ctx context.Context) (*corev1.PodList, err
 	return podList, nil
 }
 
-func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string) (ctrl.Result, error) {
+func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
 	for _, pod := range pods.Items {
 		podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
-		if podRevision != currentRevision && r.okToDeletePod(&pod) {
+		if podRevision != currentRevision {
+			for _, check := range externalChecks {
+			}
+
 			if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to delete the %s ready pod", pod.Name)
 			}
@@ -177,15 +162,18 @@ func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodLis
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string) (ctrl.Result, error) {
+func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
 	for _, pod := range pods.Items {
-		if !r.podIsReadyAndRunning(&pod) {
+		if !checks.PodIsReadyAndRunning(&pod) {
 			if !pod.DeletionTimestamp.IsZero() {
 				break
 			}
 
 			podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
-			if podRevision != currentRevision && r.okToDeletePod(&pod) {
+			if podRevision != currentRevision {
+				for _, check := range externalChecks {
+				}
+
 				if err := r.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to delete the %s not ready pod", pod.Name)
 				}
@@ -198,19 +186,13 @@ func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.Pod
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func (r *reconciler) okToDeletePod(pod *corev1.Pod) bool {
-	// TODO: CONDITIONS
-
-	return true
-}
-
 func (r *reconciler) reconcileDaemonSet(ctx context.Context, ds *appsv1.DaemonSet) (ctrl.Result, error) {
-	pods, err := r.getDaemonSetPods(ctx)
+	pods, err := r.getNodeLocalDNSPods(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if r.daemonSetIsUpToDate(ds) {
+	if checks.DaemonSetIsUpToDate(ds) {
 		klog.V(5).Infof("DaemonSet is up to date")
 		return ctrl.Result{}, nil
 	}
