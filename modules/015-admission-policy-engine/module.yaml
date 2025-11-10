@@ -7,5 +7,3 @@ description: |
   Admission policy engine module
 descriptions:
   en: Admission policy engine module
-requirements:
-  deckhouse: ">= 1.68"
