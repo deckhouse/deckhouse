@@ -300,7 +300,7 @@ def process_menu_and_extract_content(yaml_file_path: str) -> None:
                 for span in minus_icon_spans:
                     span.decompose()
                 
-                # Remove div blocks with details class containing specified link text
+                # Remove links with specified text from div blocks with details class
                 details_divs = soup.find_all("div", class_="details")
                 for div in details_divs:
                     # Check if div contains an 'a' tag with target text
@@ -309,7 +309,7 @@ def process_menu_and_extract_content(yaml_file_path: str) -> None:
                         link_text = ' '.join(link.get_text().split())
                         target_text = 'Как явно включить или отключить модуль…'
                         if target_text in link_text:
-                            div.decompose()
+                            link.decompose()
                             break
                 
                 # Wrap divs containing span with class="ancestors" in bold text
@@ -409,7 +409,6 @@ if __name__ == "__main__":
         "--margin-bottom", "1cm",
         "--enable-local-file-access",
         "--disable-external-links",
-        "--disable-internal-links",
         "--outline",
         "--outline-depth", "3",
         "--header-left", "Deckhouse Kubernetes Platform CSE. Справочник администратора - [section]",
