@@ -708,12 +708,17 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
 
+		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		if err != nil {
+			return fmt.Errorf("registry initialization: %v", err)
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
-
 	return res, nil
 }
 

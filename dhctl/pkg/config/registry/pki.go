@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
-
 	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 	registry_users "github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
@@ -33,54 +30,51 @@ const (
 	readOnlyUser          = "ro"
 	readWriteUser         = "rw"
 	certificateCommonName = "registry-ca"
-	secretNamespace       = "d8-system"
-	secretName            = "registry-init"
 )
 
 type PKI = registry_init.Config
 
 type ClusterPKIManager struct {
 	kubeClient client.KubeClient
-	once       once[PKI]
+	pki        *PKI
+	mu         sync.RWMutex
 }
 
 type PKIGenerator struct {
-	once once[PKI]
-}
-
-type once[T any] struct {
-	ret  T
+	pki  PKI
 	err  error
 	once sync.Once
 }
 
-func (o *once[T]) do(initFunc func() (T, error)) (T, error) {
-	o.once.Do(func() {
-		o.ret, o.err = initFunc()
-	})
-	return o.ret, o.err
-}
-
 func (generator *PKIGenerator) Get() (PKI, error) {
-	ret, err := generator.once.do(func() (PKI, error) {
-		return generatePKI()
+	generator.once.Do(func() {
+		generator.pki, generator.err = generatePKI()
 	})
-
-	if err != nil {
-		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", err)
+	if generator.err != nil {
+		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", generator.err)
 	}
-	return ret.DeepCopy(), nil
+	return generator.pki.DeepCopy(), nil
 }
 
 func (manager *ClusterPKIManager) Get() (PKI, error) {
-	ret, err := manager.once.do(func() (PKI, error) {
-		return fetchPKIFromCluster(context.TODO(), manager.kubeClient)
-	})
-
-	if err != nil {
-		return PKI{}, fmt.Errorf("failed to retrieve registry PKI from cluster: %w", err)
+	manager.mu.RLock()
+	if manager.pki != nil {
+		defer manager.mu.RUnlock()
+		return manager.pki.DeepCopy(), nil
 	}
-	return ret.DeepCopy(), nil
+	manager.mu.RUnlock()
+
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	if manager.pki == nil {
+		pki, err := initSecretFetch(context.TODO(), manager.kubeClient)
+		if err != nil {
+			return PKI{}, fmt.Errorf("failed to fetch registry PKI from cluster: %w", err)
+		}
+		manager.pki = &pki
+	}
+	return manager.pki.DeepCopy(), nil
 }
 
 func NewPKIGenerator() *PKIGenerator {
@@ -121,18 +115,5 @@ func generatePKI() (PKI, error) {
 	ret.UserRW = &rw
 	ret.UserRO = &ro
 
-	return ret, nil
-}
-
-func fetchPKIFromCluster(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
-	var ret PKI
-	secret, err := kubeClient.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
-	if err != nil {
-		return ret, err
-	}
-
-	if err := yaml.Unmarshal(secret.Data["config"], &ret); err != nil {
-		return ret, fmt.Errorf("failed to unmarshal: %w", err)
-	}
 	return ret, nil
 }
