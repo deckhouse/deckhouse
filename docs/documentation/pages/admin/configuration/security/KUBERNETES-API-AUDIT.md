@@ -159,7 +159,7 @@ rules:
 ```
 
 {% alert level="warning" %}
-**Warning!**   
+**Warning!**
 Not recommended for production environments.  
 A high event flow may result in increased load on the control-plane disk subsystem of cluster nodes.
 {% endalert %}
