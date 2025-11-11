@@ -53,7 +53,7 @@ title: "Модуль deckhouse: FAQ"
 > Флаг `--list-exclude` выводит список доступных для исключения элементов. Пример:
 
   ```shell
-  d8 p collect-debug-info --list-exclude
+  d8 system collect-debug-info --list-exclude
   ```
 
 <p>Ниже перечислены сведения, формируемые при выполнении архива. Названия в колонке «Файл в архиве» соответствуют элементам верхнего уровня внутри итогового архива <code>tar.gz</code>. Отдельные чувствительные значения (например, <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) исключаются из выборки.</p>
