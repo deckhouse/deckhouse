@@ -43,7 +43,7 @@ VPA может работать в двух режимах:
 1. Через команду `d8` (в поде `d8-system/deckhouse`):
 
    ```console
-   d8 platform module enable vertical-pod-autoscaler
+   d8 system module enable vertical-pod-autoscaler
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):

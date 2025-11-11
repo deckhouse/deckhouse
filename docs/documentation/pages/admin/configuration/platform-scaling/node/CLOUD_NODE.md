@@ -95,7 +95,7 @@ The configuration of the cloud provider used in a cloud or hybrid cluster is sto
 Regardless of the cloud provider used, its settings can be modified using the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 ## NodeGroup autoscaling

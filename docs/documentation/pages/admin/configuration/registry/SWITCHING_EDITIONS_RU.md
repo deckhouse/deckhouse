@@ -28,7 +28,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого выполните команду:
 
    ```shell
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Измените [параметр `kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
@@ -146,7 +146,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    В DKP CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
@@ -154,7 +154,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -254,7 +254,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Проверить состояние очереди DKP:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для DKP EE:
@@ -267,7 +267,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Если в выводе присутствуют поды [модуля `chrony`](/modules/chrony/), заново включите данный модуль (в DKP CSE этот модуль по умолчанию выключен):
 
    ```shell
-   d8 platform module enable chrony
+   d8 system module enable chrony
    ```
 
 1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:
@@ -433,7 +433,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Отключите неподдерживаемые новой редакцией модули:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и убедитесь в выполнении всех задач в очереди.

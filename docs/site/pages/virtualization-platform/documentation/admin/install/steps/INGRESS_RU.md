@@ -203,5 +203,5 @@ EOF
 Чтобы включить модуль, выполните следующую команду:
 
 ```shell
-d8 s module enable console
+d8 system module enable console
 ```
