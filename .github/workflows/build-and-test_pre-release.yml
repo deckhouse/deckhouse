@@ -3064,6 +3064,10 @@ jobs:
         with:
           result-encoding: string
           script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const match = branch.match(/^release-(\d+\.\d+)$/);
+            const version = match[1];
+
             const { data: tags } = await github.rest.repos.listTags({
               owner: context.repo.owner,
               repo: context.repo.repo,
