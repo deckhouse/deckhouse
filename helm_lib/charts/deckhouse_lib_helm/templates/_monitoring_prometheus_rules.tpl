@@ -42,22 +42,46 @@
 
     {{- end }}
 
-    {{ $definition = $definitionStruct.Rules | toYaml }}
-
     {{- $resourceName := (regexReplaceAllLiteral "\\.(yaml|tpl)$" $path "") }}
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
     {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
+    {{- $propagated := false }}
+    {{- $useObservabilityRules := false }}
+    {{- if ( $context.Values.global.enabledModules | has "observability" ) }}
+      {{- if ($context.Values.global.discovery.apiVersions | has "observability.deckhouse.io/v1alpha1/ClusterObservabilityMetricsRulesGroup") }}
+        {{- $useObservabilityRules = true }}
+        {{- $propagated = contains "propagated-" $resourceName }}
+      {{- end}}
+    {{- end }}
+    {{- $resourceName = $resourceName | replace "propagated-" "" }}
+
+    {{- if or $propagated $useObservabilityRules }}
+      {{- range $idx, $group := $definitionStruct.Rules }}
+        {{- $_ := unset $group "name" }}
+        {{- $groupResourceName := printf "%s-%d" $resourceName $idx }}
+---
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservability{{ if $propagated }}Propagated{{ end }}MetricsRulesGroup
+metadata:
+  name: {{ $groupResourceName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
+spec:
+  {{- $group | toYaml | nindent 2 }}
+      {{- end }}
+    {{- else }}
+        {{- $definition := $definitionStruct.Rules | toYaml }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ $resourceName }}
   namespace: {{ $namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
+    {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
 spec:
   groups:
     {{- $definition | nindent 4 }}
+    {{- end }}
   {{- end }}
 
   {{- $subDirs := list }}
