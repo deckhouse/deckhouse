@@ -2,21 +2,38 @@
 RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
-{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
-    {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
-    {{- $featureGates = list $featureGates "StructuredAuthenticationConfiguration=true" | join "," }}
-{{- end }}
-{{- $nodesCount := .nodesCount | default 0 | int }}
-{{- $gcThresholdCount := 1000}}
-{{- if lt $nodesCount 100 }}
-    {{- $gcThresholdCount = 1000 }}
-{{- else if lt $nodesCount 300 }}
-    {{- $gcThresholdCount = 3000 }}
-{{- else }}
-    {{- $gcThresholdCount = 6000 }}
-{{- end }}
+{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion -}}
+    {{- $baseFeatureGates = append $baseFeatureGates "ValidatingAdmissionPolicy=true" -}}
+    {{- $baseFeatureGates = append $baseFeatureGates "AdmissionWebhookMatchConditions=true" -}}
+    {{- $baseFeatureGates = append $baseFeatureGates "StructuredAuthenticationConfiguration=true" -}}
+{{- end -}}
+{{- $apiserverFeatureGates := $baseFeatureGates -}}
+{{- $controllerManagerFeatureGates := $baseFeatureGates -}}
+{{- $schedulerFeatureGates := $baseFeatureGates -}}
+{{- if hasKey . "allowedFeatureGates" -}}
+  {{- range .allowedFeatureGates.apiserver -}}
+    {{- $apiserverFeatureGates = append $apiserverFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeControllerManager -}}
+    {{- $controllerManagerFeatureGates = append $controllerManagerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeScheduler -}}
+    {{- $schedulerFeatureGates = append $schedulerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
+{{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
+{{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
+{{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- $gcThresholdCount := 1000 -}}
+{{- if lt $nodesCount 100 -}}
+    {{- $gcThresholdCount = 1000 -}}
+{{- else if lt $nodesCount 300 -}}
+    {{- $gcThresholdCount = 3000 -}}
+{{- else -}}
+    {{- $gcThresholdCount = 6000 -}}
+{{- end -}}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
@@ -90,7 +107,7 @@ apiServer:
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
-    feature-gates: {{ $featureGates | quote }}
+    feature-gates: {{ $apiserverFeatureGatesStr | quote }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
@@ -166,7 +183,7 @@ controllerManager:
   extraArgs:
     profiling: "false"
     terminated-pod-gc-threshold: {{ $gcThresholdCount | quote }}
-    feature-gates: {{ $featureGates | quote }}
+    feature-gates: {{ $controllerManagerFeatureGatesStr | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
@@ -190,7 +207,7 @@ scheduler:
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
 {{- end }}
     profiling: "false"
-    feature-gates: {{ $featureGates | quote }}
+    feature-gates: {{ $schedulerFeatureGatesStr | quote }}
     bind-address: "127.0.0.1"
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
