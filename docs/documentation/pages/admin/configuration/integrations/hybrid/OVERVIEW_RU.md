@@ -325,7 +325,7 @@ volumeBindingMode: WaitForFirstConsumer
 1. Включите модуль `cloud-provider-vcd`:
 
    ```shell
-   d8 platform module enable cloud-provider-vcd
+   d8 system module enable cloud-provider-vcd
    ```
 
 1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).

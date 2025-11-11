@@ -11,7 +11,7 @@ lang: ru
    Включить мониторинг кластера можно в [веб-интерфейсе Deckhouse](/modules/console/), или с помощью следующей команды:
 
    ```shell
-   d8 platform module enable monitoring-custom
+   d8 system module enable monitoring-custom
    ```
   
    > У текущего пользователя платформы может не быть прав на включение или выключение модулей. Если прав нет, необходимо обратиться к администратору платформы.

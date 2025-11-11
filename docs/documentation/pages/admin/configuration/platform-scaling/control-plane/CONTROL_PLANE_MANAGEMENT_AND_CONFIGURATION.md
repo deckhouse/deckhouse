@@ -42,13 +42,13 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
 1. Using the command:
 
    ```bash
-   d8 platform module enable control-plane-manager
+   d8 system module enable control-plane-manager
    ```
 
    or to disable:
 
    ```bash
-   d8 platform module disable control-plane-manager
+   d8 system module disable control-plane-manager
    ```  
   
 1. Via the [Deckhouse web interface](/modules/console/):
@@ -113,7 +113,7 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 1. Get the list of queues and active tasks:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Example output:
