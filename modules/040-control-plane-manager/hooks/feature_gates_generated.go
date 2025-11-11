@@ -101,42 +101,71 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		},
 	},
 	"1.30": {
+		Deprecated: []string{
+			"ValidatingAdmissionPolicy",
+			"AdmissionWebhookMatchConditions",
+			"StructuredAuthenticationConfiguration",
+		},
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
+			"KubeletCgroupDriverFromCRI",
+			"LocalStorageCapacityIsolationFSQuotaMonitoring",
 		},
 		APIServer: []string{
 			"APIServerIdentity",
 			"StorageVersionAPI",
+			"CustomResourceFieldSelectors",
+			"AuthorizeWithSelectors",
+			"CoordinatedLeaderElection",
 		},
 		KubeControllerManager: []string{
 			"CronJobsScheduledAnnotation",
+			"JobSuccessPolicy",
+			"CoordinatedLeaderElection",
 		},
 		KubeScheduler: []string{
 			"SchedulerQueueingHints",
+			"MatchLabelKeysInPodAffinity",
+			"CoordinatedLeaderElection",
 		},
 	},
 	"1.31": {
 		Deprecated: []string{
 			"DynamicResourceAllocation",
-			"NewDeprecatedGate",
+			"InTreePluginAWSUnregister",
+			"InTreePluginAzureDiskUnregister",
+			"InTreePluginGCEUnregister",
 		},
 		Forbidden: []string{
-			"SomeProblematicFeature",
+			"SecurityContextDeny",
 		},
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
+			"DisableNodeKubeProxyVersion",
+			"KubeletCgroupDriverFromCRI",
+			"LocalStorageCapacityIsolationFSQuotaMonitoring",
 		},
 		APIServer: []string{
 			"APIServerIdentity",
 			"StorageVersionAPI",
+			"CustomResourceFieldSelectors",
+			"AuthorizeWithSelectors",
+			"CoordinatedLeaderElection",
+			"RelaxedEnvironmentVariableValidation",
 		},
 		KubeControllerManager: []string{
 			"CronJobsScheduledAnnotation",
+			"JobSuccessPolicy",
+			"CoordinatedLeaderElection",
+			"JobBackoffLimitPerIndex",
 		},
 		KubeScheduler: []string{
 			"SchedulerQueueingHints",
+			"MatchLabelKeysInPodAffinity",
+			"CoordinatedLeaderElection",
+			"DynamicResourceAllocation",
 		},
 	},
 	"1.32": {

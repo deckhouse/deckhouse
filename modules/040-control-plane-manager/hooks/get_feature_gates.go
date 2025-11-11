@@ -93,7 +93,7 @@ func isFeatureGateDeprecatedInFutureVersions(currentVersion KubernetesVersion, f
 }
 
 func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
-	k8sVersionStr := input.Values.Get("global.discovery.kubernetesVersion").String()
+	k8sVersionStr := input.Values.Get("global.clusterConfiguration.kubernetesVersion").String()
 
 	result := featureGatesResult{
 		APIServer:             []string{},

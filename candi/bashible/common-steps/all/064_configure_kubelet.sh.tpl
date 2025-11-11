@@ -313,6 +313,11 @@ featureGates:
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
 {{- end }}
+{{- if hasKey . "allowedKubeletFeatureGates" }}
+  {{- range .allowedKubeletFeatureGates }}
+  {{ . }}: true
+  {{- end }}
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70

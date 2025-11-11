@@ -19,42 +19,71 @@ versions = {
         ],
     },
     "1.30": {
+        "deprecated": [
+            "ValidatingAdmissionPolicy",
+            "AdmissionWebhookMatchConditions",
+            "StructuredAuthenticationConfiguration",
+        ],
         "kubelet": [
             "CPUManager",
             "MemoryManager",
+            "KubeletCgroupDriverFromCRI",
+            "LocalStorageCapacityIsolationFSQuotaMonitoring",
         ],
         "apiserver": [
             "APIServerIdentity",
             "StorageVersionAPI",
+            "CustomResourceFieldSelectors",
+            "AuthorizeWithSelectors",
+            "CoordinatedLeaderElection",
         ],
         "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
+            "JobSuccessPolicy",
+            "CoordinatedLeaderElection",
         ],
         "kubeScheduler": [
             "SchedulerQueueingHints",
+            "MatchLabelKeysInPodAffinity",
+            "CoordinatedLeaderElection",
         ],
     },
     "1.31": {
         "deprecated": [
             "DynamicResourceAllocation",
-            "NewDeprecatedGate",
+            "InTreePluginAWSUnregister",
+            "InTreePluginAzureDiskUnregister",
+            "InTreePluginGCEUnregister",
         ],
         "forbidden": [
-            "SomeProblematicFeature",
+            "SecurityContextDeny",
         ],
         "kubelet": [
             "CPUManager",
             "MemoryManager",
+            "DisableNodeKubeProxyVersion",
+            "KubeletCgroupDriverFromCRI",
+            "LocalStorageCapacityIsolationFSQuotaMonitoring",
         ],
         "apiserver": [
             "APIServerIdentity",
             "StorageVersionAPI",
+            "CustomResourceFieldSelectors",
+            "AuthorizeWithSelectors",
+            "CoordinatedLeaderElection",
+            "RelaxedEnvironmentVariableValidation",
         ],
         "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
+            "JobSuccessPolicy",
+            "CoordinatedLeaderElection",
+            "JobBackoffLimitPerIndex",
         ],
         "kubeScheduler": [
             "SchedulerQueueingHints",
+            "MatchLabelKeysInPodAffinity",
+            "CoordinatedLeaderElection",
+            "DynamicResourceAllocation",
         ],
     },
     "1.32": {
