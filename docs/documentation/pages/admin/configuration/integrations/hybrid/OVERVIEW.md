@@ -334,7 +334,7 @@ Before you begin, ensure the following conditions are met:
 1. Enable the `cloud-provider-vcd` module:
 
    ```shell
-   d8 platform module enable cloud-provider-vcd
+   d8 system module enable cloud-provider-vcd
    ```
 
 1. Edit the `d8-cni-configuration` secret so that the `mode` parameter is determined from `mc cni-cilium` (change `.data.cilium` to `.data.necilium` if necessary).

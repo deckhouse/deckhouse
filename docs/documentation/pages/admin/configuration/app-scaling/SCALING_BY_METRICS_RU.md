@@ -28,7 +28,7 @@ lang: ru
    Включить модуль `prometheus-metrics-adapter` можно в веб-интерфейсе Deckhouse, или с помощью следующей команды:
 
    ```shell
-   d8 platform module enable prometheus-metrics-adapter
+   d8 system module enable prometheus-metrics-adapter
    ```
 
 1. Определите PromQL-запрос, который будет описывать нужную метрику (например, скорость запросов к приложению или загрузку CPU за определённое время). Этот запрос регистрируется в кластере как метрика для HPA.
