@@ -545,10 +545,6 @@ entries:
             ru: Безопасность
           folders:
             - title:
-                en: Integrity control
-                ru: Контроль целостности
-              url: /virtualization-platform/documentation/architecture/security/integrity-control.html
-            - title:
                 en: Architecture of security event audit
                 ru: Архитектура аудита событий безопасности
               url: /virtualization-platform/documentation/architecture/security/runtime-audit.html

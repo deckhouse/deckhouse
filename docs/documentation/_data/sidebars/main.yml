@@ -1205,10 +1205,6 @@ entries:
             ru: Безопасность
           folders:
             - title:
-                en: Integrity control
-                ru: Контроль целостности
-              url: /architecture/security/integrity-control.html
-            - title:
                 en: Architecture of security event audit
                 ru: Архитектура аудита событий безопасности
               url: /architecture/security/runtime-audit.html
