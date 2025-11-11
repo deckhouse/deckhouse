@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+_chmod_dh_bin_path() {
+chmod +x /etc/bashrc.d/02-deckhouse-path.sh /etc/profile.d/02-deckhouse-path.sh
+}
+
+bb-event-on 'bb-sync-file-changed' '_chmod_dh_bin_path'
+
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
-chmod +x /etc/profile.d/02-deckhouse-path.sh
 
 bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
 PROMPT_COMMAND='
@@ -27,4 +33,3 @@ PROMPT_COMMAND='
     __deckhouse-path=1
   fi
 '"$PROMPT_COMMAND"
-chmod +x /etc/bashrc.d/02-deckhouse-path.sh
