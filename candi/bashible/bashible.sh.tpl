@@ -36,12 +36,12 @@ bb-kubectl-exec() {
     host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
     port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z "$host" "$port"; then
+    if ! nc -z -w 3 "$host" "$port" 2>/dev/null; then
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         host=$(echo "$server" | cut -d: -f1)
         port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z "$host" "$port"; then
+        if nc -z -w 3 "$host" "$port" 2>/dev/null; then
           args="--server=https://$server"
           break
         fi

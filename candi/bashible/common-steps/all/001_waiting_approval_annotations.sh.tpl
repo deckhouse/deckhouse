@@ -12,20 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+get_node_json() {
+  local node_json
+  node_json="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json 2>&1)"
+  
+  if [ -z "$node_json" ]; then
+    bb-log-error "Failed to get node: empty response"
+    exit 1
+  fi
+  
+  if ! echo "$node_json" | jq empty 2>/dev/null; then
+    bb-log-error "Failed to get node: invalid JSON"
+    exit 1
+  fi
+  
+  echo "$node_json"
+}
+
 {{ if eq .runType "Normal" }}
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
   attempt=0
   until
-    node_data="$(
-      bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq '
-      {
-        "resourceVersion": .metadata.resourceVersion,
-        "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
-        "isWaitingForApproval": (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval"))
-      }
-    ')" &&
-     jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
+    node_json="$(get_node_json)"
+    node_data="$(echo "$node_json" | jq '{
+        resourceVersion: .metadata.resourceVersion,
+        isApproved: .metadata.annotations | has("update.node.deckhouse.io/approved"),
+        isWaitingForApproval: .metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval")
+      }')"
+    jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
   do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -41,8 +57,8 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
   attempt=0
   until
-    bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
-    jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
+    node_json="$(get_node_json)"
+    echo "$node_json" | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
