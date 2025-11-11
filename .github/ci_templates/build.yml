@@ -52,6 +52,13 @@ steps:
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- if eq $buildType "dev" }!} 
+  {!{- $secrets = append ( slice "projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs" "VAULT_ADDR" "VAULT_ADDR" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs" "VAULT_ROLE_ID" "VAULT_ROLE_ID" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs" "WERF_SIGN_CERT" "WERF_SIGN_CERT" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs" "WERF_SIGN_INTERMEDIATES" "WERF_SIGN_INTERMEDIATES" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs" "WERF_SIGN_KEY" "WERF_SIGN_KEY" ) $secrets -}!} 
+  {!{- end }!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
@@ -115,6 +122,13 @@ steps:
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
 {!{- if eq $buildType "dev" }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+      ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+      VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+      VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+      WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+      WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+      WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}

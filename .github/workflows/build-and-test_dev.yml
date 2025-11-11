@@ -24,10 +24,12 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 env:
-
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  WERF_VERSION: "v2.51.0"
+  WERF_SIGN_MANIFEST: "1"
+  WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -379,6 +381,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -406,6 +409,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -519,6 +527,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -668,6 +683,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -695,6 +711,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -808,6 +829,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -957,6 +985,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -984,6 +1013,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1097,6 +1131,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -1246,6 +1287,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1273,6 +1315,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1386,6 +1433,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -1535,6 +1589,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1562,6 +1617,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1675,6 +1735,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -1824,6 +1891,7 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1851,6 +1919,11 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1964,6 +2037,13 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          VAULT_ADDR: "${{ steps.secrets.outputs.VAULT_ADDR }}"
+          VAULT_ROLE_ID: "${{ steps.secrets.outputs.VAULT_ROLE_ID }}"
+          WERF_SIGN_CERT: "${{ steps.secrets.outputs.WERF_SIGN_CERT }}"
+          WERF_SIGN_INTERMEDIATES: "${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}"
+          WERF_SIGN_KEY: "${{ steps.secrets.outputs.WERF_SIGN_KEY }}"
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"

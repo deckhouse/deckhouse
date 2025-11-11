@@ -22,7 +22,8 @@ on:
 
 env:
   WERF_DRY_RUN: "false"
-{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+  
+{!{ tmpl.Exec "werf_envs" (slice "daily") | strings.Indent 2 }!}
 
 # Always run a single job at a time.
 # Note: Concurrency is currently in beta and subject to change.

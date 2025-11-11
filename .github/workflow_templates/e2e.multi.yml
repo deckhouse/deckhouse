@@ -103,7 +103,8 @@ on:
         default: false
         type: boolean
 env:
-{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "werf_envs" (slice "multi") | strings.Indent 2 }!}
 
 # Note: no concurrency section for e2e workflows.
 # Usually you run e2e and wait until it ends.
