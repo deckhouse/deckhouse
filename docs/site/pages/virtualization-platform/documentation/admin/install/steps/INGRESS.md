@@ -208,5 +208,5 @@ The `console` module allows you to manage virtualization components through the 
 To enable the module, run the following command:
 
 ```shell
-d8 s module enable console
+d8 system module enable console
 ```

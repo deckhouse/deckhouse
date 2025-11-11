@@ -88,7 +88,7 @@ d8 k edit moduleconfig/upmeter
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 После сохранения изменений DKP автоматически приведёт кластер в соответствие с новой конфигурацией. В зависимости от размеров кластера это может занять некоторое время.
