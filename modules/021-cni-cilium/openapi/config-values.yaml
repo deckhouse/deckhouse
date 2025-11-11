@@ -6,14 +6,14 @@ properties:
     description: |
       Enable SCTP support for Cilium (for both incoming and outgoing traffic).
 
-      > Note! Cilium implements only basic SCTP support. Therefore, when using SCTP with Cilium, please be aware of the following limitations:
+      > **Note.** Cilium implements only basic SCTP support. Therefore, when using SCTP with Cilium, please be aware of the following limitations:
 
       - The following features are not currently supported: `SCTP multi-homing`, `NetworkPolicies for pod-to-VIP`.
       - For incoming SCTP packets port overwriting is not supported.
         This means that applications must be published through either HostPort or Service, where the `targetPort` MUST match the `port` specified. Otherwise, the packet will be dropped.
       - For outgoing SCTP packets, only 1:1 SNAT is supported by default.
         In this mode, only the src_ip is replaced, while the src_port remains unchanged. If the src_port is already in use on the node, the packet will be rejected.
-        To enable src_port substitution, you must switch the *masqueradeMode* parameter to `Netfilter` mode.
+        To enable src_port substitution, you must switch the `masqueradeMode` parameter to `Netfilter` mode.
   debugLogging:
     type: boolean
     default: false
