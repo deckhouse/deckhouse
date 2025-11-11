@@ -176,7 +176,7 @@ masterNodeGroup:
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}

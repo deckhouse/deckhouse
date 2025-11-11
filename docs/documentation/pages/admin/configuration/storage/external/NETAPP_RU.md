@@ -31,7 +31,7 @@ lang: ru
 1. Выполните команду для активации модуля `csi-netapp`:
 
    ```shell
-   d8 s module enable csi-netapp
+   d8 system module enable csi-netapp
    ```
 
    После активации модуля на всех узлах кластера будут:

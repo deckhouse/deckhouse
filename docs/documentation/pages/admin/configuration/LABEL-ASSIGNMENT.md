@@ -20,7 +20,7 @@ without having to manually edit each one.
 Enable the [`namespace-configurator`](/modules/namespace-configurator/) module:
 
 ```shell  
-d8 platform module enable namespace-configurator
+d8 system module enable namespace-configurator
 ```
 
 Configure automatic label and annotation assignment in ModuleConfig [`namespace-configurator`](/modules/namespace-configurator/configuration.html):

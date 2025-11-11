@@ -61,7 +61,7 @@ DKP поддерживает подключение следующих внеш�
    Включите модуль через CLI:
 
    ```shell
-   d8 platform module enable user-authn
+   d8 system module enable user-authn
    ```
 
 1. Настройте [модуль `user-authn`](/modules/user-authn/).
