@@ -15,3 +15,16 @@
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+chmod +x /etc/profile.d/02-deckhouse-path.sh
+
+bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
+PROMPT_COMMAND='
+  if [ -z "$__deckhouse-path" ]; then
+    case ":$PATH:" in
+      *:/opt/deckhouse/bin:*) ;;
+      *) PATH="/opt/deckhouse/bin:$PATH" ;;
+    esac
+    __deckhouse-path=1
+  fi
+'"$PROMPT_COMMAND"
+chmod +x /etc/bashrc.d/02-deckhouse-path.sh
