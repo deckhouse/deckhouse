@@ -101,3 +101,6 @@ When OIDC authentication is configured, additional user information is included 
 - `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
+
+## Feature Gates
+Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. 
