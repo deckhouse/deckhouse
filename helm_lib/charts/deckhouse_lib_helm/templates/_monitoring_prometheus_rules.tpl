@@ -42,22 +42,45 @@
 
     {{- end }}
 
-    {{ $definition = $definitionStruct.Rules | toYaml }}
-
     {{- $resourceName := (regexReplaceAllLiteral "\\.(yaml|tpl)$" $path "") }}
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
     {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
+    {{- $propagated := false }}
+    {{- if ( $context.Values.global.enabledModules | has "observability" ) }}
+      {{- $propagated = contains "-propagated" $resourceName }}
+    {{- end }}
+    {{- $resourceName = $resourceName | replace "-propagated" "" }}
+
+    {{- if not $propagated }}
+    {{- $definition := $definitionStruct.Rules | toYaml }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ $resourceName }}
   namespace: {{ $namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
+    {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
 spec:
   groups:
     {{- $definition | nindent 4 }}
+    {{- else }}
+      {{- range $idx, $group := $definitionStruct.Rules }}
+        {{- $_ := unset $group "name" }}
+        {{- $groupResourceName := $resourceName }}
+        {{- if gt (len $definitionStruct.Rules) 1 }}
+          {{- $groupResourceName = printf "%s-%d" $resourceName $idx }}
+        {{- end }}
+---
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityPropagatedMetricsRulesGroup
+metadata:
+  name: {{ $groupResourceName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
+spec:
+  {{- $group | toYaml | nindent 2 }}
+      {{- end }}
+    {{- end }}
   {{- end }}
 
   {{- $subDirs := list }}
