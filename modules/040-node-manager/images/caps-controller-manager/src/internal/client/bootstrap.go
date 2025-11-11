@@ -45,9 +45,7 @@ import (
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
-const (
-	RequeueForStaticInstanceBootstrapping = 60 * time.Second
-)
+const RequeueForStaticInstanceBootstrapping = 60 * time.Second
 
 // Bootstrap runs the bootstrap script on StaticInstance.
 func (c *Client) Bootstrap(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
