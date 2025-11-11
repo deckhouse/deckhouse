@@ -10,7 +10,7 @@ To organize metrics collection from any applications in the cluster, follow thes
    You can enable cluster monitoring in the [Deckhouse web UI](/modules/console/), or using the following command:
 
    ```shell
-   d8 platform module enable monitoring-custom
+   d8 system module enable monitoring-custom
    ```
   
    > The current platform user may not have rights to enable or disable modules. If there are no rights, you need to contact the platform administrator.

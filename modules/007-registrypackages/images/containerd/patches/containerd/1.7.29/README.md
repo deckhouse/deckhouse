@@ -1,5 +1,8 @@
 # Patches
 
+## 001-go-mod.patch
+Fixed cve CVE-2025-52881 for selinux usage
+
 ## 002-hosts-rewrite.patch
 Adds ability to rewrite path (repository) part for mirror defined in containerd [host](https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md) configuration.
 Configuration will be applied wihout containerd service restart.

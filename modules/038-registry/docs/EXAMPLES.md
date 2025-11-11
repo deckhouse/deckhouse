@@ -53,7 +53,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Example output:
@@ -129,7 +129,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Example output:

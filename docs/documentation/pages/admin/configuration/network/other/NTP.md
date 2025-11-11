@@ -14,7 +14,7 @@ If required, you can disable this built-in mechanism and configure custom NTP da
 Enable the [`chrony`](/modules/chrony/) module to activate time synchronization:
 
 ```shell  
-d8 platform module enable chrony
+d8 system module enable chrony
 ```
 
 By default, the time source is the server `pool.ntp.org`.
@@ -44,7 +44,7 @@ To disable the built-in time synchronization mechanism and use your own NTP daem
 1. Disable the [`chrony`](/modules/chrony/) module:
 
    ```shell
-   d8 platform module disable chrony
+   d8 system module disable chrony
    ```
 
    If the command is successful, you should see the message confirming that the module has been disabled:

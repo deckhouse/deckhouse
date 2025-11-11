@@ -65,7 +65,7 @@ If the parameter is not specified, no group-based filtering will be applied.
    Enable the module via CL:
 
    ```shell
-   d8 platform module enable user-authn
+   d8 system module enable user-authn
    ```
 
 1. Configure the [`user-authn`](/modules/user-authn/) module.

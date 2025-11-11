@@ -262,7 +262,7 @@ It's important to have an odd number of master nodes to maintain etcd quorum.
 1. Make sure the Deckhouse queue is empty:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
@@ -326,7 +326,7 @@ The following steps must be performed starting from the first master node (`mast
 1. Make sure the DKP queue is empty:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
@@ -409,5 +409,5 @@ The following steps must be performed starting from the first master node (`mast
 In clusters with multiple master nodes, DKP runs in high-availability mode (with multiple replicas). To access the active DKP controller, you can use the following command (example shown for the `deckhouse-controller queue list` command):
 
 ```console
-d8 platform queue list
+d8 system queue list
 ```

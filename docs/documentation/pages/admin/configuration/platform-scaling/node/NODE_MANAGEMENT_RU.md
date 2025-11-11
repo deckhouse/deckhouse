@@ -48,7 +48,7 @@ DKP может работать как с bare-metal, так и с облачн�
 1. Командой:
 
    ```shell
-   d8 platform module enable node-manager
+   d8 system module enable node-manager
    # Или disable.
    ```
 

@@ -21,7 +21,7 @@ lang: ru
 Включите [модуль `namespace-configurator`](/modules/namespace-configurator/):
 
 ```shell  
-d8 platform module enable namespace-configurator
+d8 system module enable namespace-configurator
 ```
 
 Настройте автоматическое назначение лейблов и аннотаций в ModuleConfig [`namespace-configurator`](/modules/namespace-configurator/configuration.html):

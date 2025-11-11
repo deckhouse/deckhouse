@@ -64,7 +64,7 @@ Deckhouse Kubernetes Platform использует **пять каналов о�
 Для ручного обновления минорной версии control plane (например, с `1.28.*` до `1.30.*`), укажите нужную версию в параметре [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) ресурса ClusterConfiguration. Например: `kubernetesVersion: 1.30`.
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 Команда запускает обновление до минорной версии Kubernetes, используемой в DKP по умолчанию на момент обновления. Чтобы отследить ход обновления, ориентируйтесь на версию Kubernetes, указанную в выводе команды описания узлов:

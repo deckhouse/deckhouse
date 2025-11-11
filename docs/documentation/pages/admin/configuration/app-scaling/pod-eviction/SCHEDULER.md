@@ -276,9 +276,9 @@ You can do this in one of the following ways:
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
    ```console
-   d8 platform module enable descheduler
+   d8 system module enable descheduler
    # or to disable:
-   d8 platform module disable descheduler
+   d8 system module disable descheduler
    ```
 
 1. Through the [Deckhouse web interface](/modules/console/):

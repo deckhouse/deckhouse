@@ -18,7 +18,7 @@ Enable the `sds-node-configurator`, `sds-replicated-volume`, and `snapshot-contr
 1. Enable the `sds-node-configurator` module:
 
    ```shell
-   sudo -i d8 s module enable sds-node-configurator
+   sudo -i d8 system module enable sds-node-configurator
    ```
 
 1. Wait until the `sds-node-configurator` module reaches the `Ready` state:
@@ -30,13 +30,13 @@ Enable the `sds-node-configurator`, `sds-replicated-volume`, and `snapshot-contr
 1. Enable the `snapshot-controller` module:
 
    ```shell
-   sudo -i d8 s module enable snapshot-controller
+   sudo -i d8 system module enable snapshot-controller
    ```
 
 1. Enable the `sds-replicated-volume` module:
 
    ```shell
-   sudo -i d8 s module enable sds-replicated-volume
+   sudo -i d8 system module enable sds-replicated-volume
    ```
 
 1. Wait until the `sds-replicated-volume` module reaches the `Ready` state:

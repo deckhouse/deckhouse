@@ -1,0 +1,36 @@
+control-plane-manager:
+  fixes:
+    - summary: Add vex for CVE-2025-31133, CVE-2025-52881 .
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16337
+deckhouse:
+  fixes:
+    - summary: Add umask before creating first-control-plane-bashible-ran file
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14574
+dhctl:
+  fixes:
+    - summary: Fix getting passphrase for key from connection config for cli.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16100
+    - summary: Move yandex withNATInstance layout settings from preflights to preparator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16100
+documentation:
+  fixes:
+    - summary: Fix module's deployment and configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16387
+extended-monitoring:
+  fixes:
+    - summary: Fix extended-monitoring.deckhouse.io/enabled label handling
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16372
+      impact: the extended monitoring will only be enabled when the label is explicitly set on a namespace
+monitoring-kubernetes:
+  fixes:
+    - summary: fix CVE-2025-52881 for node-exporter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16376
+prometheus:
+  fixes:
+    - summary: Fix description for not usable CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16377
+registrypackages:
+  fixes:
+    - summary: Fixes CVE in kubernetes-cni
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16343
+

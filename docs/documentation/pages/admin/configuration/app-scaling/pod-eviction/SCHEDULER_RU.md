@@ -270,9 +270,9 @@ DKP позволяет точно настроить, на какие поды �
 1. Через команду `d8` (в поде `d8-system/deckhouse`):
 
    ```console
-   d8 platform module enable descheduler
+   d8 system module enable descheduler
    # или, чтобы отключить:
-   d8 platform module disable descheduler
+   d8 system module disable descheduler
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):

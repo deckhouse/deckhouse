@@ -368,7 +368,7 @@ module-two                   Available   False     False
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-  d8 platform module enable <MODULE_NAME>
+  d8 system module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.

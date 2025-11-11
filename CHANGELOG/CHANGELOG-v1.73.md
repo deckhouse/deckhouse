@@ -4,7 +4,7 @@
 
 
  - ALL pods of the ingress-nginx module will be restarted.
- - Deckhouse how has privileged mode and runs as root.
+ - Deckhouse now has privileged mode and runs as root.
  - Fixed multiple security vulnerabilities that could affect authentication components.
  - The runtime-audit-engine module has been moved to external. All pods of the module will be restarted.
  - This update fixes a security vulnerability in the `user-authn` module (CVE-2025-22868) that could potentially allow bypass of authentication validation.
@@ -30,7 +30,7 @@
  - **[cloud-provider-zvirt]** Added support zvirt cloud provider to cse. [#14683](https://github.com/deckhouse/deckhouse/pull/14683)
  - **[control-plane-manager]** Added extra claim `user-authn.deckhouse.io/dex-provider` (from `federated_claims.connector_id`) Request `federated:id` scope in Dex Authenticator, Basic Auth Proxy, and kubeconfig generator to populate. `federated_claims.connector_id` [#15816](https://github.com/deckhouse/deckhouse/pull/15816)
  - **[deckhouse]** Make deckhouse privileged and run as root. [#15664](https://github.com/deckhouse/deckhouse/pull/15664)
-    Deckhouse how has privileged mode and runs as root.
+    Deckhouse now has privileged mode and runs as root.
  - **[deckhouse]** Added alert for deprecated modules. [#15483](https://github.com/deckhouse/deckhouse/pull/15483)
  - **[deckhouse]** Added Deckhouse release information status. [#15458](https://github.com/deckhouse/deckhouse/pull/15458)
  - **[deckhouse]** Made the module source `deckhouse` the default source. [#15437](https://github.com/deckhouse/deckhouse/pull/15437)
@@ -122,6 +122,7 @@
  - **[cni-cilium]** Fixed egress gateway reselection for case node hard reset. [#15090](https://github.com/deckhouse/deckhouse/pull/15090)
  - **[cni-cilium]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cni-flannel]** Used mode HostGW as default for podNetworkMode. [#15710](https://github.com/deckhouse/deckhouse/pull/15710)
+ - **[control-plane-manager]** Add vex for CVE-2025-31133, CVE-2025-52881 . [#16337](https://github.com/deckhouse/deckhouse/pull/16337)
  - **[control-plane-manager]** Append audit policies for virtualization before appending custom policies from Secret. [#15603](https://github.com/deckhouse/deckhouse/pull/15603)
  - **[control-plane-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[dashboard]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
@@ -141,6 +142,8 @@
  - **[deckhouse-tools]** Added tolerations support to DexAuthenticator configuration. [#14869](https://github.com/deckhouse/deckhouse/pull/14869)
  - **[deckhouse-tools]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[descheduler]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[dhctl]** Fix getting passphrase for key from connection config for cli. [#16100](https://github.com/deckhouse/deckhouse/pull/16100)
+ - **[dhctl]** Move yandex withNATInstance layout settings from preflights to preparator. [#16100](https://github.com/deckhouse/deckhouse/pull/16100)
  - **[dhctl]** Stop all kube proxies during destroy. Improve Do not lock converge for static clusters and save information about lock in state. [#16059](https://github.com/deckhouse/deckhouse/pull/16059)
  - **[dhctl]** Prompt user about static cluster bootstrap on current host. [#16011](https://github.com/deckhouse/deckhouse/pull/16011)
  - **[dhctl]** Added terminfo for proper terminal behavior in dhctl and deckhouse containers. [#15988](https://github.com/deckhouse/deckhouse/pull/15988)
@@ -153,6 +156,8 @@
  - **[docs]** Added description about custom CoreDNS installation. [#16092](https://github.com/deckhouse/deckhouse/pull/16092)
  - **[documentation]** Added tolerations support to DexAuthenticator configuration. [#14869](https://github.com/deckhouse/deckhouse/pull/14869)
  - **[documentation]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[extended-monitoring]** Fix extended-monitoring.deckhouse.io/enabled label handling [#16372](https://github.com/deckhouse/deckhouse/pull/16372)
+    the extended monitoring will only be enabled when the label is explicitly set on a namespace
  - **[extended-monitoring]** Init extended-monitoring-exporter on unavailable API. [#15529](https://github.com/deckhouse/deckhouse/pull/15529)
  - **[extended-monitoring]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[ingress-nginx]** CVEs fixed [#16340](https://github.com/deckhouse/deckhouse/pull/16340)
@@ -173,6 +178,7 @@
  - **[loki]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[metallb]** Fixed CVE's. [#15777](https://github.com/deckhouse/deckhouse/pull/15777)
  - **[metallb]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[monitoring-kubernetes]** fix CVE-2025-52881 for node-exporter [#16376](https://github.com/deckhouse/deckhouse/pull/16376)
  - **[monitoring-kubernetes]** Fixed gaps on graph. [#15479](https://github.com/deckhouse/deckhouse/pull/15479)
  - **[monitoring-kubernetes]** Added `tier=cluster` label. [#15290](https://github.com/deckhouse/deckhouse/pull/15290)
  - **[monitoring-kubernetes]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
@@ -191,11 +197,13 @@
  - **[operator-trivy]** Fixed node-collector pods crasing on startup. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
  - **[operator-trivy]** Added a passtrough for a HTTP(s) proxy parameters from operator to vulnerability scanning jobs processes. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
  - **[operator-trivy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[prometheus]** Fix description for not usable CVE [#16377](https://github.com/deckhouse/deckhouse/pull/16377)
  - **[prometheus]** Fixed template indentation [#15434](https://github.com/deckhouse/deckhouse/pull/15434)
  - **[prometheus]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[prometheus-metrics-adapter]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[registry]** bump go_lib/registry dependencies [#15985](https://github.com/deckhouse/deckhouse/pull/15985)
  - **[registry-packages-proxy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[registrypackages]** Fixes CVE in kubernetes-cni [#16343](https://github.com/deckhouse/deckhouse/pull/16343)
  - **[registrypackages]** Update runc to 1.3.1. [#16263](https://github.com/deckhouse/deckhouse/pull/16263)
  - **[service-with-healthchecks]** Improved the module's security [#15358](https://github.com/deckhouse/deckhouse/pull/15358)
  - **[service-with-healthchecks]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)

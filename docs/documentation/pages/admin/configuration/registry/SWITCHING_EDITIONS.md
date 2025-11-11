@@ -127,7 +127,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/exampl
    Disable the modules not supported by the new edition:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).

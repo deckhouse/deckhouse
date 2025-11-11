@@ -30,7 +30,7 @@ To work with snapshots, the [snapshot-controller](/modules/snapshot-controller/)
 1. Execute the command to activate the `csi-netapp` module.
 
    ```shell
-   d8 s module enable csi-netapp
+   d8 system module enable csi-netapp
    ```
 
    After activation, the following will be deployed on all cluster nodes:

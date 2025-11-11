@@ -39,7 +39,7 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
 1. Create a diagnostic archive with the `d8` utility, redirecting its output (stdout) to a file:
 
    ```shell
-   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 system collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 1. Send the resulting archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
@@ -47,13 +47,13 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
 > The `--exclude` flag omits the specified items from the archive. Example:
 
   ```sh
-  d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+  d8 system collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
   ```
 
 > The `--list-exclude` flag prints the list of items available for exclusion. Example:
 
   ```shell
-  d8 p collect-debug-info --list-exclude
+  d8 system collect-debug-info --list-exclude
   ```
 
 <p>The following information is produced when creating the archive. Names in the "File in archive" column correspond to top-level items inside the resulting <code>tar.gz</code> archive. Certain sensitive values (e.g., <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>) are excluded.</p>

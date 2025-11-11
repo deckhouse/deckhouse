@@ -27,7 +27,7 @@ To configure scaling based on metrics, follow these steps:
    You can enable the `prometheus-metrics-adapter` module in the Deckhouse web interface or via the following command:
 
    ```shell
-   d8 platform module enable prometheus-metrics-adapter
+   d8 system module enable prometheus-metrics-adapter
    ```
 
 1. Define a PromQL query that describes the desired metric (e.g., application request rate or CPU usage over time). This query is registered in the cluster as a metric for HPA.

@@ -19,7 +19,7 @@ lang: ru
 1. Включите модуль `sds-node-configurator`:
 
    ```shell
-   sudo -i d8 s module enable sds-node-configurator
+   sudo -i d8 system module enable sds-node-configurator
    ```
 
 1. Дождитесь, пока модуль `sds-node-configurator` перейдёт в состояние `Ready`:
@@ -31,13 +31,13 @@ lang: ru
 1. Включите модуль `snapshot-controller`:
 
    ```shell
-   sudo -i d8 s module enable snapshot-controller
+   sudo -i d8 system module enable snapshot-controller
    ```
 
 1. Включите модуль `sds-replicated-volume`:
 
    ```shell
-   sudo -i d8 s module enable sds-replicated-volume
+   sudo -i d8 system module enable sds-replicated-volume
    ```
 
 1. Дождитесь пока модуль `sds-replicated-volume` перейдёт в состояние `Ready`:

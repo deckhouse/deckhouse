@@ -154,7 +154,7 @@ provider:
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}

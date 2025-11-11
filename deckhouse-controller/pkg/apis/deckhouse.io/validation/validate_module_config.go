@@ -173,7 +173,7 @@ func moduleConfigValidationHandler(
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
-			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
+			if !ok && !oldOk && oldEnabled && !newEnabled {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {

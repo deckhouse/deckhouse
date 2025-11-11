@@ -266,7 +266,7 @@ kind: YandexClusterConfiguration
 To edit this resource in a running cluster, execute the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 After making changes, apply them using the following command:

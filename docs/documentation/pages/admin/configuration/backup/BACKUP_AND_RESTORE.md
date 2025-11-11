@@ -141,7 +141,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).

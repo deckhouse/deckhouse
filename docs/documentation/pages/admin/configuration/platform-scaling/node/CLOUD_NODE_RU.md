@@ -95,7 +95,7 @@ spec:
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 ## Автомасштабирование группы узлов

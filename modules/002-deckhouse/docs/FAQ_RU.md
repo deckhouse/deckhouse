@@ -39,7 +39,7 @@ title: "Модуль deckhouse: FAQ"
 1. Соберите диагностический архив утилитой `d8`, перенаправив вывод (stdout) в файл:
 
    ```shell
-   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 system collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 1. Отправьте полученный архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
@@ -47,13 +47,13 @@ title: "Модуль deckhouse: FAQ"
 > Флаг `--exclude` исключает указанные элементы из архива. Пример:
 
   ```shell
-  d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+  d8 system collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
   ```
 
 > Флаг `--list-exclude` выводит список доступных для исключения элементов. Пример:
 
   ```shell
-  d8 p collect-debug-info --list-exclude
+  d8 system collect-debug-info --list-exclude
   ```
 
 <p>Ниже перечислены сведения, формируемые при выполнении архива. Названия в колонке «Файл в архиве» соответствуют элементам верхнего уровня внутри итогового архива <code>tar.gz</code>. Отдельные чувствительные значения (например, <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) исключаются из выборки.</p>

@@ -251,7 +251,7 @@ lang: ru
    или проверьте состояние очереди DKP:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 ## Миграция ModuleUpdatePolicy на версию v1alpha2
