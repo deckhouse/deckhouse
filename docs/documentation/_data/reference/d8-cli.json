@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.22.0",
+  "version": "v0.22.7",
   "aliases": null,
   "flags": {
     "help": {
@@ -38094,6 +38094,11 @@
             },
             "gost-digest": {
               "description": "Calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-suspended-channels": {
+              "description": "Ignore suspended release channels instead of failing.",
               "shorthand": "",
               "global": false
             },
