@@ -19,38 +19,39 @@ import (
 	"fmt"
 	"log/slog"
 
-	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
+	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
+	hookctrl "github.com/flant/shell-operator/pkg/hook/controller"
 
-	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "hookSync"
+	taskTracer = "hook-sync"
 )
 
-type DependencyContainer interface {
-	PackageManager() *packagemanager.Manager
+type manager interface {
+	RunPackageHook(ctx context.Context, name, hook string, bctx []bctx.BindingContext) error
+	UnlockKubernetesMonitors(name, hook string, monitors ...string)
 }
 
 type task struct {
 	packageName string
 	hook        string
 
-	info hookcontroller.BindingExecutionInfo
+	info hookctrl.BindingExecutionInfo
 
-	dc DependencyContainer
+	manager manager
 
 	logger *log.Logger
 }
 
-func New(name, hook string, info hookcontroller.BindingExecutionInfo, dc DependencyContainer, logger *log.Logger) queue.Task {
+func NewTask(name, hook string, info hookctrl.BindingExecutionInfo, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		hook:        hook,
 		info:        info,
-		dc:          dc,
+		manager:     manager,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -60,21 +61,29 @@ func (t *task) String() string {
 }
 
 func (t *task) Execute(ctx context.Context) error {
+	// Hook synchronization task runs after hook bindings are registered
+	// Purpose: Execute initial hook run and unlock monitors to allow future events
 	t.logger.Debug("run sync hook", slog.String("hook", t.hook), slog.String("name", t.packageName))
-	if !t.info.KubernetesBinding.ExecuteHookOnSynchronization {
-		t.dc.PackageManager().UnlockKubernetesMonitors(t.packageName, t.hook)
 
+	// If ExecuteHookOnSynchronization=false, just unlock and return
+	// The hook will only run on future events, not during initialization
+	if !t.info.KubernetesBinding.ExecuteHookOnSynchronization {
+		t.manager.UnlockKubernetesMonitors(t.packageName, t.hook)
 		return nil
 	}
 
-	if _, err := t.dc.PackageManager().RunPackageHook(ctx, t.packageName, t.hook, t.info.BindingContext); err != nil {
+	// Execute hook with initial binding context (typically snapshot of current resources)
+	if err := t.manager.RunPackageHook(ctx, t.packageName, t.hook, t.info.BindingContext); err != nil {
+		// If AllowFailure=true, log warning and continue
 		if !t.info.AllowFailure {
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)
 		}
 		t.logger.Warn("hook failed", slog.String("name", t.packageName), slog.String("hook", t.hook), log.Err(err))
 	}
 
-	t.dc.PackageManager().UnlockKubernetesMonitors(t.packageName, t.hook)
+	// Unlock monitors to allow hook to process future Kubernetes events
+	t.logger.Debug("unlock kubernetes monitors", slog.String("name", t.packageName), slog.String("hook", t.hook))
+	t.manager.UnlockKubernetesMonitors(t.packageName, t.hook, t.info.KubernetesBinding.Monitor.Metadata.MonitorId)
 
 	return nil
 }

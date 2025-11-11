@@ -33,6 +33,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 )
 
 // DependencyContainer provides access to shared services needed by applications.
@@ -46,9 +48,7 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name      string // Application instance name
-	namespace string // Kubernetes namespace where app is deployed
-
+	name string // Application instance name
 	path string // path to the package dir on fs
 
 	definition Definition // Application definition
@@ -122,7 +122,7 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 
 // GetName returns the full application identifier in format "namespace:name".
 func (a *Application) GetName() string {
-	return BuildName(a.namespace, a.name)
+	return a.name
 }
 
 // BuildName returns the full application identifier in format "namespace:name".
@@ -141,6 +141,12 @@ func (a *Application) GetValuesChecksum() string {
 	return a.values.GetValuesChecksum()
 }
 
+// GetSettingsChecksum returns a checksum of the current config values.
+// Used to detect if settings changed.
+func (a *Application) GetSettingsChecksum() string {
+	return a.values.GetConfigChecksum()
+}
+
 // GetValues returns values for rendering
 func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
@@ -149,6 +155,23 @@ func (a *Application) GetValues() addonutils.Values {
 // ApplySettings apply setting values to application
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
+}
+
+// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
+func (a *Application) GetChecks() schedule.Checks {
+	deps := make(map[string]dependency.Dependency)
+	for module, dep := range a.definition.Requirements.Modules {
+		deps[module] = dependency.Dependency{
+			Constraint: dep.Constraints,
+			Optional:   dep.Optional,
+		}
+	}
+
+	return schedule.Checks{
+		Kubernetes: a.definition.Requirements.Kubernetes,
+		Deckhouse:  a.definition.Requirements.Deckhouse,
+		Modules:    deps,
+	}
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.
