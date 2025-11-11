@@ -29,6 +29,75 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const (
+	ingress01 = `
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lb-nginx-v2-custom-headers-reload
+  namespace: d8-ingress-nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+`
+
+	ingress02 = `
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lb-nginx-v2-client-cert-reload
+  namespace: d8-ingress-nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+`
+
+	svc01 = `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    deckhouse-service-type: provider-managed
+    name: lb-nginx-v2
+  name: lb-nginx-v2-load-balancer
+  namespace: d8-ingress-nginx
+spec:
+  ipFamilyPolicy: SingleStack
+  loadBalancerClass: ingress
+  type: LoadBalancer
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.168.223.197
+      ipMode: VIP
+    - ip: 192.168.223.198
+      ipMode: VIP
+    - ip: 192.168.223.199
+      ipMode: VIP
+`
+
+	svcWithoutIPs = `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    deckhouse-service-type: provider-managed
+    name: lb-nginx-v2
+  name: lb-nginx-v2-load-balancer
+  namespace: d8-ingress-nginx
+spec:
+  ipFamilyPolicy: SingleStack
+  loadBalancerClass: ingress
+  type: LoadBalancer
+status:
+  loadBalancer: {}
+`
+)
+
 var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
@@ -103,6 +172,36 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: update_ingress_address ::
 			Expect(ingress.Field("status.loadBalancer.ip").Str).To(Equal("ip"))
 		})
 	})
+
+	Context("Service with LoadBalancer type but without ingress addresses", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(ingress01 + svcWithoutIPs)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Should no change status", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ingress := f.KubernetesResource("Ingress", "d8-ingress-nginx", "lb-nginx-v2-custom-headers-reload")
+			Expect(ingress.Field("status.loadBalancer.ingress").Array()).To(HaveLen(0))
+		})
+	})
+
+	Context("Service with LoadBalancer type with ingress addresses", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(ingress02 + svc01)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Should change status", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ingress := f.KubernetesResource("Ingress", "d8-ingress-nginx", "lb-nginx-v2-client-cert-reload")
+			Expect(ingress.Field("status.loadBalancer.ingress").Array()).To(HaveLen(3))
+			Expect(ingress.Field("status.loadBalancer.ingress.#.ip").AsStringSlice()).
+				To(Equal([]string{"192.168.223.197", "192.168.223.198", "192.168.223.199"}))
+		})
+	})
 })
 
 func serviceYAML(name, inlet, ip, hostname string) string {
@@ -122,6 +221,7 @@ func serviceYAML(name, inlet, ip, hostname string) string {
 			Type: corev1.ServiceTypeNodePort,
 		},
 	}
+
 	if inlet == "LoadBalancer" {
 		svc.Labels["deckhouse-service-type"] = "provider-managed"
 		var loadBalancerIngress corev1.LoadBalancerIngress
@@ -133,6 +233,7 @@ func serviceYAML(name, inlet, ip, hostname string) string {
 		}
 		svc.Status.LoadBalancer.Ingress = append(svc.Status.LoadBalancer.Ingress, loadBalancerIngress)
 	}
+
 	marshaled, _ := yaml.Marshal(svc)
 	return string(marshaled)
 }

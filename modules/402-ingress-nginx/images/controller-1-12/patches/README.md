@@ -107,3 +107,7 @@ The metric `geoip_errors_total` has been added, which indicates the number of er
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
 
 https://github.com/kubernetes/ingress-nginx/pull/14005
+
+### 019-skip-ingress-update-status.patch
+
+The patch adds a new annotation `ingress-nginx.kubernetes.io/skip-status-update` for Ingress resources. This annotation allows you to exclude specific Ingresses from the status update process. This can be useful when there are multiple Ingress controllers working with the same Ingress class, as it allows you to selectively update the status of each Ingress independently.
