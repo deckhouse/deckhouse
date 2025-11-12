@@ -38,10 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const (
-	controllerName = "d8-application-controller"
-)
-
 // PackageEvent represents an event about a package.
 type PackageEvent struct {
 	PackageName string

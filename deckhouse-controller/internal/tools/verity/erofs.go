@@ -30,6 +30,7 @@ const (
 	tracerName = "verity"
 
 	// fs type for mount
+	// nolint: unused
 	erofsType = "erofs"
 
 	// this is util to create erofs image

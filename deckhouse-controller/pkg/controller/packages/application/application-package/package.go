@@ -87,7 +87,7 @@ func (o *PackageOperator) RemoveModule(_ context.Context, metadata *v1alpha1.Mod
 	o.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
 
-func (o *PackageOperator) GetApplicationStatus(ctx context.Context, packageName, appName, namespace string) ([]PackageStatus, error) {
+func (o *PackageOperator) GetApplicationStatus(_ context.Context, packageName, appName, namespace string) ([]PackageStatus, error) {
 	o.logger.Debug("getting application status",
 		slog.String("package", packageName),
 		slog.String("app", appName),

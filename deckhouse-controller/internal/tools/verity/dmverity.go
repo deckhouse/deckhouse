@@ -34,7 +34,7 @@ import (
 const (
 	// this is util to manage dm-verity
 	verityCommand = "veritysetup"
-
+	// nolint: unused
 	dmTemplate = "/dev/mapper/%s"
 
 	// formatArg computes the Merkle tree
