@@ -213,7 +213,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools
+generate: generate-kubernetes generate-tools generate-docs
 
 .PHONY: generate-tools
 generate-tools:
@@ -481,7 +481,7 @@ YQ_VERSION ?= v4.47.2
 ## Generate tools documentation
 .PHONY: generate-docs
 generate-docs: deckhouse-cli ## Generate documentation for deckhouse-cli.
-	@$(DECKHOUSE_CLI) help-json > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@$(DECKHOUSE_CLI) help-json --username-replace runner > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
