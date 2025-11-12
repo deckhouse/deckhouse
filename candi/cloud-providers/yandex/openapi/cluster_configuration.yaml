@@ -417,7 +417,7 @@ apiVersions:
 
               > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
             type: object
-            default: {"cores": 2, "memory": 2048}
+            default: {"cores": 2, "memory": 2048, "platform": "standard-v2"}
             x-doc-default: {}
             properties:
               cores:
