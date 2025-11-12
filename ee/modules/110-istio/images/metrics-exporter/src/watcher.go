@@ -20,15 +20,15 @@ import (
 )
 
 type Watcher struct {
-	mu        sync.RWMutex
+	mu   sync.RWMutex
 	clientSet *kubernetes.Clientset
 	metrics   *PrometheusExporterMetrics
-	pods      map[string]*IstioPodInfo
+	pods map[string]*IstioPodInfo
 }
 
 func NewWatcher(clientSet *kubernetes.Clientset, metrics *PrometheusExporterMetrics) *Watcher {
 	return &Watcher{
-		pods:      make(map[string]*IstioPodInfo),
+		pods: make(map[string]*IstioPodInfo),
 		clientSet: clientSet,
 		metrics:   metrics,
 	}
@@ -116,8 +116,8 @@ func (w *Watcher) GetRunningIstiodPods() []IstioPodInfo {
 	for _, pod := range w.pods {
 		if pod.Status == v1.PodRunning && pod.IP != "" {
 			pods = append(pods, IstioPodInfo{
-				Name:   pod.Name,
-				IP:     pod.IP,
+				Name: pod.Name,
+				IP:   pod.IP,
 				Status: pod.Status,
 			})
 		}

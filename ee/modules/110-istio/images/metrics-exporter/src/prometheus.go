@@ -24,18 +24,18 @@ import (
 type PrometheusExporterMetrics struct {
 	clusterUp   *prometheus.GaugeVec
 	istiodToken *authv1.TokenRequest
-	clientSet   *kubernetes.Clientset
+	clientSet *kubernetes.Clientset
 }
 
 func RegisterMetrics(clientSet *kubernetes.Clientset, reg prometheus.Registerer) *PrometheusExporterMetrics {
 	// Set metrics
 	p := &PrometheusExporterMetrics{
 		clusterUp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Name: "istio_remote_cluster_up",
-				Help: "Indicates if remote cluster is synced (1 = yes, 0 = no)",
-			},
-			[]string{"istiod", "cluster_id", "secret"},
+		prometheus.GaugeOpts{
+			Name: "istio_remote_cluster_up",
+			Help: "Indicates if remote cluster is synced (1 = yes, 0 = no)",
+		},
+		[]string{"istiod", "cluster_id", "secret"},
 		),
 		clientSet: clientSet,
 	}
