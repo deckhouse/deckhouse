@@ -80,8 +80,6 @@ spec:
     global:
       istiod:
         enableAnalysis: false
-      istiodRemote:
-        enabled: false
       defaultPodDisruptionBudget:
         enabled: false
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
