@@ -57,9 +57,7 @@ func (w *Watcher) StartNodeWatcher(ctx context.Context) {
 func (w *Watcher) updateNode(node *v1.Node) {
 	defer met.UpdateIsPopulated()
 
-	enabled := enabledLabel(node.Labels)
-
-	if !enabled {
+	if !enabledLabel(node.Labels) {
 		w.metrics.NodeEnabled.DeletePartialMatch(prometheus.Labels{"node": node.Name})
 		w.metrics.NodeThreshold.DeletePartialMatch(prometheus.Labels{"node": node.Name})
 		log.Printf("[NODE UPDATE] %s disabled, metrics cleared", node.Name)
