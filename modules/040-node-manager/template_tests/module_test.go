@@ -676,6 +676,7 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: StaticMachineTemplate
+        namespace: d8-cloud-instance-manager
         name: worker
   selector: {}
 `
