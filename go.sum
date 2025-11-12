@@ -198,6 +198,8 @@ github.com/flant/kube-client v1.4.0 h1:1m/Hyf4KMaYi6rGyfHz0Coh44MJz2nUiitvMmrBwX
 github.com/flant/kube-client v1.4.0/go.mod h1:mql6hsZMgBLAhdj3Emb8TrP5MVdXduFQ2NLjzn6IF0Y=
 github.com/flant/shell-operator v1.11.4 h1:PfLAq11RG4+gmtr5/yxBSEeuFH6btDT87oO+usph4ts=
 github.com/flant/shell-operator v1.11.4/go.mod h1:TFTCgXpp+yrvSUQSQKgotJbRK720fiqwaQdFVU6dAlU=
+github.com/flant/shell-operator v1.11.5-0.20251112121710-bf68871171f2 h1:mYqK6qv+yYpjYpwbfVR5JjCos2BH8mrMX3MAmG54kig=
+github.com/flant/shell-operator v1.11.5-0.20251112121710-bf68871171f2/go.mod h1:TFTCgXpp+yrvSUQSQKgotJbRK720fiqwaQdFVU6dAlU=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fluxcd/flagger v1.36.1 h1:X2PumtNwZz9YSGaOtZLFm2zAKLgHhFkbNv8beg7ifyc=
