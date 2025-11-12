@@ -1,0 +1,174 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+name: Antivirus Scan
+
+on:
+#   schedule:
+#     - cron: '0 21 * * 6' # 21:00 UTC Saturday = 03:00 MSK Sunday
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch or tag to scan'
+        required: true
+        type: string
+        default: main
+
+env:
+  SCAN_RESULTS_DIR: 'scans'
+
+jobs:
+  debug-info:
+    name: Debug Info
+    runs-on: [self-hosted, regular]
+    steps:
+      - name: Debug
+        run: |          
+          echo "Branch or tag: ${{ github.event.inputs.branch }}"  
+
+  drweb-scan:
+    name: Dr.Web Scan
+    runs-on: [self-hosted, antivirus]
+    permissions:
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n%20jobs%20fails%20url N8N_LOOP_NOTIFIER_URL | N8N_LOOP_NOTIFIER_URL ;
+
+      # </template: import_secrets>
+      - name: Run Dr.Web scan
+        id: scan
+        run: |
+          ref=${{ github.event.inputs.branch }}
+          if [[ "${{ github.event.inputs.branch }}" == v* ]]; then
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          else
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          fi
+          SCAN_TIME=$(date '+%s')
+          CONTAINER_NAME=registry_drweb
+          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
+          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}/sys/deckhouse-oss $SCAN_TIME
+
+          mkdir -p scans
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_TIME}/scan_results_clean.md ./scans/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_TIME}/scan_results_threats.md ./scans/scan_results_threats.md
+
+          function fail_notify() {
+            workflow_url=github.com/{{ github.repository }}/actions/runs/${{ github.run_id }}
+            curl -f -L -X POST ${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }} -H "Content-Type: application/json" --data "{\"type\": \"ci_fail\",\"message\":\"🛑 Antivirus: **${CONTAINER_NAME}** failed! 🛑\n[URL](${workflow_url})\"}"
+          }
+          if [ -f scans/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              echo "Details in the file scans/scan_results_threats.md"
+              fail_notify
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            fail_notify
+            exit 1
+          fi
+
+          echo "✅ Dr.Web scan completed"
+          docker exec ${CONTAINER_NAME} rm -f /root/.docker/config.json
+
+
+  kaspersky-scan:
+    name: Kaspersky Scan
+    runs-on: [self-hosted, antivirus]
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n%20jobs%20fails%20url N8N_LOOP_NOTIFIER_URL | N8N_LOOP_NOTIFIER_URL ;
+
+      # </template: import_secrets>
+      - name: Run Kaspersky scan
+        id: scan
+        run: |
+          ref=${{ github.event.inputs.branch }}
+          if [[ "${{ github.event.inputs.branch }}" == v* ]]; then
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          else
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          fi
+          SCAN_TIME=$(date '+%s')
+          CONTAINER_NAME=registry_kaspersky
+          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
+          docker exec ${CONTAINER_NAME} scanner ${{ github.event.inputs.branch }} ${registry_host}/sys/deckhouse-oss $SCAN_TIME
+
+
+          mkdir -p scans
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_TIME}/scan_results_clean.md ./scans/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_TIME}/scan_results_threats.md ./scans/scan_results_threats.md
+
+          function fail_notify() {
+            workflow_url=github.com/{{ github.repository }}/actions/runs/${{ github.run_id }}
+            curl -f -L -X POST ${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }} -H "Content-Type: application/json" --data "{\"type\": \"ci_fail\",\"message\":\"🛑 Antivirus: **${CONTAINER_NAME}** failed! 🛑\n[URL](${workflow_url})\"}"
+          }
+          if [ -f scans/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              echo "Details in the file scans/scan_results_threats.md"
+              fail_notify
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            fail_notify
+            exit 1
+          fi
+
+          echo "✅ Kaspersky scan completed"
+          docker exec ${CONTAINER_NAME} rm -f /root/.docker/config.json
