@@ -48,15 +48,12 @@ type PackageEvent struct {
 type ApplicationReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
-	Log    *slog.Logger
+	Log    *log.Logger
 	events chan PackageEvent
 }
 
-func RegisterController(mgr manager.Manager, logger *slog.Logger) error {
+func RegisterController(mgr manager.Manager, pkgOp *applicationpackage.PackageOperator, logger *log.Logger) error {
 	events := make(chan PackageEvent, 1024)
-
-	pkgOpLogger := log.NewLogger().Named("package-operator")
-	pkgOp := applicationpackage.NewPackageOperator(pkgOpLogger)
 
 	r := &ApplicationReconciler{
 		Client: mgr.GetClient(),
@@ -65,10 +62,9 @@ func RegisterController(mgr manager.Manager, logger *slog.Logger) error {
 		events: events,
 	}
 
-	workerLogger := log.NewLogger().Named("packagestatus")
 	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		w := newPackageStatusWorker(
-			workerLogger,
+			logger.Named("packagestatus"),
 			r.Client,
 			pkgOp,
 			events,

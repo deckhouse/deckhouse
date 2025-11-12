@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -155,7 +155,7 @@ func setupFakeController(t *testing.T, filename string) (*ApplicationReconciler,
 	ctr := &ApplicationReconciler{
 		Client: kubeClient,
 		Scheme: scheme,
-		Log:    slog.Default().With(slog.String("test", "true")),
+		Log:    log.NewNop(),
 		events: make(chan PackageEvent, 1024),
 	}
 
