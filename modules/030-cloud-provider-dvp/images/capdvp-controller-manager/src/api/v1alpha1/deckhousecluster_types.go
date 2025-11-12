@@ -35,6 +35,11 @@ type DeckhouseClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// initialization provides observations of the Cluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization ClusterInitializationStatus `json:"initialization,omitempty,omitzero"`
+
 	// +optional
 	Ready bool `json:"ready,omitempty"`
 
@@ -47,6 +52,26 @@ type DeckhouseClusterStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+
+// ClusterInitializationStatus provides observations of the Cluster initialization process.
+// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+// +kubebuilder:validation:MinProperties=1
+type ClusterInitializationStatus struct {
+	// infrastructureProvisioned is true when the infrastructure provider reports that Cluster's infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+	// The value of this field is never updated after provisioning is completed.
+	// +optional
+	InfrastructureProvisioned *bool `json:"infrastructureProvisioned,omitempty"`
+
+	// controlPlaneInitialized denotes when the control plane is functional enough to accept requests.
+	// This information is usually used as a signal for starting all the provisioning operations that depends on
+	// a functional API server, but do not require a full HA control plane to exists, like e.g. join worker Machines,
+	// install core addons like CNI, CPI, CSI etc.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+	// The value of this field is never updated after initialization is completed.
+	// +optional
+	ControlPlaneInitialized *bool `json:"controlPlaneInitialized,omitempty"`
+}
 
 // DeckhouseCluster is the Schema for the deckhouseclusters API.
 type DeckhouseCluster struct {
