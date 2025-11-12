@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/uuid"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -90,25 +89,23 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 				return manifests.ClusterUUIDConfigMap(clusterUUID)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				// NOTE: Uuid configmap uses "more careful" update task,
-				// NOTE:  which will create configmap only if it does not exist,
-				// NOTE:  or update configmap only if actual uuid in configmap does not match target uuid.
-				actualManifest, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifest.(*apiv1.ConfigMap).Name, metav1.GetOptions{})
-				if errors.IsAlreadyExists(err) {
-					if actualManifest.Data[manifests.ClusterUUIDCmKey] != manifest.(*apiv1.ConfigMap).Data[manifests.ClusterUUIDCmKey] {
-						// Update manifest only if update needed
-						return err
-					} else {
-						// Do nothing if manifest is actual
-						return nil
-					}
-				}
-
-				_, err = kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
+				// NOTE: Uuid configmap uses "more careful" update task,
+				// NOTE: which will create configmap only if it does not exist,
+				// NOTE: or update configmap only if actual uuid in configmap does not match target uuid.
+				actualManifest, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifest.(*apiv1.ConfigMap).Name, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+
+				if actualManifest.Data[manifests.ClusterUUIDCmKey] == manifest.(*apiv1.ConfigMap).Data[manifests.ClusterUUIDCmKey] {
+					return nil
+				}
+
+				_, err = kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 				return err
 			},
 		},
