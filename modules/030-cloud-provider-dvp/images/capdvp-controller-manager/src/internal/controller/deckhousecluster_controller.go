@@ -101,7 +101,8 @@ func (r *DeckhouseClusterReconciler) reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
-	dvpCluster.Status.Ready = true
+	infraReady := true
+	dvpCluster.Status.Initialization.InfrastructureProvisioned = &infraReady
 	dvpCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: controlPlaneEndpointURL.Hostname(),
 		Port: int32(port),
