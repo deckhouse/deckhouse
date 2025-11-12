@@ -5,51 +5,7 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ## Single-master
 
-### Restoring from a backup
-
-Follow these steps to restore from a backup:
-
-1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
-
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
-
-   ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
-   ```
-
-1. Stop etcd.
-
-   ```shell
-   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-   ```
-
-1. Back up your files.
-
-   ```shell
-   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
-   ```
-
-1. Delete the data directory.
-
-   ```shell
-   rm -rf /var/lib/etcd/member/
-   ```
-
-1. Copy backup file to `~/etc-backup.snapshot`.
-
-1. Restore the etcd database.
-
-   ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
-   ```
-
-1. Start etcd.
-
-   ```shell
-   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-   ```
+see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node
 
 ## Multi-master
 
