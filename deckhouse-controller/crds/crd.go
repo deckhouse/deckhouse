@@ -35,9 +35,9 @@ func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
 
 	fsys := os.DirFS(filepath.Join(projectDir, "deckhouse-controller", "crds"))
 	var result []apiextensionsv1.CustomResourceDefinition
-	return result, fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("fs io error: %w", err)
+			return fmt.Errorf("walk dir: %w", err)
 		}
 
 		if _, ok := map[string]struct{}{
@@ -69,4 +69,8 @@ func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
 		result = append(result, crd)
 		return nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("walk dir: %w", err)
+	}
+	return result, nil
 }

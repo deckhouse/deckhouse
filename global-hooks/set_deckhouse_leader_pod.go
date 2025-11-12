@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -41,7 +42,7 @@ func setLeaderLabelToPod(_ context.Context, input *go_hook.HookInput, dc depende
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	pods, err := client.CoreV1().Pods(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse"})

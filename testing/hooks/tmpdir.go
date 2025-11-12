@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,7 +77,10 @@ func TempFileWithPerms(dir, pattern string, perms int) (*os.File, error) {
 		break
 	}
 
-	return f, err
+	if err != nil {
+		return f, fmt.Errorf("open file: %w", err)
+	}
+	return f, nil
 }
 
 func TempDirWithPerms(dir, prefix string, perms int) (string, error) {
@@ -103,7 +107,7 @@ func TempDirWithPerms(dir, prefix string, perms int) (string, error) {
 		}
 		if os.IsNotExist(err) {
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				return "", err
+				return "", fmt.Errorf("stat: %w", err)
 			}
 		}
 		if err == nil {
@@ -112,5 +116,8 @@ func TempDirWithPerms(dir, prefix string, perms int) (string, error) {
 		break
 	}
 
-	return name, err
+	if err != nil {
+		return name, fmt.Errorf("mkdir: %w", err)
+	}
+	return name, nil
 }

@@ -59,15 +59,18 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 	}
 
 	module := new(v1alpha1.Module)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(backoff, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			r.refreshModuleStatus(module)
 			return r.client.Status().Update(ctx, module)
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleConfig refreshes module config in cluster
@@ -79,7 +82,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -91,7 +94,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 
 			r.refreshModuleConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return err
+				return fmt.Errorf("update: %w", err)
 			}
 
 			// skip firing alert for global module
@@ -109,7 +112,10 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			}
 			return nil
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleStatus refreshes module status by addon-operator

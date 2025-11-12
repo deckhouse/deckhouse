@@ -147,13 +147,13 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		err := json.NewEncoder(buf).Encode(data)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encode: %w", err)
 		}
 
 		var req *http.Request
 		req, err = http.NewRequestWithContext(ctx, http.MethodPost, config.WebhookURL, buf)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new request with context: %w", err)
 		}
 
 		req.Header.Add("Content-Type", "application/json")
@@ -161,7 +161,7 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("do: %w", err)
 		}
 		defer resp.Body.Close()
 

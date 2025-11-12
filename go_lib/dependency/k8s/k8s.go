@@ -17,6 +17,8 @@ limitations under the License.
 package k8s
 
 import (
+	"fmt"
+
 	"github.com/flant/kube-client/fake"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -67,7 +69,7 @@ func NewClient(options ...Option) (Client, error) {
 		config, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("in cluster config: %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

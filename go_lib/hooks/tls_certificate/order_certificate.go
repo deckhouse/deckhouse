@@ -112,12 +112,12 @@ func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cc := ParseSecret(secret)
 
-	return cc, err
+	return cc, nil
 }
 
 func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {

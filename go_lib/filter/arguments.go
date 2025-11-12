@@ -15,6 +15,7 @@
 package filter
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/flant/addon-operator/sdk"
@@ -26,7 +27,7 @@ func GetArgFromUnstructuredPodWithRegexp(obj *unstructured.Unstructured, exp *re
 	var pod v1.Pod
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return GetArgPodWithRegexp(&pod, exp, captureIndex, containerName), nil

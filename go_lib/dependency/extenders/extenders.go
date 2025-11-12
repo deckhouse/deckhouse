@@ -17,6 +17,7 @@ limitations under the License.
 package extenders
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -82,19 +83,19 @@ func (b *ExtendersStack) AddConstraints(module string, critical bool, access *mo
 
 	if len(requirements.Deckhouse) > 0 {
 		if err := b.DeckhouseVersion.AddConstraint(module, requirements.Deckhouse); err != nil {
-			return err
+			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
 	if len(requirements.Kubernetes) > 0 {
 		if err := b.KubernetesVersion.AddConstraint(module, requirements.Kubernetes); err != nil {
-			return err
+			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
 	if len(requirements.ParentModules) > 0 {
 		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
-			return err
+			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
@@ -115,19 +116,19 @@ func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleReleas
 
 	if len(requirements.Deckhouse) > 0 {
 		if err := b.DeckhouseVersion.ValidateRelease(moduleRelease, requirements.Deckhouse); err != nil {
-			return err
+			return fmt.Errorf("validate release: %w", err)
 		}
 	}
 
 	if len(requirements.Kubernetes) > 0 {
 		if err := b.KubernetesVersion.ValidateRelease(moduleRelease, requirements.Kubernetes); err != nil {
-			return err
+			return fmt.Errorf("validate release: %w", err)
 		}
 	}
 
 	if len(requirements.ParentModules) > 0 {
 		if err := b.ModuleDependency.ValidateRelease(moduleName, moduleRelease, moduleReleaseVersion, requirements.ParentModules); err != nil {
-			return err
+			return fmt.Errorf("validate release: %w", err)
 		}
 	}
 

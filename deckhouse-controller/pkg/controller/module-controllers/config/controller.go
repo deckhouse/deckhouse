@@ -99,7 +99,7 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
@@ -116,7 +116,10 @@ func RegisterController(
 				return false
 			},
 		})).
-		Complete(configController)
+		Complete(configController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type reconciler struct {
@@ -154,7 +157,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		r.logger.Error("failed to get module config", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("get: %w", err)
 	}
 
 	// handle delete event
@@ -202,7 +205,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
 			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("patch: %w", err)
 		}
 	}
 
@@ -274,7 +277,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 					err := r.client.Delete(ctx, release)
 					if err != nil && !apierrors.IsNotFound(err) {
 						r.logger.Error("failed to delete pending release", slog.String("pending_release", release.Name), log.Err(err))
-						return ctrl.Result{}, err
+						return ctrl.Result{}, fmt.Errorf("delete: %w", err)
 					}
 				}
 			}

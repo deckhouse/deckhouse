@@ -88,7 +88,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	v, _, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "enabled")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested bool: %w", err)
 	}
 
 	if !v {
@@ -102,7 +102,7 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	var cm v1core.Secret
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cni, ok := cm.Data["cni"]

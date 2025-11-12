@@ -170,7 +170,7 @@ func (c *deckhouseVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhouse
 		// or an enabled module has requirements
 		// prevent deckhouse release from becoming predicted
 		if releaseName == "" || c.enabledModules.Has(releaseName) {
-			return err
+			return fmt.Errorf("validate base version: %w", err)
 		}
 	}
 
@@ -213,7 +213,7 @@ func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhous
 			// or an enabled module has requirements
 			// prevent deckhouse release from becoming predicted
 			if moduleName == "" || c.enabledModules.Has(moduleName) {
-				return err
+				return fmt.Errorf("validate base version: %w", err)
 			}
 		}
 	}
@@ -377,7 +377,7 @@ func (c *moduleRequirementsCheck) GetName() string {
 func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleRelease) error {
 	err := c.exts.CheckModuleReleaseRequirements(mr.GetModuleName(), mr.GetName(), mr.GetVersion(), mr.GetModuleReleaseRequirements())
 	if err != nil {
-		return err
+		return fmt.Errorf("check module release requirements: %w", err)
 	}
 
 	return nil

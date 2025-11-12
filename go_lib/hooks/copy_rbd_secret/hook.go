@@ -19,6 +19,7 @@ package copy_rbd_secret
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -76,7 +77,7 @@ func filterStorageClass(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &sc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var userSecretName string
@@ -94,7 +95,7 @@ func filterSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	var secret v1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &secret, nil

@@ -69,7 +69,7 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 
 	key := client.ObjectKeyFromObject(obj)
 
-	return retry.OnError(options.OnErrorBackoff, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(options.OnErrorBackoff, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(options.RetryOnConflictBackoff, func() error {
 			if err := c.Get(ctx, key, obj); err != nil {
 				return client.IgnoreNotFound(err)
@@ -101,6 +101,10 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 func UpdateStatusWithRetry(ctx context.Context, c client.Client, obj client.Object, f MutateFn, opts ...UpdateOption) error {

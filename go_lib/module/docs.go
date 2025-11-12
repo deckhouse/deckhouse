@@ -32,7 +32,7 @@ func ExtractDocs(img v1.Image) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 
 	go func() {

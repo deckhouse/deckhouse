@@ -38,7 +38,7 @@ func newConverter(pathToConversions string) (*Converter, error) {
 	c := &Converter{conversions: make(map[int]string), latest: 1}
 	conversionsDir, err := os.ReadDir(pathToConversions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read dir: %w", err)
 	}
 	for _, file := range conversionsDir {
 		if file.IsDir() || filepath.Ext(file.Name()) != ".yaml" {
@@ -46,26 +46,29 @@ func newConverter(pathToConversions string) (*Converter, error) {
 		}
 		v, conversion, err := readConversions(path.Join(pathToConversions, file.Name()))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read conversions: %w", err)
 		}
 		if v > c.latest {
 			c.latest = v
 		}
 		c.conversions[v] = conversion
 	}
-	return c, err
+	if err != nil {
+		return nil, fmt.Errorf("read dir: %w", err)
+	}
+	return c, nil
 }
 func readConversions(path string) (int, string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return 0, "", err
+		return 0, "", fmt.Errorf("read file: %w", err)
 	}
 	var parsed struct {
 		Version     int
 		Conversions []string
 	}
 	if err = yaml.Unmarshal(data, &parsed); err != nil {
-		return 0, "", err
+		return 0, "", fmt.Errorf("unmarshal: %w", err)
 	}
 	return parsed.Version, strings.Join(parsed.Conversions, " | "), nil
 }
@@ -122,7 +125,7 @@ func (c *Converter) convert(version int, settings map[string]interface{}) (map[s
 	}
 	query, err := gojq.Parse(conversion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 	v, _ := query.Run(settings).Next()
 	if v == nil {
@@ -154,7 +157,7 @@ func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVers
 	}
 	marshaledConverted, err := json.Marshal(converted)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 
 	expected, err := readSettings(rawExpected)
@@ -163,7 +166,7 @@ func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVers
 	}
 	marshaledExpected, err := json.Marshal(expected)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 	if string(marshaledConverted) != string(marshaledExpected) {
 		return fmt.Errorf("expected: %s got: %s", marshaledExpected, marshaledConverted)
@@ -173,5 +176,8 @@ func TestConvert(rawSettings, rawExpected, pathToConversions string, currentVers
 func readSettings(settings string) (map[string]interface{}, error) {
 	var parsed map[string]interface{}
 	err := yaml.Unmarshal([]byte(settings), &parsed)
-	return parsed, err
+	if err != nil {
+		return parsed, fmt.Errorf("unmarshal: %w", err)
+	}
+	return parsed, nil
 }

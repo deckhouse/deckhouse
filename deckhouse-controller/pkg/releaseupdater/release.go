@@ -18,6 +18,7 @@ package releaseupdater
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
@@ -30,7 +31,11 @@ func (sp StatusPatch) MarshalJSON() ([]byte, error) {
 		"status": v1alpha1.DeckhouseReleaseStatus(sp),
 	}
 
-	return json.Marshal(m)
+	result, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return result, nil
 }
 
 type ByVersion[R v1alpha1.Release] []R

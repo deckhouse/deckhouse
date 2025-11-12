@@ -18,7 +18,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -117,7 +121,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 
 			l.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
@@ -282,5 +286,86 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
+// attempting to download version/tag of the module and creating correct symlink
+func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
+	l.logger.Info("module is absent on filesystem, restore it from source",
+		slog.String("name", moduleName),
+		slog.String("version", moduleVersion),
+		slog.String("source_name", moduleSource.Name),
+	)
+
+	// remove possible symlink doubles
+	if err := deleteModuleSymlinks(l.symlinksDir, moduleName); err != nil {
+		return fmt.Errorf("delete the '%s' module symlinks: %w", moduleName, err)
+	}
+
+	var moduleTag string
+	if mpo {
+		moduleTag = moduleVersion
+		moduleVersion = downloader.DefaultDevVersion
+	}
+
+	// check if module's directory exists on fs
+	info, err := os.Stat(filepath.Join(l.downloadedModulesDir, moduleName, moduleVersion))
+	if err != nil || !info.IsDir() {
+		l.logger.Info("downloading the module from the registry", slog.String("name", moduleName), slog.String("version", moduleVersion))
+		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.logger)
+		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options)
+
+		if mpo {
+			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")
+		} else {
+			_, err = md.DownloadByModuleVersion(ctx, moduleName, moduleVersion)
+		}
+		if err != nil {
+			return fmt.Errorf("download the '%s' module of the '%s' version/tag: %w", moduleName, moduleVersion, err)
+		}
+	}
+
+	moduleRelativePath := filepath.Join("../", moduleName, moduleVersion)
+	symlinkPath := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
+	if err = restoreModuleSymlink(l.downloadedModulesDir, symlinkPath, moduleRelativePath); err != nil {
+		return fmt.Errorf("restore the '%s' module symlink: %w", moduleName, err)
+	}
+	l.logger.Info("module restored", slog.String("name", moduleName), slog.String("version", moduleVersion), slog.String("path", moduleRelativePath))
+
+	return nil
+}
+
+func restoreModuleSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath string) error {
+	// make absolute path for versioned module
+	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
+	// check that module exists on a disk
+	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
+		return fmt.Errorf("get stat of the '%s': %v", moduleRelativePath, err)
+	}
+
+	return os.Symlink(moduleRelativePath, symlinkPath)
+}
+
+// deleteModuleSymlinks checks if there are symlinks for the module with different weight in the symlink folder
+func deleteModuleSymlinks(symlinksDir, moduleName string) error {
+	// delete all module's symlinks in a loop
+	for {
+		anotherModuleSymlink, err := utils.GetModuleSymlink(symlinksDir, moduleName)
+		if err != nil {
+			return fmt.Errorf("check if there are any other symlinks for the '%s' module: %w", moduleName, err)
+		}
+
+		if len(anotherModuleSymlink) > 0 {
+			if err = os.Remove(anotherModuleSymlink); err != nil {
+				return fmt.Errorf("delete the '%s' stale symlink for the '%s' module: %w", anotherModuleSymlink, moduleName, err)
+			}
+			// go for another spin
+			continue
+		}
+
+		// no more symlinks found
+		break
+	}
 	return nil
 }

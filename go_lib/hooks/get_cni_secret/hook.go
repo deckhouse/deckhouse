@@ -33,7 +33,7 @@ func applyCNISecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if _, ok := secret.Data["cni"]; !ok {
@@ -42,7 +42,7 @@ func applyCNISecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	dataYAML, err := yaml.Marshal(secret.Data)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString(dataYAML), nil
