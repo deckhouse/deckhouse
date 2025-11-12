@@ -1,51 +1,52 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-e837687ca73b6d97b720c72228fa886b2d159aae2fc408b7d6125c2bc7a72d2f",
-  "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-05-07T22:06:23.7823+03:00",
-  "version": 1,
+  "@id": "https://openvex.dev/docs/public/vex-7db5232317265ad6eb4f8b31615dae63e4d08830d6cda36e3f2e1326ce66e69d",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2023-45142"
+        "name": "CVE-2025-31133"
       },
-      "timestamp": "2025-05-06T14:17:49.782779+03:00",
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
         }
       ],
       "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма. Компонент kube-proxy не участвует в процессе запуска контейнеров и в формировании их манифестов. Таким образом, уязвимость не эксплуатируема в данном контексте.",
+      "timestamp": "2025-11-12T22:01:21.381505Z"
     },
     {
       "vulnerability": {
-        "name": "CVE-2023-45142"
+        "name": "CVE-2025-52565"
       },
-      "timestamp": "2025-05-07T22:05:46.082802+03:00",
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
         }
       ],
       "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма. Компонент kube-proxy не участвует в процессе запуска контейнеров и в формировании их манифестов. Таким образом, уязвимость не эксплуатируема в данном контексте.",
+      "timestamp": "2025-11-12T22:01:21.402321Z"
     },
     {
       "vulnerability": {
-        "name": "CVE-2023-47108"
+        "name": "CVE-2025-52881"
       },
-      "timestamp": "2025-05-06T14:17:33.774559+03:00",
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.2.0-rc.3"
         }
       ],
       "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма. Компонент kube-proxy не участвует в процессе запуска контейнеров и в формировании их манифестов. Таким образом, уязвимость не эксплуатируема в данном контексте.",
+      "timestamp": "2025-11-12T22:01:21.421905Z"
     }
-  ]
+  ],
+  "timestamp": "2025-11-12T22:01:21Z",
+  "last_updated": "2025-11-12T22:01:21Z"
 }
