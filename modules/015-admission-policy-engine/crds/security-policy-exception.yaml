@@ -23,8 +23,8 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            Describes exceptions to security policies for a cluster.
-            Each `SecurityPolicyException` custom resource provides specific allowances.
+            Describes exceptions to the cluster's security policies.
+            Each SecurityPolicyException resource defines a set of specific allowances.
           properties:
             status:
               type: object
@@ -60,29 +60,29 @@ spec:
               properties:
                 securityContext:
                   type: object
-                  description: Specifies exceptions for securityContext section parameters.
+                  description: Exceptions for parameters in the `securityContext` section.
                   properties:
                     readOnlyRootFilesystem:
                       type: object
-                      description: Allows exceptions for the read-only root filesystem.
+                      description: Exceptions for the `readOnlyRootFilesystem` parameter.
                       required: ["allowedValue"]
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for readOnlyRootFilesystem.
+                          description: Allowed value for `readOnlyRootFilesystem`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
                           additionalProperties: true
                     allowPrivilegeEscalation:
                       type: object
-                      description: Allows exceptions for privilege escalation.
+                      description: Exceptions for the `allowPrivilegeEscalation` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for allowPrivilegeEscalation.
+                          description: Allowed value for `allowPrivilegeEscalation`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -90,21 +90,21 @@ spec:
                       required: ["allowedValue"]
                     capabilities:
                       type: object
-                      description: Allows exceptions for the capabilities parameter.
+                      description: Exceptions for the `capabilities` parameter.
                       properties:
                         allowedValues:
                           type: object
-                          description: Permitted values for adding or dropping capabilities.
+                          description: Allowed values for adding or dropping Linux capabilities.
                           properties:
                             drop:
                               type: array
-                              description: List of capabilities to drop.
+                              description: List of capabilities that are allowed to be dropped from the container.
                               default: ["all"]
                               items:
                                 type: string
                             add:
                               type: array
-                              description: List of capabilities to add.
+                              description: List of capabilities that are allowed to be added to the container.
                               default: []
                               items:
                                 type: string
@@ -115,11 +115,11 @@ spec:
                       required: ["allowedValues"]
                     runAsUser:
                       type: object
-                      description: Allows exceptions for the runAsUser parameter.
+                      description: Exceptions for the `runAsUser` parameter.
                       properties:
                         allowedValues:
                           type: array
-                          description: List of allowed user IDs.
+                          description: List of allowed user IDs (UIDs).
                           items:
                             type: integer
                         metadata:
@@ -129,12 +129,12 @@ spec:
                       required: ["allowedValues"]
                     runAsNonRoot:
                       type: object
-                      description: Allows exceptions for the runAsNonRoot parameter.
+                      description: Exceptions for the `runAsNonRoot` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: true
-                          description: The allowed value for runAsNonRoot.
+                          description: Allowed value for `runAsNonRoot`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -142,7 +142,7 @@ spec:
                       required: ["allowedValue"]
                     seccompProfile:
                       type: object
-                      description: Allows exceptions for the seccompProfile parameter.
+                      description: Exceptions for the `seccompProfile` parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -157,27 +157,31 @@ spec:
                     appArmorProfile:
                       type: object
                       description: |
-                        The list of allowed profile values for appArmorProfile on Pods/containers.
-                        Both formats are supported:
+                        List of allowed AppArmor profile values for pods and containers.
+
+                        Supported formats:
+
                         - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
                           `localhost/*` allows any local profile.
-                        - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
-                          For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+                        - Via `securityContext`: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                          For `Localhost`, specify allowed profiles using the `allowedLocalhostFiles` parameter.
 
                         Profile types:
-                        - `Unconfined` — no restrictions (not recommended for security reasons).
-                        - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
-                        - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
 
-                        Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
+                        - `Unconfined`: No restrictions (not recommended for security reasons).
+                        - `RuntimeDefault`: The default profile provided by the container runtime (such as Docker or CRI-O).
+                        - `Localhost`: A custom profile defined on the host and tailored for the application.
+
+                        Using `*` allows all profiles. It's not necessary to specify both formats as they are automatically mapped to each other.
                       properties:
                         allowedValues:
                           type: array
                           description: |
                             Allowed values:
-                            - runtime/default
-                            - unconfined
-                            - localhost/* (where `*` may be a profile name or a wildcard)
+
+                            - `runtime/default`
+                            - `unconfined`
+                            - `localhost/*` (where `*` may be a profile name or a wildcard)
                           items:
                             type: string
                             pattern: '^(runtime\/default|unconfined|localhost\/.+)$'
@@ -188,7 +192,7 @@ spec:
                       required: ["allowedValues"]
                     seLinuxOptions:
                       type: object
-                      description: Allows exceptions for the seLinuxOptions parameter.
+                      description: Exceptions for the `seLinuxOptions` parameter.
                       properties:
                         allowedValues:
                           type: array
@@ -198,16 +202,16 @@ spec:
                             properties:
                               user:
                                 type: string
-                                description: The SELinux user label.
+                                description: SELinux user label.
                               role:
                                 type: string
-                                description: The SELinux role label.
+                                description: SELinux role label.
                               type:
                                 type: string
-                                description: The SELinux type label.
+                                description: SELinux type label.
                               level:
                                 type: string
-                                description: The SELinux level label.
+                                description: SELinux level label.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -215,12 +219,12 @@ spec:
                       required: ["allowedValues"]
                     privileged:
                       type: object
-                      description: Allows exceptions for the privileged parameter.
+                      description: Exceptions for the `privileged` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for privileged.
+                          description: Allowed value for `privileged`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -228,11 +232,11 @@ spec:
                       required: ["allowedValue"]
                     procMount:
                       type: object
-                      description: Allows exceptions for the procMount parameter.
+                      description: Exceptions for the `procMount` parameter.
                       properties:
                         allowedValues:
                           type: array
-                          description: List of allowed procMount values.
+                          description: List of allowed `procMount` values.
                           items:
                             type: string
                             enum: ["Default", "Unmasked"]
@@ -243,20 +247,20 @@ spec:
                       required: ["allowedValues"]
                     sysctls:
                       type: object
-                      description: Allows exceptions for the sysctls parameter.
+                      description: Exceptions for the `sysctls` parameter.
                       properties:
                         allowedValues:
                           type: array
-                          description: List of allowed sysctl settings.
+                          description: List of allowed `sysctl` settings.
                           items:
                             type: object
                             properties:
                               name:
                                 type: string
-                                description: The name of the sysctl.
+                                description: Name of the `sysctl` parameter.
                               value:
                                 type: string
-                                description: The allowed value for the sysctl.
+                                description: Allowed value for the specified `sysctl` parameter.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -264,7 +268,7 @@ spec:
                       required: ["allowedValues"]
                 network:
                   type: object
-                  description: Specifies the network-related exceptions.
+                  description: Exceptions for network-related parameters.
                   properties:
                     hostPorts:
                       type: array
@@ -274,10 +278,10 @@ spec:
                         properties:
                           port:
                             type: integer
-                            description: The host port to allow.
+                            description: Allowed host port.
                           protocol:
                             type: string
-                            description: The protocol for the host port.
+                            description: Protocol for the host port.
                             enum:
                               - TCP
                               - UDP
@@ -288,12 +292,12 @@ spec:
                       required: ["port", "protocol"]
                     hostNetwork:
                       type: object
-                      description: Allows exceptions for hostNetwork.
+                      description: Exceptions for the `hostNetwork` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for hostNetwork.
+                          description: Allowed value for `hostNetwork`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -301,12 +305,12 @@ spec:
                       required: ["allowedValue"]
                     hostPID:
                       type: object
-                      description: Allows exceptions for hostPID.
+                      description: Exceptions for the `hostPID` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for hostPID.
+                          description: Allowed value for `hostPID`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -314,12 +318,12 @@ spec:
                       required: ["allowedValue"]
                     hostIPC:
                       type: object
-                      description: Allows exceptions for hostIPC.
+                      description: Exceptions for the `hostIPC` parameter.
                       properties:
                         allowedValue:
                           type: boolean
                           default: false
-                          description: The allowed value for hostIPC.
+                          description: Allowed value for `hostIPC`.
                         metadata:
                           type: object
                           description: Metadata related to the exception.
@@ -327,11 +331,11 @@ spec:
                       required: ["allowedValue"]
                 volumes:
                   type: object
-                  description: Specifies the volume-related exceptions.
+                  description: Exceptions for volume-related parameters.
                   properties:
                     types:
                       type: object
-                      description: Allows exceptions for volume types.
+                      description: Exceptions for volume types.
                       properties:
                         allowedValues:
                           type: array
@@ -345,26 +349,26 @@ spec:
                       required: ["allowedValues"]
                     hostPath:
                       type: object
-                      description: Allows exceptions for hostPath volumes.
+                      description: Exceptions for `hostPath` volumes.
                       properties:
                         allowedValues:
                           type: array
-                          description: List of allowed hostPath configurations.
+                          description: List of allowed `hostPath` configurations.
                           items:
                             type: object
                             properties:
                               path:
                                 type: string
-                                description: The allowed hostPath.
+                                description: Allowed `hostPath`.
                               readOnly: 
                                 type: boolean
                                 default: false
-                                description: The read-only value for the hostPath.
+                                description: A `readOnly` value for the `hostPath`.
                               metadata:
                                 type: object
                                 description: Metadata related to the exception.
                                 properties:
                                   description:
                                     type: string
-                                    description: The description of the exception.                                
+                                    description: Description of the exception.                                
                       required: ["allowedValues"]
