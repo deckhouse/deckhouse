@@ -120,7 +120,11 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
 
 			// Try download as legacy option
 			url := createURL(account.Mirror, licenseKey, edition)
-			log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
+			if account.Mirror != "" {
+				log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror))
+			} else {
+				log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
+			}
 			dataDB, err := downloadDB(url, account.SkipTLS)
 			if err != nil {
 				incrementError(err)
@@ -350,7 +354,7 @@ func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition str
 
 func createURL(mirror, licenseKey, dbName string) string {
 	if mirror != "" {
-		return fmt.Sprintf("%s/%s.%s", mirror, dbName, dbExtension)
+		return fmt.Sprintf("%s/%s%s", mirror, dbName, dbExtension)
 	}
 	return fmt.Sprintf(maxmindURL, licenseKey, dbName)
 }
