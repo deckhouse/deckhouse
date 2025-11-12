@@ -20,15 +20,6 @@
           "owner_name", "$1", "cronjob", "(.*)"
         )
 
-    # Pre-filter CronJobs with extended monitoring enabled
-    # Normalizes the label name from 'cronjob' to 'owner_name' for easier joins
-    - record: extended_monitoring:cronjob:enabled
-      expr: |
-        label_replace(
-          extended_monitoring_cronjob_enabled == 1,
-          "owner_name", "$1", "cronjob", "(.*)"
-        )
-
     # Identify Jobs that are from the latest CronJob execution
     # A Job is "latest" if its start_time >= parent CronJob's last_schedule_time
     # This prevents alerting on historical failed jobs that are still in history

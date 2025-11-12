@@ -6,10 +6,14 @@
       # 2. The Job is from the latest CronJob execution (not a historical failure)
       # 3. The CronJob's recent execution hasn't succeeded yet
       # 4. Extended monitoring is enabled for the CronJob
+      #
     expr: |
       extended_monitoring:job:failed_latest_from_pending_cronjob
       * on (namespace, owner_name) group_left()
-      extended_monitoring:cronjob:enabled
+      label_replace(
+        extended_monitoring_cronjob_enabled == 1,
+        "owner_name", "$1", "cronjob", "(.*)"
+      )
     labels:
       severity_level: "5"
     annotations:
