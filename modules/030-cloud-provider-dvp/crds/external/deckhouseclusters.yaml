@@ -6,7 +6,7 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-dvp
     cluster.x-k8s.io/provider: dvp
-    cluster.x-k8s.io/v1beta2: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1    
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.1
   name: deckhouseclusters.infrastructure.cluster.x-k8s.io
@@ -46,17 +46,19 @@ spec:
             properties:
               controlPlaneEndpoint:
                 description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                minProperties: 1
                 properties:
                   host:
-                    description: The hostname on which the API server is serving.
+                    description: host is the hostname on which the API server is serving.
+                    maxLength: 512
+                    minLength: 1
                     type: string
                   port:
-                    description: The port on which the API server is serving.
+                    description: port is the port on which the API server is serving.
                     format: int32
+                    maximum: 65535
+                    minimum: 1
                     type: integer
-                required:
-                - host
-                - port
                 type: object
             type: object
           status:
@@ -66,11 +68,31 @@ spec:
                 type: string
               failureReason:
                 type: string
+              initialization:
+                description: |-
+                  initialization provides observations of the Cluster initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                minProperties: 1
+                properties:
+                  controlPlaneInitialized:
+                    description: |-
+                      controlPlaneInitialized denotes when the control plane is functional enough to accept requests.
+                      This information is usually used as a signal for starting all the provisioning operations that depends on
+                      a functional API server, but do not require a full HA control plane to exists, like e.g. join worker Machines,
+                      install core addons like CNI, CPI, CSI etc.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+                      The value of this field is never updated after initialization is completed.
+                    type: boolean
+                  infrastructureProvisioned:
+                    description: |-
+                      infrastructureProvisioned is true when the infrastructure provider reports that Cluster's infrastructure is fully provisioned.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+                      The value of this field is never updated after provisioning is completed.
+                    type: boolean
+                type: object
               ready:
                 type: boolean
             type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
