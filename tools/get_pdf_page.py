@@ -423,6 +423,8 @@ if __name__ == "__main__":
         "--toc-header-text", "Содержание",
         "--toc-text-size-shrink", "1",
         "--toc-level-indentation", "20",
+        "--xsl-style-sheet", "toc_template.xsl",
+        "--user-style-sheet", "toc_style.css",
         INTERMEDIATE_HTML_FILE,
         "deckhouse-admin-guide.pdf"
     ]

@@ -1,0 +1,85 @@
+/* Стили для оглавления (TOC) в wkhtmltopdf */
+/* Исправляем проблему с перекрытием текста и номера страницы */
+
+/* Основной контейнер */
+div.toc,
+.toc {
+    width: 100%;
+}
+
+/* Убираем стандартные стили списка */
+.toc ul,
+div.toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+.toc li,
+div.toc li {
+    display: block;
+    margin-bottom: 0.2em;
+    width: 100%;
+}
+
+/* Ключевое изменение: используем table layout для div, содержащего текст и номер страницы */
+.toc li > div,
+div.toc li > div {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-bottom: 1px dashed rgb(200,200,200);
+}
+
+/* Текст в ссылке занимает доступное пространство */
+.toc li > div > a,
+div.toc li > div > a {
+    display: table-cell !important;
+    width: auto !important;
+    max-width: none !important;
+    padding-right: 1em !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto;
+    text-decoration: none;
+    color: black;
+    white-space: normal !important;
+    vertical-align: top;
+}
+
+/* Номер страницы всегда справа, фиксированной ширины */
+.toc li > div > span,
+div.toc li > div > span {
+    display: table-cell !important;
+    width: 3em !important;
+    min-width: 3em !important;
+    max-width: 3em !important;
+    text-align: right !important;
+    vertical-align: top !important;
+    white-space: nowrap !important;
+    float: none !important;
+    padding-left: 0.5em !important;
+}
+
+/* Убираем точки (если они добавляются через ::after) */
+.toc a::after,
+div.toc a::after {
+    content: none !important;
+}
+
+/* Для вложенных уровней */
+.toc ul ul {
+    padding-left: 1em;
+    font-size: 80%;
+}
+
+.toc ul ul li > div > a {
+    padding-right: 1em !important;
+}
+
+.toc ul ul li > div > span {
+    width: 3em !important;
+    min-width: 3em !important;
+    max-width: 3em !important;
+}
