@@ -7,17 +7,19 @@
     # - Have been scheduled more recently than their last success
     - record: extended_monitoring:cronjob:recent_schedule_not_successful
       expr: |
-        label_replace(
-          (
-            kube_cronjob_status_last_schedule_time
-            >= on(namespace, cronjob)
+        max by (namespace, owner_name) (
+          label_replace(
             (
-              kube_cronjob_status_last_successful_time
-              or on(namespace, cronjob)
-              (kube_cronjob_status_last_schedule_time * 0)
-            )
-          ),
-          "owner_name", "$1", "cronjob", "(.*)"
+              kube_cronjob_status_last_schedule_time
+              >= on(namespace, cronjob)
+              (
+                kube_cronjob_status_last_successful_time
+                or on(namespace, cronjob)
+                (kube_cronjob_status_last_schedule_time * 0)
+              )
+            ),
+            "owner_name", "$1", "cronjob", "(.*)"
+          )
         )
 
     # Identify Jobs that are from the latest CronJob execution
@@ -28,12 +30,16 @@
         kube_job_status_start_time
         >= on (namespace, job_name) group_left(owner_name)
         (
-          label_replace(
-            kube_cronjob_status_last_schedule_time,
-            "owner_name", "$1", "cronjob", "(.*)"
+          max by (namespace, owner_name) (
+            label_replace(
+              kube_cronjob_status_last_schedule_time,
+              "owner_name", "$1", "cronjob", "(.*)"
+            )
           )
           * on (namespace, owner_name) group_right(job_name)
-          kube_job_owner{owner_kind="CronJob"}
+          max by (namespace, owner_name, job_name) (
+            kube_job_owner{owner_kind="CronJob"}
+          )
         )
 
     # Combine all conditions into a single metric
