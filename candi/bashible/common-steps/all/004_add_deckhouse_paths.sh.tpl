@@ -13,8 +13,10 @@
 # limitations under the License.
 
 
-_chmod_dh_bin_path() {
-chmod +x /etc/bashrc.d/02-deckhouse-path.sh /etc/profile.d/02-deckhouse-path.sh
+_chmod_dh_bin_path() {ё
+for f in /etc/bashrc.d/02-deckhouse-path.sh /etc/profile.d/02-deckhouse-path.sh; do
+  [ -f "$f" ] && chmod +x "$f"
+done
 }
 
 bb-event-on 'bb-sync-file-changed' '_chmod_dh_bin_path'
