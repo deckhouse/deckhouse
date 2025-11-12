@@ -96,8 +96,12 @@ defaults:
       lang: en
       showPrevNextButton: true
       feedback: true
-      # Maximum number of related links to display
-      related_links_max: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has NO defined relative_links
+      extracted_links_only_max: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has defined relative_links
+      extracted_links_max: 2
   - scope:
       path: "pages/admin"
     values:

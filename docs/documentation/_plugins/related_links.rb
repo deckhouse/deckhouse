@@ -60,6 +60,10 @@ module Jekyll
               title = site_data['i18n']['common']['global_parameters'][page_lang]
             end
           end
+        else
+          # Skip links which is neither module nor global references
+          # Maybe in future we will use such links too
+          next
         end
 
         # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
@@ -355,7 +359,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     if existing_links.any?
       begin
         existing_links.each do |link|
-          if link.is_a?(Hash) && link.key?('url') && link.key?('title')
+          if link.is_a?(Hash) && link.key?('url') && !link['url'].to_s.strip.empty?
             # Create a copy of the link to avoid modifying the original
             processed_link = link.dup
 
@@ -412,44 +416,60 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
             valid_existing_links << processed_link
           else
-            puts "Warning: Invalid link structure in related_links for #{page.url}: #{link.inspect}"
+            puts "Warning: Skip link with invalid structure in related_links for #{page.url}: #{link.inspect}"
           end
         end
 
-        if valid_existing_links.length != existing_links.length
-          puts "Warning: Skipping malformed related_links for #{page.url}, using only extracted_links"
-          valid_existing_links = []
-        end
       rescue => e
         puts "Warning: Error processing related_links for #{page.url}: #{e.message}. Using only extracted_links."
         valid_existing_links = []
       end
     end
 
-    # Merge extracted_links with valid existing_links and remove duplicates
-    all_links = valid_existing_links + extracted_links
-    merged_links = all_links.uniq { |link| link['url'] }
+    page.data['related_links'] = valid_existing_links
 
-    # Store both extracted_links and merged related_links
+    # Remove items from extracted_links if there is an item with the same url in related_links
+    valid_existing_links_urls = valid_existing_links.map { |link| link['url'] }
+    extracted_links = extracted_links.reject { |link| valid_existing_links_urls.include?(link['url']) }
+
+    # If there are items with the same module and one has type 'module_doc', keep only the 'module_doc' item
+    extracted_links = extracted_links.group_by { |link| link['module'] }.flat_map do |module_name, links|
+      if module_name && links.any? { |link| link['type'] == 'module_doc' }
+        # Keep only the module_doc item for this module
+        links.select { |link| link['type'] == 'module_doc' }
+      else
+        # Keep all items if no module_doc exists or no module name
+        links
+      end
+    end
+
+    # Limit extracted_links to the first extracted_links_max items if specified
+    if valid_existing_links.size > 0
+      if page.data['extracted_links_max'] && page.data['extracted_links_max'].is_a?(Integer) && page.data['extracted_links_max'] >= 0
+        max_links = page.data['extracted_links_max']
+      else
+        max_links = 2
+      end
+    else
+      if page.data['extracted_links_only_max'] && page.data['extracted_links_only_max'].is_a?(Integer) && page.data['extracted_links_only_max'] >= 0
+        max_links = page.data['extracted_links_only_max']
+      else
+        max_links = 6
+      end
+    end
+    extracted_links = extracted_links.first(max_links)
+
+    # Sort extracted_links: first global_conf/global_crds, then others sorted by module
+    extracted_links = extracted_links.sort_by do |link|
+      if link['type'] == 'global_conf' || link['type'] == 'global_crds'
+        [0, '']  # Global links come first
+      else
+        [1, link['module'] || '']  # Other links sorted by module
+      end
+    end
+
     page.data['extracted_links'] = extracted_links
-    page.data['related_links'] = merged_links
 
-    # Debug output for pages with links
-    # if extracted_links.any? || valid_existing_links.any?
-    #   puts "  #{page.url}: Found #{extracted_links.length} extracted links, #{valid_existing_links.length} valid existing links, #{merged_links.length} total merged links"
-    #   if extracted_links.any?
-    #     puts "    Extracted links:"
-    #     extracted_links.each do |link|
-    #       puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
-    #     end
-    #   end
-    #   if valid_existing_links.any?
-    #     puts "    Existing links (cleaned URLs):"
-    #     valid_existing_links.each do |link|
-    #       puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
-    #     end
-    #   end
-    # end
   end
 
   puts "Finished extracting related links..."
