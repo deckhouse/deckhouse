@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.22.7",
+  "version": "v0.22.9",
   "aliases": null,
   "flags": {
     "help": {
@@ -13884,6 +13884,99 @@
                   "description": "if set, will wait until all the resources are deleted before returning. It will wait for as long as --timeout",
                   "shorthand": "",
                   "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "unittest",
+              "description": "unittest for helm charts",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "hooks-status-progress-period": {
+                  "description": "Hooks status progress period in seconds. Set 0 to stop showing hooks status progress. Defaults to $WERF_HOOKS_STATUS_PROGRESS_PERIOD_SECONDS or status progress period value",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config": {
+                  "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config-base64": {
+                  "description": "Kubernetes config data as base64 string (default $WERF_KUBE_CONFIG_BASE64 or $WERF_KUBECONFIG_BASE64 or $KUBECONFIG_BASE64)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-context": {
+                  "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "namespace scope for this request",
+                  "shorthand": "n",
+                  "global": true
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "status-progress-period": {
+                  "description": "Status progress period in seconds. Set -1 to stop showing status progress. Defaults to $WERF_STATUS_PROGRESS_PERIOD_SECONDS or 5 seconds",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
                 }
               },
               "subcommands": null
@@ -38001,11 +38094,6 @@
             },
             "gost-digest": {
               "description": "Calculate GOST R 34.11-2012 STREEBOG digest for downloaded bundle",
-              "shorthand": "",
-              "global": false
-            },
-            "ignore-suspended-channels": {
-              "description": "Ignore suspended release channels instead of failing.",
               "shorthand": "",
               "global": false
             },
