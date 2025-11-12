@@ -20,6 +20,7 @@ data:
   capiClusterKind: {{ b64enc "ZvirtCluster" | quote }}
   capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
   capiClusterName: {{ b64enc "zvirt" | quote }}
+  capiClusterNamespace: {{ b64enc "d8-cloud-instance-manager" | quote }}
   capiMachineTemplateKind: {{ b64enc "ZvirtMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1" | quote }}
   sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}

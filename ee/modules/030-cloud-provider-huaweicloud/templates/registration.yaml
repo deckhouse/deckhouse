@@ -19,6 +19,7 @@ data:
   capiClusterKind: {{ b64enc "HuaweiCloudCluster" | quote }}
   capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
   capiClusterName: {{ b64enc "huaweicloud" | quote }}
+  capiClusterNamespace: {{ b64enc "d8-cloud-instance-manager" | quote }}
   capiMachineTemplateKind: {{ b64enc "HuaweiCloudMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
   sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
