@@ -102,19 +102,18 @@ When OIDC authentication is configured, additional user information is included 
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
 
-
 ## Feature Gates
 
-Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. Enabling a feature gate for control plane components (`kubelet`, `control-plane-manager`, `kube-scheduler`, and `kube-apiserver`) is possible only if the following requirements are met:
+Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. Enabling the feature gate for control plane components (`kubelet`, `control-plane-manager`, `kube-scheduler`, and `kube-apiserver`) is possible only if the following requirements are met:
 
-1. a feature is in the Alpha stage for the version of the control plane components specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter;
-2. a feature gate is not enabled or disabled by default in Deckhouse.
+1. a feature is in the Alpha or Beta stage for the version of the control plane components specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter;
+2. a feature gate is not used by default in DKP.
 
 Otherwise, a warning will be displayed that the feature gate will not be applied, and the `D8ProblematicFeatureGateInUse` alert will be triggered.
 
 {% alert level="warning" %}
-Control plane components upgrade will not proceed if `ModuleConfig` specifies feature gates that have a `deprecated` status for the version specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
+Control plane components upgrade will not proceed if `ModuleConfig` specifies feature gate that is `deprecated` for the version specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
 {% endalert %}
 
-*Description of feature gates in the Kubernetes [documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).*
+*Description of feature gates in Kubernetes [documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).*
 
