@@ -11,7 +11,7 @@ The provider supports working with only one disk in the virtual machine template
 
 ## Creating a service account
 
-You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available in the provider's [documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
+You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
 1. Create a user named `deckhouse`. The command response will contain its parameters:
 
@@ -56,7 +56,7 @@ Recommended quotas for a new cluster:
 
 ### Configuring security groups
 
-When creating a [cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates a default [security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Kubernetes Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
+When creating [a cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates [a default security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Kubernetes Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
 
 {% alert level="danger" %}
 Do not delete the default rules that allow for traffic to pass in any direction before finishing configuring all the other rules for the security group. Doing so may disrupt the performance of the cluster.
@@ -66,7 +66,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the `prefix` field of [the ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
@@ -77,7 +77,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
    ![The default security group](images/sg-en-default.png)
 
-1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
+1. Create rules as described [in Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
    ![Rules for the security group](images/sg-en-rules.png)
 
@@ -91,7 +91,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 - [Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/)
 - [Synchronizing with Yandex Lockbox secrets](https://cloud.yandex.com/en/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
-- [External Secret Operator](https://external-secrets.io/latest/)
+- [External Secrets Operator](https://external-secrets.io/latest/)
 
 #### Deployment instructions
 
@@ -118,9 +118,9 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
    For advanced customization, check out [access control in Yandex Lockbox](https://cloud.yandex.com/en/docs/lockbox/security).
 
-1. Install the External Secrets Operator using the Helm chart according to [instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
+1. Install the External Secrets Operator using the Helm chart according [to instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
-   Note that you may need to set `nodeSelector`, `tolerations` and other parameters. To do this, use the `./external-secrets/values.yaml` file after unpacking the Helm-chart.
+   Note that you may need to set `nodeSelector`, `tolerations` and other parameters. To do this, use the `./external-secrets/values.yaml` file after unpacking the Helm chart.
 
    Pull and extract the chart:
 
@@ -160,7 +160,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
    Where:
 
-   - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm Chart has been installed.
+   - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm chart has been installed.
    - `key` — the name of the key in the `.data` field of the secret above.
 
 #### Checking that everything works as expected
@@ -209,8 +209,8 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
    Where:
 
-   - `spec.target.name` — the name of the new secret. The External Secret Operator will create this secret in the Deckhouse Kubernetes Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
-   - `spec.data[].secretKey` — the name of the key in the `.data` field of the secret that the External Secret Operator will create.
+   - `spec.target.name` — the name of the new secret. The External Secrets Operator will create this secret in the Deckhouse Kubernetes Platform cluster and populate it with the parameters of the Yandex Lockbox's `lockbox-secret`.
+   - `spec.data[].secretKey` — the name of the key in the `.data` field of the secret that the External Secrets Operator will create.
    - `spec.data[].remoteRef.key` — identifier of the Yandex Lockbox's `lockbox-secret` created earlier, e.g., `e6q28nvfmhu539******`.
    - `spec.data[].remoteRef.property` — the **key** you specified earlier for the Yandex Lockbox's `lockbox-secret`.
 
@@ -228,13 +228,13 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 ### Yandex Managed Service for Prometheus integration
 
-This integration lets you use the [Yandex Managed Service for Prometheus](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/) as an external metrics repository, e.g., for long-term metrics storage.
+This integration lets you use [the Yandex Managed Service for Prometheus](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/) as an external metrics repository, e.g., for long-term metrics storage.
 
 #### Writing metrics
 
 1. [Create a service account](https://cloud.yandex.com/en/docs/iam/operations/sa/create) with the `monitoring.editor` role.
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
-1. Create a `PrometheusRemoteWrite` resource:
+1. Create a PrometheusRemoteWrite resource:
 
    ```shell
    d8 k apply -f - <<< '
@@ -253,15 +253,15 @@ This integration lets you use the [Yandex Managed Service for Prometheus](https:
    - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to the [documentation](../../modules/prometheus/cr.html#prometheusremotewrite).
+   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#prometheusremotewrite).
 
-More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/ingestion/remote-write).
+More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
 #### Reading metrics with Grafana
 
 1. [Create a service account](https://cloud.yandex.com/en/docs/iam/operations/sa/create) with the `monitoring.viewer` role.
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
-1. Create a `GrafanaAdditionalDatasource` resource:
+1. Create a GrafanaAdditionalDatasource resource:
 
    ```shell
    d8 k apply -f - <<< '
@@ -288,6 +288,6 @@ More details about this feature can be found in [Yandex Cloud documentation](htt
    - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to the [documentation](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   You may also specify additional parameters; refer to [the documentation](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
-More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/querying/grafana).
+More details about this feature can be found [in Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/querying/grafana).

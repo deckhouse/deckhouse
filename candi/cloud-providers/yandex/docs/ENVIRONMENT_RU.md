@@ -62,7 +62,7 @@ description: "Настройка Yandex Cloud для работы облачно
 Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
 {% endalert %}
 
-Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста, ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
@@ -91,7 +91,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 - [Yandex Lockbox](https://cloud.yandex.ru/ru/docs/lockbox/)
 - [Синхронизация с секретами Yandex Lockbox](https://cloud.yandex.ru/ru/docs/managed-kubernetes/tutorials/kubernetes-lockbox-secrets)
-- [External Secret Operator](https://external-secrets.io/latest/)
+- [External Secrets Operator](https://external-secrets.io/latest/)
 
 #### Инструкция по развертыванию
 
@@ -116,7 +116,7 @@ description: "Настройка Yandex Cloud для работы облачно
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
    ```
 
-   Для более тонкой настройки ознакомьтесь с [управлением доступом в Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
+   Для более тонкой настройки ознакомьтесь [с управлением доступом в Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
 
 1. Установите External Secrets Operator с помощью Helm-чарта согласно [инструкции](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
@@ -210,8 +210,8 @@ description: "Настройка Yandex Cloud для работы облачно
 
    Где:
 
-   - `spec.target.name` — имя нового секрета. External Secret Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
-   - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secret Operator.
+   - `spec.target.name` — имя нового секрета. External Secrets Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
+   - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secrets Operator.
    - `spec.data[].remoteRef.key` — идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
    - `spec.data[].remoteRef.property` — **ключ**, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.
 
@@ -254,15 +254,15 @@ description: "Настройка Yandex Cloud для работы облачно
    - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
+   Также вы можете указать дополнительные параметры в соответствии [с документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
 
-Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
+Подробнее с данной функциональностью можно ознакомиться [в документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
 #### Чтение метрик через Grafana
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `GrafanaAdditionalDatasource`:
+1. Создайте ресурс GrafanaAdditionalDatasource:
 
    ```shell
    d8 k apply -f - <<< '
@@ -289,6 +289,6 @@ description: "Настройка Yandex Cloud для работы облачно
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+   Также вы можете указать дополнительные параметры в соответствии [с документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
-Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).
+Подробнее с данной функциональностью можно ознакомиться [в документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).

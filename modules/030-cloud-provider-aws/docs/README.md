@@ -12,5 +12,5 @@ The `cloud-provider-aws` module:
   * It creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type.
   * It updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in AWS.
 - Provisions volumes in AWS using the `CSI storage` component.
-- Enables the necessary CNI plugin (using the [simple bridge](/modules/cni-simple-bridge/)).
-- Registers with the [node-manager](/modules/node-manager/) module so that [AWSInstanceClasses](cr.html#awsinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Enables the necessary CNI plugin (using [the simple bridge](/modules/cni-simple-bridge/)).
+- Registers with [the `node-manager`](/modules/node-manager/) module so that [AWSInstanceClasses](cr.html#awsinstanceclass) can be used when creating [the NodeGroup](/modules/node-manager/cr.html#nodegroup).

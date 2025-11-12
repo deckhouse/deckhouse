@@ -13,4 +13,4 @@ description: "Управление облачными ресурсами в Deck
   - Актуализирует метаданные узлов кластера согласно описанным параметрам конфигурации и удаляет из кластера узлы, которых более нет в AWS.
 - Заказывает диски в AWS с помощью компонента `CSI storage`.
 - Включает необходимый CNI (использует [simple bridge](/modules/cni-simple-bridge/)).
-- Регистрируется в модуле [node-manager](/modules/node-manager/), чтобы [AWSInstanceClass'ы](cr.html#awsinstanceclass) можно было использовать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Регистрируется в модуле [`node-manager`](/modules/node-manager/), чтобы [AWSInstanceClass'ы](cr.html#awsinstanceclass) можно было использовать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
