@@ -83,6 +83,15 @@ const (
   spec:
     geoIP2: {}
 `
+
+	controllersWithMirrorOnly = `
+- name: mirror-only
+  spec:
+    geoIP2:
+      maxmindMirror: https://mirror-only.local
+      maxmindEditionIDs:
+        - GeoLite2-City
+`
 )
 
 var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", func() {
@@ -143,6 +152,25 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 
 		service := hec.KubernetesResource("Service", "d8-ingress-nginx", "geoproxy")
 		Expect(service.Exists()).To(BeFalse())
+	})
+
+	It("renders geoproxy when only mirror is configured", func() {
+		hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", controllersWithMirrorOnly)
+
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		statefulSet := hec.KubernetesResource("StatefulSet", "d8-ingress-nginx", "geoproxy")
+		Expect(statefulSet.Exists()).To(BeTrue())
+
+		secret := hec.KubernetesResource("Secret", "d8-ingress-nginx", "geoip-license-editions")
+		Expect(secret.Exists()).To(BeTrue())
+		licenseMap := decodeLicenseMap(secret)
+		Expect(licenseMap).To(HaveKey("mirror:e17d2092"))
+		mirrorEntry := licenseMap["mirror:e17d2092"]
+		Expect(mirrorEntry.Mirror).To(Equal("https://mirror-only.local"))
+		Expect(mirrorEntry.AccountID).To(Equal(0))
+		Expect(mirrorEntry.Editions).To(ConsistOf("GeoLite2-City"))
 	})
 })
 
