@@ -57,3 +57,5 @@ In addition to common GitHub features, here are some other online resources rela
 * [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse;
 * [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
 * [Deckhouse blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse.
+
+Test!
