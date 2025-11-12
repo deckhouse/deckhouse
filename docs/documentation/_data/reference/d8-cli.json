@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.20.7",
+  "version": "v0.22.9",
   "aliases": null,
   "flags": {
     "help": {
@@ -186,16 +186,13 @@
     },
     {
       "name": "data",
-      "description": "Provides volume resources data from kubernetes cluster",
-      "aliases": [
-        "de",
-        "dataexport"
-      ],
+      "description": "Data operations (export/import)",
+      "aliases": null,
       "flags": {},
       "subcommands": [
         {
           "name": "create [flags] data_export_name volume_type/volume_name",
-          "description": "Create dataexport kubernetes resource",
+          "description": "Deprecated: use 'd8 data export create'",
           "aliases": null,
           "flags": {
             "namespace": {
@@ -218,7 +215,7 @@
         },
         {
           "name": "delete [flags] data_export_name",
-          "description": "Delete dataexport kubernetes resource",
+          "description": "Deprecated: use 'd8 data export delete'",
           "aliases": null,
           "flags": {
             "namespace": {
@@ -231,7 +228,7 @@
         },
         {
           "name": "download [flags] [KIND/]data_export_name [path/file.ext]",
-          "description": "Download exported data",
+          "description": "Deprecated: use 'd8 data export download'",
           "aliases": null,
           "flags": {
             "namespace": {
@@ -258,11 +255,198 @@
           "subcommands": null
         },
         {
+          "name": "export",
+          "description": "Export data (DataExport)",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "create [flags] data_export_name volume_type/volume_name",
+              "description": "Create dataexport kubernetes resource",
+              "aliases": null,
+              "flags": {
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "publish": {
+                  "description": "Provide access outside of cluster",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ttl": {
+                  "description": "Time to live",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "delete [flags] data_export_name",
+              "description": "Delete dataexport kubernetes resource",
+              "aliases": null,
+              "flags": {
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "download [flags] [KIND/]data_export_name [path/file.ext]",
+              "description": "Download exported data",
+              "aliases": null,
+              "flags": {
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "output": {
+                  "description": "file to save data (default: same as resource)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "publish": {
+                  "description": "Provide access outside of cluster",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ttl": {
+                  "description": "Time to live for auto-created DataExport",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "list [flags] data_export_name [/path/]",
+              "description": "List DataExported content information",
+              "aliases": [
+                "ls"
+              ],
+              "flags": {
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "publish": {
+                  "description": "Provide access outside of cluster",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ttl": {
+                  "description": "Time to live for auto-created DataExport",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "import",
+          "description": "Import data (DataImport)",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "create [flags] data_import_name",
+              "description": "Create DataImport",
+              "aliases": null,
+              "flags": {
+                "file": {
+                  "description": "PVC manifest file path",
+                  "shorthand": "f",
+                  "global": false
+                },
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "publish": {
+                  "description": "Provide access outside of cluster",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ttl": {
+                  "description": "Time to live",
+                  "shorthand": "",
+                  "global": false
+                },
+                "wffc": {
+                  "description": "Wait for first consumer",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "delete [flags] data_import_name",
+              "description": "Delete dataimport kubernetes resource",
+              "aliases": null,
+              "flags": {
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "upload [flags] data_import_name path/file.ext",
+              "description": "Upload a file to the provided url",
+              "aliases": null,
+              "flags": {
+                "chunks": {
+                  "description": "number of chunks to upload",
+                  "shorthand": "c",
+                  "global": false
+                },
+                "dstPath": {
+                  "description": "destination path of the uploaded file",
+                  "shorthand": "d",
+                  "global": false
+                },
+                "file": {
+                  "description": "file to upload",
+                  "shorthand": "f",
+                  "global": false
+                },
+                "namespace": {
+                  "description": "data volume namespace",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "publish": {
+                  "description": "publish the uploaded file",
+                  "shorthand": "P",
+                  "global": false
+                },
+                "resume": {
+                  "description": "resume upload if process was interrupted",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
           "name": "list [flags] data_export_name [/path/]",
-          "description": "List DataExported content information",
-          "aliases": [
-            "ls"
-          ],
+          "description": "Deprecated: use 'd8 data export list'",
+          "aliases": null,
           "flags": {
             "namespace": {
               "description": "data volume namespace",
@@ -13700,6 +13884,99 @@
                   "description": "if set, will wait until all the resources are deleted before returning. It will wait for as long as --timeout",
                   "shorthand": "",
                   "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "unittest",
+              "description": "unittest for helm charts",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "hooks-status-progress-period": {
+                  "description": "Hooks status progress period in seconds. Set 0 to stop showing hooks status progress. Defaults to $WERF_HOOKS_STATUS_PROGRESS_PERIOD_SECONDS or status progress period value",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config": {
+                  "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config-base64": {
+                  "description": "Kubernetes config data as base64 string (default $WERF_KUBE_CONFIG_BASE64 or $WERF_KUBECONFIG_BASE64 or $KUBECONFIG_BASE64)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-context": {
+                  "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "namespace scope for this request",
+                  "shorthand": "n",
+                  "global": true
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "status-progress-period": {
+                  "description": "Status progress period in seconds. Set -1 to stop showing status progress. Defaults to $WERF_STATUS_PROGRESS_PERIOD_SECONDS or 5 seconds",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
                 }
               },
               "subcommands": null
@@ -37820,11 +38097,6 @@
               "shorthand": "",
               "global": false
             },
-            "ignore-suspended-channels": {
-              "description": "Ignore suspended release channels instead of failing.",
-              "shorthand": "",
-              "global": false
-            },
             "images-bundle-chunk-size": {
               "description": "Split resulting bundle file into chunks of at most N gigabytes",
               "shorthand": "c",
@@ -38152,10 +38424,20 @@
               "shorthand": "",
               "global": true
             },
+            "exclude": {
+              "description": "Exclude specific files from the debug archive. Use comma-separated values",
+              "shorthand": "",
+              "global": false
+            },
             "kubeconfig": {
               "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
               "shorthand": "k",
               "global": true
+            },
+            "list-exclude": {
+              "description": "List all files that can be excluded from the debug archive",
+              "shorthand": "l",
+              "global": false
             }
           },
           "subcommands": null
