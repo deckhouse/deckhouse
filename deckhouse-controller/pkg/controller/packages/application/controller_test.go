@@ -19,20 +19,16 @@ package application
 import (
 	"bytes"
 	"context"
-	"errors"
 	"flag"
-	"net/http"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 
-	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,11 +37,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -66,20 +57,12 @@ type ControllerTestSuite struct {
 	suite.Suite
 
 	kubeClient       client.Client
-	ctr              *reconciler
+	ctr              *ApplicationReconciler
 	testDataFileName string
 }
 
-func (suite *ControllerTestSuite) SetupSuite() {
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
-}
-
 func (suite *ControllerTestSuite) SetupSubTest() {
-	dependency.TestDC.HTTPClient.DoMock.
-		Expect(&http.Request{}).
-		Return(&http.Response{
-			StatusCode: http.StatusOK,
-		}, nil)
+	// Setup for tests if needed
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
@@ -105,21 +88,9 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	}
 }
 
-type reconcilerOption func(*reconciler)
-
-func withDependencyContainer(dc dependency.Container) reconcilerOption {
-	return func(r *reconciler) {
-		r.dc = dc
-	}
-}
-
-func (suite *ControllerTestSuite) setupController(filename string, options ...reconcilerOption) {
+func (suite *ControllerTestSuite) setupController(filename string) {
 	suite.testDataFileName = filename
 	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename)
-
-	for _, opt := range options {
-		opt(suite.ctr)
-	}
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
@@ -171,7 +142,7 @@ func singleDocToManifests(doc []byte) []string {
 	return result
 }
 
-func setupFakeController(t *testing.T, filename string) (*reconciler, client.Client) {
+func setupFakeController(t *testing.T, filename string) (*ApplicationReconciler, client.Client) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 
@@ -181,12 +152,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.Application{}).
 		Build()
 
-	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		pm:     applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop()),
-		dc:     dependency.NewMockedContainer(),
-		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
+	ctr := &ApplicationReconciler{
+		Client: kubeClient,
+		Scheme: scheme,
+		Log:    slog.Default().With(slog.String("test", "true")),
+		events: make(chan PackageEvent, 1024),
 	}
 
 	// Load test data from file
@@ -202,7 +172,9 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				continue
 			}
 
-			var obj metav1.PartialObjectMetadata
+			var obj struct {
+				Kind string `yaml:"kind"`
+			}
 			err := yaml.Unmarshal([]byte(manifest), &obj)
 			require.NoError(t, err)
 
@@ -232,17 +204,6 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 func (suite *ControllerTestSuite) TestReconcile() {
 	ctx := context.Background()
 
-	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: func() (*crv1.Manifest, error) {
-			return &crv1.Manifest{
-				Layers: []crv1.Descriptor{},
-			}, nil
-		},
-		LayersStub: func() ([]crv1.Layer, error) {
-			return []crv1.Layer{&utils.FakeLayer{}}, nil
-		},
-	}, nil)
-
 	suite.Run("resource not found", func() {
 		suite.setupController("resource-not-found.yaml")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
@@ -251,42 +212,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("successful reconcile with golden file", func() {
-		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-			v, _ := getter.Get("global.discovery.kubernetesVersion")
-			if v != requirementValue {
-				return false, errors.New("min k8s version failed")
-			}
+	suite.Run("successful reconcile", func() {
+		suite.setupController("successful-reconcile.yaml")
 
-			return true, nil
-		})
-		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
-
-		dc := dependency.NewMockedContainer()
-
-		suite.setupController("successful-reconcile.yaml", withDependencyContainer(dc))
-
-		app := suite.getApplication("test-app", "foobar")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
-		})
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("version not found", func() {
-		suite.setupController("version-not-found.yaml")
-		app := suite.getApplication("test-app", "foobar")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
-		})
-		require.NoError(suite.T(), err)
-		app = suite.getApplication("test-app", "foobar")
-		require.NotEmpty(suite.T(), app.Status.Conditions)
-		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.Conditions[0].Reason)
-	})
-
-	suite.Run("version is draft", func() {
-		suite.setupController("version-is-draft.yaml")
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
