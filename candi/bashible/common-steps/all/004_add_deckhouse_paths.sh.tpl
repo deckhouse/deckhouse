@@ -27,11 +27,12 @@ EOF
 
 bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
 PROMPT_COMMAND='
-  if [ -z "$__deckhouse-path" ]; then
+  if [ -z "$__deckhouse_path" ]; then
     case ":$PATH:" in
       *:/opt/deckhouse/bin:*) ;;
       *) PATH="/opt/deckhouse/bin:$PATH" ;;
     esac
-    __deckhouse-path=1
+    __deckhouse_path=1
   fi
 '"$PROMPT_COMMAND"
+EOF
