@@ -1015,6 +1015,7 @@ spec:
                         Custom URL address for download GeoIP DB, by default https://download.maxmind.com.
 
                         **Be aware if using Self-Signed TLS certificate set optinons skip-tls-verification to "true" value.**
+                        If this mirror is used to host preloaded archives, the `licenseKey` parameter may be omitted.
                       x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
                     maxmindMirrorSkipTLSVerify:
                       type: boolean
