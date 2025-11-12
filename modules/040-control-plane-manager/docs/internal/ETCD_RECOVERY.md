@@ -6,14 +6,14 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 ### High‑level notes (read first)
 
 - Use the right binary for your etcd version: from etcd v3.6 the restore/defrag utilities moved to `etcdutl`; older guides using `etcdctl snapshot restore` apply to ≤v3.5. ([etcd][6])
-- Deckhouse exposes a concise “Backup and restore” entry point (and CPM config) you can reference before diving into low‑level steps. ([Deckhouse][1])
+- Deckhouse exposes a concise “Backup and restore” entry point (and CPM config) you can reference before diving into low‑level steps. ([Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
 - When in doubt, the upstream etcd “Disaster recovery” page is the canonical source on safe snapshot restore and membership semantics. ([etcd][4])
 
 ## Single-master
 
 ### Restoring from a backup
 
-**Prefer this first:** Deckhouse “Backup and restore” (single control‑plane) — stop the etcd static Pod, wipe the data dir, and restore the snapshot with the matching etcd tool (`etcdutl` for v3.6+, `etcdctl` for ≤v3.5), then bring the manifest back. ([Deckhouse][1])
+**Prefer this first:** Deckhouse “Backup and restore” (single control‑plane) — stop the etcd static Pod, wipe the data dir, and restore the snapshot with the matching etcd tool (`etcdutl` for v3.6+, `etcdctl` for ≤v3.5), then bring the manifest back. ([Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
 
 **If that doesn’t work:** proceed with the detailed steps in this section.
 
@@ -201,7 +201,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-[1]: https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html?utm_source=chatgpt.com "Backup and restore | Deckhouse Kubernetes Platform"
+[1]: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html "Backup and restore | Deckhouse Kubernetes Platform"
 [2]: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html?utm_source=chatgpt.com "Managing control plane: FAQ | Deckhouse Kubernetes Platform"
 [3]: https://etcd.io/docs/v3.6/op-guide/configuration/?utm_source=chatgpt.com "Configuration options"
 [4]: https://etcd.io/docs/v3.5/op-guide/recovery/?utm_source=chatgpt.com "Disaster recovery"
@@ -395,7 +395,7 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
 
 #### Single-master
 
-**Prefer this first:** Deckhouse single‑node restore — stop etcd, delete data dir, restore from snapshot with the correct tool, start etcd. Keep tool/version parity (`etcdutl` for 3.6+). ([Deckhouse][1])
+**Prefer this first:** Deckhouse single‑node restore — stop etcd, delete data dir, restore from snapshot with the correct tool, start etcd. Keep tool/version parity (`etcdutl` for 3.6+). ([Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
 
 **If that doesn’t work:** use your forced re‑creation approach (`--skip-hash-check` only when you accept the risk) as described below.
 
