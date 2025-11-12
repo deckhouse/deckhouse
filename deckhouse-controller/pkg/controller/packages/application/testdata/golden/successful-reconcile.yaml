@@ -3,21 +3,14 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
   creationTimestamp: null
-  finalizers:
-  - application.deckhouse.io/processed
   name: test-app
   namespace: foobar
-  resourceVersion: "3"
+  resourceVersion: "1"
 spec:
   applicationPackageName: test
   repository: deckhouse
   version: v1.0.0
-status:
-  conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: Processed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
