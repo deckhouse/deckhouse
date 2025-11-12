@@ -5,9 +5,8 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ### High‑level notes (read first)
 
-- Use the right binary for your etcd version: from etcd v3.6 the restore/defrag utilities moved to `etcdutl`; older guides using `etcdctl snapshot restore` apply to ≤v3.5. ([etcd][6])
-- Deckhouse exposes a concise “Backup and restore” entry point (and CPM config) you can reference before diving into low‑level steps. ([Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
-- When in doubt, the upstream etcd “Disaster recovery” page is the canonical source on safe snapshot restore and membership semantics. ([etcd][4])
+- Use the right binary for your etcd version: from etcd v3.6 the restore/defrag utilities moved to `etcdutl`; older guides using `etcdctl snapshot restore` apply to ≤v3.5. ([etcd v3.6 announcement](https://etcd.io/blog/2025/announcing-etcd-3.6/))
+- Deckhouse exposes a concise “Backup and restore” entry point (and CPM config) you can reference before diving into low‑level steps. ([Deckhouse backup and restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
 
 ## Single-master
 
@@ -65,9 +64,9 @@ Follow these steps to restore from a backup:
 
 ### Complete data loss or recovery to previous state from a backup
 
-**Prefer this first:** Deckhouse control‑plane‑manager FAQ recipe — temporarily run as a single master, restore etcd from the snapshot on that node, clean up deleted masters, then return to HA. ([Deckhouse][2])
+**Prefer this first:** Deckhouse control‑plane‑manager FAQ recipe — temporarily run as a single master, restore etcd from the snapshot on that node, clean up deleted masters, then return to HA. ([Deckhouse FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html))
 
-**If that doesn’t work:** use your advanced recovery (including `--force-new-cluster`) and relabeling workflow below. (The `--force-new-cluster` flag recreates a one‑member cluster to bootstrap recovery.) ([etcd][3])
+**If that doesn’t work:** use your advanced recovery (including `--force-new-cluster`) and relabeling workflow below. The `--force-new-cluster` flag recreates a one‑member cluster to bootstrap recovery. ([etcd configuration options](https://etcd.io/docs/v3.6/op-guide/configuration/))
 
 If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
 1. Stop etcd.
@@ -201,18 +200,11 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-[1]: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html "Backup and restore | Deckhouse Kubernetes Platform"
-[2]: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html?utm_source=chatgpt.com "Managing control plane: FAQ | Deckhouse Kubernetes Platform"
-[3]: https://etcd.io/docs/v3.6/op-guide/configuration/?utm_source=chatgpt.com "Configuration options"
-[4]: https://etcd.io/docs/v3.5/op-guide/recovery/?utm_source=chatgpt.com "Disaster recovery"
-[5]: https://etcd.io/docs/v3.5/op-guide/maintenance/?utm_source=chatgpt.com "Maintenance"
-[6]: https://etcd.io/blog/2025/announcing-etcd-3.6/?utm_source=chatgpt.com "Announcing etcd v3.6.0"
-
 ### etcd quorum loss
 
-**Prefer this first:** etcd “Disaster recovery” — restore the cluster from a known‑good snapshot (v3.6+: `etcdutl snapshot restore`) and re‑form membership cleanly; use this instead of ad‑hoc edits when possible. ([etcd][4])
+**Prefer this first:** etcd “Disaster recovery” — restore the cluster from a known‑good snapshot (v3.6+: `etcdutl snapshot restore`) and re‑form membership cleanly; use this instead of ad‑hoc edits when possible. ([etcd disaster recovery](https://etcd.io/docs/v3.5/op-guide/recovery/))
 
-**If that doesn’t work:** follow your section’s `--force-new-cluster` bootstrap on the surviving node, then re‑add control‑plane nodes as described below. (Flag semantics documented here.) ([etcd][3])
+**If that doesn’t work:** follow your section’s `--force-new-cluster` bootstrap on the surviving node, then re‑add control‑plane nodes as described below. Flag semantics documented here. ([etcd configuration options](https://etcd.io/docs/v3.6/op-guide/configuration/))
 
 Perform the following steps to restore the quorum in the etcd cluster:
 1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
@@ -301,9 +293,9 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ## "Failed to find database snapshot file (snap: snapshot file doesn't exist)"
 
-**Prefer this first:** etcd maintenance guidance — handle NOSPACE/compaction issues by freeing space, defragmenting, and clearing alarms; many “missing snapshot” panics are preceded by quota exhaustion. ([etcd][5])
+**Prefer this first:** etcd maintenance guidance — handle NOSPACE/compaction issues by freeing space, defragmenting, and clearing alarms; many “missing snapshot” panics are preceded by quota exhaustion. ([etcd maintenance](https://etcd.io/docs/v3.5/op-guide/maintenance/))
 
-**If that doesn’t work:** apply your targeted fix paths below that remove broken `.snap` files or re‑inflate from a snapshot.
+**If that doesn’t work:** apply your targeted fix paths below that remove broken `.snap` files or re‑inflate from a snapshot. ([GitHub issue](https://github.com/etcd-io/etcd/issues/11949))
 
 This error may occur after restarting etcd if etcd has reached the `quota-backend-bytes` limit.
 
@@ -337,7 +329,7 @@ This [issue](https://github.com/etcd-io/etcd/issues/11949) suggests that such an
 
 ### Solving the problem - First method
 
-**Prefer this first:** etcd maintenance flow — defragment and clear `NOSPACE` alarms (on‑line via `etcdctl defrag` for ≤v3.5; note v3.6 moves certain offline ops to `etcdutl`). ([etcd][5])
+**Prefer this first:** etcd maintenance flow — defragment and clear `NOSPACE` alarms (on‑line via `etcdctl defrag` for ≤v3.5; note v3.6 moves certain offline ops to `etcdutl`). ([etcd maintenance](https://etcd.io/docs/v3.5/op-guide/maintenance/))
 
 **If that doesn’t work:** use the deeper steps you listed (remove stale `.snap`, bump `quota-backend-bytes`, restart, then verify).
 
@@ -395,7 +387,7 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
 
 #### Single-master
 
-**Prefer this first:** Deckhouse single‑node restore — stop etcd, delete data dir, restore from snapshot with the correct tool, start etcd. Keep tool/version parity (`etcdutl` for 3.6+). ([Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
+**Prefer this first:** Deckhouse single‑node restore — stop etcd, delete data dir, restore from snapshot with the correct tool, start etcd. Keep tool/version parity (`etcdutl` for 3.6+). ([Deckhouse backup and restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html))
 
 **If that doesn’t work:** use your forced re‑creation approach (`--skip-hash-check` only when you accept the risk) as described below.
 
@@ -467,7 +459,7 @@ Do the following:
 
 ##### If this error affect one node
 
-**Prefer this first:** etcd maintenance + standard rejoin — defragment healthy members, take/verify a snapshot, then fully re‑provision the bad node and let it rejoin from a clean state rather than hand‑editing its data. ([etcd][4])
+**Prefer this first:** etcd maintenance + standard rejoin — defragment healthy members, take/verify a snapshot, then fully re‑provision the bad node and let it rejoin from a clean state rather than hand‑editing its data. ([etcd disaster recovery](https://etcd.io/docs/v3.5/op-guide/recovery/))
 
 **If that doesn’t work:** follow your “clear the node → relabel control‑plane → wait for pods → verify membership” sequence.
 
@@ -519,9 +511,9 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ##### If this error affect > 1 nodes
 
-**Prefer this first:** Deckhouse control‑plane‑manager FAQ “restore whole cluster” — pivot to a single master, restore from the snapshot there, and rebuild the HA control plane. This avoids partial, inconsistent restores across members. ([Deckhouse][2])
+**Prefer this first:** Deckhouse control‑plane‑manager FAQ “restore whole cluster” — pivot to a single master, restore from the snapshot there, and rebuild the HA control plane. This avoids partial, inconsistent restores across members. ([Deckhouse FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html))
 
-**If that doesn’t work:** use your advanced flow: restore from the backup on one chosen node, start with `--force-new-cluster`, increase backend quota if needed, then reintroduce the remaining control‑plane nodes and verify etcd membership. (Flag behavior reference.) ([etcd][3])
+**If that doesn’t work:** use your advanced flow: restore from the backup on one chosen node, start with `--force-new-cluster`, increase backend quota if needed, then reintroduce the remaining control‑plane nodes and verify etcd membership. ([etcd configuration options](https://etcd.io/docs/v3.6/op-guide/configuration/))
 
 1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
