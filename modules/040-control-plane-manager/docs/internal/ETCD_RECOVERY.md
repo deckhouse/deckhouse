@@ -13,6 +13,10 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ### Restoring from a backup
 
+**Prefer this first:** Deckhouse “Backup and restore” (single control‑plane) — stop the etcd static Pod, wipe the data dir, and restore the snapshot with the matching etcd tool (`etcdutl` for v3.6+, `etcdctl` for ≤v3.5), then bring the manifest back. ([Deckhouse][1])
+
+**If that doesn’t work:** proceed with the detailed steps in this section.
+
 Follow these steps to restore from a backup:
 
 1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
@@ -56,10 +60,6 @@ Follow these steps to restore from a backup:
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    ```
-
-**Prefer this first:** Deckhouse “Backup and restore” (single control‑plane) — stop the etcd static Pod, wipe the data dir, and restore the snapshot with the matching etcd tool (`etcdutl` for v3.6+, `etcdctl` for ≤v3.5), then bring the manifest back. ([Deckhouse][1])
-
-**If that doesn’t work:** proceed with the detailed steps in this section.
 
 ## Multi-master
 
