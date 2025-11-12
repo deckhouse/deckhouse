@@ -25,6 +25,7 @@ bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
 
+if [[ $(bb-is-bundle) == "altlinux" ]]; then
 bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
 PROMPT_COMMAND='
   if [ -z "$__deckhouse_path" ]; then
@@ -36,3 +37,4 @@ PROMPT_COMMAND='
   fi
 '"$PROMPT_COMMAND"
 EOF
+fi
