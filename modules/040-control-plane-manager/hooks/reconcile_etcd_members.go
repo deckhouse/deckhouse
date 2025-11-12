@@ -145,13 +145,14 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 	}
 
-	input.Logger.Debug("etcd members to remove", slog.Any("removeList", removeList))
+	input.Logger.Warn("etcd members to remove", slog.Any("removeList", removeList))
 
 	if len(removeList) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
 
 	for _, rm := range removeList {
+		input.Logger.Warn("removing etcd member", slog.Uint64("memberID", rm))
 		_, err = etcdcli.MemberRemove(ctx, rm)
 		if err != nil {
 			return errors.Wrap(err, "remove etcd member failed")
