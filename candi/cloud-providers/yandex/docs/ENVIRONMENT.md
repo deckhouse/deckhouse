@@ -143,8 +143,9 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) with the `sa-creds` secret in it:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -155,7 +156,8 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
          auth:
            authorizedKeySecretRef:
              name: sa-creds
-             key: key'
+             key: key
+   EOF
    ```
 
    Where:
@@ -187,8 +189,9 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -204,7 +207,8 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
      - secretKey: password
        remoteRef:
          key: <SECRET_ID>
-         property: password'
+         property: password
+   EOF
    ```
 
    Where:
@@ -236,8 +240,8 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a PrometheusRemoteWrite resource:
 
-   ```shell
-   d8 k apply -f - <<< '
+   ```yaml
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -245,7 +249,7 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
    spec:
      url: <URL_TO_WRITE_METRICS>
      bearerToken: <API_KEY>
-   '
+   EOF
    ```
 
    Where:
@@ -263,8 +267,9 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a GrafanaAdditionalDatasource resource:
 
-   ```shell
-   d8 k apply -f - <<< '
+   ```yaml
+   d8 k apply -f - <<EOF
+
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:
@@ -280,7 +285,7 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
        httpHeaderName1: Authorization
      secureJsonData:
        httpHeaderValue1: Bearer <API_KEY>
-   '
+   EOF
    ```
 
    Where:

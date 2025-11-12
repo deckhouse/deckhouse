@@ -66,8 +66,9 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -78,7 +79,8 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
          auth:
            authorizedKeySecretRef:
              name: sa-creds
-             key: key'
+             key: key
+   EOF
    ```
 
    Где:
@@ -122,8 +124,9 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -139,7 +142,8 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
      - secretKey: password
        remoteRef:
          key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
-         property: password'
+         property: password
+   EOF
    ```
 
    Где:

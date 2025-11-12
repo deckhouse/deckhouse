@@ -144,8 +144,9 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+   
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -156,7 +157,8 @@ description: "Настройка Yandex Cloud для работы облачно
          auth:
            authorizedKeySecretRef:
              name: sa-creds
-             key: key'
+             key: key
+   EOF
    ```
 
    Где:
@@ -188,8 +190,9 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
-   ```shell
-   d8 k -n external-secrets apply -f - <<< '
+   ```yaml
+   d8 k -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -205,7 +208,8 @@ description: "Настройка Yandex Cloud для работы облачно
      - secretKey: password
        remoteRef:
          key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
-         property: password'
+         property: password
+   EOF
    ```
 
    Где:
@@ -237,8 +241,9 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс `PrometheusRemoteWrite`:
 
-   ```shell
-   d8 k apply -f - <<< '
+   ```yaml
+   d8 k apply -f - <<EOF
+
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -246,7 +251,7 @@ description: "Настройка Yandex Cloud для работы облачно
    spec:
      url: <URL_ЗАПИСИ_МЕТРИК>
      bearerToken: <API_КЛЮЧ>
-   '
+   EOF
    ```
 
    Где:
@@ -264,8 +269,9 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс GrafanaAdditionalDatasource:
 
-   ```shell
-   d8 k apply -f - <<< '
+   ```yaml
+   d8 k apply -f - <<EOF
+
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:
@@ -281,7 +287,7 @@ description: "Настройка Yandex Cloud для работы облачно
        httpHeaderName1: Authorization
      secureJsonData:
        httpHeaderValue1: Bearer <API_КЛЮЧ>
-   '
+   EOF
    ```
 
    Где:

@@ -68,8 +68,9 @@ To set up the integration:
 
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) resource containing the `sa-creds` secret:
 
-   ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   ```yaml
+   kubectl -n external-secrets apply -f - <<EOF
+   
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -81,6 +82,7 @@ To set up the integration:
            authorizedKeySecretRef:
              name: sa-creds
              key: key'
+   EOF
    ```
 
    Where:
@@ -125,7 +127,8 @@ To set up the integration:
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) pointing to the `lockbox-secret` in the `secret-store`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   kubectl -n external-secrets apply -f - <<EOF
+
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -141,7 +144,8 @@ To set up the integration:
      - secretKey: password
        remoteRef:
          key: <SECRET_ID>
-         property: password'
+         property: password
+   EOF
    ```
 
    Where:
