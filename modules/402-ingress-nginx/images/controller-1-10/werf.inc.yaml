@@ -59,6 +59,7 @@ shell:
   - patch -p1 < /patches/018-disable-error-logs.patch
   - patch -p1 < /patches/019-maxmind-alerts.patch
   - patch -p1 < /patches/020-fix-sorting.patch
+  - patch -p1 < /patches/021-geoip-ver-metric.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
