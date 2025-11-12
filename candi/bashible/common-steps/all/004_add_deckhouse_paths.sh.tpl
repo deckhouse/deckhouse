@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-_chmod_dh_bin_path() {ё
+_chmod_dh_bin_path() {
 for f in /etc/bashrc.d/02-deckhouse-path.sh /etc/profile.d/02-deckhouse-path.sh; do
   [ -f "$f" ] && chmod +x "$f"
 done
