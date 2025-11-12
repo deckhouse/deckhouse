@@ -97,10 +97,6 @@ func (w *Watcher) updateMetrics(
 			thresholdMetric(append(labelValues, key)...).
 				Set(thresholdLabel(labels, key, def))
 		}
-	} else {
-		for key := range thresholds {
-			thresholdMetric(append(labelValues, key)...).Set(0)
-		}
 	}
 	met.UpdateLastObserved()
 }

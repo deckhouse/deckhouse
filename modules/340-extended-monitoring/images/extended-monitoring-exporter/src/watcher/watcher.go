@@ -20,6 +20,7 @@ import (
 
 	met "extended-monitoring/metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -54,6 +55,17 @@ func (w *Watcher) StartNodeWatcher(ctx context.Context) {
 }
 
 func (w *Watcher) updateNode(node *v1.Node) {
+	defer met.UpdateIsPopulated()
+
+	enabled := enabledLabel(node.Labels)
+
+	if !enabled {
+		w.metrics.NodeEnabled.DeletePartialMatch(prometheus.Labels{"node": node.Name})
+		w.metrics.NodeThreshold.DeletePartialMatch(prometheus.Labels{"node": node.Name})
+		log.Printf("[NODE UPDATE] %s disabled, metrics cleared", node.Name)
+		return
+	}
+
 	w.updateMetrics(
 		w.metrics.NodeEnabled.WithLabelValues,
 		w.metrics.NodeThreshold.WithLabelValues,
@@ -62,7 +74,6 @@ func (w *Watcher) updateNode(node *v1.Node) {
 		node.Name,
 	)
 	log.Printf("[NODE UPDATE] %s", node.Name)
-	met.UpdateIsPopulated()
 }
 
 func (w *Watcher) deleteNode(node *v1.Node) {
