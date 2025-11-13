@@ -232,9 +232,10 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			Message:            "VM is running and ready",
 			LastTransitionTime: metav1.Now(),
 		})
-		//dvpMachine.Status.Ready = true
+		dvpMachine.Status.Ready = true
 		infraReady := true
 		dvpMachine.Status.Initialization.InfrastructureProvisioned = &infraReady
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		dvpMachine.Status.Addresses = append(dvpMachine.Status.Addresses, []infrastructurev1a1.VMAddress{
 			{Type: clusterv1b2.MachineInternalIP, Address: vm.Status.IPAddress},
 			{Type: clusterv1b2.MachineExternalIP, Address: vm.Status.IPAddress},

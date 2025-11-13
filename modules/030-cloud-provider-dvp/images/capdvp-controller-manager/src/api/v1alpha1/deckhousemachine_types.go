@@ -158,6 +158,8 @@ type MachineInitializationStatus struct {
 	// The value of this field is never updated after provisioning is completed.
 	// +optional
 	BootstrapDataSecretCreated *bool `json:"bootstrapDataSecretCreated,omitempty"`
+
+	Provisioned *bool `json:"provisioned,omitempty"`
 }
 
 // +kubebuilder:object:root=true
