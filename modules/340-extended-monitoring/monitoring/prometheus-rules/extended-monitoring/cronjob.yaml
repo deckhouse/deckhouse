@@ -1,28 +1,18 @@
 - name: cronjob.rules
   rules:
   - alert: CronJobFailed
+      # The alert fires when:
+      # 1. A Job has failed (kube_job_status_failed > 0)
+      # 2. The Job is from the latest CronJob execution (not a historical failure)
+      # 3. The CronJob's recent execution hasn't succeeded yet
+      # 4. Extended monitoring is enabled for the CronJob
+      #
     expr: |
-      (
-        max by (namespace, job_name, owner_kind, owner_name) (
-          (kube_job_status_failed > 0)
-          * on (namespace, job_name) group_right()
-          # compare start time of a Job with the last schedule time of a CronJob
-          (
-            kube_job_status_start_time
-            >= on (namespace, job_name) group_left(owner_name)
-            (
-              max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time, "owner_name", "$1", "cronjob", "(.*)"))
-              * on (namespace, owner_name) group_right()
-              max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
-            )
-          ) ^ 0
-        )
-      )
+      extended_monitoring:job:failed_latest_from_pending_cronjob
       * on (namespace, owner_name) group_left()
-      (
-        max by (namespace, owner_name) (
-          label_replace((extended_monitoring_cronjob_enabled == 1), "owner_name", "$1", "cronjob", "(.*)")
-        ) > 0
+      label_replace(
+        extended_monitoring_cronjob_enabled == 1,
+        "owner_name", "$1", "cronjob", "(.*)"
       )
     labels:
       severity_level: "5"
