@@ -363,7 +363,6 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 				if _, ok := o.packages[name]; ok {
 					o.packages[name].status.Phase = Running
 				}
-
 			}), queue.WithUnique())
 		}
 	}
@@ -381,7 +380,6 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 				if _, ok := o.packages[name]; ok {
 					o.packages[name].status.Phase = Loaded
 				}
-
 			}), queue.WithUnique())
 		}
 	}
