@@ -33,7 +33,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $gcThresholdCount = 3000 }}
 {{- else }}
     {{- $gcThresholdCount = 6000 }}
-{{- end -}}
+{{- end }}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}

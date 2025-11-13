@@ -28,7 +28,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $gcThresholdCount = 3000 }}
 {{- else }}
     {{- $gcThresholdCount = 6000 }}
-{{- end -}}
+{{- end }}
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
