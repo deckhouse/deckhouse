@@ -50,9 +50,6 @@ type DeckhouseClusterStatus struct {
 	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-
 // ClusterInitializationStatus provides observations of the Cluster initialization process.
 // NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
 // +kubebuilder:validation:MinProperties=1
@@ -72,6 +69,9 @@ type ClusterInitializationStatus struct {
 	// +optional
 	ControlPlaneInitialized *bool `json:"controlPlaneInitialized,omitempty"`
 }
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // DeckhouseCluster is the Schema for the deckhouseclusters API.
 type DeckhouseCluster struct {
