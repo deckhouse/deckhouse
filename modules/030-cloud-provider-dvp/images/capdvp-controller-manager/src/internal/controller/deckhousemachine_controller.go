@@ -232,9 +232,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			Message:            "VM is running and ready",
 			LastTransitionTime: metav1.Now(),
 		})
-		dvpMachine.Status.Ready = true
 		infraReady := true
-		dvpMachine.Status.Initialization.InfrastructureProvisioned = &infraReady
 		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		dvpMachine.Status.Addresses = append(dvpMachine.Status.Addresses, []infrastructurev1a1.VMAddress{
 			{Type: clusterv1b2.MachineInternalIP, Address: vm.Status.IPAddress},
@@ -257,7 +255,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
 		//dvpMachine.Status.Ready = false
 		infraReady := false
-		dvpMachine.Status.Initialization.InfrastructureProvisioned = &infraReady
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		conditions.Set(dvpMachine, metav1.Condition{
 			Type:               string(infrastructurev1a1.VMReadyCondition),
 			Status:             metav1.ConditionFalse, // False instead of MarkFalse
@@ -291,7 +289,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
 		//dvpMachine.Status.Ready = false
 		infraReady := false
-		dvpMachine.Status.Initialization.InfrastructureProvisioned = &infraReady
+		dvpMachine.Status.Initialization.Provisioned = &infraReady
 		conditions.Set(dvpMachine, metav1.Condition{
 			Type:               string(infrastructurev1a1.VMReadyCondition),
 			Status:             metav1.ConditionUnknown,

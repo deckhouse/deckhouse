@@ -102,9 +102,7 @@ func (r *DeckhouseClusterReconciler) reconcile(
 	}
 
 	infraReady := true
-	dvpCluster.Status.Initialization.InfrastructureProvisioned = &infraReady
 	dvpCluster.Status.Initialization.Provisioned = &infraReady
-	dvpCluster.Status.Ready = true
 	dvpCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: controlPlaneEndpointURL.Hostname(),
 		Port: int32(port),
