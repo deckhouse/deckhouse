@@ -453,15 +453,16 @@ type normal struct {
 }
 
 type inputData struct {
-	ClusterDomain      string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider      interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	ClusterDomain       string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress   string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider       interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy               map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens     map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy       map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints  []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA        string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles      []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups          []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedFeatureGates map[string]interface{} `json:"allowedFeatureGates,omitempty" yaml:"allowedFeatureGates,omitempty"`
 }

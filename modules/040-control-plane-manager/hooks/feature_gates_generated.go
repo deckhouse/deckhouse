@@ -114,6 +114,8 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		},
 		APIServer: []string{
 			"APIServerIdentity",
+			"JobManagedBy",
+			"PortForwardWebsockets",
 			"StorageVersionAPI",
 			"CustomResourceFieldSelectors",
 			"AuthorizeWithSelectors",
@@ -146,9 +148,13 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"DisableNodeKubeProxyVersion",
 			"KubeletCgroupDriverFromCRI",
 			"LocalStorageCapacityIsolationFSQuotaMonitoring",
+			"ImageVolume",
 		},
 		APIServer: []string{
 			"APIServerIdentity",
+			"ImageVolume",
+			"JobManagedBy",
+			"PortForwardWebsockets",
 			"StorageVersionAPI",
 			"CustomResourceFieldSelectors",
 			"AuthorizeWithSelectors",
@@ -179,9 +185,11 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
+			"ImageVolume",
 		},
 		APIServer: []string{
 			"APIServerIdentity",
+			"ImageVolume",
 			"StorageVersionAPI",
 		},
 		KubeControllerManager: []string{
@@ -198,13 +206,18 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 		Kubelet: []string{
 			"CPUManager",
 			"MemoryManager",
+			"ImageVolume",
+			"KubeletPSI",
 		},
 		APIServer: []string{
 			"APIServerIdentity",
+			"ImageVolume",
+			"DeploymentReplicaSetTerminatingReplicas",
 			"StorageVersionAPI",
 		},
 		KubeControllerManager: []string{
 			"CronJobsScheduledAnnotation",
+			"DeploymentReplicaSetTerminatingReplicas",
 		},
 		KubeScheduler: []string{
 			"SchedulerQueueingHints",
