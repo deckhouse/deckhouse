@@ -44,10 +44,18 @@ ul.nav {
 
   &--sup {
     margin: 0 !important;
-    font-size: 1em;
+    font-size: 1.143em;
     line-height: 1.75;
     text-transform: uppercase;
     @include mixins.color(mixins.$ntrl-400);
+
+    @media screen and (min-width: 550px) {
+      font-size: 1em;
+    }
+
+    @media screen and (min-width: 728px) {
+      font-size: 1.143em;
+    }
   }
 
   &--medium {
