@@ -108,7 +108,6 @@ func (w *Watcher) updateMetrics(
 	} else {
 		enabledVec.DeletePartialMatch(labels)
 	}
-
 	met.UpdateLastObserved()
 }
 
