@@ -1,7 +1,7 @@
 ---
-title: "Руководство администратора Deckhouse Stronghold: механизм секретов PKI"
+title: "Руководство администратора модуля stronghold: механизм секретов PKI"
 LinkTitle: "Руководство администратора: Механизм секретов PKI"
-description: "Руководство администратора: Механизм секретов PKI в Deckhouse Stronghold."
+description: "Руководство администратора: Механизм секретов PKI в модуле stronghold."
 ---
 
 ## Механизм секретов PKI (Публичной инфраструктуры ключей / Public Key Infrastructure)

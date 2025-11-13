@@ -1,5 +1,5 @@
 ---
-title: "The stronghold module: использование"
+title: "Модуль stronghold: использование"
 description: Использование модуля stronghold.
 ---
 

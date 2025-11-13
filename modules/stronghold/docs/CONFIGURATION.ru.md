@@ -1,3 +1,3 @@
 ---
-title: "The stronghold module: настройки"
+title: "Модуль stronghold: настройки"
 ---

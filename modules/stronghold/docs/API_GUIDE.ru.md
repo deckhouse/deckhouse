@@ -1,7 +1,7 @@
 ---
-title: "Руководство администратора Deckhouse Stronghold по API"
+title: "Руководство администратора модуля stronghold по API"
 LinkTitle: "Руководство администратора по API"
-description: "Руководство администратора по работе с API Deckhouse Stronghold."
+description: "Руководство администратора по работе с API модуля stronghold."
 ---
 
 ## Методы аутентификации
