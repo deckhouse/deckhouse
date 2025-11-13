@@ -3,6 +3,15 @@ RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
+{{- $nodesCount := .nodesCount | default 0 | int }}
+{{- $gcThresholdCount := 1000}}
+{{- if lt $nodesCount 100 }}
+    {{- $gcThresholdCount = 1000 }}
+{{- else if lt $nodesCount 300 }}
+    {{- $gcThresholdCount = 3000 }}
+{{- else }}
+    {{- $gcThresholdCount = 6000 }}
+{{- end }}
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
@@ -176,7 +185,7 @@ controllerManager:
     - name: profiling
       value: "false"
     - name: terminated-pod-gc-threshold
-      value: "12500"
+      value: {{ $gcThresholdCount | quote }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
     - name: node-cidr-mask-size

@@ -138,6 +138,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       - master-0
     pkiChecksum: checksum
     rolloutEpoch: 1857
+    nodesCount: 0
+    kubeSchedulerExtenders: []
 `
 
 	const defultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -1010,5 +1012,57 @@ apiserver:
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
 			})
 		})
+	})
+
+	Context("terminated-pod-gc-threshold based on node count", func() {
+		testTerminatedPodGcThreshold := func(nodesCount int, expectedThreshold string) {
+			Context(fmt.Sprintf("with %d nodes", nodesCount), func() {
+				const testValuesTemplate = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  nodesCount: %d
+  kubeSchedulerExtenders: []
+`
+
+				testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
+
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager", testValues)
+					f.HelmRender()
+				})
+
+				It(fmt.Sprintf("should set terminated-pod-gc-threshold to %s", expectedThreshold), func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+					Expect(secret.Exists()).To(BeTrue())
+
+					kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+					Expect(err).ShouldNot(HaveOccurred())
+
+					configYaml := string(kubeadmConfigData)
+
+					// Check for the correct value in YAML
+					Expect(configYaml).To(ContainSubstring("terminated-pod-gc-threshold"))
+					Expect(configYaml).To(ContainSubstring(fmt.Sprintf("\"%s\"", expectedThreshold)))
+				})
+			})
+		}
+
+		// Test cases for different node counts with Kubernetes-1.32
+		testTerminatedPodGcThreshold(0, "1000") // default value
+		testTerminatedPodGcThreshold(50, "1000")
+		testTerminatedPodGcThreshold(99, "1000")
+		testTerminatedPodGcThreshold(100, "3000")
+		testTerminatedPodGcThreshold(150, "3000")
+		testTerminatedPodGcThreshold(299, "3000")
+		testTerminatedPodGcThreshold(300, "6000")
+		testTerminatedPodGcThreshold(500, "6000")
 	})
 })
