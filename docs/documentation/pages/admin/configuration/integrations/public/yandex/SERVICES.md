@@ -81,7 +81,7 @@ To set up the integration:
          auth:
            authorizedKeySecretRef:
              name: sa-creds
-             key: key'
+             key: key
    EOF
    ```
 
