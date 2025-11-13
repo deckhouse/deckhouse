@@ -103,10 +103,17 @@ When OIDC authentication is configured, additional user information is included 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
 
 ## Feature Gates
-Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. Enabling a feature gate for control plane components (`kubelet`, `control-plane-manager`, `kube-scheduler`, and `kube-apiserver`) is only possible if the following requirements are met:
+Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. It is possible to enable the following feature gates:
 
-1. the feature is in the Alpha or Beta stage for the version of the control plane components specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter;
-2. the feature gate is not enabled or disabled by default in DKP.
+1. feature gate 1
+2. feature gate 2
+3. feature gate 3
+4. ...
+
+`ModuleConfig` example:
+```yaml
+
+```
 
 Otherwise, a warning will be displayed that the feature gate will not be applied, and the `D8ProblematicFeatureGateInUse` alert will be triggered.
 

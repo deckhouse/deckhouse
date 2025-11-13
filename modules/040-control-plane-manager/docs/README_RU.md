@@ -104,9 +104,17 @@ description: Deckhouse управляет компонентами control plane
 
 ## Feature Gates
 
-Настройки feature gates задаются через `ModuleConfig` в разделе [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates). Для компонентов control plane (`kubelet`, `control-plane-manager`, `kube-scheduler` и `kube-apiserver`) включить только те Feature Gates, которые одновременно удовлетворяют следующим условиям:
-1. относятся к стадии Alpha или Beta для версии компонентов control plane, заданной с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion);
-2. не используются в DKP по умолчанию.
+Настройки feature gates задаются через `ModuleConfig` в разделе [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates). Можно включить следующие feature gates:
+1. feature gate 1
+2. feature gate 2
+3. feature gate 3
+4. ...
+
+Пример включения через `ModuleConfig`:
+```yaml
+
+```
+
 
 В противном случае будет отображено предупреждение о том, что feature gate не будет применен и сработает алерт `D8ProblematicFeatureGateInUse`.
 
