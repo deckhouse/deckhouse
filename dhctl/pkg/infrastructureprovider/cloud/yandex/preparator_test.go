@@ -78,7 +78,7 @@ func TestValidateNodeGroupsSpec(t *testing.T) {
 }
 
 func TestWithNATInstanceLayoutSpec(t *testing.T) {
-	assertWithNATInstance := func(t *testing.T, settings string, hasError bool, nodeGroups json.RawMessage) {
+	getMetaConfig := func(t *testing.T, settings string, nodeGroups json.RawMessage) *config.MetaConfig {
 		cfg := &config.MetaConfig{}
 
 		cfg.ClusterPrefix = "valid-prefix"
@@ -86,6 +86,11 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		fillTestProviderClusterConfig(cfg, master, nodeGroups)
 		fillTestWithNatInstanceLayout(t, cfg, settings)
 
+		return cfg
+	}
+
+	assertWithNATInstance := func(t *testing.T, settings string, hasError bool, nodeGroups json.RawMessage) {
+		cfg := getMetaConfig(t, settings, nodeGroups)
 		assertValidation(t, true, cfg, hasError)
 	}
 
@@ -105,6 +110,28 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 	assertWithNATInstance(t,
 		`{"internalSubnetCIDR": "127.0.0.1/24"}`,
 		false,
+		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
+	)
+
+	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
+		cfg := getMetaConfig(t, settings, nodeGroups)
+		preparator := NewMetaConfigPreparator(true)
+		require.False(t, preparator.validateWithNATLayout)
+
+		err := preparator.Validate(context.TODO(), cfg)
+		require.NoError(t, err)
+	}
+
+	// skip with-nat layout validation
+	// no settings
+	assertSkipValidationWithNATInstance(t, "", nil)
+	// empty settings
+	assertSkipValidationWithNATInstance(t, `{}`, nil)
+	// no required values
+	assertSkipValidationWithNATInstance(t, `{"exporterAPIKey": "not security key"}`, nil)
+	// all in
+	assertSkipValidationWithNATInstance(t,
+		`{"internalSubnetCIDR": "127.0.0.1/24"}`,
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
 }
@@ -187,7 +214,9 @@ func fillTestWithNatInstanceLayout(t *testing.T, cfg *config.MetaConfig, setting
 }
 
 func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig, hasError bool) {
-	preparator := NewMetaConfigPreparator(validatePrefix)
+	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout()
+
+	require.True(t, preparator.validateWithNATLayout)
 
 	err := preparator.Validate(context.TODO(), cfg)
 	if hasError {
