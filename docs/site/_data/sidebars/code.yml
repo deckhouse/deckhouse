@@ -36,7 +36,7 @@ entries:
           ru: События аудита безопасности
         url: /code/documentation/admin/audit-events.html
       - title:
-          en: Security Credentials
+          en: Security сredentials
           ru: Ключи доступа
         url: /code/documentation/admin/security-credentials.html
   - title:
