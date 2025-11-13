@@ -377,7 +377,7 @@ type bashibleContext struct {
 	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
-	AllowedKubeletFeatureGates map[string]interface{}       `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -423,7 +423,7 @@ type tplContextCommon struct {
 
 	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	AllowedKubeletFeatureGates map[string]interface{} `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -468,5 +468,5 @@ type inputData struct {
 	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
 	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
 	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	AllowedKubeletFeatureGates map[string]interface{} `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
