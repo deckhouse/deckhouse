@@ -120,7 +120,7 @@ func (svc *StatusService) handleEvent(ctx context.Context, event packagestatusse
 	case status.Installed:
 		svc.setConditionTrue(app, v1alpha1.ApplicationConditionInstalled)
 		svc.setConditionFalse(app, v1alpha1.ApplicationConditionReady, "NotReady", "Package is installed but not ready")
-	case status.Installed:
+	default:
 		svc.setConditionFalse(app, v1alpha1.ApplicationConditionInstalled, "NotInstalled", "Package is not installed")
 	}
 
