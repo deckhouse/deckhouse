@@ -147,7 +147,7 @@ func (n *NodeService) NodePublishVolume(
 func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (string, error) {
 	disk, err := n.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while finding disk %v by id, error: %w", diskName, err)
 		klog.Error(msg.Error())
 		return "", msg
 	}
