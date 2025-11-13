@@ -105,92 +105,37 @@ func (svc *StatusService) handleEvent(ctx context.Context, event packagestatusse
 	status, err := svc.pm.GetPackageStatus(ctx, event.PackageName, event.Namespace, event.Version, event.Type)
 	if err != nil {
 		logger.Warn("failed to get package status", log.Err(err))
-		svc.updateCondition(ctx, app, false, "StatusCheckFailed", err.Error())
 		return
 	}
 
 	original := app.DeepCopy()
-
-	switch {
-	case status.Error != "":
-		svc.setConditionFalse(app, v1alpha1.ApplicationConditionInstalled, "PackageError", status.Error)
-	case status.Installed && status.Ready:
-		svc.setConditionTrue(app, v1alpha1.ApplicationConditionInstalled)
-		svc.setConditionTrue(app, v1alpha1.ApplicationConditionReady)
-	case status.Installed:
-		svc.setConditionTrue(app, v1alpha1.ApplicationConditionInstalled)
-		svc.setConditionFalse(app, v1alpha1.ApplicationConditionReady, "NotReady", "Package is installed but not ready")
-	default:
-		svc.setConditionFalse(app, v1alpha1.ApplicationConditionInstalled, "NotInstalled", "Package is not installed")
-	}
-
+	svc.applyConditions(app, status.Conditions)
 	err = svc.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
 	}
 }
 
-func (svc *StatusService) updateCondition(ctx context.Context, app *v1alpha1.Application, status bool, reason, message string) {
-	original := app.DeepCopy()
-	if status {
-		svc.setConditionTrue(app, v1alpha1.ApplicationConditionInstalled)
-	} else {
-		svc.setConditionFalse(app, v1alpha1.ApplicationConditionInstalled, reason, message)
-	}
-	err := svc.client.Status().Patch(ctx, app, client.MergeFrom(original))
-	if err != nil {
-		svc.logger.Warn("failed to patch application status", log.Err(err))
-	}
-}
+func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationStatusCondition) {
+	now := metav1.NewTime(svc.dc.GetClock().Now())
 
-func (svc *StatusService) setConditionTrue(app *v1alpha1.Application, condType string) {
-	time := metav1.NewTime(svc.dc.GetClock().Now())
+	prev := make(map[string]corev1.ConditionStatus, len(app.Status.Conditions))
+	for _, c := range app.Status.Conditions {
+		prev[c.Type] = c.Status
+	}
 
-	for idx, cond := range app.Status.Conditions {
-		if cond.Type == condType {
-			app.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionTrue {
-				app.Status.Conditions[idx].LastTransitionTime = time
-				app.Status.Conditions[idx].Status = corev1.ConditionTrue
-			}
-			app.Status.Conditions[idx].Reason = ""
-			app.Status.Conditions[idx].Message = ""
-			return
+	applied := make([]v1alpha1.ApplicationStatusCondition, 0, len(newConds))
+	for _, c := range newConds {
+		cond := c
+		cond.LastProbeTime = now
+
+		if p, ok := prev[cond.Type]; !ok || p != cond.Status {
+			cond.LastTransitionTime = now
 		}
+		applied = append(applied, cond)
 	}
 
-	app.Status.Conditions = append(app.Status.Conditions, v1alpha1.ApplicationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
-}
-
-func (svc *StatusService) setConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) {
-	time := metav1.NewTime(svc.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.Conditions {
-		if cond.Type == condType {
-			app.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionFalse {
-				app.Status.Conditions[idx].LastTransitionTime = time
-				app.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-			app.Status.Conditions[idx].Reason = reason
-			app.Status.Conditions[idx].Message = message
-			return
-		}
-	}
-
-	app.Status.Conditions = append(app.Status.Conditions, v1alpha1.ApplicationStatusCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
-	})
+	app.Status.Conditions = applied
 }
 
 func RegisterController(

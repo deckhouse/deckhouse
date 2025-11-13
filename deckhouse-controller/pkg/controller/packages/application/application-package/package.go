@@ -36,9 +36,7 @@ type PackageStatusChecker interface {
 }
 
 type PackageStatus struct {
-	Installed bool
-	Ready     bool
-	Error     string
+	Conditions []v1alpha1.ApplicationStatusCondition
 }
 
 type PackageAdder interface {
@@ -113,9 +111,7 @@ func (o *PackageOperator) GetPackageStatus(_ context.Context, packageName, names
 		slog.String("type", packageType))
 
 	return PackageStatus{
-		Installed: false,
-		Ready:     false,
-		Error:     "",
+		Conditions: []v1alpha1.ApplicationStatusCondition{},
 	}, nil
 }
 
