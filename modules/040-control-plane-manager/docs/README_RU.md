@@ -105,10 +105,29 @@ description: Deckhouse управляет компонентами control plane
 ## Feature Gates
 
 Настройки feature gates задаются через `ModuleConfig` в разделе [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates). Можно включить следующие feature gates:
-1. feature gate 1
-2. feature gate 2
-3. feature gate 3
-4. ...
+
+*тут хотим подтянуть список из [файла](https://github.com/deckhouse/deckhouse/blob/b3aa8531bf494f4dfe6ddb26db285ec79df99e69/candi/feature_gates_map.yml#L1-L38), но **не** хотим указывать разделение по компонентам на kubelet, apiserver, kubeControllerManager, kubeScheduler. пример списка ниже*
+
+1.29: 
+- CPUManager
+- MemoryManager
+- APIServerIdentity
+- StorageVersionAPI
+- CronJobsScheduledAnnotation
+- SchedulerQueueingHints
+- ...
+  
+1.30:
+- CPUManager
+- MemoryManager
+- KubeletCgroupDriverFromCRI
+- LocalStorageCapacityIsolationFSQuotaMonitoring
+- APIServerIdentity
+- StorageVersionAPI
+- CustomResourceFieldSelectors
+- AuthorizeWithSelectors
+- CoordinatedLeaderElection
+- ...
 
 Пример включения через `ModuleConfig`:
 ```yaml
