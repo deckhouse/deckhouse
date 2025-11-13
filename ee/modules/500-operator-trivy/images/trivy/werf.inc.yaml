@@ -25,11 +25,11 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/3p/aquasecurity/trivy-db.git /src/trivy-db # Not original trivy-db repo anymore
   - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
-  - cd /src/trivy-patch && git checkout b9f027aa3db136d8391a0b59ee0f0f8b595551a2 # last commit from branch main
+  - cd /src/trivy-patch && git checkout f0361917de903970fa08a03abf82de2a604a5a7e # last commit from branch main. Werf trigger for rebuild
   - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/{{ $trivyVersion }}/*.patch
   - cd /src/trivy && git apply --verbose --whitespace=fix /src/trivy-patch/patches/{{ $trivyVersion }}/*.patch
   - rm -rf /src/trivy/docs /src/trivy/integration
@@ -57,5 +57,6 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go`) | indent 6 }}
   - chown 64535:64535 /trivy
   - chmod 0700 /trivy
+  - ls
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
