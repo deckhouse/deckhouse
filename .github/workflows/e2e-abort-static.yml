@@ -198,6 +198,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -377,10 +379,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -524,6 +526,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -703,10 +707,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -850,6 +854,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1029,10 +1035,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -1176,6 +1182,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1355,10 +1363,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -1502,6 +1510,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1681,10 +1691,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -1828,6 +1838,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2007,10 +2019,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -2154,6 +2166,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2333,10 +2347,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -2480,6 +2494,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2659,10 +2675,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -2806,6 +2822,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2985,10 +3003,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -3132,6 +3150,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3311,10 +3331,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -3458,6 +3478,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3637,10 +3659,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -3784,6 +3806,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3963,10 +3987,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -4110,6 +4134,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4289,10 +4315,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload
@@ -4436,6 +4462,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4615,10 +4643,10 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
           export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
           # for logs upload

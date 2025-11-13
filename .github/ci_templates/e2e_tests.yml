@@ -306,10 +306,10 @@ run: |
   export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if eq $provider "static" }!}
-  export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
   export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-  export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   export CIS_ENABLED=${CIS_ENABLED}
@@ -507,8 +507,12 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
-{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+{!{- else if eq $provider "openstack" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- else if eq $provider "static" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
@@ -901,8 +905,12 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
-{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+{!{- else if eq $provider "openstack" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- else if eq $provider "static" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
