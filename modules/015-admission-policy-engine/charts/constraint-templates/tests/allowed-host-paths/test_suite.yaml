@@ -3,20 +3,42 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-host-paths
 tests:
-  - name: pod-security-standard-baseline
+  - name: pss-baseline
     template: ../../templates/security/allowed-host-paths.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-hostpath-volumes
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-hostpath-volumes.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: disallowed-hostpath-proc
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/disallowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostpath-proc.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-hostpath-proc-ro
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostpath-proc-ro.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-hostpath-etc
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-hostpath-etc.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-multiple-volumes-one-hostpath
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-volumes-one-hostpath.yaml
         assertions:
           - violations: yes
 
@@ -24,28 +46,118 @@ tests:
     template: ../../templates/security/allowed-host-paths.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-hostpath-volumes
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-no-hostpath-volumes.yaml
         assertions:
           - violations: no
-      - name: example-allowed-read-only
+
+      - name: allowed-proc-rw-readwrite
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed_read_only.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-proc-rw-readwrite.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-proc-rw-subpath-readwrite
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-proc-rw-subpath-readwrite.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-proc-ro-readonly
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-proc-ro-readonly.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-proc-rw-readonly
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-proc-rw-readonly.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-proc-ro-readwrite
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-proc-ro-readwrite.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-read-only
+
+      - name: disallowed-proc-not-allowed-prefix
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed_read_only.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-proc-not-allowed-prefix.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-etc-path
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-etc-path.yaml
+        assertions:
+          - violations: yes
+
+  - name: security-policy-with-exception
+    template: ../../templates/security/allowed-host-paths.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: allowed-by-exception-proc-etc-readwrite
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-proc-etc.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-proc-etc-readwrite.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-paths
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-multiple-paths.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-paths.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-path-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-proc-etc.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-path-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-readonly-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-proc-etc.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-readonly-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-by-exception-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-proc-etc.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-multiple-volumes-one-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-proc-etc.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-volumes-one-mismatch.yaml
         assertions:
           - violations: yes
 

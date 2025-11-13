@@ -39,68 +39,104 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.containers[_]
-          has_disallowed_capabilities(container)
-          msg := sprintf("container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                container := input_containers[_]
+                not allowed_by_any(container)
+                msg := sprintf(
+                  "container <%v> has a disallowed capability. Allowed capabilities are %v",
+                  [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")],
+                )
+              }
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.containers[_]
-          missing_drop_capabilities(container)
-          msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
-        }
+              allowed_by_any(container) if {
+                allowed_by_securitypolicyexception(container)
+              }
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.initContainers[_]
-          has_disallowed_capabilities(container)
-          msg := sprintf("init container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
-        }
+              allowed_by_any(container) if {
+                allowed_by_securitypolicy(container)
+              }
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.initContainers[_]
-          missing_drop_capabilities(container)
-          msg := sprintf("init container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
-        }
+              allowed_by_securitypolicyexception(container) if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  allowed_add := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.add[_])}
+                  allowed_drop := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.drop[_])}
+                  capabilities_add := {c | c := lower(container.securityContext.capabilities.add[_])}
+                  capabilities_drop := {c | c := lower(container.securityContext.capabilities.drop[_])}
+                  
+                  count(capabilities_add - allowed_add) == 0
+                  count(capabilities_drop - allowed_drop) == 0
+              }
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.ephemeralContainers[_]
-          has_disallowed_capabilities(container)
-          msg := sprintf("ephemeral container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
-        }
+              allowed_by_securitypolicy(container) if {
+                allowed := {c | c := lower(input.parameters.allowedCapabilities[_])}
+                not allowed.ALL
+                capabilities := {c | c := lower(container.securityContext.capabilities.add[_])}
+                count(capabilities - allowed) == 0
+              }
 
-        violation[{"msg": msg}] {
-          container := input.review.object.spec.ephemeralContainers[_]
-          missing_drop_capabilities(container)
-          msg := sprintf("ephemeral container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
-        }
 
-        has_disallowed_capabilities(container) {
-          allowed := {c | c := lower(input.parameters.allowedCapabilities[_])}
-          not allowed["ALL"]
-          capabilities := {c | c := lower(container.securityContext.capabilities.add[_])}
+              violation contains {"msg": msg, "details": {}} if {
+                  container := input_containers[_]
+                  not drops_required_capabilities_by_any(container)
+                  msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", 
+                  [container.name, input.parameters.requiredDropCapabilities])
+              }
 
-          count(capabilities - allowed) > 0
-        }
+              drops_required_capabilities_by_any(container) if {
+                  drops_required_capabilities_by_securitypolicyexception(container)
+              }
 
-        missing_drop_capabilities(container) {
-          must_drop := {c | c := lower(input.parameters.requiredDropCapabilities[_])}
-          all := {"all"}
-          dropped := {c | c := lower(container.securityContext.capabilities.drop[_])}
+              drops_required_capabilities_by_any(container) if {
+                  drops_required_capabilities_by_securitypolicy(container)
+              }
 
-          count(must_drop - dropped) > 0
-          count(all - dropped) > 0
-        }
+              drops_required_capabilities_by_securitypolicyexception(container) if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  must_drop := {c | c := lower(exception.spec.securityContext.capabilities.allowedValues.drop[_])}
+                  capabilities_drop := {c | c := lower(container.securityContext.capabilities.drop[_])}
 
-        get_default(obj, param, _default) = out {
-          out = obj[param]
-        }
+                  count(must_drop - capabilities_drop) == 0
+              }
 
-        get_default(obj, param, _default) = out {
-          not obj[param]
-          not obj[param] == false
-          out = _default
-        }
+
+              drops_required_capabilities_by_securitypolicy(container) if {
+                  must_drop := {c | c := lower(input.parameters.requiredDropCapabilities[_])}
+                  all := {"all"}
+                  capabilities_drop := {c | c := lower(container.securityContext.capabilities.drop[_])}
+
+                  (count(must_drop - capabilities_drop) == 0) 
+                  (count(all - capabilities_drop) == 0)
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }
+
+              get_default(obj, param, _default) := out if {
+                out = obj[param]
+              }
+
+              get_default(obj, param, _default) := out if {
+                not obj[param]
+                not obj[param] == false
+                out = _default
+              }

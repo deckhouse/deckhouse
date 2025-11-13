@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-hostport-despite-empty-ranges
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-hostport-despite-empty-ranges
+spec:
+  hostNetwork: true
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 9000
+          hostPort: 5000
+          protocol: TCP
+

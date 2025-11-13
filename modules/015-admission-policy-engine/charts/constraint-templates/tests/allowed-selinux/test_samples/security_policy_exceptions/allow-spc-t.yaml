@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-spc-t
+spec:
+  securityContext:
+    seLinuxOptions:
+      allowedValues:
+      - type: spc_t
+

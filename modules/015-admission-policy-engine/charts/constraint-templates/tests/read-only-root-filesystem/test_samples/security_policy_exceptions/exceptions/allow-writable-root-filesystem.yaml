@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-writable-root-filesystem
+spec:
+  securityContext:
+    readOnlyRootFilesystem:
+      allowedValue: false
+

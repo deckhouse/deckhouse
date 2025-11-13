@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-containers-one-out-of-range
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        runAsUser: 5
+    - name: redis
+      image: redis
+      securityContext:
+        runAsUser: 11
+

@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-proc-etc
+spec:
+  volumes:
+    hostPath:
+      allowedValues:
+      - path: /proc/etc
+        readOnly: false
+

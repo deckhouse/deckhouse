@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-default-procmount-pod
+  namespace: testns
+spec:
+  securityContext:
+    procMount: Default
+  containers:
+    - name: nginx
+      image: nginx
+

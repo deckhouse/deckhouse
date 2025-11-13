@@ -122,5 +122,34 @@ webhooks:
 {{- end }}
   timeoutSeconds: 15
   {{- include "validating.webhook.config" . | nindent 2 }}
-  {{- end }}
+{{- end }}
+
+{{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
+  {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: security-policy-exception.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: security.deckhouse.io/enable-security-policy-check
+      operator: Exists
+  {{- if include "trivy.provider.enabled" . }}
+    - key: security.deckhouse.io/trivy-provider
+      operator: DoesNotExist
+  {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
+  rules:
+  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+  {{/* Always validate CONNECT for exec/attach subresources */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+{{- end }}
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" . | nindent 2 }}
+{{- end }}
+{{/* #### end of TODO */}}
+
 {{- end }}

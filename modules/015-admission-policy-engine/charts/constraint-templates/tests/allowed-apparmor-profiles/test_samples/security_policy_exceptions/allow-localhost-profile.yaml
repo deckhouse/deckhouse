@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-localhost-profile
+spec:
+  securityContext:
+    appArmorProfile:
+      allowedValues:
+      - localhost/my-custom-profile
+

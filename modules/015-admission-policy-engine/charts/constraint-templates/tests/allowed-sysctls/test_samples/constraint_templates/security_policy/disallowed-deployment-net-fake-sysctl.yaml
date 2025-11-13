@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disallowed-deployment-net-fake-sysctl
+  namespace: testns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      securityContext:
+        sysctls:
+        - name: net.fake.sysctl
+          value: "1"
+      containers:
+        - name: nginx
+          image: nginx
+
