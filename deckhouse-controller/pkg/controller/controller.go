@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -59,13 +60,10 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
-	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
-	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
-	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
-	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
-	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -196,16 +194,13 @@ func NewDeckhouseController(
 	}
 
 	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
-		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplication{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
-	}
+	// if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+	opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
+	opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
+	opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
+	opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
+	opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	// }
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
 	if err != nil {
@@ -232,7 +227,7 @@ func NewDeckhouseController(
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
 		module := new(v1alpha1.Module)
-		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		if err = retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
 		}); err != nil {
 			return "", err
@@ -326,40 +321,40 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
-	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
-		logger.Info("Package system controllers are enabled")
+	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create package operator: %w", err)
+	}
 
-		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register package repository controller: %w", err)
-		}
+	// package should not run before converge done
+	operator.ConvergeState.SetOnConvergeStart(func() {
+		logger.Debug("start converge")
+		packageOperator.Scheduler().Pause()
+	})
 
-		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register package repository operation controller: %w", err)
-		}
+	operator.ConvergeState.SetOnConvergeFinish(func() {
+		logger.Debug("finish converge")
+		packageOperator.Scheduler().Resume()
+	})
 
-		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("cluster-application-package-version-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
-		}
+	err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register package repository controller: %w", err)
+	}
 
-		err = packageclusterapplication.RegisterController(runtimeManager, logger.Named("cluster-application-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register cluster application controller: %w", err)
-		}
+	err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register package repository operation controller: %w", err)
+	}
 
-		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register application package version controller: %w", err)
-		}
+	err = applicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register application package version controller: %w", err)
+	}
 
-		packageOperator := applicationpackage.NewPackageOperator(logger.Named("package-operator"))
-		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register application controller: %w", err)
-		}
+	err = application.RegisterController(runtimeManager, packageOperator, dc, logger.Named("application-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register application controller: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(

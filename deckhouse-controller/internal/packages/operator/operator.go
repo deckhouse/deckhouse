@@ -17,11 +17,12 @@ package operator
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -30,6 +31,7 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
@@ -41,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -67,10 +70,16 @@ type Operator struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources
 
+	debugServer *debug.Server
+
 	mu       sync.Mutex
 	packages map[string]*Package
 
 	logger *log.Logger
+}
+
+type moduleManager interface {
+	GetGlobal() *modules.GlobalModule
 }
 
 // New creates and initializes a new Operator instance with all subsystems.
@@ -89,7 +98,7 @@ type Operator struct {
 //   - NELM monitor: Tuned QPS for Helm resource monitoring
 //
 // The event handler starts immediately to begin processing events.
-func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Logger) (*Operator, error) {
+func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
 	o.packages = make(map[string]*Package)
@@ -101,7 +110,7 @@ func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Lo
 	o.installer = installer.New(dc, o.logger)
 
 	// Initialize scheduler with enabling/disabling callbacks
-	o.buildScheduler(globalValues)
+	o.buildScheduler(moduleManager)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := o.buildNelmService(); err != nil {
@@ -146,7 +155,34 @@ func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Lo
 		QueueService:      o.queueService,
 	}, o.logger).Start()
 
+	if err := o.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
+		return nil, fmt.Errorf("register debug server: %w", err)
+	}
+
 	return o, nil
+}
+
+func (o *Operator) registerDebugServer(sockerPath string) error {
+	o.debugServer = debug.NewServer(o.logger)
+	if err := o.debugServer.Start(sockerPath); err != nil {
+		return fmt.Errorf("start debug server: %w", err)
+	}
+
+	o.debugServer.RegisterGet("/packages/dump", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(o.Dump())
+	})
+
+	o.debugServer.RegisterGet("/packages/queues/dump", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(o.queueService.Dump())
+	})
+
+	return nil
 }
 
 // QueueService returns the queue service for external access.
@@ -228,6 +264,15 @@ func (o *Operator) buildKubeEventsManager() error {
 	}
 
 	o.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(context.Background(), client, o.logger.Named("kube-events-manager"))
+
+	// Initialize metric storage for the kube events manager
+	// This is required to record metrics during hook initialization and execution
+	metricStorage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithLogger(o.logger.Named("kube-events-metrics")),
+		metricsstorage.WithNewRegistry(),
+	)
+	o.kubeEventsManager.WithMetricStorage(metricStorage)
+
 	return nil
 }
 
@@ -306,9 +351,9 @@ func (o *Operator) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (o *Operator) buildScheduler(globalValues addonutils.Values) {
+func (o *Operator) buildScheduler(moduleManager moduleManager) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := globalValues[deckhouseVersionValue]
+		value, ok := moduleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -322,7 +367,7 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		value, ok := globalValues[kubernetesVersionValue]
+		value, ok := moduleManager.GetGlobal().GetValues(false)[kubernetesVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("kubernetes version not found in global values")
 		}
@@ -337,7 +382,7 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := globalValues[bootstrappedGlobalValue]
+		value, ok := moduleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}

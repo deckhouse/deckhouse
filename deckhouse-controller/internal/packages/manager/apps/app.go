@@ -85,7 +85,7 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 	}
 
 	var err error
-	a.values, err = values.NewStorage(name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
+	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
 	}

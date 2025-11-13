@@ -143,6 +143,16 @@ func (o *Operator) Remove(namespace, instance string) {
 	}))
 }
 
+type dump struct {
+	Packages map[string]packageDump `json:"packages" yaml:"packages"`
+}
+
+type packageDump struct {
+	Status
+	schedule.State
+	addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
+}
+
 // Dump returns a YAML snapshot of all packages and their current state.
 //
 // Includes for each package:
@@ -156,16 +166,8 @@ func (o *Operator) Dump() []byte {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	type status struct {
-		Status
-		schedule.State
-		addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
-	}
-
-	dump := struct {
-		Packages map[string]status `json:"packages" yaml:"packages"`
-	}{
-		Packages: make(map[string]status),
+	d := dump{
+		Packages: make(map[string]packageDump),
 	}
 
 	for name, pkg := range o.packages {
@@ -174,13 +176,13 @@ func (o *Operator) Dump() []byte {
 			continue
 		}
 
-		dump.Packages[name] = status{
+		d.Packages[name] = packageDump{
 			pkg.status,
 			o.scheduler.State(name),
-			app.GetValues(),
+			app.GetValues().GetKeySection(name),
 		}
 	}
 
-	marshalled, _ := yaml.Marshal(dump)
+	marshalled, _ := yaml.Marshal(d)
 	return marshalled
 }

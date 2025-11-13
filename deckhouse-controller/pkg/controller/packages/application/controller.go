@@ -30,8 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -45,23 +46,23 @@ const (
 )
 
 type reconciler struct {
-	client client.Client
-	dc     dependency.Container
-	pm     applicationpackage.PackageManager
-	logger *log.Logger
+	client   client.Client
+	operator *packageoperator.Operator
+	dc       dependency.Container
+	logger   *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
+	operator *packageoperator.Operator,
 	dc dependency.Container,
-	pm applicationpackage.PackageManager,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		dc:     dc,
-		pm:     pm,
-		logger: logger,
+		client:   runtimeManager.GetClient(),
+		operator: operator,
+		dc:       dc,
+		logger:   logger,
 	}
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -160,8 +161,20 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, &apv.Status)
+	repository := new(v1alpha1.PackageRepository)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: app.Spec.Repository}, repository); err != nil {
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.Repository, err)
+	}
+
+	r.operator.Update(repository, packageoperator.Instance{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+		Definition: apps.Definition{
+			Name:    apv.Status.PackageName,
+			Version: apv.Status.Version,
+		},
+		Settings: app.Spec.Settings,
+	})
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
@@ -191,7 +204,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 	logger.Debug("deleting Application")
 
-	r.pm.RemoveApplication(ctx, app)
+	r.operator.Remove(app.Namespace, app.Name)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
