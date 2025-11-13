@@ -43,7 +43,7 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 			logger.SetLevel(log.LevelError)
 			cli := kubeclient.New(kubeclient.WithLogger(logger))
 			if err := cli.Init(); err != nil {
-				return err
+				return fmt.Errorf("init: %w", err)
 			}
 
 			return moduleSwitch(cli, moduleName, true, "enable", logger)
@@ -55,7 +55,7 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 			logger.SetLevel(log.LevelError)
 			cli := kubeclient.New(kubeclient.WithLogger(logger))
 			if err := cli.Init(); err != nil {
-				return err
+				return fmt.Errorf("init: %w", err)
 			}
 
 			return moduleSwitch(cli, moduleName, false, "disable", logger)

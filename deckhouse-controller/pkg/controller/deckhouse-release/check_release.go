@@ -566,7 +566,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	if len(releaseMetadata.Disruptions) > 0 {
 		version, err := semver.NewVersion(releaseMetadata.Version)
 		if err != nil {
-			return err
+			return fmt.Errorf("new version: %w", err)
 		}
 		disruptionsVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
 		disruptions = releaseMetadata.Disruptions[disruptionsVersion]
@@ -609,7 +609,14 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 	}
 
-	return client.IgnoreAlreadyExists(f.k8sClient.Create(ctx, release))
+	err := f.k8sClient.Create(ctx, release)
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return fmt.Errorf("create: %w", err)
+	}
+	return nil
 }
 
 func (f *DeckhouseReleaseFetcher) patchSetSuspendAnnotation(ctx context.Context, release *v1alpha1.DeckhouseRelease, suspend bool) error {
@@ -691,24 +698,24 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 			return nil
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("next: %w", err)
 		}
 
 		switch hdr.Name {
 		case "version.json":
 			_, err = io.Copy(rr.versionReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 		case "changelog.yaml", "changelog.yml":
 			_, err = io.Copy(rr.changelogReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 		case "module.yaml":
 			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 
 		default:
@@ -832,7 +839,11 @@ func parseTime(s string) (time.Time, error) {
 		return t, nil
 	}
 
-	return time.Parse(time.RFC3339, s)
+	t, err = time.Parse(time.RFC3339, s)
+	if err != nil {
+		return t, fmt.Errorf("parse: %w", err)
+	}
+	return t, nil
 }
 
 // FetchReleasesMetadata realize step by step update

@@ -17,6 +17,7 @@ limitations under the License.
 package sandbox_runner
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -57,7 +58,7 @@ func WithFile(path string, contents []byte, envOpts ...EnvOption) SandboxOption 
 	return func(conf sandboxConfig) error {
 		err := os.WriteFile(path, contents, os.FileMode(0644))
 		if err != nil {
-			return err
+			return fmt.Errorf("write file: %w", err)
 		}
 
 		for _, opt := range envOpts {

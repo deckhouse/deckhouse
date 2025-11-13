@@ -168,7 +168,7 @@ func filterResources(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, &resource)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	resource.APIVersion = obj.GetAPIVersion()

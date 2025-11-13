@@ -445,7 +445,7 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
 	module := new(v1alpha1.Module)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
 				if !apierrors.IsNotFound(err) {
@@ -517,6 +517,10 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
@@ -533,10 +537,16 @@ func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawCon
 	if settings.UID == "" {
 		settings.Name = module
 		settings.Labels = map[string]string{"heritage": "deckhouse"}
-		return l.client.Create(ctx, settings)
+		if err := l.client.Create(ctx, settings); err != nil {
+			return fmt.Errorf("create: %w", err)
+		}
+		return nil
 	}
 
-	return l.client.Update(ctx, settings)
+	if err := l.client.Update(ctx, settings); err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+	return nil
 }
 
 // parseModulesDir returns modules definitions from the target dir
@@ -619,12 +629,12 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 func resolveSymlinkToDir(dirPath string, entry os.DirEntry) (string, error) {
 	info, err := entry.Info()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("info: %w", err)
 	}
 
 	targetDirPath, isTargetDir, err := addonutils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("symlink info: %w", err)
 	}
 
 	if isTargetDir {
@@ -660,13 +670,13 @@ func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
 
 	def := new(moduletypes.Definition)
 	if err = yaml.NewDecoder(f).Decode(def); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
 	if def.Name == "" {
@@ -751,7 +761,7 @@ func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettin
 func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	// Parse YAML directly into a temporary struct

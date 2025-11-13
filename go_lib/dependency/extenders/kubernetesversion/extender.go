@@ -95,7 +95,7 @@ func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 			e.logger.Debug("file exists", slog.String("path", path))
 			content, err := os.ReadFile(path)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("read file: %w", err)
 			}
 			if len(content) == 0 {
 				e.logger.Debug("file is empty", slog.String("path", path))
@@ -105,7 +105,7 @@ func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 		} else if os.IsNotExist(err) {
 			time.Sleep(10 * time.Millisecond)
 		} else {
-			return nil, err
+			return nil, fmt.Errorf("stat: %w", err)
 		}
 	}
 }
@@ -131,7 +131,7 @@ func (e *Extender) watchForKubernetesVersion() {
 func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
 		e.logger.Debug("adding installed constraint for the module failed", slog.String("name", name))
-		return err
+		return fmt.Errorf("add constraint: %w", err)
 	}
 	e.logger.Debug("installed constraint for the module is added", slog.String("name", name))
 	return nil

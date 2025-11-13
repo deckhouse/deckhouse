@@ -97,7 +97,7 @@ func applyClusterDomainFromConfigMapFilter(obj *unstructured.Unstructured) (go_h
 	var cm v1core.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	coreFile, ok := cm.Data["Corefile"]
@@ -115,7 +115,11 @@ func applyClusterDomainFromConfigMapFilter(obj *unstructured.Unstructured) (go_h
 }
 
 func applyClusterDomainFromDNSPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return filter.GetArgFromUnstructuredPodWithRegexp(obj, clusterDomainFromPodRegexp, 1, "")
+	result, err := filter.GetArgFromUnstructuredPodWithRegexp(obj, clusterDomainFromPodRegexp, 1, "")
+	if err != nil {
+		return "", fmt.Errorf("get arg from unstructured pod with regexp: %w", err)
+	}
+	return result, nil
 }
 
 // We have a hook for handling clusterConfiguration.

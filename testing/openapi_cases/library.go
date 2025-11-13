@@ -114,7 +114,7 @@ func GetAllOpenAPIDirs() ([]string, error) {
 	for _, possibleDir := range possiblePathToModules {
 		globDirs, err := filepath.Glob(possibleDir)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("glob: %w", err)
 		}
 
 		openAPIDirs = append(openAPIDirs, globDirs...)
@@ -138,11 +138,11 @@ func TestCasesFromFile(filename string) (*TestCases, error) {
 	var testCases TestCases
 	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 	err = yaml.Unmarshal(yamlFile, &testCases)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	testCases.hasFocused = testCases.Positive.HasFocused() || testCases.Negative.HasFocused()
 	return &testCases, nil
@@ -153,7 +153,11 @@ func ValidatePositiveCase(schemaStorage *validation.SchemaStorage, moduleName st
 		return nil
 	}
 	delete(testValues, FocusFieldName)
-	return schemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
+	err := schemaStorage.Validate(schema, moduleName, utils.Values{moduleName: testValues})
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	return nil
 }
 
 func ValidateNegativeCase(validator *validation.SchemaStorage, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {

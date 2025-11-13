@@ -235,7 +235,7 @@ func NewDeckhouseController(
 		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
 		}); err != nil {
-			return "", err
+			return "", fmt.Errorf("on error: %w", err)
 		}
 
 		// set some version for the modules overridden by mpos

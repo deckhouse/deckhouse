@@ -41,12 +41,12 @@ func isAllMasterNodesInitialized(_ context.Context, input *go_hook.HookInput, dc
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		input.Logger.Error(err.Error())
-		return false, err
+		return false, fmt.Errorf("get k8s client: %w", err)
 	}
 	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 	if err != nil {
 		input.Logger.Error(err.Error())
-		return false, err
+		return false, fmt.Errorf("list: %w", err)
 	}
 
 	for _, node := range masterNodes.Items {

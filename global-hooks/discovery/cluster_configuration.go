@@ -41,7 +41,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cc := &ClusterConfigurationYaml{}
@@ -53,7 +53,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 	cc.Content = ccYaml
 
-	return cc, err
+	return cc, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -91,7 +91,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		// we use only ClusterConfiguration here
 		metaConfig, err = config.ParseConfigFromData(ctx, string(configYamlBytes.Content), config.DummyPreparatorProvider())
 		if err != nil {
-			return err
+			return fmt.Errorf("parse config from data: %w", err)
 		}
 
 		kubernetesVersionFromMetaConfig, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
@@ -172,8 +172,11 @@ func rawMessageToString(message json.RawMessage) (string, error) {
 	var result string
 	b, err := message.MarshalJSON()
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("marshal json: %w", err)
 	}
 	err = json.Unmarshal(b, &result)
-	return result, err
+	if err != nil {
+		return result, fmt.Errorf("unmarshal: %w", err)
+	}
+	return result, nil
 }

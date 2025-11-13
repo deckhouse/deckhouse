@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -53,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 	selfSignedCA, err := certificate.GetOrCreateCa(input, caSnapshot, selfSignedSecretName)
 	if err != nil {
-		return err
+		return fmt.Errorf("get or create ca: %w", err)
 	}
 
 	input.Values.Set("global.internal.modules.kubeRBACProxyCA.cert", selfSignedCA.Cert)

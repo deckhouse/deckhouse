@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"regexp"
 
@@ -140,7 +141,7 @@ func applyClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	var cm v1core.Secret
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	clusterConf, ok := cm.Data["cluster-configuration.yaml"]
@@ -152,11 +153,19 @@ func applyClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyPodSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return filter.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
+	result, err := filter.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
+	if err != nil {
+		return nil, fmt.Errorf("get arg from unstructured pod with regexp: %w", err)
+	}
+	return result, nil
 }
 
 func applyServiceSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return filter.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
+	result, err := filter.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
+	if err != nil {
+		return nil, fmt.Errorf("get arg from unstructured pod with regexp: %w", err)
+	}
+	return result, nil
 }
 
 func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string) string {

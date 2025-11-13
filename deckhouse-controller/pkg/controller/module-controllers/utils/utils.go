@@ -163,10 +163,10 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 
 // Update updates object with retryOnConflict to avoid conflict
 func Update[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			if updater(object) {
 				return cli.Update(ctx, object)
@@ -174,14 +174,18 @@ func Update[Object client.Object](ctx context.Context, cli client.Client, object
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // UpdateStatus updates object status with retryOnConflict to avoid conflict
 func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			if updater(object) {
 				return cli.Status().Update(ctx, object)
@@ -189,6 +193,10 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // UpdatePolicy returns policy for the module, if no policy, embeddedPolicy is returned
@@ -228,7 +236,7 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName
 	mpo := new(v1alpha2.ModulePullOverride)
 	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, mpo); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return false, err
+			return false, fmt.Errorf("get: %w", err)
 		}
 		return false, nil
 	}
