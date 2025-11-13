@@ -25,14 +25,14 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
 {{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
-{{- $nodesCount := .nodesCount | default 0 | int -}}
-{{- $gcThresholdCount := 1000 -}}
-{{- if lt $nodesCount 100 -}}
-    {{- $gcThresholdCount = 1000 -}}
-{{- else if lt $nodesCount 300 -}}
-    {{- $gcThresholdCount = 3000 -}}
-{{- else -}}
-    {{- $gcThresholdCount = 6000 -}}
+{{- $nodesCount := .nodesCount | default 0 | int }}
+{{- $gcThresholdCount := 1000 }}
+{{- if lt $nodesCount 100 }}
+    {{- $gcThresholdCount = 1000 }}
+{{- else if lt $nodesCount 300 }}
+    {{- $gcThresholdCount = 3000 }}
+{{- else }}
+    {{- $gcThresholdCount = 6000 }}
 {{- end -}}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration

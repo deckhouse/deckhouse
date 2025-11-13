@@ -32,6 +32,8 @@ versions = {
         ],
         "apiserver": [
             "APIServerIdentity",
+            "JobManagedBy",
+            "PortForwardWebsockets",
             "StorageVersionAPI",
             "CustomResourceFieldSelectors",
             "AuthorizeWithSelectors",
@@ -64,9 +66,13 @@ versions = {
             "DisableNodeKubeProxyVersion",
             "KubeletCgroupDriverFromCRI",
             "LocalStorageCapacityIsolationFSQuotaMonitoring",
+            "ImageVolume",
         ],
         "apiserver": [
             "APIServerIdentity",
+            "ImageVolume",
+            "JobManagedBy",
+            "PortForwardWebsockets",
             "StorageVersionAPI",
             "CustomResourceFieldSelectors",
             "AuthorizeWithSelectors",
@@ -97,9 +103,11 @@ versions = {
         "kubelet": [
             "CPUManager",
             "MemoryManager",
+            "ImageVolume",
         ],
         "apiserver": [
             "APIServerIdentity",
+            "ImageVolume",
             "StorageVersionAPI",
         ],
         "kubeControllerManager": [
@@ -116,13 +124,18 @@ versions = {
         "kubelet": [
             "CPUManager",
             "MemoryManager",
+            "ImageVolume",
+            "KubeletPSI",
         ],
         "apiserver": [
             "APIServerIdentity",
+            "ImageVolume",
+            "DeploymentReplicaSetTerminatingReplicas",
             "StorageVersionAPI",
         ],
         "kubeControllerManager": [
             "CronJobsScheduledAnnotation",
+            "DeploymentReplicaSetTerminatingReplicas",
         ],
         "kubeScheduler": [
             "SchedulerQueueingHints",
