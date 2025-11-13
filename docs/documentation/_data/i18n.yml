@@ -268,6 +268,9 @@ common:
   related_reference_and_documentation_links:
     en: Links to related documentation and API
     ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
   related_links:
     en: Related links
     ru: Связанные ссылки
@@ -278,17 +281,17 @@ common:
     en: Global custom resources
     ru: Глобальные кастомные ресурсы
   module_x_parameters:
-    en: Module `XXXX` parameters
-    ru: Параметры модуля `XXXX`
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
   module_x_crds:
-    en: Module `XXXX` custom resources
-    ru: Кастомные ресурсы модуля `XXXX`
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
   module_x_documentation:
-    en: Module `XXXX` documentation
-    ru: Документация модуля `XXXX`
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
   module_x_cluster_configuration:
-    en: Module `XXXX` provider configuration
-    ru: Настройки провайдера модуля `XXXX`
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
