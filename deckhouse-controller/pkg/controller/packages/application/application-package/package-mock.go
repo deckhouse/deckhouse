@@ -88,9 +88,8 @@ func (m *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, n
 		slog.String("type", packageType))
 
 	return PackageStatus{
-		Installed: false,
-		Ready:     false,
-		Error:     "",
+		Conditions:         []v1alpha1.ApplicationStatusCondition{},
+		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{},
 	}, nil
 }
 
