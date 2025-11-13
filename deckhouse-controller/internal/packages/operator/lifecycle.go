@@ -179,7 +179,7 @@ func (o *Operator) Dump() []byte {
 		d.Packages[name] = packageDump{
 			pkg.status,
 			o.scheduler.State(name),
-			app.GetValues().GetKeySection(name),
+			app.GetValues(),
 		}
 	}
 

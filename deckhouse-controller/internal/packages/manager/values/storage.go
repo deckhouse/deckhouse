@@ -138,7 +138,9 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 		return fmt.Errorf("validate values patch: %w", err)
 	}
 
-	currentValues := s.resultValues
+	currentValues := addonutils.Values{
+		s.name: s.resultValues,
+	}
 
 	// Apply new patches in Strict mode. Hook should not return 'remove' with nonexistent path.
 	patched, changed, err := addonutils.ApplyValuesPatch(currentValues, patch, addonutils.Strict)
@@ -148,6 +150,15 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 
 	if !changed {
 		return nil
+	}
+
+	switch v := patched[s.name].(type) {
+	case addonutils.Values:
+		patched = v
+	case map[string]interface{}:
+		patched = v
+	default:
+		return fmt.Errorf("unknown values type: %T", v)
 	}
 
 	// Validate updated values against schema
