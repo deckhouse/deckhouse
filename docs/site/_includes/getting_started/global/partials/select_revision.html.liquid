@@ -1,4 +1,4 @@
-<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
+<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}'; const revisionNames = {ce: '{{ site.data.i18n.ce }}', be: '{{ site.data.i18n.be }}', se: '{{ site.data.i18n.se }}', 'se-plus': '{{ site.data.i18n.se-plus }}', ee: '{{ site.data.i18n.ee }}'};</script>
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 {% if page.platform_code == "bm-private" -%}
   <script type="text/javascript" src='{% javascript_asset_tag getting-started-private %}[_assets/js/getting-started-private.js]{% endjavascript_asset_tag %}'></script>
