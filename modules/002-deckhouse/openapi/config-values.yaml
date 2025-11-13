@@ -3,7 +3,7 @@ properties:
 
   logLevel:
     type: string
-    enum: ["Debug", "Info", "Error"]
+    enum: ["Trace", "Debug", "Info", "Error"]
     x-examples: ["Info"]
     description: |
       Deckhouse logging level.
