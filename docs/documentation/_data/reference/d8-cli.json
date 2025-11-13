@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.22.9",
+  "version": "v0.23.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -486,13 +486,28 @@
               "shorthand": "",
               "global": false
             },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -502,7 +517,12 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -517,7 +537,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -533,6 +553,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -567,12 +592,17 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
             "env": {
               "description": "Use specified environment (default $WERF_ENV)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-images-only": {
+              "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
               "shorthand": "",
               "global": false
             },
@@ -662,7 +692,7 @@
               "global": false
             },
             "introspect-stage": {
-              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
               "shorthand": "",
               "global": false
             },
@@ -746,6 +776,11 @@
               "shorthand": "",
               "global": false
             },
+            "project-name": {
+              "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+              "shorthand": "N",
+              "global": false
+            },
             "quiet": {
               "description": "Disable explanatory output (default $WERF_QUIET).",
               "shorthand": "",
@@ -803,6 +838,11 @@
             },
             "secondary-repo": {
               "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
               "shorthand": "",
               "global": false
             },
@@ -870,6 +910,16 @@
                   "shorthand": "R",
                   "global": false
                 },
+                "config": {
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config-templates-dir": {
+                  "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "container-registry-mirror": {
                   "description": "(Buildah-only) Use specified mirrors for docker.io",
                   "shorthand": "",
@@ -877,6 +927,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -890,6 +945,36 @@
                   "shorthand": "",
                   "global": false
                 },
+                "dev": {
+                  "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-branch": {
+                  "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-ignore": {
+                  "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dir": {
+                  "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "disable-default-secret-values": {
+                  "description": "Do not use secret values from the default .helm/secret-values.yaml file (default $WERF_DISABLE_DEFAULT_SECRET_VALUES or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "disable-default-values": {
+                  "description": "Do not use values from the default .helm/values.yaml file (default $WERF_DISABLE_DEFAULT_VALUES or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "docker-config": {
                   "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to read, pull and push images into the specified repo, to pull base images",
                   "shorthand": "",
@@ -897,6 +982,21 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "force-adoption": {
+                  "description": "Always adopt resources, even if they belong to a different Helm release (default $WERF_FORCE_ADOPTION or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "git-work-tree": {
+                  "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "giterminism-config": {
+                  "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -925,6 +1025,21 @@
                   "shorthand": "",
                   "global": false
                 },
+                "kube-api-server": {
+                  "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-burst-limit": {
+                  "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-ca-path": {
+                  "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "kube-config": {
                   "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
                   "shorthand": "",
@@ -937,6 +1052,21 @@
                 },
                 "kube-context": {
                   "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-qps-limit": {
+                  "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-tls-server": {
+                  "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-token": {
+                  "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -985,6 +1115,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "loose-giterminism": {
+                  "description": "Loose werf giterminism mode restrictions",
+                  "shorthand": "",
+                  "global": false
+                },
                 "namespace": {
                   "description": "Use specified Kubernetes namespace (default $WERF_NAMESPACE)",
                   "shorthand": "",
@@ -992,6 +1127,16 @@
                 },
                 "network-parallelism": {
                   "description": "Parallelize some network operations (default $WERF_NETWORK_PARALLELISM or 30)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "no-install-crds": {
+                  "description": "Do not install CRDs from \"crds/\" directories of installed charts (default $WERF_NO_INSTALL_CRDS)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "no-pod-logs": {
+                  "description": "Disable Pod logs collection and printing (default $WERF_NO_POD_LOGS or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1005,8 +1150,18 @@
                   "shorthand": "",
                   "global": false
                 },
+                "release-label": {
+                  "description": "Add Helm release labels (can specify multiple). Kind of labels depends or release storage driver.\nFormat: labelName=labelValue.\nAlso, can be specified with $WERF_RELEASE_LABEL_* (e.g. $WERF_RELEASE_LABEL_1=labelName1=labelValue1, $WERF_RELEASE_LABEL_2=labelName2=labelValue2)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "releases-history-max": {
                   "description": "Max releases to keep in release storage ($WERF_RELEASES_HISTORY_MAX or 5 by default)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "render-subchart-notes": {
+                  "description": "If set, render subchart notes along with the parent (by default $WERF_RENDER_SUBCHART_NOTES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1093,6 +1248,16 @@
                 "skip-dependencies-repo-refresh": {
                   "description": "Do not refresh helm chart repositories locally cached index",
                   "shorthand": "L",
+                  "global": false
+                },
+                "skip-tls-verify-helm-dependencies": {
+                  "description": "Skip TLS certificate validation when accessing a Helm charts repository (default $WERF_SKIP_TLS_VERIFY_HELM_DEPENDENCIES)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-tls-verify-kube": {
+                  "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+                  "shorthand": "",
                   "global": false
                 },
                 "skip-tls-verify-registry": {
@@ -1281,13 +1446,28 @@
                   "shorthand": "",
                   "global": false
                 },
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1297,7 +1477,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1312,7 +1497,7 @@
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1328,6 +1513,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1372,12 +1562,17 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1472,7 +1667,7 @@
                   "global": false
                 },
                 "introspect-stage": {
-                  "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+                  "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
                   "shorthand": "",
                   "global": false
                 },
@@ -1554,6 +1749,11 @@
                 "platform": {
                   "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
                   "shorthand": "",
+                  "global": false
+                },
+                "project-name": {
+                  "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+                  "shorthand": "N",
                   "global": false
                 },
                 "quiet": {
@@ -1651,6 +1851,11 @@
                   "shorthand": "L",
                   "global": false
                 },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "skip-tls-verify-registry": {
                   "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
                   "shorthand": "",
@@ -1724,6 +1929,16 @@
                   "shorthand": "b",
                   "global": false
                 },
+                "config": {
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config-templates-dir": {
+                  "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "container-registry-mirror": {
                   "description": "(Buildah-only) Use specified mirrors for docker.io",
                   "shorthand": "",
@@ -1734,8 +1949,38 @@
                   "shorthand": "",
                   "global": false
                 },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev": {
+                  "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-branch": {
+                  "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-ignore": {
+                  "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dir": {
+                  "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "disable-default-secret-values": {
                   "description": "Do not use secret values from the default .helm/secret-values.yaml file (default $WERF_DISABLE_DEFAULT_SECRET_VALUES or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "disable-default-values": {
+                  "description": "Do not use values from the default .helm/values.yaml file (default $WERF_DISABLE_DEFAULT_VALUES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1746,6 +1991,21 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "force-adoption": {
+                  "description": "Always adopt resources, even if they belong to a different Helm release (default $WERF_FORCE_ADOPTION or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "git-work-tree": {
+                  "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "giterminism-config": {
+                  "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1771,6 +2031,51 @@
                 },
                 "insecure-registry": {
                   "description": "Use plain HTTP requests when accessing a registry (default $WERF_INSECURE_REGISTRY)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-api-server": {
+                  "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-burst-limit": {
+                  "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-ca-path": {
+                  "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-config": {
+                  "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-config-base64": {
+                  "description": "Kubernetes config data as base64 string (default $WERF_KUBE_CONFIG_BASE64 or $WERF_KUBECONFIG_BASE64 or $KUBECONFIG_BASE64)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-context": {
+                  "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-qps-limit": {
+                  "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-tls-server": {
+                  "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kube-token": {
+                  "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1821,6 +2126,11 @@
                 },
                 "log-verbose": {
                   "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "loose-giterminism": {
+                  "description": "Loose werf giterminism mode restrictions",
                   "shorthand": "",
                   "global": false
                 },
@@ -1919,6 +2229,26 @@
                   "shorthand": "",
                   "global": false
                 },
+                "show-only": {
+                  "description": "only show manifests rendered from the given templates",
+                  "shorthand": "s",
+                  "global": false
+                },
+                "skip-dependencies-repo-refresh": {
+                  "description": "Do not refresh helm chart repositories locally cached index",
+                  "shorthand": "L",
+                  "global": false
+                },
+                "skip-tls-verify-helm-dependencies": {
+                  "description": "Skip TLS certificate validation when accessing a Helm charts repository (default $WERF_SKIP_TLS_VERIFY_HELM_DEPENDENCIES)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-tls-verify-kube": {
+                  "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "skip-tls-verify-registry": {
                   "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
                   "shorthand": "",
@@ -1959,6 +2289,11 @@
           "description": "Generate werf environment variables for specified CI system",
           "aliases": null,
           "flags": {
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
             "as-env-file": {
               "description": "Create the .env file and print the path for sourcing (default $WERF_AS_ENV_FILE).",
               "shorthand": "",
@@ -1970,7 +2305,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -1981,6 +2316,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -2095,7 +2435,7 @@
               "global": false
             },
             "shell": {
-              "description": "Set to cmdexe, powershell or use the default behaviour that is compatible with any unix shell (default $WERF_SHELL).",
+              "description": "Set to cmdexe, powershell or use the default behavior that is compatible with any unix shell (default $WERF_SHELL).",
               "shorthand": "",
               "global": false
             },
@@ -2122,13 +2462,28 @@
           "description": "Cleanup project images in the container registry",
           "aliases": null,
           "flags": {
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -2138,7 +2493,12 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -2148,7 +2508,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -2164,6 +2524,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -2198,7 +2563,7 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -2279,6 +2644,11 @@
             },
             "insecure-registry": {
               "description": "Use plain HTTP requests when accessing a registry (default $WERF_INSECURE_REGISTRY)",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-list": {
+              "description": "Set path to keep list file (default $WERF_KEEP_LIST)",
               "shorthand": "",
               "global": false
             },
@@ -2365,6 +2735,11 @@
             "platform": {
               "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
               "shorthand": "",
+              "global": false
+            },
+            "project-name": {
+              "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+              "shorthand": "N",
               "global": false
             },
             "quiet": {
@@ -2484,13 +2859,28 @@
               "description": "Run docker-compose config command with forwarded image names.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2500,7 +2890,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2510,7 +2905,7 @@
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2526,6 +2921,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2575,7 +2975,7 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2586,6 +2986,11 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2729,6 +3134,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "project-name": {
+                  "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+                  "shorthand": "N",
+                  "global": false
+                },
                 "quiet": {
                   "description": "Disable explanatory output (default $WERF_QUIET).",
                   "shorthand": "",
@@ -2786,6 +3196,11 @@
                 },
                 "secondary-repo": {
                   "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2837,13 +3252,28 @@
               "description": "Run docker-compose down command with forwarded image names.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2853,7 +3283,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2863,7 +3298,7 @@
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2879,6 +3314,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2928,7 +3368,7 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2939,6 +3379,11 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3082,6 +3527,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "project-name": {
+                  "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+                  "shorthand": "N",
+                  "global": false
+                },
                 "quiet": {
                   "description": "Disable explanatory output (default $WERF_QUIET).",
                   "shorthand": "",
@@ -3139,6 +3589,11 @@
                 },
                 "secondary-repo": {
                   "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3190,13 +3645,28 @@
               "description": "Run docker-compose run command with forwarded image names.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3206,7 +3676,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3216,7 +3691,7 @@
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3232,6 +3707,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3281,7 +3761,7 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3292,6 +3772,11 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3435,6 +3920,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "project-name": {
+                  "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+                  "shorthand": "N",
+                  "global": false
+                },
                 "quiet": {
                   "description": "Disable explanatory output (default $WERF_QUIET).",
                   "shorthand": "",
@@ -3495,6 +3985,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "skip-tls-verify-registry": {
                   "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
                   "shorthand": "",
@@ -3543,13 +4038,28 @@
               "description": "Run docker-compose up command with forwarded image names.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3559,7 +4069,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3569,7 +4084,7 @@
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3585,6 +4100,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3634,7 +4154,7 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3645,6 +4165,11 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3793,6 +4318,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "project-name": {
+                  "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+                  "shorthand": "N",
+                  "global": false
+                },
                 "quiet": {
                   "description": "Disable explanatory output (default $WERF_QUIET).",
                   "shorthand": "",
@@ -3853,6 +4383,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "skip-tls-verify-registry": {
                   "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
                   "shorthand": "",
@@ -3909,8 +4444,13 @@
               "description": "Print dependency graph for images in werf.yaml.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3921,6 +4461,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3946,6 +4491,11 @@
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or false by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4032,8 +4582,13 @@
               "description": "List image and artifact names defined in werf.yaml.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4044,6 +4599,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4165,8 +4725,13 @@
               "description": "Render werf.yaml.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4177,6 +4742,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -4305,13 +4875,28 @@
               "shorthand": "",
               "global": false
             },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -4321,7 +4906,7 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -4335,6 +4920,11 @@
               "shorthand": "R",
               "global": false
             },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -4346,7 +4936,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -4362,6 +4952,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -4416,12 +5011,17 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
             "env": {
               "description": "Use specified environment (default $WERF_ENV)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-images-only": {
+              "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
               "shorthand": "",
               "global": false
             },
@@ -4475,6 +5075,11 @@
               "shorthand": "",
               "global": false
             },
+            "force-adoption": {
+              "description": "Always adopt resources, even if they belong to a different Helm release (default $WERF_FORCE_ADOPTION or false)",
+              "shorthand": "",
+              "global": false
+            },
             "git-work-tree": {
               "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
               "shorthand": "",
@@ -4521,7 +5126,22 @@
               "global": false
             },
             "introspect-stage": {
-              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-api-server": {
+              "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-burst-limit": {
+              "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-ca-path": {
+              "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -4537,6 +5157,21 @@
             },
             "kube-context": {
               "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-qps-limit": {
+              "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-tls-server": {
+              "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-token": {
+              "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
               "shorthand": "",
               "global": false
             },
@@ -4600,6 +5235,16 @@
               "shorthand": "",
               "global": false
             },
+            "no-install-crds": {
+              "description": "Do not install CRDs from \"crds/\" directories of installed charts (default $WERF_NO_INSTALL_CRDS)",
+              "shorthand": "",
+              "global": false
+            },
+            "no-pod-logs": {
+              "description": "Disable Pod logs collection and printing (default $WERF_NO_POD_LOGS or false)",
+              "shorthand": "",
+              "global": false
+            },
             "parallel": {
               "description": "Run in parallel (default $WERF_PARALLEL or true)",
               "shorthand": "p",
@@ -4615,6 +5260,11 @@
               "shorthand": "",
               "global": false
             },
+            "project-name": {
+              "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+              "shorthand": "N",
+              "global": false
+            },
             "quiet": {
               "description": "Disable explanatory output (default $WERF_QUIET).",
               "shorthand": "",
@@ -4625,8 +5275,18 @@
               "shorthand": "",
               "global": false
             },
+            "release-label": {
+              "description": "Add Helm release labels (can specify multiple). Kind of labels depends or release storage driver.\nFormat: labelName=labelValue.\nAlso, can be specified with $WERF_RELEASE_LABEL_* (e.g. $WERF_RELEASE_LABEL_1=labelName1=labelValue1, $WERF_RELEASE_LABEL_2=labelName2=labelValue2)",
+              "shorthand": "",
+              "global": false
+            },
             "releases-history-max": {
               "description": "Max releases to keep in release storage ($WERF_RELEASES_HISTORY_MAX or 5 by default)",
+              "shorthand": "",
+              "global": false
+            },
+            "render-subchart-notes": {
+              "description": "If set, render subchart notes along with the parent (by default $WERF_RENDER_SUBCHART_NOTES or false)",
               "shorthand": "",
               "global": false
             },
@@ -4730,6 +5390,21 @@
               "shorthand": "L",
               "global": false
             },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-helm-dependencies": {
+              "description": "Skip TLS certificate validation when accessing a Helm charts repository (default $WERF_SKIP_TLS_VERIFY_HELM_DEPENDENCIES)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-kube": {
+              "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+              "shorthand": "",
+              "global": false
+            },
             "skip-tls-verify-registry": {
               "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
               "shorthand": "",
@@ -4779,13 +5454,18 @@
               "description": "Enable virtual/ephemeral merge commit mode when building current application state ($WERF_VIRTUAL_MERGE by default)",
               "shorthand": "",
               "global": false
+            },
+            "without-images": {
+              "description": "Disable building of images defined in the werf.yaml (if any) and usage of such images in the .helm/templates ($WERF_WITHOUT_IMAGES or false by default — e.g. enable all images defined in the werf.yaml by default)",
+              "shorthand": "",
+              "global": false
             }
           },
           "subcommands": null
         },
         {
           "name": "cr",
-          "description": "Work with container registry: authenticate, list and remove images, etc.",
+          "description": "Authenticate with container registry.",
           "aliases": null,
           "flags": {},
           "subcommands": [
@@ -4952,13 +5632,28 @@
           "description": "Delete werf release from Kubernetes",
           "aliases": null,
           "flags": {
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -4968,7 +5663,12 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -4978,7 +5678,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -4994,6 +5694,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -5033,7 +5738,7 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -5117,6 +5822,21 @@
               "shorthand": "",
               "global": false
             },
+            "kube-api-server": {
+              "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-burst-limit": {
+              "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-ca-path": {
+              "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "kube-config": {
               "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
               "shorthand": "",
@@ -5129,6 +5849,21 @@
             },
             "kube-context": {
               "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-qps-limit": {
+              "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-tls-server": {
+              "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-token": {
+              "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
               "shorthand": "",
               "global": false
             },
@@ -5184,6 +5919,16 @@
             },
             "namespace": {
               "description": "Use specified Kubernetes namespace (default [[ project ]]-[[ env ]] template or deploy.namespace custom template from werf.yaml or $WERF_NAMESPACE)",
+              "shorthand": "",
+              "global": false
+            },
+            "network-parallelism": {
+              "description": "Parallelize some network operations (default $WERF_NETWORK_PARALLELISM or 30)",
+              "shorthand": "",
+              "global": false
+            },
+            "no-pod-logs": {
+              "description": "Disable Pod logs collection and printing (default $WERF_NO_POD_LOGS or false)",
               "shorthand": "",
               "global": false
             },
@@ -5257,6 +6002,11 @@
               "shorthand": "",
               "global": false
             },
+            "skip-tls-verify-kube": {
+              "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+              "shorthand": "",
+              "global": false
+            },
             "skip-tls-verify-registry": {
               "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
               "shorthand": "",
@@ -5306,7 +6056,17 @@
           "aliases": null,
           "flags": {
             "add-label": {
-              "description": "Add label to exported images (can specify multiple).\nFormat: labelName=labelValue.\nAlso, can be specified with $WERF_EXPORT_ADD_LABEL_* (e.g. $WERF_EXPORT_ADD_LABEL_1=labelName1=labelValue1, $WERF_EXPORT_ADD_LABEL_2=labelName2=labelValue2)",
+              "description": "Add label to exported images (can specify multiple).\nFormat: labelName=labelValue[\u003cseparator\u003elabelName=labelValue ...]. The default separator is a newline (\"\\n\"), but it can be customized using the --add-label-separator flag.\nAlso, can be specified with $WERF_EXPORT_ADD_LABEL_* (e.g. $WERF_EXPORT_ADD_LABEL_1=labelName1=labelValue1, $WERF_EXPORT_ADD_LABEL_2=labelName2=labelValue2)",
+              "shorthand": "",
+              "global": false
+            },
+            "add-label-separator": {
+              "description": "Separator for --add-label values (default $WERF_EXPORT_ADD_LABEL_SEPARATOR or \"\\n\")",
+              "shorthand": "",
+              "global": false
+            },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
               "shorthand": "",
               "global": false
             },
@@ -5316,7 +6076,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -5332,6 +6092,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -5360,13 +6125,13 @@
               "shorthand": "",
               "global": false
             },
-            "dry-run": {
-              "description": "Indicate what the command would do without actually doing that (default $WERF_DRY_RUN)",
+            "env": {
+              "description": "Use specified environment (default $WERF_ENV)",
               "shorthand": "",
               "global": false
             },
-            "env": {
-              "description": "Use specified environment (default $WERF_ENV)",
+            "final-images-only": {
+              "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
               "shorthand": "",
               "global": false
             },
@@ -5451,7 +6216,7 @@
               "global": false
             },
             "introspect-stage": {
-              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
               "shorthand": "",
               "global": false
             },
@@ -5592,6 +6357,11 @@
             },
             "secondary-repo": {
               "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
               "shorthand": "",
               "global": false
             },
@@ -7063,13 +7833,23 @@
               "description": "Get service values yaml generated by werf for helm chart during deploy",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "build-report-path": {
+                  "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
+                  "shorthand": "",
+                  "global": false
+                },
                 "cache-repo": {
                   "description": "Specify one or multiple cache repos with images that will be used as a cache. Cache will be populated when pushing newly built images into the primary repo and when pulling existing images from the primary repo. Cache repo will be used to pull images and to get manifests before making requests to the primary repo.\nAlso, can be specified with $WERF_CACHE_REPO_* (e.g. $WERF_CACHE_REPO_1=..., $WERF_CACHE_REPO_2=...)",
                   "shorthand": "",
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7085,6 +7865,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7109,12 +7894,17 @@
                   "global": false
                 },
                 "docker-config": {
-                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to read and pull images from the specified repo",
+                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to read, pull and push images into the specified repo and to pull base images",
                   "shorthand": "",
                   "global": false
                 },
                 "env": {
                   "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "final-images-only": {
+                  "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7188,6 +7978,21 @@
                   "shorthand": "",
                   "global": false
                 },
+                "introspect-before-error": {
+                  "description": "Introspect failed stage in the clean state, before running all assembly instructions of the stage",
+                  "shorthand": "",
+                  "global": false
+                },
+                "introspect-error": {
+                  "description": "Introspect failed stage in the state, right after running failed assembly instruction",
+                  "shorthand": "",
+                  "global": false
+                },
+                "introspect-stage": {
+                  "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
+                  "shorthand": "",
+                  "global": false
+                },
                 "kube-config": {
                   "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
                   "shorthand": "",
@@ -7215,6 +8020,11 @@
                 },
                 "log-pretty": {
                   "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-project-dir": {
+                  "description": "Print current project directory path (default $WERF_LOG_PROJECT_DIR)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7250,6 +8060,16 @@
                 },
                 "namespace": {
                   "description": "Use specified Kubernetes namespace (default [[ project ]]-[[ env ]] template or deploy.namespace custom template from werf.yaml or $WERF_NAMESPACE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "parallel": {
+                  "description": "Run in parallel (default $WERF_PARALLEL or true)",
+                  "shorthand": "p",
+                  "global": false
+                },
+                "parallel-tasks-limit": {
+                  "description": "Parallel tasks limit, set -1 to remove the limitation (default $WERF_PARALLEL_TASKS_LIMIT or 5)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7308,8 +8128,28 @@
                   "shorthand": "",
                   "global": false
                 },
+                "require-built-images": {
+                  "description": "Requires all used images to be previously built and exist in repo. Exits with error if needed images are not cached and so require to run build instructions (default $WERF_REQUIRE_BUILT_IMAGES)",
+                  "shorthand": "Z",
+                  "global": false
+                },
+                "save-build-report": {
+                  "description": "Save build report (by default $WERF_SAVE_BUILD_REPORT or false). Its path and format configured with --build-report-path",
+                  "shorthand": "",
+                  "global": false
+                },
                 "secondary-repo": {
                   "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "set-docker-config-json-value": {
+                  "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-image-spec-stage": {
+                  "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7371,8 +8211,13 @@
               "description": "Print Kubernetes Namespace that will be used in current configuration with specified params.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7383,6 +8228,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7529,8 +8379,13 @@
               "description": "Print Helm Release name that will be used in current configuration with specified params.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -7541,6 +8396,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -11638,8 +12498,13 @@
                   "description": "Regenerate secret files with new secret key",
                   "aliases": null,
                   "flags": {
+                    "allow-includes-update": {
+                      "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                      "shorthand": "",
+                      "global": false
+                    },
                     "config": {
-                      "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                      "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                       "shorthand": "",
                       "global": false
                     },
@@ -11650,6 +12515,11 @@
                     },
                     "debug": {
                       "description": "Enable debug (default $WERF_DEBUG).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "debug-templates": {
+                      "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                       "shorthand": "",
                       "global": false
                     },
@@ -14538,13 +15408,23 @@
               "description": "Cleanup old unused werf cache and data of all projects on host machine.",
               "aliases": null,
               "flags": {
+                "allowed-backend-storage-volume-usage": {
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allowed-backend-storage-volume-usage-margin": {
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "allowed-docker-storage-volume-usage": {
-                  "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+                  "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
                   "shorthand": "",
                   "global": false
                 },
                 "allowed-docker-storage-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
                   "shorthand": "",
                   "global": false
                 },
@@ -14554,7 +15434,12 @@
                   "global": false
                 },
                 "allowed-local-cache-volume-usage-margin": {
-                  "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "backend-storage-path": {
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -14594,7 +15479,7 @@
                   "global": false
                 },
                 "docker-server-storage-path": {
-                  "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+                  "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
                   "shorthand": "",
                   "global": false
                 },
@@ -14837,6 +15722,458 @@
           ]
         },
         {
+          "name": "includes",
+          "description": "Work with werf includes",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "get-file [FILE_NAME]",
+              "description": "Display file content that will be used by werf according to the includes overlay rules.",
+              "aliases": null,
+              "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config": {
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config-templates-dir": {
+                  "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev": {
+                  "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-branch": {
+                  "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-ignore": {
+                  "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dir": {
+                  "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "env": {
+                  "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "follow": {
+                  "description": "Enable follow mode (default $WERF_FOLLOW).\nThe mode allows restarting the command on a new commit.\nIn development mode (--dev), werf restarts the command on any changes (including untracked files) in the git repository worktree",
+                  "shorthand": "",
+                  "global": false
+                },
+                "git-work-tree": {
+                  "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "giterminism-config": {
+                  "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "home-dir": {
+                  "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-project-dir": {
+                  "description": "Print current project directory path (default $WERF_LOG_PROJECT_DIR)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "loose-giterminism": {
+                  "description": "Loose werf giterminism mode restrictions",
+                  "shorthand": "",
+                  "global": false
+                },
+                "platform": {
+                  "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ssh-key": {
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "shorthand": "",
+                  "global": false
+                },
+                "tmp-dir": {
+                  "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "ls-files [GLOB...]",
+              "description": "List files in the project according to the includes overlay rules.",
+              "aliases": null,
+              "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config": {
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config-templates-dir": {
+                  "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev": {
+                  "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-branch": {
+                  "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-ignore": {
+                  "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dir": {
+                  "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "env": {
+                  "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "filter": {
+                  "description": "Filter by source, e.g. --filter=source=local,remoteRepo (default $WERF_INCLUDES_LIST_FILTER or all sources).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "follow": {
+                  "description": "Enable follow mode (default $WERF_FOLLOW).\nThe mode allows restarting the command on a new commit.\nIn development mode (--dev), werf restarts the command on any changes (including untracked files) in the git repository worktree",
+                  "shorthand": "",
+                  "global": false
+                },
+                "git-work-tree": {
+                  "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "giterminism-config": {
+                  "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "home-dir": {
+                  "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-project-dir": {
+                  "description": "Print current project directory path (default $WERF_LOG_PROJECT_DIR)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "loose-giterminism": {
+                  "description": "Loose werf giterminism mode restrictions",
+                  "shorthand": "",
+                  "global": false
+                },
+                "platform": {
+                  "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ssh-key": {
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "shorthand": "",
+                  "global": false
+                },
+                "tmp-dir": {
+                  "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "update",
+              "description": "Create or update includes lock file (default: werf-includes.lock).",
+              "aliases": null,
+              "flags": {
+                "config": {
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "config-templates-dir": {
+                  "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev": {
+                  "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-branch": {
+                  "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dev-ignore": {
+                  "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dir": {
+                  "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "env": {
+                  "description": "Use specified environment (default $WERF_ENV)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "follow": {
+                  "description": "Enable follow mode (default $WERF_FOLLOW).\nThe mode allows restarting the command on a new commit.\nIn development mode (--dev), werf restarts the command on any changes (including untracked files) in the git repository worktree",
+                  "shorthand": "",
+                  "global": false
+                },
+                "git-work-tree": {
+                  "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "giterminism-config": {
+                  "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "home-dir": {
+                  "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-project-dir": {
+                  "description": "Print current project directory path (default $WERF_LOG_PROJECT_DIR)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "loose-giterminism": {
+                  "description": "Loose werf giterminism mode restrictions",
+                  "shorthand": "",
+                  "global": false
+                },
+                "platform": {
+                  "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ssh-key": {
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "shorthand": "",
+                  "global": false
+                },
+                "tmp-dir": {
+                  "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
           "name": "kube-run [options] [IMAGE_NAME] [-- COMMAND ARG...]",
           "description": "Run container for project image in Kubernetes",
           "aliases": null,
@@ -14851,6 +16188,11 @@
               "shorthand": "",
               "global": false
             },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
             "auto-pull-secret": {
               "description": "Automatically create docker config secret in the namespace and plug it via pod's imagePullSecrets for private registry access (default $WERF_AUTO_PULL_SECRET or true if not specified)",
               "shorthand": "",
@@ -14862,7 +16204,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -14888,6 +16230,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -15077,7 +16424,7 @@
               "global": false
             },
             "overrides": {
-              "description": "Inline JSON to override/extend any fields in created Pod, e.g. to add imagePullSecrets field (default $WERF_OVERRIDES). %pod_name% and %container_name% will be replaced with names of a created pod and a container.",
+              "description": "Inline JSON to override/extend any fields in created Pod, e.g. to add imagePullSecrets field (default $WERF_OVERRIDES). %pod_name%, %container_name%, and %container_image% will be replaced with the names of the created pod, container, and container image, respectively.",
               "shorthand": "",
               "global": false
             },
@@ -15161,6 +16508,11 @@
               "shorthand": "",
               "global": false
             },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+              "shorthand": "",
+              "global": false
+            },
             "skip-tls-verify-registry": {
               "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
               "shorthand": "",
@@ -15210,13 +16562,18 @@
               "description": "Add image record to the list of managed images which will be preserved during cleanup procedure.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "cache-repo": {
                   "description": "Specify one or multiple cache repos with images that will be used as a cache. Cache will be populated when pushing newly built images into the primary repo and when pulling existing images from the primary repo. Cache repo will be used to pull images and to get manifests before making requests to the primary repo.\nAlso, can be specified with $WERF_CACHE_REPO_* (e.g. $WERF_CACHE_REPO_1=..., $WERF_CACHE_REPO_2=...)",
                   "shorthand": "",
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -15232,6 +16589,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -15493,13 +16855,18 @@
               "description": "List managed images which will be preserved during cleanup procedure.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "cache-repo": {
                   "description": "Specify one or multiple cache repos with images that will be used as a cache. Cache will be populated when pushing newly built images into the primary repo and when pulling existing images from the primary repo. Cache repo will be used to pull images and to get manifests before making requests to the primary repo.\nAlso, can be specified with $WERF_CACHE_REPO_* (e.g. $WERF_CACHE_REPO_1=..., $WERF_CACHE_REPO_2=...)",
                   "shorthand": "",
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -15515,6 +16882,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -15776,13 +17148,18 @@
               "description": "Remove image record from the list of managed images which will be preserved during cleanup procedure.",
               "aliases": null,
               "flags": {
+                "allow-includes-update": {
+                  "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "cache-repo": {
                   "description": "Specify one or multiple cache repos with images that will be used as a cache. Cache will be populated when pushing newly built images into the primary repo and when pulling existing images from the primary repo. Cache repo will be used to pull images and to get manifests before making requests to the primary repo.\nAlso, can be specified with $WERF_CACHE_REPO_* (e.g. $WERF_CACHE_REPO_1=..., $WERF_CACHE_REPO_2=...)",
                   "shorthand": "",
                   "global": false
                 },
                 "config": {
-                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+                  "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
                   "shorthand": "",
                   "global": false
                 },
@@ -15798,6 +17175,11 @@
                 },
                 "debug": {
                   "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug-templates": {
+                  "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
                   "shorthand": "",
                   "global": false
                 },
@@ -16076,13 +17458,28 @@
               "shorthand": "",
               "global": false
             },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -16092,7 +17489,12 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -16107,7 +17509,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -16123,6 +17525,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -16167,7 +17574,7 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -16178,6 +17585,11 @@
             },
             "exit-code": {
               "description": "If true, returns exit code 0 if no changes, exit code 2 if any changes planned or exit code 1 in case of an error (default $WERF_EXIT_CODE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-images-only": {
+              "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
               "shorthand": "",
               "global": false
             },
@@ -16231,6 +17643,11 @@
               "shorthand": "",
               "global": false
             },
+            "force-adoption": {
+              "description": "Always adopt resources, even if they belong to a different Helm release (default $WERF_FORCE_ADOPTION or false)",
+              "shorthand": "",
+              "global": false
+            },
             "git-work-tree": {
               "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
               "shorthand": "",
@@ -16277,7 +17694,22 @@
               "global": false
             },
             "introspect-stage": {
-              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-api-server": {
+              "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-burst-limit": {
+              "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-ca-path": {
+              "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -16293,6 +17725,21 @@
             },
             "kube-context": {
               "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-qps-limit": {
+              "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-tls-server": {
+              "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-token": {
+              "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
               "shorthand": "",
               "global": false
             },
@@ -16356,6 +17803,11 @@
               "shorthand": "",
               "global": false
             },
+            "no-install-crds": {
+              "description": "Do not install CRDs from \"crds/\" directories of installed charts (default $WERF_NO_INSTALL_CRDS)",
+              "shorthand": "",
+              "global": false
+            },
             "parallel": {
               "description": "Run in parallel (default $WERF_PARALLEL or true)",
               "shorthand": "p",
@@ -16369,6 +17821,11 @@
             "platform": {
               "description": "Enable platform emulation when building images with werf, format: OS/ARCH[/VARIANT] ($WERF_PLATFORM or $DOCKER_DEFAULT_PLATFORM by default)",
               "shorthand": "",
+              "global": false
+            },
+            "project-name": {
+              "description": "Set a specific project name (default $WERF_PROJECT_NAME)",
+              "shorthand": "N",
               "global": false
             },
             "quiet": {
@@ -16476,6 +17933,21 @@
               "shorthand": "L",
               "global": false
             },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-helm-dependencies": {
+              "description": "Skip TLS certificate validation when accessing a Helm charts repository (default $WERF_SKIP_TLS_VERIFY_HELM_DEPENDENCIES)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-kube": {
+              "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+              "shorthand": "",
+              "global": false
+            },
             "skip-tls-verify-registry": {
               "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
               "shorthand": "",
@@ -16488,6 +17960,11 @@
             },
             "status-progress-period": {
               "description": "Status progress period in seconds. Set -1 to stop showing status progress. Defaults to $WERF_STATUS_PROGRESS_PERIOD_SECONDS or 5 seconds",
+              "shorthand": "",
+              "global": false
+            },
+            "stub-tags": {
+              "description": "Use stubs instead of real tags (default $WERF_STUB_TAGS)",
               "shorthand": "",
               "global": false
             },
@@ -16525,6 +18002,11 @@
               "description": "Enable virtual/ephemeral merge commit mode when building current application state ($WERF_VIRTUAL_MERGE by default)",
               "shorthand": "",
               "global": false
+            },
+            "without-images": {
+              "description": "Disable building of images defined in the werf.yaml (if any) and usage of such images in the .helm/templates ($WERF_WITHOUT_IMAGES or false by default — e.g. enable all images defined in the werf.yaml by default)",
+              "shorthand": "",
+              "global": false
             }
           },
           "subcommands": null
@@ -16534,13 +18016,28 @@
           "description": "Purge all project images in the container registry",
           "aliases": null,
           "flags": {
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage": {
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE)",
+              "shorthand": "",
+              "global": false
+            },
+            "allowed-backend-storage-volume-usage-margin": {
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_BACKEND_STORAGE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
             "allowed-docker-storage-volume-usage": {
-              "description": "Set allowed percentage of docker storage volume usage which will cause cleanup of least recently used local docker images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
+              "description": "Set allowed percentage of backend (Docker or Buildah) storage volume usage which will cause cleanup of least recently used local backend images (default 70% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE)",
               "shorthand": "",
               "global": false
             },
             "allowed-docker-storage-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of least recently used local backend (Docker or Buildah) images werf would delete images until volume usage becomes below \"allowed-backend-storage-volume-usage - allowed-backend-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_DOCKER_STORAGE_VOLUME_USAGE_MARGIN)",
               "shorthand": "",
               "global": false
             },
@@ -16550,7 +18047,12 @@
               "global": false
             },
             "allowed-local-cache-volume-usage-margin": {
-              "description": "During cleanup of least recently used local docker images werf would delete images until volume usage becomes below \"allowed-docker-storage-volume-usage - allowed-docker-storage-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "description": "During cleanup of local cache werf would delete local cache data until volume usage becomes below \"allowed-local-cache-volume-usage - allowed-local-cache-volume-usage-margin\" level (default 5% or $WERF_ALLOWED_LOCAL_CACHE_VOLUME_USAGE_MARGIN)",
+              "shorthand": "",
+              "global": false
+            },
+            "backend-storage-path": {
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -16560,7 +18062,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -16576,6 +18078,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -16610,7 +18117,7 @@
               "global": false
             },
             "docker-server-storage-path": {
-              "description": "Use specified path to the local docker server storage to check docker storage volume usage while performing garbage collection of local docker images (detect local docker server storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
+              "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_DOCKER_SERVER_STORAGE_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -16867,6 +18374,11 @@
               "shorthand": "",
               "global": false
             },
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -16878,7 +18390,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -16894,6 +18406,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -16934,6 +18451,11 @@
             },
             "env": {
               "description": "Use specified environment (default $WERF_ENV)",
+              "shorthand": "",
+              "global": false
+            },
+            "final-images-only": {
+              "description": "Process final images only ($WERF_FINAL_IMAGES_ONLY or true by default)",
               "shorthand": "",
               "global": false
             },
@@ -16979,6 +18501,11 @@
             },
             "final-repo-quay-token": {
               "description": "final-repo quay.io token (default $WERF_FINAL_REPO_QUAY_TOKEN)",
+              "shorthand": "",
+              "global": false
+            },
+            "force-adoption": {
+              "description": "Always adopt resources, even if they belong to a different Helm release (default $WERF_FORCE_ADOPTION or false)",
               "shorthand": "",
               "global": false
             },
@@ -17033,7 +18560,22 @@
               "global": false
             },
             "introspect-stage": {
-              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile",
+              "description": "Introspect a specific stage. The option can be used multiple times to introspect several stages.\n\nThere are the following formats to use:\n* specify IMAGE_NAME/STAGE_NAME to introspect stage STAGE_NAME of either image or artifact IMAGE_NAME\n* specify STAGE_NAME or */STAGE_NAME for the introspection of all existing stages with name STAGE_NAME\n\nIMAGE_NAME is the name of an image or artifact described in werf.yaml, the nameless image specified with ~.\nSTAGE_NAME should be one of the following: from, beforeInstall, dependenciesBeforeInstall, gitArchive, install, dependenciesAfterInstall, beforeSetup, dependenciesBeforeSetup, setup, dependenciesAfterSetup, gitCache, gitLatestPatch, dockerInstructions, dockerfile, imageSpec",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-api-server": {
+              "description": "Kubernetes API server address (default $WERF_KUBE_API_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-burst-limit": {
+              "description": "Kubernetes client burst limit (default $WERF_KUBE_BURST_LIMIT or 100)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-ca-path": {
+              "description": "Kubernetes API server CA path (default $WERF_KUBE_CA_PATH)",
               "shorthand": "",
               "global": false
             },
@@ -17049,6 +18591,21 @@
             },
             "kube-context": {
               "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-qps-limit": {
+              "description": "Kubernetes client QPS limit (default $WERF_KUBE_QPS_LIMIT or 30)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-tls-server": {
+              "description": "Server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used (default $WERF_KUBE_TLS_SERVER)",
+              "shorthand": "",
+              "global": false
+            },
+            "kube-token": {
+              "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
               "shorthand": "",
               "global": false
             },
@@ -17247,6 +18804,21 @@
               "shorthand": "L",
               "global": false
             },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-helm-dependencies": {
+              "description": "Skip TLS certificate validation when accessing a Helm charts repository (default $WERF_SKIP_TLS_VERIFY_HELM_DEPENDENCIES)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-tls-verify-kube": {
+              "description": "Skip TLS certificate validation when accessing a Kubernetes cluster (default $WERF_SKIP_TLS_VERIFY_KUBE)",
+              "shorthand": "",
+              "global": false
+            },
             "skip-tls-verify-registry": {
               "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
               "shorthand": "",
@@ -17315,6 +18887,11 @@
           "description": "Run container for project image",
           "aliases": null,
           "flags": {
+            "allow-includes-update": {
+              "description": "Allow use includes latest versions (default $WERF_ALLOW_INCLUDES_UPDATE or false)",
+              "shorthand": "",
+              "global": false
+            },
             "bash": {
               "description": "Use predefined docker options and command for debug",
               "shorthand": "",
@@ -17326,7 +18903,7 @@
               "global": false
             },
             "config": {
-              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in working directory)",
+              "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
               "global": false
             },
@@ -17342,6 +18919,11 @@
             },
             "debug": {
               "description": "Enable debug (default $WERF_DEBUG).",
+              "shorthand": "",
+              "global": false
+            },
+            "debug-templates": {
+              "description": "Enable debug mode for Go templates (default $WERF_DEBUG_TEMPLATES or false)",
               "shorthand": "",
               "global": false
             },
@@ -17592,6 +19174,11 @@
             },
             "shell": {
               "description": "Use predefined docker options and command for debug",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-image-spec-stage": {
+              "description": "Force skipping \"imageSpec\" build stage (default $WERF_SKIP_IMAGE_SPEC_STAGE or false)",
               "shorthand": "",
               "global": false
             },
@@ -18873,11 +20460,6 @@
             },
             "prune-allowlist": {
               "description": "Overwrite the default allowlist with \u003cgroup/version/kind\u003e for --prune",
-              "shorthand": "",
-              "global": false
-            },
-            "prune-whitelist": {
-              "description": "Overwrite the default whitelist with \u003cgroup/version/kind\u003e for --prune",
               "shorthand": "",
               "global": false
             },
@@ -23393,6 +24975,16 @@
                   "shorthand": "",
                   "global": false
                 },
+                "exec-interactive-mode": {
+                  "description": "InteractiveMode of the exec credentials plugin for the user entry in kubeconfig",
+                  "shorthand": "",
+                  "global": false
+                },
+                "exec-provide-cluster-info": {
+                  "description": "ProvideClusterInfo of the exec credentials plugin for the user entry in kubeconfig",
+                  "shorthand": "",
+                  "global": false
+                },
                 "insecure-skip-tls-verify": {
                   "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
                   "shorthand": "",
@@ -25371,7 +26963,7 @@
                   "global": false
                 },
                 "image": {
-                  "description": "Image names to run.",
+                  "description": "Image names to run. A deployment can have multiple images set for multi-container pod.",
                   "shorthand": "",
                   "global": false
                 },
@@ -25411,7 +27003,7 @@
                   "global": true
                 },
                 "port": {
-                  "description": "The port that this container exposes.",
+                  "description": "The containerPort that this deployment exposes.",
                   "shorthand": "",
                   "global": false
                 },
@@ -29024,7 +30616,7 @@
                   "global": true
                 },
                 "duration": {
-                  "description": "Requested lifetime of the issued token. If not set, the lifetime will be determined by the server automatically. The server may return a token with a longer or shorter lifetime.",
+                  "description": "Requested lifetime of the issued token. If not set or if set to 0, the lifetime will be determined by the server automatically. The server may return a token with a longer or shorter lifetime.",
                   "shorthand": "",
                   "global": false
                 },
@@ -29259,7 +30851,7 @@
               "global": true
             },
             "profile": {
-              "description": "Debugging profile. Options are \"legacy\", \"general\", \"baseline\", \"netadmin\", or \"restricted\".",
+              "description": "Options are \"legacy\", \"general\", \"baseline\", \"netadmin\", \"restricted\" or \"sysadmin\".",
               "shorthand": "",
               "global": false
             },
@@ -29462,7 +31054,7 @@
               "global": true
             },
             "interactive": {
-              "description": "If true, delete resource only when user confirms. This flag is in Alpha.",
+              "description": "If true, delete resource only when user confirms.",
               "shorthand": "i",
               "global": false
             },
@@ -29893,7 +31485,7 @@
               "global": false
             },
             "prune-allowlist": {
-              "description": "Overwrite the default whitelist with \u003cgroup/version/kind\u003e for --prune",
+              "description": "Overwrite the default allowlist with \u003cgroup/version/kind\u003e for --prune",
               "shorthand": "",
               "global": false
             },
