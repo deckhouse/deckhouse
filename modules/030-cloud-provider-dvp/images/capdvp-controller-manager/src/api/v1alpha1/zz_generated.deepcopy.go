@@ -64,6 +64,11 @@ func (in *ClusterInitializationStatus) DeepCopyInto(out *ClusterInitializationSt
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Provisioned != nil {
+		in, out := &in.Provisioned, &out.Provisioned
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ControlPlaneInitialized != nil {
 		in, out := &in.ControlPlaneInitialized, &out.ControlPlaneInitialized
 		*out = new(bool)
