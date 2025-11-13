@@ -138,20 +138,22 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		return errors.Wrap(err, "list etcd members failed")
 	}
 
-	removeList := make([]uint64, 0)
+	removeListIDs := make([]uint64, 0)
+	removeListNames := make([]string, 0)
 	for _, mem := range etcdMembersResp.Members {
 		if _, ok := discoveredMasterMap[mem.Name]; !ok {
-			removeList = append(removeList, mem.ID)
+			removeListIDs = append(removeListIDs, mem.ID)
+			removeListNames = append(removeListNames, mem.Name)
 		}
 	}
 
-	input.Logger.Warn("etcd members to remove", slog.Any("removeList", removeList))
+	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs), slog.Any("removeListNames", removeListNames))
 
-	if len(removeList) == len(etcdMembersResp.Members) {
+	if len(removeListIDs) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
 
-	for _, rm := range removeList {
+	for _, rm := range removeListIDs {
 		input.Logger.Warn("removing etcd member", slog.Uint64("memberID", rm))
 		_, err = etcdcli.MemberRemove(ctx, rm)
 		if err != nil {
