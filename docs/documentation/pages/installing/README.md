@@ -3,6 +3,12 @@ title: "Installation"
 permalink: en/installing/
 description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
+extracted_links_max: 2
+related_links:
+  - title: "Supported Kubernetes and OS versions"
+    url: ../reference/supported_versions.html
+  - title: "Integration with IaaS providers"
+    url: ../admin/integrations/integrations-overview.html
 ---
 
 {% alert level="warning" %}
@@ -77,7 +83,7 @@ The installation configuration YAML file contains parameters for several resourc
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. [ModuleConfig](/products/kubernetes-platform/documentation/latest/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
+1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
