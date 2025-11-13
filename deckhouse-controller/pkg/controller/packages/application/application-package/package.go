@@ -36,7 +36,8 @@ type PackageStatusChecker interface {
 }
 
 type PackageStatus struct {
-	Conditions []v1alpha1.ApplicationStatusCondition
+	Conditions         []v1alpha1.ApplicationStatusCondition
+	InternalConditions []v1alpha1.ApplicationInternalStatusCondition
 }
 
 type PackageAdder interface {
@@ -111,7 +112,8 @@ func (o *PackageOperator) GetPackageStatus(_ context.Context, packageName, names
 		slog.String("type", packageType))
 
 	return PackageStatus{
-		Conditions: []v1alpha1.ApplicationStatusCondition{},
+		Conditions:         []v1alpha1.ApplicationStatusCondition{},
+		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{},
 	}, nil
 }
 

@@ -110,6 +110,7 @@ func (svc *StatusService) handleEvent(ctx context.Context, event packagestatusse
 
 	original := app.DeepCopy()
 	svc.applyConditions(app, status.Conditions)
+	svc.applyInternalConditions(app, status.InternalConditions)
 	err = svc.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
@@ -136,6 +137,26 @@ func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []
 	}
 
 	app.Status.Conditions = applied
+}
+
+func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationInternalStatusCondition) {
+	now := metav1.NewTime(svc.dc.GetClock().Now())
+	prev := make(map[string]corev1.ConditionStatus)
+	for _, c := range app.Status.Conditions {
+		prev[c.Type] = c.Status
+	}
+
+	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(newConds))
+	for _, c := range newConds {
+		cond := c
+		cond.LastProbeTime = now
+		if p, ok := prev[cond.Type]; !ok || p != cond.Status {
+			cond.LastTransitionTime = now
+		}
+		applied = append(applied, cond)
+	}
+
+	app.Status.IternalConditions = applied
 }
 
 func RegisterController(
