@@ -60,6 +60,8 @@ type ClusterInitializationStatus struct {
 	// +optional
 	InfrastructureProvisioned *bool `json:"infrastructureProvisioned,omitempty"`
 
+	Provisioned *bool `json:"provisioned,omitempty"`
+
 	// controlPlaneInitialized denotes when the control plane is functional enough to accept requests.
 	// This information is usually used as a signal for starting all the provisioning operations that depends on
 	// a functional API server, but do not require a full HA control plane to exists, like e.g. join worker Machines,
