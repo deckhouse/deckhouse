@@ -73,10 +73,11 @@ type ApplicationConfig struct {
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
+func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
 
 	a.name = name
+	a.path = path
 	a.definition = cfg.Definition
 
 	a.hooks = hooks.NewStorage()
@@ -254,6 +255,12 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //
 // Returns error if hook execution or patch application fails.
 func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
+	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("hook", h.GetName()))
+	span.SetAttributes(attribute.String("name", a.GetName()))
+
 	hookConfigValues := a.values.GetConfigValues()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()

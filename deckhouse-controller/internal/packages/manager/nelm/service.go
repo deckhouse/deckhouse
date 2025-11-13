@@ -166,7 +166,7 @@ func (s *Service) Delete(ctx context.Context, name string) error {
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
 func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
-	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Install")
+	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", app.GetName()))

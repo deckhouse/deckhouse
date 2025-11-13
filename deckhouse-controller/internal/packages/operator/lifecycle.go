@@ -15,9 +15,12 @@
 package operator
 
 import (
+	"context"
 	"log/slog"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
@@ -51,7 +54,16 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
+func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository, inst Instance) {
+	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Update")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", inst.Name))
+	span.SetAttributes(attribute.String("namespace", inst.Namespace))
+	span.SetAttributes(attribute.String("package", inst.Definition.Name))
+	span.SetAttributes(attribute.String("version", inst.Definition.Version))
+	span.SetAttributes(attribute.String("repo", repo.Name))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -71,7 +83,7 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 	}
 
 	// Cancel previous tasks before enqueueing new ones
-	ctx := o.packages[name].renewContext()
+	ctx = o.packages[name].renewContext(ctx)
 
 	if o.packages[name].status.Phase == Pending {
 		packageName := inst.Definition.Name
@@ -104,7 +116,13 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 //  2. Clean up custom queues created by package hooks
 //  3. Uninstall package resources (taskuninstall)
 //  4. Remove package's main queue
-func (o *Operator) Remove(namespace, instance string) {
+func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
+	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Remove")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", instance))
+	span.SetAttributes(attribute.String("namespace", namespace))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -121,7 +139,7 @@ func (o *Operator) Remove(namespace, instance string) {
 	// Capture queues before manager removes the app metadata
 	queues := o.manager.GetPackageQueues(name)
 
-	ctx := app.renewContext()
+	ctx = app.renewContext(ctx)
 	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			if q == "main" || q == name {
