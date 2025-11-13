@@ -79,7 +79,7 @@ func runInformer[T any](
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj any) { eventHandler(obj.(*T), false) },
 		UpdateFunc: func(_, obj any) { eventHandler(obj.(*T), false) },
-		DeleteFunc: func(obj any) { eventHandler(obj.(*T), false) },
+		DeleteFunc: func(obj any) { eventHandler(obj.(*T), true) },
 	}); err != nil {
 		log.Printf("[%s] AddEventHandler failed: %v", name, err)
 		return
