@@ -5,4 +5,17 @@ properties:
   internal:
     type: object
     default: {}
-    properties: {}
+    properties:
+      disabledCache:
+        type: object
+        default: {}
+        properties:
+          zones:
+            type: array
+            description: |
+              List of DNS zones (FQDN suffixes) for which node-local-dns cache should be disabled.
+            default: []
+            items:
+              type: string
+          hash:
+            type: string

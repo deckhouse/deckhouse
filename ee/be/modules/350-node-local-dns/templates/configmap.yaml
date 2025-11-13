@@ -5,6 +5,9 @@ metadata:
   name: node-local-dns
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+{{- $nodeLocalDns := (default (dict) (get .Values "nodeLocalDns")) }}
+{{- $internal := (default (dict) (get $nodeLocalDns "internal")) }}
+{{- $disabledCache := (default (dict) (get $internal "disabledCache")) }}
 data:
   Corefile: |
     .:53 {
@@ -18,6 +21,10 @@ data:
         prefetch 10 1m 25%
         serve_stale 1h immediate
         servfail 0 # disable caching servfail
+{{- range $zone := (or $disabledCache.zones (list)) }}
+        disable success {{ $zone }}
+        disable denial {{ $zone }}
+{{- end }}
       }
       kubeforward {
         namespace kube-system
