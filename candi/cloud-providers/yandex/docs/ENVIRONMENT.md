@@ -169,7 +169,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. Check the status of the External Secrets Operator and the secrets store you created:
 
-   ```shell
+   ```console
    $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
@@ -226,7 +226,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
    The output of the command should contain the **value** of the `password` key of the `lockbox-secret` created earlier:
 
-   ```shell
+   ```console
    p@$$w0rd
    ```
 

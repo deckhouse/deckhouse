@@ -170,7 +170,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
 
-   ```shell
+   ```console
    $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
@@ -227,7 +227,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
    В выводе команды будет содержаться **значение** ключа `password` секрета `lockbox-secret`, созданного ранее:
 
-   ```shell
+   ```console
    p@$$w0rd
    ```
 
