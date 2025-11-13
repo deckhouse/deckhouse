@@ -25,6 +25,9 @@ module Jekyll
         # Render Jekyll expressions in URL if present
         final_url = has_jekyll_expressions?(url) ? render_jekyll_url(url, jekyll_context) : url
 
+        # Skip if final_url still has Jekyll expressions
+        next if has_jekyll_expressions?(final_url)
+
         link_type = determine_link_type(final_url, final_url)
 
         # Determine title based on link type
@@ -107,77 +110,80 @@ module Jekyll
           # Render Jekyll expressions in URL if present
           final_url = has_jekyll_expressions?(url) ? render_jekyll_url(url, jekyll_context) : url
 
+          # Skip if final_url still has Jekyll expressions
+          next if has_jekyll_expressions?(final_url)
+
           title = link.text.strip
           title = link['title'] if title.empty? && link['title']
           title = final_url if title.empty?
 
-        link_type = determine_link_type(final_url, final_url)
+          link_type = determine_link_type(final_url, final_url)
 
-        # Determine title based on link type
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(final_url)
-          if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
-            case link_type
-            when 'module_conf'
-              template = site_data['i18n']['common']['module_x_parameters'][page_lang]
-              title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
-            when 'module_cluster_conf'
-              template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
-              title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
-            when 'module_crds'
-              template = site_data['i18n']['common']['module_x_crds'][page_lang]
-              title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
-            when 'module_doc'
-              template = site_data['i18n']['common']['module_x_documentation'][page_lang]
-              title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
+          # Determine title based on link type
+          if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
+            module_name = extract_module_name(final_url)
+            if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
+              case link_type
+              when 'module_conf'
+                template = site_data['i18n']['common']['module_x_parameters'][page_lang]
+                title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
+              when 'module_cluster_conf'
+                template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+                title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
+              when 'module_crds'
+                template = site_data['i18n']['common']['module_x_crds'][page_lang]
+                title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
+              when 'module_doc'
+                template = site_data['i18n']['common']['module_x_documentation'][page_lang]
+                title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
+              end
             end
-          end
-        elsif link_type == 'global_crds' || link_type == 'global_conf'
-          # Extract resource name from global reference URL
-          resource_name = extract_global_resource_name(url)
-          if resource_name
-            title = "Global #{resource_name} custom resource"
-          else
-            # Use translation based on link type
-            if site_data && site_data['i18n'] && site_data['i18n']['common']
-              if link_type == 'global_crds'
-                title = site_data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
-              elsif link_type == 'global_conf'
-                title = site_data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+          elsif link_type == 'global_crds' || link_type == 'global_conf'
+            # Extract resource name from global reference URL
+            resource_name = extract_global_resource_name(url)
+            if resource_name
+              title = "Global #{resource_name} custom resource"
+            else
+              # Use translation based on link type
+              if site_data && site_data['i18n'] && site_data['i18n']['common']
+                if link_type == 'global_crds'
+                  title = site_data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+                elsif link_type == 'global_conf'
+                  title = site_data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+                end
               end
             end
           end
-        end
 
-        # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
-        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
-          final_url = final_url.split('#')[0]
-        end
-
-        # For module_docs, use only base module URL (e.g., /modules/cloud-provider-aws/faq.html -> /modules/cloud-provider-aws/)
-        if link_type == 'module_doc'
-          # Extract module name and construct base module URL
-          module_name = extract_module_name(final_url)
-          if module_name
-            # Remove language prefix and construct base module URL
-            base_url = final_url.sub(/^(\/?(en\/|ru\/))?/, '')
-            final_url = "/modules/#{module_name}/"
+          # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
+          if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
+            final_url = final_url.split('#')[0]
           end
-        end
 
-        link_data = {
-          'url' => final_url,
-          'title' => title,
-          'type' => link_type
-        }
+          # For module_docs, use only base module URL (e.g., /modules/cloud-provider-aws/faq.html -> /modules/cloud-provider-aws/)
+          if link_type == 'module_doc'
+            # Extract module name and construct base module URL
+            module_name = extract_module_name(final_url)
+            if module_name
+              # Remove language prefix and construct base module URL
+              base_url = final_url.sub(/^(\/?(en\/|ru\/))?/, '')
+              final_url = "/modules/#{module_name}/"
+            end
+          end
 
-        # Add module property for module links
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(final_url)
-          link_data['module'] = module_name if module_name
-        end
+          link_data = {
+            'url' => final_url,
+            'title' => title,
+            'type' => link_type
+          }
 
-        links << link_data
+          # Add module property for module links
+          if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
+            module_name = extract_module_name(final_url)
+            link_data['module'] = module_name if module_name
+          end
+
+          links << link_data
         end
       rescue => e
         puts "Warning: Error parsing HTML in content: #{e.message}"
