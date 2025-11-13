@@ -72,6 +72,7 @@ type ClusterInitializationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced
 
 // DeckhouseCluster is the Schema for the deckhouseclusters API.
 type DeckhouseCluster struct {
