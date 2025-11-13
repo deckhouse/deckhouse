@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2023 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-umask 0022
-mkdir -m 0755 -p /opt/cni/bin
-cp -f bandwidth bridge dhcp dummy firewall host-device host-local ipvlan loopback macvlan portmap ptp sbr static tap tuning vlan vrf flannel /opt/cni/bin
+# In some cases, the umask 027 may be installed on the system,
+# which can reset the permissions for other users.
+# This can be critical for /opt/cni files and can cause problems
+# with their execution.
+# Therefore, it is necessary to manually set the appropriate permissions.
+
+if [[ -d /opt/cni ]]; then
+  chmod o+rx /opt/cni/ -R
+fi
