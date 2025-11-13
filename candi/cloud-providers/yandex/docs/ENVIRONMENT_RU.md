@@ -144,7 +144,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
-   ```yaml
+   ```console
    d8 k -n external-secrets apply -f - <<EOF
    
    apiVersion: external-secrets.io/v1alpha1
@@ -190,7 +190,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
-   ```yaml
+   ```console
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -241,7 +241,7 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс `PrometheusRemoteWrite`:
 
-   ```yaml
+   ```console
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1
@@ -269,7 +269,7 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс GrafanaAdditionalDatasource:
 
-   ```yaml
+   ```console
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1

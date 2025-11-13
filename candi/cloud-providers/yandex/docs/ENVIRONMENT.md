@@ -143,7 +143,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) with the `sa-creds` secret in it:
 
-   ```yaml
+   ```console
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -189,7 +189,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
-   ```yaml
+   ```console
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -240,7 +240,7 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a PrometheusRemoteWrite resource:
 
-   ```yaml
+   ```console
    d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
@@ -267,7 +267,7 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a GrafanaAdditionalDatasource resource:
 
-   ```yaml
+   ```console
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1
