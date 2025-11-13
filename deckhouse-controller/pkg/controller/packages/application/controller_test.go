@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -181,11 +182,24 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.Application{}).
 		Build()
 
+	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
+	eventChannel := make(chan packagestatusservice.PackageEvent, 100)
+	pm.SetEventChannel(eventChannel)
+
+	statusService := &StatusService{
+		client:       kubeClient,
+		logger:       log.NewNop(),
+		pm:           pm,
+		dc:           dependency.NewMockedContainer(),
+		eventChannel: eventChannel,
+	}
+
 	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		pm:     applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop()),
-		dc:     dependency.NewMockedContainer(),
+		client:        kubeClient,
+		logger:        log.NewNop(),
+		pm:            pm,
+		dc:            dependency.NewMockedContainer(),
+		statusService: statusService,
 		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 

@@ -23,12 +23,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type PackageOperatorStub struct {
-	client client.Client
-	logger *log.Logger
+	client       client.Client
+	logger       *log.Logger
+	eventChannel chan<- packagestatusservice.PackageEvent
 }
 
 func NewStubPackageOperator(client client.Client, logger *log.Logger) *PackageOperatorStub {
@@ -38,8 +40,24 @@ func NewStubPackageOperator(client client.Client, logger *log.Logger) *PackageOp
 	}
 }
 
-func (m *PackageOperatorStub) AddApplication(_ context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
-	m.logger.Debug("adding application", slog.String("name", apvStatus.PackageName), slog.String("version", apvStatus.Version))
+func (m *PackageOperatorStub) SetEventChannel(ch chan<- packagestatusservice.PackageEvent) {
+	m.eventChannel = ch
+}
+
+func (m *PackageOperatorStub) AddApplication(_ context.Context, app *v1alpha1.Application, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
+	m.logger.Debug("adding application",
+		slog.String("name", app.Name),
+		slog.String("namespace", app.Namespace),
+		slog.String("package", apvStatus.PackageName),
+		slog.String("version", apvStatus.Version))
+
+	m.SendEvent(packagestatusservice.PackageEvent{
+		PackageName: apvStatus.PackageName,
+		Name:        app.Name,
+		Namespace:   app.Namespace,
+		Version:     apvStatus.Version,
+		Type:        "application",
+	})
 }
 
 func (m *PackageOperatorStub) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
@@ -60,4 +78,29 @@ func (m *PackageOperatorStub) RemoveClusterApplication(_ context.Context, capvSt
 
 func (m *PackageOperatorStub) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	m.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
+}
+
+func (m *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
+	m.logger.Debug("getting package status",
+		slog.String("package", packageName),
+		slog.String("namespace", namespace),
+		slog.String("version", version),
+		slog.String("type", packageType))
+
+	return PackageStatus{
+		Installed: false,
+		Ready:     false,
+		Error:     "",
+	}, nil
+}
+
+func (m *PackageOperatorStub) SendEvent(event packagestatusservice.PackageEvent) {
+	if m.eventChannel != nil {
+		select {
+		case m.eventChannel <- event:
+		default:
+			// TODO: mb add a metric for this?
+			m.logger.Warn("event channel is full, dropping event", slog.Any("event", event))
+		}
+	}
 }
