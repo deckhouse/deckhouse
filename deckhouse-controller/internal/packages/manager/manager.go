@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"slices"
 	"sync"
 
@@ -35,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -59,8 +61,6 @@ type Manager struct {
 }
 
 type Config struct {
-	AppsDir string
-
 	OnValuesChanged func(ctx context.Context, name string)
 
 	NelmService       *nelm.Service
@@ -71,11 +71,12 @@ type Config struct {
 
 // New creates a new package manager with the specified apps directory.
 func New(conf Config, logger *log.Logger) *Manager {
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
 		onValuesChanged:   conf.OnValuesChanged,
-		loader:            loader.NewApplicationLoader(conf.AppsDir, logger),
+		loader:            loader.NewApplicationLoader(appsPath, logger),
 		nelm:              conf.NelmService,
 		kubeEventsManager: conf.KubeEventsManager,
 		kubeObjectPatcher: conf.KubeObjectPatcher,

@@ -137,7 +137,7 @@ func (o *Operator) Remove(namespace, instance string) {
 		o.mu.Unlock()
 	}))
 
-	o.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, nil, o.logger), queue.WithOnDone(func() {
+	o.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, o.installer, o.logger), queue.WithOnDone(func() {
 		// Remove package's main queue after uninstall completes
 		go o.queueService.Remove(name)
 	}))

@@ -44,9 +44,6 @@ import (
 )
 
 const (
-	// TODO(ipaqsa): tmp solution
-	appsDir = "/deckhouse/download/apps"
-
 	operatorTracer = "operator"
 
 	// TODO(ipaqsa): tmp solution
@@ -123,10 +120,13 @@ func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Lo
 
 	// Initialize package manager with all dependencies
 	o.manager = manager.New(manager.Config{
-		AppsDir: appsDir,
 		OnValuesChanged: func(ctx context.Context, name string) {
 			o.mu.Lock()
 			defer o.mu.Unlock()
+
+			if _, ok := o.packages[name]; !ok {
+				return
+			}
 
 			if o.packages[name].status.Phase == Running {
 				o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
@@ -280,6 +280,10 @@ func (o *Operator) buildNelmService() error {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 
+		if _, ok := o.packages[name]; !ok {
+			return
+		}
+
 		if o.packages[name].status.Phase == Running {
 			o.queueService.Enqueue(context.Background(), name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
 		}
@@ -355,7 +359,11 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 			o.queueService.Enqueue(ctx, name, taskstartup.NewTask(name, o.manager, o.queueService, o.logger), queue.WithOnDone(func() {
 				o.mu.Lock()
 				defer o.mu.Unlock()
-				o.packages[name].status.Phase = Running
+
+				if _, ok := o.packages[name]; ok {
+					o.packages[name].status.Phase = Running
+				}
+
 			}), queue.WithUnique())
 		}
 	}
@@ -369,7 +377,11 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 			o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger), queue.WithOnDone(func() {
 				o.mu.Lock()
 				defer o.mu.Unlock()
-				o.packages[name].status.Phase = Loaded
+
+				if _, ok := o.packages[name]; ok {
+					o.packages[name].status.Phase = Loaded
+				}
+
 			}), queue.WithUnique())
 		}
 	}
