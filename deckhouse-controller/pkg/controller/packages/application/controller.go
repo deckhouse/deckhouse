@@ -175,13 +175,7 @@ func RegisterController(
 		eventChannel: eventChannel,
 	}
 
-	switch p := pm.(type) {
-	case *applicationpackage.PackageOperator:
-		p.SetEventChannel(eventChannel)
-	case *applicationpackage.PackageOperatorStub:
-		p.SetEventChannel(eventChannel)
-	}
-
+	pm.SetEventChannel(eventChannel)
 	go statusService.Start(context.Background())
 
 	r := &reconciler{

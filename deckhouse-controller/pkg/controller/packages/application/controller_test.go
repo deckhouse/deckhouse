@@ -194,6 +194,8 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		eventChannel: eventChannel,
 	}
 
+	go statusService.Start(context.Background())
+
 	ctr := &reconciler{
 		client:        kubeClient,
 		logger:        log.NewNop(),

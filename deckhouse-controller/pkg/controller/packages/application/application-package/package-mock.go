@@ -80,16 +80,26 @@ func (m *PackageOperatorStub) RemoveModule(_ context.Context, metadata *v1alpha1
 	m.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
 
-func (m *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
-	m.logger.Debug("getting package status",
+func (o *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
+	o.logger.Debug("getting package status",
 		slog.String("package", packageName),
 		slog.String("namespace", namespace),
 		slog.String("version", version),
 		slog.String("type", packageType))
 
 	return PackageStatus{
-		Conditions:         []v1alpha1.ApplicationStatusCondition{},
-		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{},
+		Conditions: []v1alpha1.ApplicationStatusCondition{
+			{
+				Status: "True",
+				Type:   "Processed",
+			},
+		},
+		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{
+			{
+				Status: "True",
+				Type:   "UpdateNotified",
+			},
+		},
 	}, nil
 }
 

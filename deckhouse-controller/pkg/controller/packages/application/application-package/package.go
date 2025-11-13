@@ -33,6 +33,7 @@ type PackageManager interface {
 
 type PackageStatusChecker interface {
 	GetPackageStatus(ctx context.Context, packageName, namespace, version, packageType string) (PackageStatus, error)
+	SetEventChannel(ch chan<- packagestatusservice.PackageEvent)
 }
 
 type PackageStatus struct {
