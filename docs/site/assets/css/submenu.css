@@ -2,7 +2,7 @@
     position: absolute;
     z-index: 1000;
     padding: 0;
-    min-width: 100%;
+    max-width: 100%;
     visibility: hidden;
     opacity: 0;
     transition: all .2s;
@@ -88,7 +88,7 @@
 }
 
 .submenu-parent {
-    position: relative;
+    /* position: relative; */
 }
 
 .submenu-parent:not(.disabled):hover .submenu-container {

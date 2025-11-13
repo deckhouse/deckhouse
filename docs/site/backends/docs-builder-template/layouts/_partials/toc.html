@@ -9,8 +9,12 @@
     }
     const headerHeight = getHeaderHeight();
 
-    const $sidebar = $('.sidebar__wrapper-inner');
-    $sidebar.css("top", headerHeight);
+    const $tocTop = $('.layout-sidebar__sidebar_right > .sidebar__wrapper-inner');
+    $tocTop.css("top", headerHeight);
+    const $sidebarTop = $('.container_sidebar_left > .layout-sidebar__sidebar');
+    $sidebarTop.css("top", headerHeight);
+    const $sidebarGuidesTop = $('.layout-sidebar__sidebar--guides > .sidebar__wrapper-inner');
+    $sidebarGuidesTop.css("top", headerHeight);
     
     const $toc = $('#toc-sidebar');
 

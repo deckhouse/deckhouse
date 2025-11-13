@@ -1,6 +1,11 @@
 .layout-sidebar__sidebar--guides {
+    position: relative;
     flex: 1;
     padding-top: 50px;
+
+    .sidebar__wrapper-inner {
+        position: sticky;
+    }
 
     #toc-sidebar ul li {
         padding: 0;
