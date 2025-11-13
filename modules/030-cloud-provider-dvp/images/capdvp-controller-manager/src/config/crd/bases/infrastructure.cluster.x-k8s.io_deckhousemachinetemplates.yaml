@@ -1,0 +1,203 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: deckhousemachinetemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: DeckhouseMachineTemplate
+    listKind: DeckhouseMachineTemplateList
+    plural: deckhousemachinetemplates
+    singular: deckhousemachinetemplate
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DeckhouseMachineTemplate is the Schema for the deckhousemachinetemplates
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DeckhouseMachineTemplateSpec defines the desired state of
+              DeckhouseMachineTemplate.
+            properties:
+              template:
+                properties:
+                  metadata:
+                    description: |-
+                      ObjectMeta is metadata that all persisted resources must have, which includes all objects
+                      users must create. This is a copy of customizable fields from metav1.ObjectMeta.
+
+                      ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template` and `MachineSet.Template`,
+                      which are not top-level Kubernetes objects. Given that metav1.ObjectMeta has lots of special cases
+                      and read-only fields which end up in the generated CRD validation, having it as a subset simplifies
+                      the API and some issues that can impact user experience.
+
+                      During the [upgrade to controller-tools@v2](https://github.com/kubernetes-sigs/cluster-api/pull/1054)
+                      for v1alpha2, we noticed a failure would occur running Cluster API test suite against the new CRDs,
+                      specifically `spec.metadata.creationTimestamp in body must be of type string: "null"`.
+                      The investigation showed that `controller-tools@v2` behaves differently than its previous version
+                      when handling types from [metav1](k8s.io/apimachinery/pkg/apis/meta/v1) package.
+
+                      In more details, we found that embedded (non-top level) types that embedded `metav1.ObjectMeta`
+                      had validation properties, including for `creationTimestamp` (metav1.Time).
+                      The `metav1.Time` type specifies a custom json marshaller that, when IsZero() is true, returns `null`
+                      which breaks validation because the field isn't marked as nullable.
+
+                      In future versions, controller-tools@v2 might allow overriding the type and validation for embedded
+                      types. When that happens, this hack should be revisited.
+                    minProperties: 1
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          annotations is an unstructured key value map stored with a resource that may be
+                          set by external tools to store and retrieve arbitrary metadata. They are not
+                          queryable and should be preserved when modifying objects.
+                          More info: http://kubernetes.io/docs/user-guide/annotations
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          labels is a map of string keys and values that can be used to organize and categorize
+                          (scope and select) objects. May match selectors of replication controllers
+                          and services.
+                          More info: http://kubernetes.io/docs/user-guide/labels
+                        type: object
+                    type: object
+                  spec:
+                    properties:
+                      additionalDisks:
+                        description: AdditionalDisks holds the list of additional
+                          (non-boot) disks to attach to the VM.
+                        items:
+                          properties:
+                            size:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Size of the disk.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            storageClass:
+                              type: string
+                          required:
+                          - size
+                          - storageClass
+                          type: object
+                        type: array
+                      bootDiskImageRef:
+                        description: BootDiskImageRef holds the image to boot this
+                          VM from.
+                        properties:
+                          kind:
+                            default: VirtualImage
+                            description: Kind is a block device type.
+                            enum:
+                            - ClusterVirtualImage
+                            - VirtualImage
+                            - VirtualDiskSnapshot
+                            type: string
+                          name:
+                            description: Name of the attached resource.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      bootloader:
+                        default: EFI
+                        description: Bootloader holds the type of underlying firmware
+                          this VM runs on. Must be kept in sync with DVP bootloader
+                          enum.
+                        enum:
+                        - BIOS
+                        - EFI
+                        - EFIWithSecureBoot
+                        type: string
+                      cpu:
+                        description: CPU holds number of cores and processing time
+                          allocated to them.
+                        properties:
+                          cores:
+                            default: 4
+                            description: Cores is the number of cores per socket.
+                            minimum: 1
+                            type: integer
+                          cpuFraction:
+                            default: 100%
+                            description: |-
+                              Fraction is a guaranteed share of CPU time that will be allocated to the VM.
+                              Expressed as percentage.
+                            pattern: ^100%$|^[1-9][0-9]?%$
+                            type: string
+                        required:
+                        - cores
+                        - cpuFraction
+                        type: object
+                      memory:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        default: 8Gi
+                        description: Memory is this machine's RAM amount in mebibytes
+                          (MiB).
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      rootDiskSize:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: RootDiskSize holds the size of the bootable disk.
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      rootDiskStorageClass:
+                        description: RootDiskStorageClass holds the name of the StorageClass
+                          to use for bootable disk.
+                        type: string
+                      vmClassName:
+                        description: |-
+                          VMClassName defines the name of the VirtualMachineClass resource describing requirements
+                          for a virtual CPU, memory, and the resource allocation policy of this machine.
+                        type: string
+                    required:
+                    - bootDiskImageRef
+                    - cpu
+                    - memory
+                    - rootDiskSize
+                    - rootDiskStorageClass
+                    - vmClassName
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

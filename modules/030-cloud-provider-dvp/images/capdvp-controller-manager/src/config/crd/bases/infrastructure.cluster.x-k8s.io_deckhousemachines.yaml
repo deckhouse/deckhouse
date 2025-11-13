@@ -1,0 +1,262 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: deckhousemachines.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: DeckhouseMachine
+    listKind: DeckhouseMachineList
+    plural: deckhousemachines
+    singular: deckhousemachine
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DeckhouseMachine is the Schema for the deckhousemachines API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DeckhouseMachineSpec defines the desired state of DeckhouseMachine.
+            properties:
+              additionalDisks:
+                description: AdditionalDisks holds the list of additional disks to
+                  attach to the VM.
+                items:
+                  properties:
+                    size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Size of the disk.
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    storageClass:
+                      type: string
+                  required:
+                  - size
+                  - storageClass
+                  type: object
+                type: array
+              bootDiskImageRef:
+                description: BootDiskImageRef holds the image to boot this VM from.
+                properties:
+                  kind:
+                    default: VirtualImage
+                    description: Kind is a block device type.
+                    enum:
+                    - ClusterVirtualImage
+                    - VirtualImage
+                    - VirtualDiskSnapshot
+                    type: string
+                  name:
+                    description: Name of the attached resource.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              bootloader:
+                default: EFI
+                description: Bootloader holds the type of underlying firmware this
+                  VM runs on. Must be kept in sync with DVP bootloader enum.
+                enum:
+                - BIOS
+                - EFI
+                - EFIWithSecureBoot
+                type: string
+              cpu:
+                description: CPU holds number of cores and processing time allocated
+                  to them.
+                properties:
+                  cores:
+                    default: 4
+                    description: Cores is the number of cores per socket.
+                    minimum: 1
+                    type: integer
+                  cpuFraction:
+                    default: 100%
+                    description: |-
+                      Fraction is a guaranteed share of CPU time that will be allocated to the VM.
+                      Expressed as percentage.
+                    pattern: ^100%$|^[1-9][0-9]?%$
+                    type: string
+                required:
+                - cores
+                - cpuFraction
+                type: object
+              memory:
+                anyOf:
+                - type: integer
+                - type: string
+                default: 8Gi
+                description: Memory is this machine's RAM amount.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
+              providerID:
+                description: ProviderID is the UUID of the VM, prefixed with 'dvp://'
+                  proto.
+                type: string
+              rootDiskSize:
+                anyOf:
+                - type: integer
+                - type: string
+                description: RootDiskSize holds the size of the bootable disk.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
+              rootDiskStorageClass:
+                description: RootDiskStorageClass holds the name of the StorageClass
+                  to use for bootable disk.
+                type: string
+              vmClassName:
+                description: |-
+                  VMClassName defines the name of the VirtualMachineClass resource describing requirements
+                  for a virtual CPU, memory, and the resource allocation policy of this machine.
+                type: string
+            required:
+            - bootDiskImageRef
+            - cpu
+            - memory
+            - rootDiskSize
+            - rootDiskStorageClass
+            - vmClassName
+            type: object
+          status:
+            description: DeckhouseMachineStatus defines the observed state of DeckhouseMachine.
+            properties:
+              addresses:
+                description: Addresses holds a list of the host names, external IP
+                  addresses, internal IP addresses, external DNS names, and/or internal
+                  DNS names for the VM.
+                items:
+                  properties:
+                    address:
+                      description: Address in IPv4 or IPv6 notation.
+                      type: string
+                    type:
+                      description: Type of address.
+                      enum:
+                      - Hostname
+                      - ExternalIP
+                      - InternalIP
+                      - ExternalDNS
+                      - InternalDNS
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions defines current service state of the ZvirtMachine.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: FailureMessage will describe an error if something goes
+                  wrong during Machine lifecycle.
+                type: string
+              failureReason:
+                description: FailureReason will contain an error type if something
+                  goes wrong during Machine lifecycle.
+                type: string
+              initialization:
+                description: |-
+                  initialization provides observations of the Machine initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Machine provisioning.
+                minProperties: 1
+                properties:
+                  bootstrapDataSecretCreated:
+                    description: |-
+                      bootstrapDataSecretCreated is true when the bootstrap provider reports that the Machine's boostrap secret is created.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+                      The value of this field is never updated after provisioning is completed.
+                    type: boolean
+                  infrastructureProvisioned:
+                    description: |-
+                      infrastructureProvisioned is true when the infrastructure provider reports that Machine's infrastructure is fully provisioned.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate provisioning.
+                      The value of this field is never updated after provisioning is completed.
+                    type: boolean
+                type: object
+              ready:
+                description: Ready indicates the VM has been provisioned and is ready.
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
