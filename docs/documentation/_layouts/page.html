@@ -8,7 +8,6 @@ layout: sidebar
     </div>
 
     {%- include warning-latest.html %}
-    {%- include related_links.liquid %}
 
     <div class="post-content">
 
@@ -48,6 +47,8 @@ layout: sidebar
         {%- endif %}
 
     </div>
+
+    {%- include related_links.liquid %}
 
     {%- if page.showPrevNextButton %}
       {%- include navigation.html -%}

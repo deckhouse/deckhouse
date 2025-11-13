@@ -12,10 +12,11 @@
 
 {%- assign all_related_links = related_links | concat: extracted_links %}
 {%- if all_related_links and all_related_links.size > 0 %}
-   {%- alert level="info" %}
-{{ site.data.i18n.common['related_reference_and_documentation_links'][page.lang] }}:
-  {%- for link in all_related_links %}
-- [{{ link.title }}]({{ link.url }})
-  {%- endfor %}
-  {%- endalert %}
+
+<h2>{{ site.data.i18n.common['related_additional_resources'][page.lang] }}</h2>
+<ul>
+{%- for link in all_related_links %}
+<li><a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a></li>
+{%- endfor %}
+</ul>
 {%- endif %}
