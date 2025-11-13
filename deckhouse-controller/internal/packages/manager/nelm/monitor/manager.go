@@ -44,13 +44,13 @@ type Manager struct {
 }
 
 // New creates a new monitor manager instance.
-func New(ctx context.Context, cache runtimecache.Cache, nelm *nelm.Client, cb AbsentCallback, logger *log.Logger) *Manager {
+func New(cache runtimecache.Cache, nelm *nelm.Client, callback AbsentCallback, logger *log.Logger) *Manager {
 	return &Manager{
-		ctx:      ctx,
+		ctx:      context.Background(),
 		cache:    cache,
 		nelm:     nelm,
+		callback: callback,
 		monitors: make(map[string]*resourcesMonitor),
-		callback: cb,
 		logger:   logger,
 	}
 }

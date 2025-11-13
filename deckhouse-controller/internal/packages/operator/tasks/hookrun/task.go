@@ -12,51 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagerun
+package hookrun
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 
-	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
+	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "packageRun"
+	taskTracer = "hook-run"
 )
 
-type DependencyContainer interface {
-	PackageManager() *packagemanager.Manager
+type manager interface {
+	RunPackageHook(ctx context.Context, name, hook string, bctx []bctx.BindingContext) error
 }
 
 type task struct {
 	packageName string
+	hook        string
 
-	dc DependencyContainer
+	bctx []bctx.BindingContext
+
+	manager manager
 
 	logger *log.Logger
 }
 
-func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
+func NewTask(name, hook string, bctx []bctx.BindingContext, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
-		dc:          dc,
+		hook:        hook,
+		bctx:        bctx,
+		manager:     manager,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Run", t.packageName)
+	return fmt.Sprintf("Package:%s:Hook:%s:Run", t.packageName, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("run package", slog.String("name", t.packageName))
-
-	if err := t.dc.PackageManager().RunPackage(ctx, t.packageName); err != nil {
-		return fmt.Errorf("run package '%s': %w", t.packageName, err)
+	t.logger.Debug("run hook", slog.String("hook", t.hook), slog.String("name", t.packageName))
+	if err := t.manager.RunPackageHook(ctx, t.packageName, t.hook, t.bctx); err != nil {
+		return fmt.Errorf("run hook '%s': %w", t.hook, err)
 	}
 
 	return nil

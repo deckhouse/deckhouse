@@ -12,52 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagedisable
+package run
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 
-	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "packageDisable"
+	taskTracer = "package-run"
 )
 
-type DependencyContainer interface {
-	PackageManager() *packagemanager.Manager
-}
-
-func New(name string, dc DependencyContainer, logger *log.Logger) queue.Task {
-	return &task{
-		packageName: name,
-		dc:          dc,
-		logger:      logger.Named(taskTracer),
-	}
+type manager interface {
+	RunPackage(ctx context.Context, name string) error
 }
 
 type task struct {
 	packageName string
 
-	dc DependencyContainer
+	manager manager
 
 	logger *log.Logger
 }
 
+func NewTask(name string, manager manager, logger *log.Logger) queue.Task {
+	return &task{
+		packageName: name,
+		manager:     manager,
+		logger:      logger.Named(taskTracer),
+	}
+}
+
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Disable", t.packageName)
+	return "Run"
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("disable package", slog.String("name", t.packageName))
-
-	// stop kube monitors and schedules
-	if err := t.dc.PackageManager().DisablePackage(ctx, t.packageName, true); err != nil {
-		return fmt.Errorf("disable package '%s': %w", t.packageName, err)
+	// Run package lifecycle: beforeHelm hooks → Helm upgrade → afterHelm hooks
+	// Also starts Helm resource monitoring to detect drift/deletions
+	t.logger.Debug("run package", slog.String("name", t.packageName))
+	if err := t.manager.RunPackage(ctx, t.packageName); err != nil {
+		return fmt.Errorf("run package: %w", err)
 	}
 
 	return nil

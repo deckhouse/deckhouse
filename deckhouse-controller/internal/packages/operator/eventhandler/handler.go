@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package taskevent provides event handling for Kubernetes and schedule events.
+// Package eventhandler provides event handling for Kubernetes and schedule events.
 // It converts events from multiple sources into queue tasks for processing.
 //
 // The Handler orchestrates events from:
@@ -33,8 +33,8 @@ import (
 	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/operator/tasks/hookrun"
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
+	taskhookrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hookrun"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -99,8 +99,6 @@ func New(conf Config, logger *log.Logger) *Handler {
 }
 
 // Start begins the event processing loop in a new goroutine.
-// It creates a cancellable context from the provided parent context and starts
-// listening to events from both the Kubernetes event manager and schedule manager.
 //
 // Events are converted to tasks via kubeTasks and scheduleTasks callbacks,
 // then enqueued to the queue service for processing.
@@ -115,18 +113,17 @@ func New(conf Config, logger *log.Logger) *Handler {
 //   - One of the event channels closes (abnormal termination)
 //
 // To stop the handler, call Stop() which waits for goroutine completion.
-func (h *Handler) Start(ctx context.Context) {
+func (h *Handler) Start() *Handler {
 	h.once.Do(func() {
 		h.logger.Info("start loop")
 
 		// Create cancellable context before starting goroutine
-		h.ctx, h.cancel = context.WithCancel(ctx)
+		h.ctx, h.cancel = context.WithCancel(context.Background())
 
 		// Increment WaitGroup before goroutine starts
 		h.wg.Add(1)
 
 		go func() {
-			// Ensure WaitGroup is decremented when goroutine exits
 			defer h.wg.Done()
 
 			for {
@@ -160,6 +157,8 @@ func (h *Handler) Start(ctx context.Context) {
 			}
 		}()
 	})
+
+	return h
 }
 
 // Stop gracefully shuts down the event handler.
@@ -194,7 +193,7 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 			queueName = name
 		}
 
-		return queueName, hookrun.New(name, hook, info.BindingContext, h, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildKubeTasks(ctx, kubeEvent, builder)
@@ -215,16 +214,8 @@ func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[s
 			queueName = name
 		}
 
-		return queueName, hookrun.New(name, hook, info.BindingContext, h, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildScheduleTasks(ctx, crontab, builder)
-}
-
-func (h *Handler) QueueService() *queue.Service {
-	return h.queueService
-}
-
-func (h *Handler) PackageManager() *packagemanager.Manager {
-	return h.packageManager
 }
