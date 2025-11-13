@@ -94,7 +94,6 @@ spec:
         - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
         - --health-addr=127.0.0.1:9442
         - --webhook-port=4200
-        - --skip-crd-migration-phases=StorageVersionMigration,CleanupManagedFields # disabled for now
         - -v=3
         livenessProbe:
           httpGet:

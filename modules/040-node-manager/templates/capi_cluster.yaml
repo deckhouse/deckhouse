@@ -5,7 +5,7 @@
 
 {{- include "capi_infrastructure_cluster" . }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   name: {{ $prefix }}
@@ -26,14 +26,12 @@ spec:
         - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
     serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
   infrastructureRef:
-    apiVersion: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIVersion }}
+    apiGroup: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIGroup }}
     kind: {{ .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
-    namespace:  {{ .Values.nodeManager.internal.cloudProvider.capiClusterNamespace }}
     name: {{ $prefix }}
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiGroup: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIGroup }}
     kind: DeckhouseControlPlane
-    namespace: d8-cloud-instance-manager
     name: {{ $prefix }}-control-plane
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
@@ -43,7 +41,7 @@ metadata:
   name: {{ $prefix }}-control-plane
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   namespace: d8-cloud-instance-manager
@@ -51,17 +49,18 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   clusterName: {{ $prefix }}
-  nodeStartupTimeout: 20m
   selector:
     matchLabels:
       cluster.x-k8s.io/cluster-name: {{ $prefix }}
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 5m
-    - type: Ready
-      status: "False"
-      timeout: 5m
+  checks:
+    nodeStartupTimeoutSeconds: 1200
+    unhealthyNodeConditions:
+      - type: Ready
+        status: Unknown
+        timeoutSeconds: 300
+      - type: Ready
+        status: "False"
+        timeoutSeconds: 300
   {{- end }}
 {{- end }}
 
