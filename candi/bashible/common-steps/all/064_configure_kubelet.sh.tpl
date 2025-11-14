@@ -313,6 +313,9 @@ featureGates:
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
 {{- end }}
+{{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
+  DynamicResourceAllocation: true
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
