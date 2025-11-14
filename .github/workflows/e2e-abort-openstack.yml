@@ -191,9 +191,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -334,9 +339,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -350,8 +356,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -374,7 +380,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -510,9 +516,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -653,9 +664,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -669,8 +681,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -693,7 +705,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -829,9 +841,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -972,9 +989,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.31"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -988,8 +1006,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1012,7 +1030,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1148,9 +1166,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1291,9 +1314,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.32"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -1307,8 +1331,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1331,7 +1355,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1467,9 +1491,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1610,9 +1639,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.33"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -1626,8 +1656,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1650,7 +1680,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1786,9 +1816,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1929,9 +1964,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.34"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -1945,8 +1981,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1969,7 +2005,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2105,9 +2141,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2248,9 +2289,10 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -2264,8 +2306,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2288,7 +2330,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2424,9 +2466,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2567,9 +2614,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -2583,8 +2631,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2607,7 +2655,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2743,9 +2791,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2886,9 +2939,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -2902,8 +2956,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2926,7 +2980,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3062,9 +3116,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3205,9 +3264,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.31"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -3221,8 +3281,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3245,7 +3305,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3381,9 +3441,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3524,9 +3589,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.32"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -3540,8 +3606,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3564,7 +3630,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3700,9 +3766,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3843,9 +3914,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.33"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -3859,8 +3931,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3883,7 +3955,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4019,9 +4091,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -4162,9 +4239,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.34"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -4178,8 +4256,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -4202,7 +4280,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -4338,9 +4416,14 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -4481,9 +4564,10 @@ jobs:
           CRI: ContainerdV2
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -4497,8 +4581,8 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -4521,7 +4605,7 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
