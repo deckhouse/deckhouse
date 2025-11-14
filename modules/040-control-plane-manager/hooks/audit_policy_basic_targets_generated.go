@@ -58,6 +58,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-master",
 	"system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-worker",
 	"system:serviceaccount:d8-cloud-instance-manager:node-group",
+	"system:serviceaccount:d8-cloud-instance-manager:node-group-exporter",
 	"system:serviceaccount:d8-cloud-instance-manager:nvidia-dcgm-exporter",
 	"system:serviceaccount:d8-cloud-instance-manager:nvidia-device-plugin",
 	"system:serviceaccount:d8-cloud-instance-manager:nvidia-gpu-feature-discovery",
