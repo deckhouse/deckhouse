@@ -13,7 +13,7 @@
     {{- $machineDeploymentName = (printf "%s-%s" $instancePrefix $machineDeploymentSuffix) }}
   {{- end }}
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
@@ -44,18 +44,20 @@ spec:
       bootstrap:
         dataSecretName: {{ $bootstrap_secret_name | quote }}
       infrastructureRef:
-        apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
+        apiGroup: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIGroup | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
         name: {{ $template_name }}
   {{- if $ng.nodeDrainTimeoutSecond }}
-      drainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeDeletionTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+      deletion:
+        drainTimeout: {{$ng.nodeDrainTimeoutSecond}}
+        nodeDrainTimeoutSeconds: {{$ng.nodeDrainTimeoutSecond}}
+        nodeDeletionTimeoutSeconds: {{$ng.nodeDrainTimeoutSecond}}
+        nodeVolumeDetachTimeoutSeconds: {{$ng.nodeDrainTimeoutSecond}}
   {{- else }}
-      nodeDrainTimeout: 10m
-      nodeDeletionTimeout: 10m
-      nodeVolumeDetachTimeout: 10m
+      deletion:
+        nodeDrainTimeout: 600
+        nodeDeletionTimeout: 600
+        nodeVolumeDetachTimeout: 600
   {{- end }}
   strategy:
     type: RollingUpdate

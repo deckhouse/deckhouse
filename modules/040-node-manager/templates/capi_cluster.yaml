@@ -63,5 +63,3 @@ spec:
         timeoutSeconds: 300
   {{- end }}
 {{- end }}
-
-
