@@ -127,9 +127,9 @@ func (svc *StatusService) handleEvent(ctx context.Context, event packagestatusse
 func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationStatusCondition) {
 	now := metav1.NewTime(svc.dc.GetClock().Now())
 
-	prev := make(map[string]corev1.ConditionStatus, len(app.Status.Conditions))
+	prev := make(map[string]v1alpha1.ApplicationStatusCondition)
 	for _, c := range app.Status.Conditions {
-		prev[c.Type] = c.Status
+		prev[c.Type] = c
 	}
 
 	applied := make([]v1alpha1.ApplicationStatusCondition, 0, len(newConds))
@@ -137,10 +137,10 @@ func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []
 		cond := c
 		cond.LastProbeTime = now
 
-		if p, ok := prev[cond.Type]; !ok || p != cond.Status {
+		if p, ok := prev[cond.Type]; !ok || p.Status != cond.Status {
 			cond.LastTransitionTime = now
-		} else if cond.LastTransitionTime.IsZero() {
-			cond.LastTransitionTime = now
+		} else {
+			cond.LastTransitionTime = p.LastTransitionTime
 		}
 		applied = append(applied, cond)
 	}
@@ -150,17 +150,19 @@ func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []
 
 func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationInternalStatusCondition) {
 	now := metav1.NewTime(svc.dc.GetClock().Now())
-	prev := make(map[string]corev1.ConditionStatus)
-	for _, c := range app.Status.Conditions {
-		prev[c.Type] = c.Status
+	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	for _, c := range app.Status.InternalConditions {
+		prev[c.Type] = c
 	}
 
 	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(newConds))
 	for _, c := range newConds {
 		cond := c
 		cond.LastProbeTime = now
-		if p, ok := prev[cond.Type]; !ok || p != cond.Status {
+		if p, ok := prev[cond.Type]; !ok || p.Status != cond.Status {
 			cond.LastTransitionTime = now
+		} else {
+			cond.LastTransitionTime = p.LastTransitionTime
 		}
 		applied = append(applied, cond)
 	}
@@ -208,7 +210,7 @@ func RegisterController(
 		Complete(applicationController)
 }
 
-func (svc *StatusService) WaitForIdle(ctx context.Context) error {
+func (svc *StatusService) WaitForIdle(_ context.Context) error {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 

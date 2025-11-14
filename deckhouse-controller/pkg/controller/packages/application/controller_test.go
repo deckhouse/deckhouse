@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -91,6 +92,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	ctx := context.Background()
 	err := suite.ctr.statusService.WaitForIdle(ctx)
 	require.NoError(suite.T(), err)
+	time.Sleep(300 * time.Millisecond)
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()

@@ -80,8 +80,8 @@ func (m *PackageOperatorStub) RemoveModule(_ context.Context, metadata *v1alpha1
 	m.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
 
-func (o *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
-	o.logger.Debug("getting package status",
+func (m *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
+	m.logger.Debug("getting package status",
 		slog.String("package", packageName),
 		slog.String("namespace", namespace),
 		slog.String("version", version),
