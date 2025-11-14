@@ -137,10 +137,13 @@ func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []
 		cond := c
 		cond.LastProbeTime = now
 
-		if p, ok := prev[cond.Type]; !ok || p.Status != cond.Status {
-			cond.LastTransitionTime = now
-		} else {
+		p, ok := prev[cond.Type]
+		if ok {
 			cond.LastTransitionTime = p.LastTransitionTime
+		}
+
+		if p.Status != cond.Status {
+			cond.LastTransitionTime = now
 		}
 		applied = append(applied, cond)
 	}
@@ -159,10 +162,14 @@ func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, new
 	for _, c := range newConds {
 		cond := c
 		cond.LastProbeTime = now
-		if p, ok := prev[cond.Type]; !ok || p.Status != cond.Status {
-			cond.LastTransitionTime = now
-		} else {
+
+		p, ok := prev[cond.Type]
+		if ok {
 			cond.LastTransitionTime = p.LastTransitionTime
+		}
+
+		if p.Status != cond.Status {
+			cond.LastTransitionTime = now
 		}
 		applied = append(applied, cond)
 	}

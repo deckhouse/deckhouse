@@ -119,11 +119,9 @@ func (o *PackageOperator) GetPackageStatus(_ context.Context, packageName, names
 }
 
 func (o *PackageOperator) SendEvent(event packagestatusservice.PackageEvent) {
-	if o.eventChannel != nil {
-		select {
-		case o.eventChannel <- event:
-		default:
-			o.logger.Warn("event channel is full, dropping event", slog.Any("event", event))
-		}
+	select {
+	case o.eventChannel <- event:
+	default:
+		o.logger.Warn("event channel is full, dropping event", slog.Any("event", event))
 	}
 }
