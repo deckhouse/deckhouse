@@ -15,6 +15,7 @@ config:
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
+      - COSIGN_VAULT_ADDRESS
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
