@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.24.0
+go 1.24.2
 
 toolchain go1.24.6
 
@@ -82,8 +82,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
-	golang.org/x/mod v0.27.0
-	golang.org/x/text v0.29.0
+	golang.org/x/mod v0.28.0
+	golang.org/x/text v0.30.0
 	k8s.io/cli-runtime v0.30.11
 	k8s.io/code-generator v0.30.11
 	k8s.io/klog/v2 v2.130.1
@@ -97,6 +97,7 @@ require (
 require k8s.io/klog v1.0.0 // indirect
 
 require (
+	github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
 	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.1 // indirect
@@ -109,7 +110,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.20.0 // indirect
-	github.com/name212/govalue v1.0.1 // indirect
+	github.com/name212/govalue v1.0.2 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/sigstore/sigstore v1.8.8 // indirect
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8 // indirect
@@ -317,15 +318,15 @@ require (
 	go.starlark.net v0.0.0-20231121155337-90ade8b19d09 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.36.0
-	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/sys v0.37.0
+	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
