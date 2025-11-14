@@ -38,4 +38,4 @@ The set of actions that can be performed on a credential depends on its type. Th
 | Action\Credential type | Personal Access Token | SSH Key | GPG Key | Group/Project Access Token |
 |------------------------|-----------------------|---------|---------|----------------------------|
 | Removal                | Yes                   | Yes     | Yes     | Yes                        |
-| Revocation             | Yes                   | No      | No      | No                         |
+| Revocation             | Yes                   | No      | No      | Yes                        |
