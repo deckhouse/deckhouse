@@ -286,7 +286,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'eks';
-            const kubernetesDefaultVersion = '1.30';
+            const kubernetesDefaultVersion = '1.32';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -4071,7 +4071,7 @@ jobs:
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.30"
+      KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
@@ -4351,7 +4351,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
@@ -4532,7 +4532,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
@@ -8453,7 +8453,7 @@ jobs:
       PROVIDER: EKS
       CRI: ContainerdV2
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.30"
+      KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
@@ -8733,7 +8733,7 @@ jobs:
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
@@ -8914,7 +8914,7 @@ jobs:
           PROVIDER: EKS
           CRI: ContainerdV2
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}

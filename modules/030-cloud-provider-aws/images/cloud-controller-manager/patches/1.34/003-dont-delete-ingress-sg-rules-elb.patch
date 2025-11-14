@@ -1,9 +1,9 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index af8217e..e9e5f2d 100644
+index e1070ee..feff012 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
-@@ -4613,6 +4613,12 @@ func (c *Cloud) updateInstanceSecurityGroupsForLoadBalancer(lb *elb.LoadBalancer
- 	c.sortELBSecurityGroupList(lbSecurityGroupIDs, annotations)
+@@ -2733,6 +2733,13 @@ func (c *Cloud) updateInstanceSecurityGroupsForLoadBalancer(ctx context.Context,
+ 	c.sortELBSecurityGroupList(lbSecurityGroupIDs, annotations, taggedLBSecurityGroups)
  	loadBalancerSecurityGroupID := lbSecurityGroupIDs[0]
  
 +	var deleteSecurityGroupID bool
@@ -12,15 +12,16 @@ index af8217e..e9e5f2d 100644
 +	if loadBalancerSecurityGroupID != c.cfg.Global.ElbSecurityGroup {
 +		deleteSecurityGroupID = true
 +	}
++
  	// Get the actual list of groups that allow ingress from the load-balancer
- 	var actualGroups []*ec2.SecurityGroup
+ 	actualGroups := make(map[*ec2types.SecurityGroup]bool)
  	{
-@@ -4708,7 +4714,7 @@ func (c *Cloud) updateInstanceSecurityGroupsForLoadBalancer(lb *elb.LoadBalancer
+@@ -2824,7 +2831,7 @@ func (c *Cloud) updateInstanceSecurityGroupsForLoadBalancer(ctx context.Context,
  			if !changed {
  				klog.Warning("Allowing ingress was not needed; concurrent change? groupId=", instanceSecurityGroupID)
  			}
 -		} else {
 +		} else if deleteSecurityGroupID {
- 			changed, err := c.removeSecurityGroupIngress(instanceSecurityGroupID, permissions)
+ 			changed, err := c.removeSecurityGroupIngress(ctx, instanceSecurityGroupID, permissions)
  			if err != nil {
  				return err

@@ -1,8 +1,8 @@
 diff --git a/cmd/cloud-controller-manager/app/options/options.go b/cmd/cloud-controller-manager/app/options/options.go
-index e7c9d2231..75adb78e5 100644
+index c9b91b5e9..ae5cc425c 100644
 --- a/cmd/cloud-controller-manager/app/options/options.go
 +++ b/cmd/cloud-controller-manager/app/options/options.go
-@@ -66,6 +66,7 @@ type CloudControllerManagerOptions struct {
+@@ -68,6 +68,7 @@ type CloudControllerManagerOptions struct {
  	KubeCloudShared    *cpoptions.KubeCloudSharedOptions
  	ServiceController  *cpoptions.ServiceControllerOptions
  	NodeIPAMController *NodeIPAMControllerOptions
@@ -10,17 +10,17 @@ index e7c9d2231..75adb78e5 100644
  
  	SecureServing  *apiserveroptions.SecureServingOptionsWithLoopback
  	Authentication *apiserveroptions.DelegatingAuthenticationOptions
-@@ -93,6 +94,9 @@ func NewCloudControllerManagerOptions() (*CloudControllerManagerOptions, error)
+@@ -98,6 +99,9 @@ func NewCloudControllerManagerOptions() (*CloudControllerManagerOptions, error)
  		ServiceController: &cpoptions.ServiceControllerOptions{
  			ServiceControllerConfiguration: &componentConfig.ServiceController,
  		},
 +		NodeController: &cpoptions.NodeControllerOptions{
-+			&componentConfig.NodeController,
++			NodeControllerConfiguration: &componentConfig.NodeController,
 +		},
  		NodeIPAMController:        defaultNodeIPAMControllerOptions(),
  		SecureServing:             apiserveroptions.NewSecureServingOptions().WithLoopback(),
  		Authentication:            apiserveroptions.NewDelegatingAuthenticationOptions(),
-@@ -137,6 +141,7 @@ func (o *CloudControllerManagerOptions) Flags(allControllers, disabledByDefaultC
+@@ -142,6 +146,7 @@ func (o *CloudControllerManagerOptions) Flags(allControllers, disabledByDefaultC
  	o.KubeCloudShared.AddFlags(fss.FlagSet("generic"))
  	o.ServiceController.AddFlags(fss.FlagSet("service controller"))
  	o.NodeIPAMController.AddFlags(fss.FlagSet("node ipam controller"))
@@ -28,7 +28,7 @@ index e7c9d2231..75adb78e5 100644
  
  	o.SecureServing.AddFlags(fss.FlagSet("secure serving"))
  	o.Authentication.AddFlags(fss.FlagSet("authentication"))
-@@ -169,6 +174,9 @@ func (o *CloudControllerManagerOptions) ApplyTo(c *cloudcontrollerconfig.Config,
+@@ -182,6 +187,9 @@ func (o *CloudControllerManagerOptions) ApplyTo(
  	if err = o.NodeIPAMController.ApplyTo(&c.NodeIPAMControllerConfig); err != nil {
  		return err
  	}
@@ -38,7 +38,7 @@ index e7c9d2231..75adb78e5 100644
  	if err = o.SecureServing.ApplyTo(&c.SecureServing, &c.LoopbackClientConfig); err != nil {
  		return err
  	}
-@@ -234,6 +242,7 @@ func (o *CloudControllerManagerOptions) Validate(allControllers, disabledByDefau
+@@ -255,6 +263,7 @@ func (o *CloudControllerManagerOptions) Validate(allControllers, disabledByDefau
  	errors = append(errors, o.KubeCloudShared.Validate()...)
  	errors = append(errors, o.ServiceController.Validate()...)
  	errors = append(errors, o.NodeIPAMController.Validate()...)
