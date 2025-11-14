@@ -4,7 +4,6 @@
 # list of $ and image name.
 # list ($ "common/kubernetes")
 {{- define "vex mitigation" }}
-  {{- if ne (env "COSIGN_VAULT_ADDRESS" "") "" }}
   {{- $context := index . 0 }}
   {{- $imageName := index . 1 }}
   {{- $knownVulnPath := "" }}
@@ -83,6 +82,5 @@ shell:
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
-  {{- end }}
   {{- end }}
 {{- end }}
