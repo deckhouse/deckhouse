@@ -19,6 +19,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
@@ -48,7 +49,8 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name      string // Application instance name
+	name      string // Package name(namespace.name)
+	instance  string // Application instance name
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
 
@@ -76,6 +78,14 @@ type ApplicationConfig struct {
 // Returns error if hook initialization or values storage creation fails.
 func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
+
+	splits := strings.Split(name, ".")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("invalid application name: %s", name)
+	}
+
+	a.namespace = splits[0]
+	a.instance = splits[1]
 
 	a.name = name
 	a.path = path
@@ -125,10 +135,12 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 // GetMetaValues returns values that is not part of schema(name, namespace, version)
 func (a *Application) GetMetaValues() addonutils.Values {
 	return addonutils.Values{
-		"Name":      a.name,
-		"Namespace": a.namespace,
-		"Package":   a.definition.Name,
-		"Version":   a.definition.Version,
+		"Meta": map[string]interface{}{
+			"Name":      a.instance,
+			"Namespace": a.namespace,
+			"Package":   a.definition.Name,
+			"Version":   a.definition.Version,
+		},
 	}
 }
 
@@ -145,11 +157,6 @@ func BuildName(namespace, name string) string {
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
-}
-
-// SetNamespace set application namespace
-func (a *Application) SetNamespace(namespace string) {
-	a.namespace = namespace
 }
 
 // GetPath returns path to the package dir

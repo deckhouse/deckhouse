@@ -101,8 +101,6 @@ func (m *Manager) LoadPackage(ctx context.Context, namespace, name string) error
 		return fmt.Errorf("load from fs: %w", err)
 	}
 
-	app.SetNamespace(namespace)
-
 	m.mu.Lock()
 	m.apps[name] = app
 	m.mu.Unlock()
