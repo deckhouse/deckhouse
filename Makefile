@@ -217,7 +217,11 @@ generate: generate-kubernetes generate-tools
 
 .PHONY: generate-tools
 generate-tools:
-	cd tools && go generate -v && cd ..
+	@bash -c \
+    "export COSIGN_VAULT_ADDRESS=1; \
+	cd tools; \
+	go generate -v; \
+	cd .."
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
