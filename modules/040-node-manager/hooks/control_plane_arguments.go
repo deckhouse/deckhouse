@@ -54,27 +54,43 @@ func handleUpdateFreq(_ context.Context, input *go_hook.HookInput) error {
 
 	if len(snaps) == 0 {
 		input.Values.Remove("nodeManager.internal.nodeStatusUpdateFrequency")
+		input.Values.Remove("nodeManager.internal.allowedKubeletFeatureGates")
 		return nil
 	}
-	var args nodeArguments
-	err := snaps[0].UnmarshalTo(&args)
+
+	var secretData controlPlaneArgumentsSecret
+	err := snaps[0].UnmarshalTo(&secretData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'secret' snapshots: %w", err)
 	}
 
-	if args.NodeMonitorGracePeriodSeconds == 0 {
+	if secretData.Arguments.NodeMonitorGracePeriodSeconds == 0 {
 		input.Values.Remove("nodeManager.internal.nodeStatusUpdateFrequency")
-		return nil
+	} else {
+		freq := math.Round(float64(secretData.Arguments.NodeMonitorGracePeriodSeconds) / 4)
+		input.Values.Set("nodeManager.internal.nodeStatusUpdateFrequency", freq)
 	}
 
-	freq := math.Round(float64(args.NodeMonitorGracePeriodSeconds) / 4)
-	input.Values.Set("nodeManager.internal.nodeStatusUpdateFrequency", freq)
+	if secretData.FeatureGates.Kubelet == nil {
+		input.Values.Set("nodeManager.internal.allowedKubeletFeatureGates", []string{})
+	} else {
+		input.Values.Set("nodeManager.internal.allowedKubeletFeatureGates", secretData.FeatureGates.Kubelet)
+	}
 
 	return nil
 }
 
 type nodeArguments struct {
 	NodeMonitorGracePeriodSeconds int64 `json:"nodeMonitorGracePeriod,omitempty"`
+}
+
+type featureGatesData struct {
+	Kubelet []string `json:"kubelet,omitempty"`
+}
+
+type controlPlaneArgumentsSecret struct {
+	Arguments    nodeArguments    `json:"arguments"`
+	FeatureGates featureGatesData `json:"featureGates"`
 }
 
 func updateFreqFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -85,11 +101,23 @@ func updateFreqFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
-	argData := secret.Data["arguments.json"]
+	var result controlPlaneArgumentsSecret
 
-	var args nodeArguments
+	if argData, ok := secret.Data["arguments.json"]; ok {
+		var args nodeArguments
+		if err := json.Unmarshal(argData, &args); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal arguments.json: %w", err)
+		}
+		result.Arguments = args
+	}
 
-	err = json.Unmarshal(argData, &args)
+	if fgData, ok := secret.Data["featureGates.json"]; ok {
+		var featureGates featureGatesData
+		if err := json.Unmarshal(fgData, &featureGates); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal featureGates.json: %w", err)
+		}
+		result.FeatureGates = featureGates
+	}
 
-	return args, err
+	return result, nil
 }

@@ -117,6 +117,9 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "etcdQuotaBackendBytes" }}
 {{ $_ := set $tpl_context.etcd "quotaBackendBytes" .Values.controlPlaneManager.internal.etcdQuotaBackendBytes }}
 {{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "allowedFeatureGates" }}
+{{- $_ := set $tpl_context "allowedFeatureGates" .Values.controlPlaneManager.internal.allowedFeatureGates }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- define "control_plane_config" }}

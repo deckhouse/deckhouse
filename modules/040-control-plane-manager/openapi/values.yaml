@@ -81,3 +81,31 @@ properties:
             caData:
               type: string
         default: []
+      allowedFeatureGates:
+        type: object
+        default: {}
+        properties:
+          apiserver:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubelet:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubeControllerManager:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
+          kubeScheduler:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-zA-Z]+$'
+            default: []
