@@ -1,0 +1,166 @@
+candi:
+  features:
+    - summary: added support for Kubernetes 1.34 and discontinued support for Kubernetes 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15518
+      impact: >-
+        The minimum supported version of Kubernetes is now 1.30. All control plane components will
+        restart.
+  fixes:
+    - summary: bb-event-error-create function fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16411
+    - summary: Exclude I/O loopback from node ip discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16179
+ci:
+  features:
+    - summary: Add scheduled Gitleaks full scan workflow for daily security monitoring
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16114
+      impact: >-
+        Enhanced security monitoring with automated daily scanning of the entire repository for
+        potential secret leaks using Gitleaks v8.28.0. The workflow runs every day at midnight UTC
+        and provides comprehensive coverage beyond the existing PR-based diff scanning.
+    - summary: Set up automatic cleaning the stage registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16074
+  fixes:
+    - summary: ci fix remove e2e labels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16099
+cloud-provider-dvp:
+  fixes:
+    - summary: Stop preferring fqdn to hostname in cloud-init configurations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16124
+cloud-provider-huaweicloud:
+  features:
+    - summary: allow users to overwrite default NIC in both CloudPermanent and CloudEphemeral
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15810
+    - summary: add Virtual IP support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15600
+cloud-provider-openstack:
+  fixes:
+    - summary: fix discovery data merging for hybrid cases
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16067
+cni-cilium:
+  features:
+    - summary: >-
+        Add the ability to configure the mapDynamicSizeRatio parameter for specific nodes using
+        CiliumNodeConfig.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16326
+    - summary: Add SCTP support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16297
+control-plane-manager:
+  features:
+    - summary: Dynamic setting of terminated-pod-gc-threshold depends on number of nodes in cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16266
+      impact: >-
+        After upgrading Deckhouse with this feature, the kube-controller-manager will be restarted,
+        and the default value of terminated-pod-gc-threshold will be reconfigured
+    - summary: Added logging before running the kubeadm command to make troubleshooting easier
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15943
+  fixes:
+    - summary: >-
+        No more errors "failed to read authentication config file" in kube-apiserver after
+        restarting pod control-plane-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15975
+deckhouse:
+  features:
+    - summary: Add nelm client.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16020
+    - summary: Add package manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16013
+    - summary: Integrity control for modules - use read only file system model.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15019
+deckhouse-controller:
+  features:
+    - summary: add package status service
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16465
+    - summary: fix packages flow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16310
+    - summary: add application controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16189
+    - summary: switch on nelm in controller logic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16142
+    - summary: >-
+        Implement Package Repository Discovery System with automatic package scanning from OCI
+        registries
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16125
+    - summary: add controller for ApplicationPackageVersion resource
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16075
+    - summary: Add foundational API structures and controllers for Package System.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16016
+    - summary: collect-debug-info command has been moved to the d8 utility.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15767
+    - summary: Restrict using of `d8ms-*` prefix for all objects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15147
+      impact: Objects with prefix `d8ms-` could NOT be created by users in their's D8 clusters.
+  fixes:
+    - summary: handle metrics if hook are failed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16319
+    - summary: Fix incorrect time value in minor release notification messages
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16271
+    - summary: bump go-openapi validate
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16183
+dhctl:
+  features:
+    - summary: Isolate temp dir for singleshot RPC and dhctl to avoid cleanup race.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15794
+  fixes:
+    - summary: Fix and refactor cleaning temp dir function for better cleaning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15794
+docs:
+  features:
+    - summary: Added small guide about steps for install cluster with Installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16276
+    - summary: Added new guide about filesystem configurations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15858
+  fixes:
+    - summary: Fix docs-builder to exclude internal documentation directories
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16400
+    - summary: Added checking of editions for license key in the Getting Started
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16342
+    - summary: Fixes at bare-metal Stronghold getting started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16155
+istio:
+  fixes:
+    - summary: vex clarification
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16353
+loki:
+  fixes:
+    - summary: fix for Discarded Samples alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16374
+multitenancy-manager:
+  fixes:
+    - summary: Fix indent for non-vpa resources block
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16471
+node-local-dns:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16292
+node-manager:
+  features:
+    - summary: deny use CAPS StaticInstance if address similar any node in DKP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15991
+    - summary: Prevent users workload deploy on nodes during first bashible running steps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14828
+  fixes:
+    - summary: Adjust configs to fix bootstrap with nelm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16444
+    - summary: move bb-label-node-bashible-first-run-finished to bashible template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16307
+prometheus:
+  fixes:
+    - summary: Add ingressClassName to grafana/prometheus redirect ingress
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16116
+tools:
+  features:
+    - summary: change dmt version to v0.1.52
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16274
+    - summary: update dmt version to 0.1.51
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16213
+    - summary: update dmt to v0.1.50
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16202
+    - summary: update dmt to v0.1.48
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16147
+    - summary: add b64enc to helm-lib
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16111
+  fixes:
+    - summary: update dmt version to 0.1.53
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16322
+
