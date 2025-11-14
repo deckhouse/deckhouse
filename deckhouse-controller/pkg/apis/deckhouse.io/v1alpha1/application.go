@@ -110,11 +110,11 @@ type ApplicationSpec struct {
 }
 
 type ApplicationStatus struct {
-	Version           *ApplicationStatusVersion            `json:"version,omitempty"`
-	Repository        string                               `json:"repository,omitempty"`
-	Status            string                               `json:"status,omitempty"`
-	Conditions        []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	IternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Version            *ApplicationStatusVersion            `json:"version,omitempty"`
+	Repository         string                               `json:"repository,omitempty"`
+	Status             string                               `json:"status,omitempty"`
+	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {

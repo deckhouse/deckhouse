@@ -19,7 +19,7 @@
 package v1alpha1
 
 import (
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -395,8 +395,8 @@ func (in *ApplicationStatus) DeepCopyInto(out *ApplicationStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.IternalConditions != nil {
-		in, out := &in.IternalConditions, &out.IternalConditions
+	if in.InternalConditions != nil {
+		in, out := &in.InternalConditions, &out.InternalConditions
 		*out = make([]ApplicationInternalStatusCondition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

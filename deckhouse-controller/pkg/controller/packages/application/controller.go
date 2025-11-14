@@ -58,7 +58,7 @@ type StatusService struct {
 	logger       *log.Logger
 	pm           applicationpackage.PackageManager
 	dc           dependency.Container
-	eventChannel <-chan packagestatusservice.PackageEvent
+	eventChannel chan packagestatusservice.PackageEvent
 }
 
 func (svc *StatusService) Start(ctx context.Context) {
@@ -156,7 +156,7 @@ func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, new
 		applied = append(applied, cond)
 	}
 
-	app.Status.IternalConditions = applied
+	app.Status.InternalConditions = applied
 }
 
 func RegisterController(
@@ -175,7 +175,7 @@ func RegisterController(
 		eventChannel: eventChannel,
 	}
 
-	pm.SetEventChannel(eventChannel)
+	pm.SetEventChannel((chan<- packagestatusservice.PackageEvent)(eventChannel))
 	go statusService.Start(context.Background())
 
 	r := &reconciler{
