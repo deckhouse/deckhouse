@@ -199,7 +199,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
-	metaValues, err := json.Marshal(app.GetMetaValues())
+	metaValues, err := json.Marshal(addonutils.Values{"Meta": app.GetMetaValues()})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("marshal metadata values: %w", err)

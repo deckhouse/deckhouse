@@ -211,8 +211,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles:   opts.ValuesPaths,
-			ValuesSetJSON: valuesSet,
+			ValuesFiles:    opts.ValuesPaths,
+			RuntimeSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
@@ -258,8 +258,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles: opts.ValuesPaths,
-			ValuesSet:   valuesSet,
+			ValuesFiles:    opts.ValuesPaths,
+			RuntimeSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
