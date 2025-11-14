@@ -191,7 +191,7 @@ type InstallOptions struct {
 }
 
 // Install installs a Helm chart as a release
-func (c *Client) Install(ctx context.Context, releaseName, namespace string, opts InstallOptions) error {
+func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) error {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Install")
 	defer span.End()
 

@@ -199,7 +199,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	defer os.Remove(valuesPath) // Clean up temp file
 
 	// Render chart to get manifests for checksum calculation
-	renderedManifests, err := s.client.Render(ctx, app.GetName(), app.GetName(), nelm.InstallOptions{
+	renderedManifests, err := s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
 	})
