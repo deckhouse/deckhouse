@@ -199,7 +199,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -216,7 +216,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
@@ -244,7 +244,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -e USER_RUNNER_ID=${user_runner_id} \
   {!{- if $run_from_issue_or_pr }!}
   -e CIS_ENABLED=${CIS_ENABLED} \
@@ -314,7 +314,7 @@ run: |
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   export CIS_ENABLED=${CIS_ENABLED}
   {!{- end }!}
-  export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+  export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
   # for logs upload
   ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -374,7 +374,7 @@ run: |
 {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
     -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
 {!{- end }!}
-    -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+    -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -487,7 +487,9 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret" "FOX_DOCKERCFG" "LAYOUT_FOX_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
@@ -693,7 +695,7 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
 {!{- if not (has $commanderProviders $provider) }!}
@@ -772,7 +774,7 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
 {!{- if not (has $commanderProviders $provider) }!}
@@ -885,7 +887,9 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret" "FOX_DOCKERCFG" "LAYOUT_FOX_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
@@ -1013,8 +1017,9 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
