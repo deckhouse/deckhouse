@@ -4,7 +4,7 @@
       {{ site.data.i18n.common.dev_menu_message[page.lang] }}
     </div>
   {%- else %}
-      <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+      <div class="versions-menu__container">
           <div>
           {%- if site.mode == 'module' %}
             <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
