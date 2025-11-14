@@ -35,6 +35,7 @@ metadata:
   namespace: kube-system
 data:
   arguments.json: eyJub2RlU3RhdHVzVXBkYXRlRnJlcXVlbmN5IjogNCwibm9kZU1vbml0b3JQZXJpb2QiOiAyLCJub2RlTW9uaXRvckdyYWNlUGVyaW9kIjogMTV9
+  featureGates.json: eyJrdWJlbGV0IjpbXX0=
 `
 		secretFailedNodePodEvictionTimeoutParameter = `
 ---
@@ -45,6 +46,18 @@ metadata:
   namespace: kube-system
 data:
   arguments.json: eyJwb2RFdmljdGlvblRpbWVvdXQiOiAxNX0=
+  featureGates.json: eyJrdWJlbGV0IjpbXX0=
+`
+		secretWithFeatureGates = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-control-plane-manager-control-plane-arguments
+  namespace: kube-system
+data:
+  arguments.json: eyJub2RlTW9uaXRvckdyYWNlUGVyaW9kIjogMTV9
+  featureGates.json: eyJrdWJlbGV0IjpbIkNQVU1hbmFnZXIiLCJNZW1vcnlNYW5hZ2VyIl19
 `
 	)
 
@@ -59,6 +72,7 @@ data:
 		It("Hook must not fail; arguments must not be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeStatusUpdateFrequency").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.allowedKubeletFeatureGates").Exists()).To(BeFalse())
 		})
 	})
 
@@ -71,6 +85,7 @@ data:
 		It("Hook must not fail; nodeStatusUpdateFrequency must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeStatusUpdateFrequency").String()).To(Equal("4"))
+			Expect(f.ValuesGet("nodeManager.internal.allowedKubeletFeatureGates").String()).To(MatchJSON(`[]`))
 		})
 	})
 
@@ -83,6 +98,20 @@ data:
 		It("Hook must not fail; nodeStatusUpdateFrequency must not be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeStatusUpdateFrequency").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.allowedKubeletFeatureGates").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	Context("Cluster with feature gates in Secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(secretWithFeatureGates))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; both values must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeStatusUpdateFrequency").String()).To(Equal("4"))
+			Expect(f.ValuesGet("nodeManager.internal.allowedKubeletFeatureGates").String()).To(MatchJSON(`["CPUManager", "MemoryManager"]`))
 		})
 	})
 

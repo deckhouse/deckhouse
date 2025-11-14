@@ -155,13 +155,9 @@ spec:
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
-    {{- if hasKey $.Values "controlPlaneManager" }}
-      {{- if hasKey $.Values.controlPlaneManager.internal "allowedFeatureGates" }}
-        {{- if hasKey $.Values.controlPlaneManager.internal.allowedFeatureGates "kubelet" }}
+    {{- if hasKey $.Values.nodeManager.internal "allowedKubeletFeatureGates" }}
     allowedKubeletFeatureGates:
-      {{- $.Values.controlPlaneManager.internal.allowedFeatureGates.kubelet | toYaml | nindent 6 }}
-        {{- end }}
-      {{- end }}
+      {{- $.Values.nodeManager.internal.allowedKubeletFeatureGates | toYaml | nindent 6 }}
     {{- end }}
 {{- end }}
 ---
