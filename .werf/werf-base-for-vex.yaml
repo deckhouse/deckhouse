@@ -23,3 +23,7 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: install
+- image: common/crane
+  add: /crane
+  to: /usr/bin/crane
+  before: setup
