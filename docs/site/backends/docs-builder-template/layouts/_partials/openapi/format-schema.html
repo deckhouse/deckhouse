@@ -124,6 +124,20 @@
   {{- end }}
 {{- end }}
 
+{{/* Render additionalProperties if they exist */}}
+{{- if and (reflect.IsMap $data) $data.additionalProperties }}
+  {{- if ne $data.additionalProperties true }} {{/* Skip if additionalProperties is just true (allow any) */}}
+    {{- if reflect.IsMap $data.additionalProperties }} {{/* Only render if additionalProperties is a schema object */}}
+      {{- $additionalPropsData := $data.additionalProperties }}
+      {{- $additionalPropsLangData := index $langData "additionalProperties" }}
+      {{- $additionalPropsRequired := $additionalPropsData.required }}
+      <ul>
+        {{- partial "openapi/format-schema" ( dict "name" "additionalProperties" "data" $additionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
+      </ul>
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- if gt ($parameterTitle | len ) 0 }}
 </li>
 {{- end }}
