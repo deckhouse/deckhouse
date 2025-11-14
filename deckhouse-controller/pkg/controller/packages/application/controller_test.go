@@ -91,7 +91,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 
 	ctx := context.Background()
 	err := suite.ctr.statusService.WaitForIdle(ctx)
-	time.Sleep(6 * time.Second)
+	time.Sleep(20 * time.Second)
 	require.NoError(suite.T(), err)
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
