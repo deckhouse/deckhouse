@@ -75,6 +75,13 @@
 
         {{- if and .IsPage ( or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") (eq .File.ContentBaseName "CONFIGURATION") ) }} {{/* Render module CRDs */}}
 
+          {{- if or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") }}
+            {{/* Add the warning for CRDs */}}
+            {{< alert level="info" >}}
+              {{ T "module_crd_warning_1" }}
+            {{</ alert >}}
+          {{- end }}
+
           {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
 
           {{- $moduleName := index $_pathElements 1 }}
