@@ -232,6 +232,7 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 registry.deckhouse.ru/deckhouse/ee/security/trivy-db:2
 registry.deckhouse.ru/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.ru/deckhouse/ee/security/trivy-checks:0
+registry.deckhouse.ru/deckhouse/ee/security/trivy-bdu:1
 ```
 
 Для настройки периодического обновления образов баз данных уязвимостей используйте конструкцию вида:

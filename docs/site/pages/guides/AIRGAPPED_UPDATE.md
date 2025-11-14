@@ -255,6 +255,7 @@ Vulnerability database images in [DKP EE](/modules/operator-trivy/) have fixed n
 registry.deckhouse.io/deckhouse/ee/security/trivy-db:2
 registry.deckhouse.io/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.io/deckhouse/ee/security/trivy-checks:0
+registry.deckhouse.io/deckhouse/ee/security/trivy-bdu:1
 ```
 
 To configure periodic updates of vulnerability database images, run the command in the following format:
