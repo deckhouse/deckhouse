@@ -89,8 +89,8 @@ type featureGatesData struct {
 }
 
 type controlPlaneArgumentsSecret struct {
-	Arguments    nodeArguments    `json:"-"`
-	FeatureGates featureGatesData `json:"-"`
+	Arguments    nodeArguments    `json:"arguments"`
+	FeatureGates featureGatesData `json:"featureGates"`
 }
 
 func updateFreqFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
