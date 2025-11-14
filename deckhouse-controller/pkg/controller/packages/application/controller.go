@@ -74,14 +74,14 @@ func (svc *StatusService) Start(ctx context.Context) {
 				return
 			case event := <-svc.eventChannel:
 				svc.wg.Add(1)
-				svc.handleEvent(ctx, event)
+				svc.HandleEvent(ctx, event)
 				svc.wg.Done()
 			}
 		}
 	}()
 }
 
-func (svc *StatusService) handleEvent(ctx context.Context, event packagestatusservice.PackageEvent) {
+func (svc *StatusService) HandleEvent(ctx context.Context, event packagestatusservice.PackageEvent) {
 	logger := svc.logger.With(
 		slog.String("package", event.PackageName),
 		slog.String("name", event.Name),
@@ -315,8 +315,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, app, &apv.Status)
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
 		logger.Debug("add finalizer")
@@ -327,6 +325,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err != nil {
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
+
+	// call PackageOperator method (maybe PackageAdder interface)
+	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	logger.Debug("handle Application complete")
 

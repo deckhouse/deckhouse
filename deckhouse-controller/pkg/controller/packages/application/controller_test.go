@@ -187,7 +187,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		Build()
 
 	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
-	eventChannel := make(chan packagestatusservice.PackageEvent, 100)
+	eventChannel := make(chan packagestatusservice.PackageEvent)
 	pm.SetEventChannel(eventChannel)
 
 	statusService := &StatusService{
@@ -198,7 +198,9 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		eventChannel: eventChannel,
 	}
 
-	go statusService.Start(context.Background())
+	// go statusService.Start(context.Background())
+
+	pm.SetStatusService(statusService)
 
 	ctr := &reconciler{
 		client:        kubeClient,

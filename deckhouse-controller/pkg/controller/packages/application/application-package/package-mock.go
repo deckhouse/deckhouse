@@ -27,10 +27,15 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+type StatusServiceInterface interface {
+	HandleEvent(ctx context.Context, event packagestatusservice.PackageEvent)
+}
+
 type PackageOperatorStub struct {
-	client       client.Client
-	logger       *log.Logger
-	eventChannel chan<- packagestatusservice.PackageEvent
+	client        client.Client
+	logger        *log.Logger
+	eventChannel  chan<- packagestatusservice.PackageEvent
+	statusService StatusServiceInterface
 }
 
 func NewStubPackageOperator(client client.Client, logger *log.Logger) *PackageOperatorStub {
@@ -44,6 +49,10 @@ func (m *PackageOperatorStub) SetEventChannel(ch chan<- packagestatusservice.Pac
 	m.eventChannel = ch
 }
 
+func (m *PackageOperatorStub) SetStatusService(ss StatusServiceInterface) {
+	m.statusService = ss
+}
+
 func (m *PackageOperatorStub) AddApplication(_ context.Context, app *v1alpha1.Application, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
 	m.logger.Debug("adding application",
 		slog.String("name", app.Name),
@@ -51,13 +60,19 @@ func (m *PackageOperatorStub) AddApplication(_ context.Context, app *v1alpha1.Ap
 		slog.String("package", apvStatus.PackageName),
 		slog.String("version", apvStatus.Version))
 
-	m.SendEvent(packagestatusservice.PackageEvent{
+	event := packagestatusservice.PackageEvent{
 		PackageName: apvStatus.PackageName,
 		Name:        app.Name,
 		Namespace:   app.Namespace,
 		Version:     apvStatus.Version,
 		Type:        "application",
-	})
+	}
+
+	if m.statusService != nil {
+		m.statusService.HandleEvent(context.Background(), event)
+	} else {
+		m.SendEvent(event)
+	}
 }
 
 func (m *PackageOperatorStub) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
@@ -158,11 +173,6 @@ func (m *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, n
 
 func (m *PackageOperatorStub) SendEvent(event packagestatusservice.PackageEvent) {
 	if m.eventChannel != nil {
-		select {
-		case m.eventChannel <- event:
-		default:
-			// TODO: mb add a metric for this?
-			m.logger.Warn("event channel is full, dropping event", slog.Any("event", event))
-		}
+		m.eventChannel <- event
 	}
 }
