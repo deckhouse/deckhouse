@@ -390,6 +390,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"coredns":                    "imageHash-nodeLocalDns-coredns",
 		"iptablesLoop":               "imageHash-nodeLocalDns-iptablesLoop",
 		"iptablesWrapperInit":        "imageHash-nodeLocalDns-iptablesWrapperInit",
+		"safeUpdater":                "imageHash-nodeLocalDns-safeUpdater",
 		"staleDnsConnectionsCleaner": "imageHash-nodeLocalDns-staleDnsConnectionsCleaner",
 	},
 	"nodeManager": map[string]interface{}{
