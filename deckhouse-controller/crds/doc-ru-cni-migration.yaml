@@ -1,0 +1,36 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию для миграции CNI.
+          properties:
+            spec:
+              description: |
+                Определяет желаемое состояние миграции CNI.
+              properties:
+                targetCNI:
+                  description: |
+                    Целевой CNI для миграции.
+                previousCNI:
+                  description: |
+                    CNI, с которого производится миграция.
+            status:
+              description: |
+                Определяет наблюдаемое состояние миграции CNI.
+              properties:
+                phase:
+                  description: |
+                    Текущая фаза миграции.
+                nodes:
+                  description: |
+                    Список узлов и их статус миграции.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Имя узла.
+                      phase:
+                        description: |
+                          Фаза миграции узла.

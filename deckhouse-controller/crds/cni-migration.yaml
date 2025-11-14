@@ -1,0 +1,60 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: cnimigrations.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  scope: Cluster
+  names:
+    plural: cnimigrations
+    singular: cnimigration
+    kind: CNIMigration
+    shortNames:
+    - cnimig
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for CNI migration.
+          properties:
+            spec:
+              type: object
+              description: |
+                Defines the desired state of CNI migration.
+              properties:
+                targetCNI:
+                  type: string
+                  description: |
+                    The target CNI to migrate to.
+                previousCNI:
+                  type: string
+                  description: |
+                    The CNI to migrate from.
+            status:
+              type: object
+              description: |
+                Defines the observed state of CNI migration.
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    The current phase of the migration.
+                nodes:
+                  type: array
+                  description: |
+                    The list of nodes and their migration status.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: |
+                          The name of the node.
+                      phase:
+                        type: string
+                        description: |
+                          The migration phase of the node.
