@@ -70,15 +70,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider/src"
   labels:
   - "type/dependencies"
