@@ -1,0 +1,129 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+name: Antivirus Scan
+
+on:
+#   schedule:
+#     - cron: '0 21 * * 6' # 21:00 UTC Saturday = 03:00 MSK Sunday
+  workflow_dispatch:
+
+env:
+  SCAN_RESULTS_DIR: 'scans'
+
+jobs:
+  drweb-scan:
+    name: Dr.Web Scan
+    runs-on: [self-hosted, antivirus]
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/github/registry_host DECKHOUSE_REGISTRY_READ_HOST | DECKHOUSE_REGISTRY_READ_HOST ;
+
+      # </template: import_secrets>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Run Dr.Web scan
+        id: scan
+        run: |
+          SCAN_TIME=$(date '+%s')
+          CONTAINER_NAME=registry_drweb
+          docker exec ${CONTAINER_NAME} scanner ${GITHUB_REF_NAME} ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/sys/deckhouse-oss $SCAN_TIME
+
+          mkdir -p scans
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_TIME}/scan_results_clean.md ./scans/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_TIME}/scan_results_threats.md ./scans/scan_results_threats.md
+
+          function fail_notify() {
+            curl -f -L -X POST ${N8N_LOOP_NOTIFIER_URL} -H "Content-Type: application/json" --data "{\"type\": \"ci_fail\",\"message\":\"🛑 Antivirus: **${CONTAINER_NAME}** failed! 🛑\n[URL](${CI_PIPELINE_URL})\"}"
+          }
+          if [ -f scans/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              echo "Details in the file scans/scan_results_threats.md"
+              fail_notify
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            fail_notify
+            exit 1
+          fi
+
+          echo "✅ Dr.Web scan completed"
+          docker exec ${CONTAINER_NAME} rm -f /root/.docker/config.json
+
+
+  kaspersky-scan:
+    name: Kaspersky Scan
+    runs-on: [self-hosted, antivirus]
+    steps:
+      - name: Run Kaspersky scan
+        id: scan
+        run: |
+          SCAN_TIME=$(date '+%s')
+          CONTAINER_NAME=registry_kaspersky
+          docker exec ${CONTAINER_NAME} scanner ${GITHUB_REF_NAME} ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/sys/deckhouse-oss $SCAN_TIME
+
+          mkdir -p scans
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_TIME}/scan_results_clean.md ./scans/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_TIME}/scan_results_threats.md ./scans/scan_results_threats.md
+
+          function fail_notify() {
+            curl -f -L -X POST ${N8N_LOOP_NOTIFIER_URL} -H "Content-Type: application/json" --data "{\"type\": \"ci_fail\",\"message\":\"🛑 Antivirus: **${CONTAINER_NAME}** failed! 🛑\n[URL](${CI_PIPELINE_URL})\"}"
+          }
+          if [ -f scans/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              echo "Details in the file scans/scan_results_threats.md"
+              fail_notify
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            fail_notify
+            exit 1
+          fi
+
+          echo "✅ Dr.Web scan completed"
+          docker exec ${CONTAINER_NAME} rm -f /root/.docker/config.json
