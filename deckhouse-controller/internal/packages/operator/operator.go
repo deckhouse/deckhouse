@@ -49,9 +49,6 @@ import (
 const (
 	operatorTracer = "operator"
 
-	// TODO(ipaqsa): tmp solution
-	namespace = "d8-system"
-
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	kubernetesVersionValue  = "discovery.kubernetesVersion"
 	deckhouseVersionValue   = "deckhouse.version"
@@ -321,7 +318,7 @@ func (o *Operator) buildNelmService() error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	o.nelmService = nelm.NewService(namespace, cache, func(name string) {
+	o.nelmService = nelm.NewService(cache, func(name string) {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 

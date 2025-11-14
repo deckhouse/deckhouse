@@ -71,7 +71,7 @@ func (m *Manager) CheckResources(ctx context.Context, name string) error {
 // AddMonitor creates and starts a new monitor for a Helm release.
 // If a monitor already exists for this release, stop it and start a new one.
 // The monitor will run in the background, checking resources every 4 minutes.
-func (m *Manager) AddMonitor(name, rendered string) {
+func (m *Manager) AddMonitor(namespace, name, rendered string) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
@@ -79,7 +79,7 @@ func (m *Manager) AddMonitor(name, rendered string) {
 		m.monitors[name].Stop()
 	}
 
-	m.monitors[name] = newMonitor(m.cache, m.nelm, name, rendered, m.logger)
+	m.monitors[name] = newMonitor(m.cache, m.nelm, namespace, name, rendered, m.logger)
 	m.monitors[name].Start(m.ctx, m.callback)
 }
 

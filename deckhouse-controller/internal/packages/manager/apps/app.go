@@ -48,8 +48,9 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name string // Application instance name
-	path string // path to the package dir on fs
+	name      string // Application instance name
+	namespace string // Application instance namespace
+	path      string // path to the package dir on fs
 
 	definition Definition // Application definition
 
@@ -129,6 +130,16 @@ func (a *Application) GetName() string {
 // BuildName returns the full application identifier in format "namespace.name".
 func BuildName(namespace, name string) string {
 	return fmt.Sprintf("%s.%s", namespace, name)
+}
+
+// GetNamespace returns the application namespace.
+func (a *Application) GetNamespace() string {
+	return a.namespace
+}
+
+// SetNamespace set application namespace
+func (a *Application) SetNamespace(namespace string) {
+	a.namespace = namespace
 }
 
 // GetPath returns path to the package dir
