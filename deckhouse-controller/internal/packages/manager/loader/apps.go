@@ -137,7 +137,7 @@ func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Applic
 		Hooks: hooks,
 	}
 
-	app, err := apps.NewApplication(name, conf)
+	app, err := apps.NewApplication(name, path, conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("create new application: %w", err)

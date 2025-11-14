@@ -82,7 +82,7 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 		}
 
 		// skip enabled dir
-		if entry.Name() == "modules" {
+		if entry.Name() == "modules" || entry.Name() == "apps" {
 			continue
 		}
 

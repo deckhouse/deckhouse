@@ -41,12 +41,13 @@ func (s *Service) Dump() []byte {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	d := &dump{
-		Queues: make(map[string]dumpQueue),
+	queues := make(map[string]dumpQueue, len(s.queues))
+	for name, q := range s.queues {
+		queues[name] = q.dump()
 	}
 
-	for name, q := range s.queues {
-		d.Queues[name] = q.dump()
+	d := dump{
+		Queues: queues,
 	}
 
 	marshalled, _ := yaml.Marshal(d)

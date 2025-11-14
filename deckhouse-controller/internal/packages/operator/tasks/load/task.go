@@ -30,12 +30,13 @@ const (
 )
 
 type manager interface {
-	LoadPackage(ctx context.Context, name string) error
+	LoadPackage(ctx context.Context, namespace, name string) error
 	ApplySettings(name string, settings addonutils.Values) error
 }
 
 type task struct {
 	packageName string
+	namespace   string
 
 	manager  manager
 	settings addonutils.Values
@@ -43,9 +44,10 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
+func NewTask(namespace, name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
+		namespace:   namespace,
 		manager:     manager,
 		settings:    settings,
 		logger:      logger.Named(taskTracer),
@@ -59,7 +61,7 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
 	t.logger.Debug("load package", slog.String("name", t.packageName))
-	if err := t.manager.LoadPackage(ctx, t.packageName); err != nil {
+	if err := t.manager.LoadPackage(ctx, t.namespace, t.packageName); err != nil {
 		return fmt.Errorf("load package: %w", err)
 	}
 

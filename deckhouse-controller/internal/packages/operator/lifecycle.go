@@ -15,9 +15,12 @@
 package operator
 
 import (
+	"context"
 	"log/slog"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
@@ -51,7 +54,16 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
+func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository, inst Instance) {
+	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Update")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", inst.Name))
+	span.SetAttributes(attribute.String("namespace", inst.Namespace))
+	span.SetAttributes(attribute.String("package", inst.Definition.Name))
+	span.SetAttributes(attribute.String("version", inst.Definition.Version))
+	span.SetAttributes(attribute.String("repo", repo.Name))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -71,7 +83,7 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 	}
 
 	// Cancel previous tasks before enqueueing new ones
-	ctx := o.packages[name].renewContext()
+	ctx = o.packages[name].renewContext(ctx)
 
 	if o.packages[name].status.Phase == Pending {
 		packageName := inst.Definition.Name
@@ -79,7 +91,7 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 		reg := registry.BuildRegistryByRepository(repo)
 
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(name, inst.Settings, o.manager, o.logger),
+		o.queueService.Enqueue(ctx, name, taskload.NewTask(inst.Namespace, name, inst.Settings, o.manager, o.logger),
 			queue.WithOnDone(func() {
 				o.mu.Lock()
 				o.packages[name].status.Phase = Loaded
@@ -104,7 +116,13 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 //  2. Clean up custom queues created by package hooks
 //  3. Uninstall package resources (taskuninstall)
 //  4. Remove package's main queue
-func (o *Operator) Remove(namespace, instance string) {
+func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
+	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Remove")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", instance))
+	span.SetAttributes(attribute.String("namespace", namespace))
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -121,7 +139,7 @@ func (o *Operator) Remove(namespace, instance string) {
 	// Capture queues before manager removes the app metadata
 	queues := o.manager.GetPackageQueues(name)
 
-	ctx := app.renewContext()
+	ctx = app.renewContext(ctx)
 	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			if q == "main" || q == name {
@@ -143,6 +161,17 @@ func (o *Operator) Remove(namespace, instance string) {
 	}))
 }
 
+type dump struct {
+	Packages map[string]packageDump `json:"packages" yaml:"packages"`
+}
+
+type packageDump struct {
+	Status
+	schedule.State
+	Meta   addonutils.Values `yaml:"meta" json:"meta"`
+	Values addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
+}
+
 // Dump returns a YAML snapshot of all packages and their current state.
 //
 // Includes for each package:
@@ -156,16 +185,8 @@ func (o *Operator) Dump() []byte {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	type status struct {
-		Status
-		schedule.State
-		addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
-	}
-
-	dump := struct {
-		Packages map[string]status `json:"packages" yaml:"packages"`
-	}{
-		Packages: make(map[string]status),
+	d := dump{
+		Packages: make(map[string]packageDump),
 	}
 
 	for name, pkg := range o.packages {
@@ -174,13 +195,14 @@ func (o *Operator) Dump() []byte {
 			continue
 		}
 
-		dump.Packages[name] = status{
+		d.Packages[name] = packageDump{
 			pkg.status,
 			o.scheduler.State(name),
+			app.GetMetaValues(),
 			app.GetValues(),
 		}
 	}
 
-	marshalled, _ := yaml.Marshal(dump)
+	marshalled, _ := yaml.Marshal(d)
 	return marshalled
 }
