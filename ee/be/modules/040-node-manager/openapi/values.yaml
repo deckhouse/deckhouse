@@ -410,3 +410,10 @@ properties:
           - "opensuse"
         items:
           type: string
+      allowedKubeletFeatureGates:
+        type: array
+        description: |
+          Allowed kubelet feature gates from control-plane-manager.
+        default: []
+        items:
+          type: string
