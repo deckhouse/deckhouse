@@ -33,11 +33,11 @@ Essentials
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ <span class="cards-item__title-text">Dashboard</span>
+🧭 <span class="cards-item__title-text">Deckhouse web UI</span>
 </h3>
 <div class="cards-item__text">
-<p>Get access to the Kubernetes Dashboard.</p>
-<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="dashboard" %}</p>
+<p>A convenient tool for managing your cluster and its key components.</p>
+<p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
 </div>
 </div>
 

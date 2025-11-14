@@ -33,11 +33,11 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ <span class="cards-item__title-text">Dashboard</span>
+🧭 <span class="cards-item__title-text">Веб-интерфейс Deckhouse</span>
 </h3>
 <div class="cards-item__text">
-<p>Получите доступ к Kubernetes Dashboard</p>
-<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="dashboard" %}</p>
+<p>Удобный инструмент для управления кластером и его основными компонентами.</p>
+<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
 </div>
 </div>
 

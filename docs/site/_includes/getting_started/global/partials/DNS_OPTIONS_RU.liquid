@@ -14,22 +14,24 @@
         Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>), то добавьте
          {%- if page.platform_code == 'aws' %} CNAME-записи
          {%- else %} А или CNAME-записи
-         {%- endif -%} с адресом {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика{% endif %}, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
+         {%- endif -%} &nbsp;с адресом {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика{% endif %}, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
         <ul>
           <li><b title="Например, <em>&quot;api-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
-          <li><b title="Например, <em>&quot;argocd-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">argocd</b></li>
-          <li><b title="Например,  <em>&quot;dashboard-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dashboard</b></li>
+          <li><b title="Например, <em>&quot;code-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">code</b></li>
+          <li><b title="Например, <em>&quot;commander-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">commander</b></li>
+          <li><b title="Например, <em>&quot;console-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">console</b></li>
+          <li><b title="Например, <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
           <li><b title="Например, <em>&quot;documentation-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">documentation</b></li>
-          <li><b title="Например,  <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
           <li><b title="Например, <em>&quot;grafana-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
           <li><b title="Например, <em>&quot;hubble-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">hubble</b></li>
           <li><b title="Например, <em>&quot;istio-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">istio</b></li>
           <li><b title="Например, <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">istio-api-proxy</b></li>
-          <li><b title="Например,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
-          <li><b title="Например,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">openvpn-admin</b></li>
-          <li><b title="Например,  <em>&quot;prometheus-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">prometheus</b></li>
+          <li><b title="Например, <em>&quot;kubeconfig-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
+          <li><b title="Например, <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">openvpn-admin</b></li>
+          <li><b title="Например, <em>&quot;prometheus-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">prometheus</b></li>
           <li><b title="Например, <em>&quot;status-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">status</b></li>
-          <li><b title="Например,  <em>&quot;upmeter-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">upmeter</b></li>
+          <li><b title="Например, <em>&quot;tools-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">tools</b></li>          
+          <li><b title="Например, <em>&quot;upmeter-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">upmeter</b></li>
         </ul>
         {%- if page.platform_code == 'aws' %}<p>Получить адрес балансировщика:
 {% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
@@ -67,7 +69,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
 <div markdown="1">
 ```shell
-for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api code commander console dex documentation grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status tools upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 </div>
 </li>
