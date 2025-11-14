@@ -186,7 +186,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
-	ExtraValues []byte   // Extra values in json format
+	ExtraValues string   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 }
@@ -203,7 +203,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 
 	var valuesSet []string
 	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, string(opts.ExtraValues))
+		valuesSet = append(valuesSet, opts.ExtraValues)
 	}
 
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
@@ -250,7 +250,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 
 	var valuesSet []string
 	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, string(opts.ExtraValues))
+		valuesSet = append(valuesSet, opts.ExtraValues)
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
