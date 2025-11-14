@@ -30,7 +30,7 @@ import (
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type deckhouseImagesModel struct {
@@ -212,7 +212,7 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 
 	t := time.Now().UTC()
 	for name, registryParams := range inputs.Params.Registries {
-		hash, err := helpers.ComputeHash(registryParams)
+		hash, err := registry_pki.ComputeHash(registryParams)
 		if err != nil {
 			return fmt.Errorf("cannot compute registry %q params hash: %w", name, err)
 		}
