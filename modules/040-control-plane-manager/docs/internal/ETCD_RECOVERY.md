@@ -218,7 +218,7 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
 1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
-1. Remove control-plane role label from nodes objects expect selected (recover in current time).
+1. Remove control-plane role label from nodes objects expect selected (recover in current time) (Sometimes this point can be skipped)
 
    ```shell
    kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
