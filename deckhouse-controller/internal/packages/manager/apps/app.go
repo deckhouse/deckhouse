@@ -122,6 +122,16 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
+// GetMetaValues returns values that is not part of schema(name, namespace, version)
+func (a *Application) GetMetaValues() addonutils.Values {
+	return addonutils.Values{
+		"Name":      a.name,
+		"Namespace": a.namespace,
+		"Package":   a.definition.Name,
+		"Version":   a.definition.Version,
+	}
+}
+
 // GetName returns the full application identifier in format "namespace.name".
 func (a *Application) GetName() string {
 	return a.name

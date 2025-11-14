@@ -50,8 +50,8 @@ const (
 	operatorTracer = "operator"
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
-	kubernetesVersionValue  = "discovery.kubernetesVersion"
-	deckhouseVersionValue   = "deckhouse.version"
+	kubernetesVersionValue  = "kubernetesVersion"
+	deckhouseVersionValue   = "version"
 )
 
 type Operator struct {
@@ -350,7 +350,12 @@ func (o *Operator) buildNelmService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (o *Operator) buildScheduler(moduleManager moduleManager) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := moduleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
+		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		if len(discovery) == 0 {
+			return nil, fmt.Errorf("discovery section not found in global values")
+		}
+
+		value, ok := discovery[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -364,7 +369,12 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		value, ok := moduleManager.GetGlobal().GetValues(false)[kubernetesVersionValue]
+		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		if len(discovery) == 0 {
+			return nil, fmt.Errorf("discovery section not found in global values")
+		}
+
+		value, ok := discovery[kubernetesVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("kubernetes version not found in global values")
 		}

@@ -186,6 +186,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
+	ExtraValues []byte   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 }
@@ -200,12 +201,18 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
+	var valuesSet []string
+	if len(opts.ExtraValues) > 0 {
+		valuesSet = append(valuesSet, string(opts.ExtraValues))
+	}
+
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles: opts.ValuesPaths,
+			ValuesFiles:   opts.ValuesPaths,
+			ValuesSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
@@ -241,9 +248,9 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
-	extraAnnotations := make(map[string]string)
-	if len(c.opts.Annotations) > 0 {
-		maps.Copy(extraAnnotations, c.opts.Annotations)
+	var valuesSet []string
+	if len(opts.ExtraValues) > 0 {
+		valuesSet = append(valuesSet, string(opts.ExtraValues))
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
@@ -252,6 +259,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		},
 		ValuesOptions: common.ValuesOptions{
 			ValuesFiles: opts.ValuesPaths,
+			ValuesSet:   valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
@@ -259,7 +267,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       extraAnnotations,
+		ExtraAnnotations:       c.opts.Annotations,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,

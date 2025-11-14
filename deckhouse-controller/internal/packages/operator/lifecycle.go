@@ -168,7 +168,8 @@ type dump struct {
 type packageDump struct {
 	Status
 	schedule.State
-	addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
+	Meta   addonutils.Values `yaml:"meta" json:"meta"`
+	Values addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
 }
 
 // Dump returns a YAML snapshot of all packages and their current state.
@@ -197,6 +198,7 @@ func (o *Operator) Dump() []byte {
 		d.Packages[name] = packageDump{
 			pkg.status,
 			o.scheduler.State(name),
+			app.GetMetaValues(),
 			app.GetValues(),
 		}
 	}
