@@ -71,8 +71,8 @@ func handleUpdateFreq(_ context.Context, input *go_hook.HookInput) error {
 		input.Values.Set("nodeManager.internal.nodeStatusUpdateFrequency", freq)
 	}
 
-	if len(secretData.FeatureGates.Kubelet) == 0 {
-		input.Values.Remove("nodeManager.internal.allowedKubeletFeatureGates")
+	if secretData.FeatureGates.Kubelet == nil {
+		input.Values.Set("nodeManager.internal.allowedKubeletFeatureGates", []string{})
 	} else {
 		input.Values.Set("nodeManager.internal.allowedKubeletFeatureGates", secretData.FeatureGates.Kubelet)
 	}
