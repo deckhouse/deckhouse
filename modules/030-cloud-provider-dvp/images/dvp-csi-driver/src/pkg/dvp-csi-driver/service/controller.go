@@ -97,7 +97,7 @@ func (c *ControllerService) CreateVolume(
 	// Check if a disk with the same name already exist
 	disks, err := c.dvpCloudAPI.DiskService.ListDisksByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("error while finding disk %s by name, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while finding disk %s by name: %v", diskName, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
@@ -132,7 +132,7 @@ func (c *ControllerService) CreateVolume(
 		dvpStorageClass,
 	)
 	if err != nil {
-		msg := fmt.Errorf("error while creating disk %s, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while creating disk %s: %v", diskName, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
@@ -154,14 +154,14 @@ func (c *ControllerService) DeleteVolume(
 		if errors.Is(err, dvpapi.ErrNotFound) {
 			return &csi.DeleteVolumeResponse{}, nil
 		}
-		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while finding disk %v by id: %v", diskName, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
 
 	err = c.dvpCloudAPI.DiskService.RemoveDiskByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("failed removing disk %v by id, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while removing disk %v by id: %v", diskName, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
@@ -184,7 +184,7 @@ func (c *ControllerService) ControllerPublishVolume(
 
 	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
 	if err != nil {
-		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
+		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", req.NodeId, err)
 	}
 
 	attached, err := c.hasDiskAttachedToVM(diskName, vm)
@@ -200,7 +200,7 @@ func (c *ControllerService) ControllerPublishVolume(
 
 	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, req.NodeId)
 	if err != nil {
-		msg := fmt.Errorf("failed creating disk attachment, error: %w", err)
+		msg := fmt.Errorf("error from parent DVP cluster while creating disk attachment: %v", err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
@@ -237,7 +237,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 
 	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
 	if err != nil {
-		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
+		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", req.NodeId, err)
 	}
 
 	vmHostname := req.NodeId
@@ -255,7 +255,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 
 	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname)
 	if err != nil {
-		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskName, vmHostname, err)
+		msg := fmt.Errorf("error from parent DVP cluster while removing disk %v from VM %v: %v", diskName, vmHostname, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
@@ -289,7 +289,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 			klog.Error(msg)
 			return nil, status.Error(codes.NotFound, msg.Error())
 		}
-		msg := fmt.Errorf("error while finding disk %v, error: %w", volumeName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while finding disk %v: %v", volumeName, err)
 		klog.Error(msg)
 		return nil, status.Error(codes.Internal, msg.Error())
 	}
@@ -315,7 +315,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		newSize,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v: %v", volumeName, err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v, error from parent DVP cluster: %v", volumeName, err)
 	}
 	klog.Infof("Expanded Disk %v to %v", volumeName, newSize)
 
