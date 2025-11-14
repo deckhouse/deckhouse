@@ -1,0 +1,38 @@
+- name: kubernetes.ingress-nginx.info
+  rules:
+  - alert: NginxIngressSslWillExpire
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
+    for: 1h
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: Certificate is expiring soon.
+      description: |-
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace will expire in less than two weeks.
+
+        To verify the certificate, run the following command:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
+  - alert: NginxIngressSslExpired
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
+    for: 1m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: Certificate has expired.
+      description: |-
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace has expired.
+
+        To verify the certificate, run the following command:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
+
+        The site at `https://{{ $labels.host }}` is not accessible.
