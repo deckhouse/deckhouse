@@ -30,31 +30,50 @@ spec:
                   type: string
                   description: |
                     The target CNI to migrate to.
-                previousCNI:
+                phase:
                   type: string
                   description: |
-                    The CNI to migrate from.
+                    The phase controlled by the d8 cli to command the agents. Possible values: Prepare, Migrate, Cleanup, Abort.
             status:
               type: object
               description: |
                 Defines the observed state of CNI migration.
               properties:
-                phase:
+                currentCNI:
                   type: string
                   description: |
-                    The current phase of the migration.
-                nodes:
+                    The detected CNI from which the switch is being made.
+                observedPhase:
+                  type: string
+                  description: |
+                    The current actual phase of the operation.
+                nodesTotal:
+                  type: integer
+                  description: |
+                    The total number of nodes involved in the migration.
+                nodesSucceeded:
+                  type: integer
+                  description: |
+                    The number of nodes that have successfully completed the current phase.
+                nodesFailed:
+                  type: integer
+                  description: |
+                    The number of nodes where an error occurred.
+                conditions:
                   type: array
                   description: |
-                    The list of nodes and their migration status.
+                    Reflect the state of the migration as a whole.
                   items:
                     type: object
                     properties:
-                      name:
+                      type:
                         type: string
-                        description: |
-                          The name of the node.
-                      phase:
+                      status:
                         type: string
-                        description: |
-                          The migration phase of the node.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string

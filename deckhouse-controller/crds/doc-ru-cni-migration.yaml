@@ -13,24 +13,28 @@ spec:
                 targetCNI:
                   description: |
                     Целевой CNI для миграции.
-                previousCNI:
+                phase:
                   description: |
-                    CNI, с которого производится миграция.
+                    Фаза, контролируемая d8 cli для управления агентами. Возможные значения: Prepare, Migrate, Cleanup, Abort.
             status:
               description: |
                 Определяет наблюдаемое состояние миграции CNI.
               properties:
-                phase:
+                currentCNI:
                   description: |
-                    Текущая фаза миграции.
-                nodes:
+                    Обнаруженный CNI, с которого выполняется переключение.
+                observedPhase:
                   description: |
-                    Список узлов и их статус миграции.
-                  items:
-                    properties:
-                      name:
-                        description: |
-                          Имя узла.
-                      phase:
-                        description: |
-                          Фаза миграции узла.
+                    Текущая фактическая фаза операции.
+                nodesTotal:
+                  description: |
+                    Общее количество узлов, участвующих в миграции.
+                nodesSucceeded:
+                  description: |
+                    Количество узлов, успешно завершивших текущую фазу.
+                nodesFailed:
+                  description: |
+                    Количество узлов, на которых произошла ошибка.
+                conditions:
+                  description: |
+                    Отражает состояние миграции в целом.
