@@ -79,7 +79,7 @@
             {{/* Add the warning for CRDs */}}
             {{< alert level="info" >}}
               {{ T "module_crd_warning_1" }}
-            {{</ alert >}}
+            {{< /alert >}}
           {{- end }}
 
           {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
