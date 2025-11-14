@@ -87,19 +87,72 @@ func (o *PackageOperatorStub) GetPackageStatus(_ context.Context, packageName, n
 		slog.String("version", version),
 		slog.String("type", packageType))
 
+	if version == "v1.0.1" {
+		return PackageStatus{
+			Conditions: []v1alpha1.ApplicationStatusCondition{
+				{
+					Status: "True",
+					Type:   "Processed",
+				},
+			},
+			InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{
+				{
+					Status: "True",
+					Type:   "UpdateNotified",
+				},
+			},
+		}, nil
+	}
+
+	if version == "v1.0.2" {
+		return PackageStatus{
+			Conditions: []v1alpha1.ApplicationStatusCondition{
+				{
+					Status: "True",
+					Type:   "Processed",
+				},
+				{
+					Status:  "False",
+					Type:    "UpdateAvailable",
+					Reason:  "NewerVersionAvailable",
+					Message: "A newer version v1.0.2 is available.",
+				},
+			},
+			InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{
+				{
+					Status: "True",
+					Type:   "UpdateNotified",
+				},
+			},
+		}, nil
+	}
+
+	if version == "v1.0.3" {
+		return PackageStatus{
+			Conditions: []v1alpha1.ApplicationStatusCondition{
+				{
+					Status: "False",
+					Type:   "Processed",
+				},
+				{
+					Status:  "False",
+					Type:    "SomeCriticalCondition",
+					Reason:  "CriticalIssueDetected",
+					Message: "A critical issue has been detected in version v1.0.2.",
+				},
+			},
+			InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{
+				{
+					Status: "False",
+					Type:   "CriticalConditionMet",
+				},
+			},
+		}, nil
+	}
+
 	return PackageStatus{
-		Conditions: []v1alpha1.ApplicationStatusCondition{
-			{
-				Status: "True",
-				Type:   "Processed",
-			},
-		},
-		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{
-			{
-				Status: "True",
-				Type:   "UpdateNotified",
-			},
-		},
+		Conditions:         []v1alpha1.ApplicationStatusCondition{},
+		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{},
 	}, nil
 }
 

@@ -11,18 +11,24 @@ metadata:
 spec:
   applicationPackageName: test
   repository: deckhouse
-  version: v1.0.1
+  version: v1.0.3
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
+    status: "False"
     type: Processed
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: A critical issue has been detected in version v1.0.2.
+    reason: CriticalIssueDetected
+    status: "False"
+    type: SomeCriticalCondition
   internalConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: UpdateNotified
+    status: "False"
+    type: CriticalConditionMet
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -31,12 +37,12 @@ metadata:
   labels:
     package: test
     repository: deckhouse
-  name: deckhouse-test-v1.0.1
+  name: deckhouse-test-v1.0.3
   resourceVersion: "1"
 spec:
   packageName: test
   repository: deckhouse
-  version: v1.0.1
+  version: v1.0.3
 status:
   conditions:
   - lastProbeTime: null
@@ -53,7 +59,7 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
-  version: v1.0.1
+  version: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

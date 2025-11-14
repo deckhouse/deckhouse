@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +60,9 @@ type StatusService struct {
 	pm           applicationpackage.PackageManager
 	dc           dependency.Container
 	eventChannel <-chan packagestatusservice.PackageEvent
+
+	mu sync.RWMutex
+	wg sync.WaitGroup
 }
 
 func (svc *StatusService) Start(ctx context.Context) {
@@ -66,9 +70,12 @@ func (svc *StatusService) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
+				svc.wg.Done()
 				return
 			case event := <-svc.eventChannel:
+				svc.wg.Add(1)
 				svc.handleEvent(ctx, event)
+				svc.wg.Done()
 			}
 		}
 	}()
@@ -131,6 +138,8 @@ func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []
 		cond.LastProbeTime = now
 
 		if p, ok := prev[cond.Type]; !ok || p != cond.Status {
+			cond.LastTransitionTime = now
+		} else if cond.LastTransitionTime.IsZero() {
 			cond.LastTransitionTime = now
 		}
 		applied = append(applied, cond)
@@ -197,6 +206,14 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
 		Complete(applicationController)
+}
+
+func (svc *StatusService) WaitForIdle(ctx context.Context) error {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+
+	svc.wg.Wait()
+	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -282,9 +299,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, app, &apv.Status)
-
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
@@ -292,6 +306,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
+	// call PackageOperator method (maybe PackageAdder interface)
+	r.pm.AddApplication(ctx, app, &apv.Status)
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
 		logger.Debug("add finalizer")

@@ -88,6 +88,10 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		return
 	}
 
+	ctx := context.Background()
+	err := suite.ctr.statusService.WaitForIdle(ctx)
+	require.NoError(suite.T(), err)
+
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
@@ -303,6 +307,50 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("version is draft", func() {
 		suite.setupController("version-is-draft.yaml")
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("successful reconcile with some falses", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("successful-reconcile-some-falses.yaml", withDependencyContainer(dc))
+
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("successful reconcile with all falses", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("successful-reconcile-all-falses.yaml", withDependencyContainer(dc))
+
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},

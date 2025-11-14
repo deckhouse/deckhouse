@@ -1,42 +1,24 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - application.deckhouse.io/processed
   name: test-app
   namespace: foobar
-  resourceVersion: "4"
 spec:
   applicationPackageName: test
   repository: deckhouse
-  version: v1.0.1
-status:
-  conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: Processed
-  internalConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: UpdateNotified
+  version: v1.0.2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
+  name: deckhouse-test-v1.0.2
   labels:
     package: test
     repository: deckhouse
-  name: deckhouse-test-v1.0.1
-  resourceVersion: "1"
 spec:
   packageName: test
+  version: v1.0.2
   repository: deckhouse
-  version: v1.0.1
 status:
   conditions:
   - lastProbeTime: null
@@ -53,19 +35,15 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
-  version: v1.0.1
+  version: v1.0.2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
 spec:
   registry:
-    ca: test-ca
-    dockerCfg: test-docker-cfg
-    repo: registry.example.com/test
     scheme: https
-status:
-  syncTime: null
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca
