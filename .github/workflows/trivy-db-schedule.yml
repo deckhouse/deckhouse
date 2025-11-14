@@ -255,11 +255,11 @@ jobs:
           ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
           ./update.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
           ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
+          ./update-vulnerability-references.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
 
       # <template: send_fail_report>
       - name: Send fail report

@@ -204,7 +204,11 @@ case "$host" in
     exit 1
     ;;
 esac
-
+date=$(date +%Y%m%d)
 perform_oras_command "../../oras push -d -v $auth --artifact-type application/vnd.aquasec.trivy.config.v1+json ${1}/security/trivy-db:2 db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
 perform_oras_command "../../oras push -d -v $auth --artifact-type application/octet-stream ${1}/security/trivy-checks:0 bundle.tar.gz:application/vnd.cncf.openpolicyagent.layer.v1.tar+gzip"
 perform_oras_command "../../oras push -d -v $auth --artifact-type application/vnd.aquasec.trivy.config.v1+json ${1}/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
+
+perform_oras_command "../../oras push -d -v $auth --artifact-type application/vnd.aquasec.trivy.config.v1+json ${1}/security/trivy-db:${date} db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
+perform_oras_command "../../oras push -d -v $auth --artifact-type application/octet-stream ${1}/security/trivy-checks:${date} bundle.tar.gz:application/vnd.cncf.openpolicyagent.layer.v1.tar+gzip"
+perform_oras_command "../../oras push -d -v $auth --artifact-type application/vnd.aquasec.trivy.config.v1+json ${1}/security/trivy-java-db:${date} javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
