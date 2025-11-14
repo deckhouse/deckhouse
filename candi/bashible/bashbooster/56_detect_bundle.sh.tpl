@@ -34,7 +34,7 @@ _bb_detect_os_context() {
   {{- range $distribution := $family.distributions }}
     {{ join "|" $distribution.ids }})
       BB_DETECTED_FAMILY="{{ $familyName }}"
-      BB_DETECTED_BUNDLE="{{ $distribution.bundle }}"
+      BB_DETECTED_BUNDLE="{{ $distribution.name }}"
       BB_DETECTED_PKG_MGR="{{ $pkg }}"
       return 0
       ;;

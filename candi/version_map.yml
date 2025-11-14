@@ -5,37 +5,29 @@ bashible: &bashible
       distributions:
         - name: ubuntu
           ids: [ubuntu]
-          bundle: ubuntu
         - name: debian
           ids: [debian]
-          bundle: debian
         - name: astra
           ids: [astra]
-          bundle: astra
     rhel:
       packageManager: dnf
       distributions:
         - name: centos
           ids: [centos, rocky, almalinux, rhel, ol]
-          bundle: centos
         - name: redos
           ids: [redos]
-          bundle: redos
         - name: rosa
           ids: [rosa, rels]
-          bundle: rosa
     suse:
       packageManager: zypper
       distributions:
         - name: opensuse
           ids: [mosos-arbat, opensuse-leap]
-          bundle: opensuse
     altlinux:
       packageManager: apt-rpm
       distributions:
         - name: altlinux
           ids: [altlinux]
-          bundle: altlinux
 k8s:
   "1.29":
     status: end-of-life
