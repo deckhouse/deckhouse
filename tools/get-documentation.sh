@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $(~/bin/trdl use werf 2 alpha)
+. $(~/bin/trdl use werf 2 ea)
 
 #rm -rf /tmp/cse
 
