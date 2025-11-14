@@ -101,3 +101,43 @@ When OIDC authentication is configured, additional user information is included 
 - `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
+
+## Feature Gates
+Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. It is possible to enable the following feature gates:
+
+*тут хотим подтянуть список из [файла](https://github.com/deckhouse/deckhouse/blob/b3aa8531bf494f4dfe6ddb26db285ec79df99e69/candi/feature_gates_map.yml#L1-L38), но **не** хотим указывать разделение по компонентам на kubelet, apiserver, kubeControllerManager, kubeScheduler. пример списка ниже*
+
+1.29: 
+- CPUManager
+- MemoryManager
+- APIServerIdentity
+- StorageVersionAPI
+- CronJobsScheduledAnnotation
+- SchedulerQueueingHints
+- ...
+  
+1.30:
+- CPUManager
+- MemoryManager
+- KubeletCgroupDriverFromCRI
+- LocalStorageCapacityIsolationFSQuotaMonitoring
+- APIServerIdentity
+- StorageVersionAPI
+- CustomResourceFieldSelectors
+- AuthorizeWithSelectors
+- CoordinatedLeaderElection
+- ...
+
+`ModuleConfig` example:
+```yaml
+
+```
+
+Otherwise, a warning will be displayed that the feature gate will not be applied, and the `D8ProblematicFeatureGateInUse` alert will be triggered.
+
+{% alert level="warning" %}
+Control plane components upgrade will not proceed if `ModuleConfig` specifies a feature gate that is `deprecated` for the version specified by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
+{% endalert %}
+
+*Description of feature gates in Kubernetes [documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).*
+

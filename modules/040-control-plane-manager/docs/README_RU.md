@@ -101,3 +101,44 @@ description: Deckhouse управляет компонентами control plane
 - `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
 
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
+
+## Feature Gates
+
+Настройки feature gates задаются через `ModuleConfig` в разделе [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates). Можно включить следующие feature gates:
+
+*тут хотим подтянуть список из [файла](https://github.com/deckhouse/deckhouse/blob/b3aa8531bf494f4dfe6ddb26db285ec79df99e69/candi/feature_gates_map.yml#L1-L38), но **не** хотим указывать разделение по компонентам на kubelet, apiserver, kubeControllerManager, kubeScheduler. пример списка ниже*
+
+1.29: 
+- CPUManager
+- MemoryManager
+- APIServerIdentity
+- StorageVersionAPI
+- CronJobsScheduledAnnotation
+- SchedulerQueueingHints
+- ...
+  
+1.30:
+- CPUManager
+- MemoryManager
+- KubeletCgroupDriverFromCRI
+- LocalStorageCapacityIsolationFSQuotaMonitoring
+- APIServerIdentity
+- StorageVersionAPI
+- CustomResourceFieldSelectors
+- AuthorizeWithSelectors
+- CoordinatedLeaderElection
+- ...
+
+Пример включения через `ModuleConfig`:
+```yaml
+
+```
+
+
+В противном случае будет отображено предупреждение о том, что feature gate не будет применен и сработает алерт `D8ProblematicFeatureGateInUse`.
+
+{% alert level="warning" %}
+Повышение версии компонентов control plane не произойдет, если в `ModuleConfig` указаны feature gates, имеющие статус `deprecated` для версии, заданной с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion).
+{% endalert %}
+
+*Описание feature gates в [документации](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) Kubernetes.*
