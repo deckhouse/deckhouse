@@ -21,7 +21,7 @@ node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
 API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
-AVAILABLE_API_SERVERS=($API_SERVERS)
+read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
 
 
 # if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
@@ -61,10 +61,10 @@ function nodeuser_patch() {
 
     while [ "$patch_pending" = true ] ; do
       if [ ${#AVAILABLE_API_SERVERS[@]} -eq 0 ]; then
-        AVAILABLE_API_SERVERS=($API_SERVERS)
+        read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
         bb-log-info "All servers failed once, resetting to original list and retrying"
       fi
-
+      bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
       for server in "${AVAILABLE_API_SERVERS[@]}"; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
