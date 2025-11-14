@@ -2,22 +2,9 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-At this point, you have created a cluster consisting of a **single node** — the master node. By default, only a limited set of system components runs on the master node. To ensure the full functionality of the cluster, you need to either add at least one worker node to the cluster or allow the remaining Deckhouse components to run on the master node.
-
-Select one of the two options below to continue installing the cluster:
-
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        A cluster of several nodes
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        A cluster of a single node
-        </a>
-</div>
+<style>
+  #block_layout_master, #block_layout_worker { display: none; }
+</style>
 
 <div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
@@ -401,4 +388,20 @@ $(document).ready(function () {
     config_highlight();
 });
 
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var choice = sessionStorage.getItem('dhctl-variant') || 'worker';
+    var master = document.getElementById('block_layout_master');
+    var worker = document.getElementById('block_layout_worker');
+
+    if (choice === 'single') {
+      if (master) master.style.display = 'block';
+      if (worker) worker.style.display = 'none';
+    } else {
+      if (worker) worker.style.display = 'block';
+      if (master) master.style.display = 'none';
+    }
+  });
 </script>

@@ -326,3 +326,53 @@ function set_license_token_cookie() {
     $.cookie('license-token', token, {path: '/', expires: 365});
   }
 }
+
+(function () {
+  const KEY = 'dhctl-variant';
+
+  function applyVariant(which) {
+    const btnW = document.getElementById('tab_layout_worker');
+    const btnM = document.getElementById('tab_layout_master');
+    const blockW = document.getElementById('block_layout_worker');
+    const blockM = document.getElementById('block_layout_master');
+
+    if (!blockW || !blockM) return;
+
+    if (which === 'single') {
+      blockM.classList.add('active'); blockM.style.display = 'block';
+      blockW.classList.remove('active'); blockW.style.display = 'none';
+      if (btnM) btnM.classList.add('active');
+      if (btnW) btnW.classList.remove('active');
+    } else {
+      blockM.classList.remove('active'); blockM.style.display = 'none';
+      blockW.classList.add('active'); blockW.style.display = 'block';
+      if (btnW) btnW.classList.add('active');
+      if (btnM) btnM.classList.remove('active');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const tabWorker = document.getElementById('tab_layout_worker');
+    const tabSingle = document.getElementById('tab_layout_master');
+
+    if (tabWorker) {
+      tabWorker.addEventListener('click', function () {
+        sessionStorage.setItem(KEY, 'worker');
+        applyVariant('worker');
+      });
+    }
+    if (tabSingle) {
+      tabSingle.addEventListener('click', function () {
+        sessionStorage.setItem(KEY, 'single');
+        applyVariant('single');
+      });
+    }
+
+    const saved = sessionStorage.getItem(KEY) || 'worker';
+    applyVariant(saved);
+  });
+
+  if (typeof window.openTabAndSaveStatus !== 'function') {
+    window.openTabAndSaveStatus = function () {};
+  }
+})();

@@ -54,6 +54,35 @@
   {% include_file "{{ includePathSingle }}" syntax="yaml" %}
 </div>
 
+<script>
+(function () {
+  const KEY = 'dhctl-variant'; // 'worker' | 'single'
+
+  if (typeof window.openTabAndSaveStatus !== 'function') {
+    window.openTabAndSaveStatus = function () {};
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var saved = sessionStorage.getItem(KEY);
+    if (saved === 'single') {
+      var btn = document.getElementById('tab_variant_single_{{ revision }}');
+      if (btn) {
+        btn.click();
+      } else {
+        var wBlock = document.getElementById('block_variant_worker_{{ revision }}');
+        var sBlock = document.getElementById('block_variant_single_{{ revision }}');
+        var wBtn   = document.getElementById('tab_variant_worker_{{ revision }}');
+        var sBtn   = document.getElementById('tab_variant_single_{{ revision }}');
+        if (wBlock) { wBlock.classList.remove('active'); wBlock.style.display = 'none'; }
+        if (sBlock) { sBlock.classList.add('active');    sBlock.style.display = 'block'; }
+        if (wBtn)   wBtn.classList.remove('active');
+        if (sBtn)   sBtn.classList.add('active');
+      }
+    }
+  });
+})();
+</script>
+
 {% else %}
 
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
@@ -101,12 +130,15 @@
 
 <script>
   $(document).ready(function() {
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
+    var root = document.getElementById('block_layout_{{ revision }}');
+    if (!root) return; // на шаге 2 этого блока нет — выходим тихо
+
+    root.querySelectorAll('span').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
+    root.querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
   });
 </script>
 
