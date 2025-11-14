@@ -58,7 +58,7 @@ type StatusService struct {
 	logger       *log.Logger
 	pm           applicationpackage.PackageManager
 	dc           dependency.Container
-	eventChannel chan packagestatusservice.PackageEvent
+	eventChannel <-chan packagestatusservice.PackageEvent
 }
 
 func (svc *StatusService) Start(ctx context.Context) {
@@ -175,7 +175,7 @@ func RegisterController(
 		eventChannel: eventChannel,
 	}
 
-	pm.SetEventChannel((chan<- packagestatusservice.PackageEvent)(eventChannel))
+	pm.SetEventChannel(eventChannel)
 	go statusService.Start(context.Background())
 
 	r := &reconciler{
