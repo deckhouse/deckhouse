@@ -130,10 +130,6 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := addonutils.ValidateHookValuesPatch(patch, s.name); err != nil {
-		return fmt.Errorf("validate values patch: %w", err)
-	}
-
 	// Apply new patches in Strict mode. Hook should not return 'remove' with nonexistent path.
 	patched, changed, err := addonutils.ApplyValuesPatch(s.resultValues, patch, addonutils.Strict)
 	if err != nil {
