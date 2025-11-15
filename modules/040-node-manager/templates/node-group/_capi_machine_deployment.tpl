@@ -55,9 +55,9 @@ spec:
         nodeVolumeDetachTimeoutSeconds: {{$ng.nodeDrainTimeoutSecond}}
   {{- else }}
       deletion:
-        nodeDrainTimeout: 600
-        nodeDeletionTimeout: 600
-        nodeVolumeDetachTimeout: 600
+        nodeDrainTimeoutSeconds: 600
+        nodeDeletionTimeoutSeconds: 600
+        nodeVolumeDetachTimeoutSeconds: 600
   {{- end }}
   strategy:
     type: RollingUpdate
