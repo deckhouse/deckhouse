@@ -113,7 +113,7 @@ internalNetworkCIDRs:
 `),
 	}
 
-	testUpdateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
+	assertUpdateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
 		test := testCreateConvergeManifestTest(t, params)
 
 		testCreateSecret(
@@ -127,10 +127,10 @@ internalNetworkCIDRs:
 			manifests.SecretWithStaticClusterConfig(params.commanderStateAfter.ProviderClusterConfigurationData),
 		)
 
-		test.do(t)
+		test.assetAndRun(t)
 	}
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsAfter,
 		testName:             "static: normal update",
@@ -138,26 +138,26 @@ internalNetworkCIDRs:
 
 	paramsAfterWithEmptyConfig := paramsAfter
 	paramsAfterWithEmptyConfig.ProviderClusterConfigurationData = make([]byte, 0)
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsAfterWithEmptyConfig,
 		testName:             "static: with empty static configuration no fault and rewrite with empty data",
 	})
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsBefore,
 		testName:             "static: no update",
 	})
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore:   paramsBefore,
 		commanderStateAfter:    paramsAfter,
 		doNotHaveCommanderUUID: true,
 		testName:               "static: without commander uuid",
 	})
 
-	testUpdateAndCreateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
+	assertUpdateAndCreateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
 		test := testCreateConvergeManifestTest(t, params)
 
 		test.secretsToAssert = append(
@@ -165,10 +165,10 @@ internalNetworkCIDRs:
 			manifests.SecretWithStaticClusterConfig(params.commanderStateAfter.ProviderClusterConfigurationData),
 		)
 
-		test.do(t)
+		test.assetAndRun(t)
 	}
 
-	testUpdateAndCreateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateAndCreateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsAfter,
 		testName:             "static: create static configuration if need",
@@ -221,7 +221,7 @@ provider:
 `),
 	}
 
-	testUpdateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
+	assertUpdateWithoutError := func(t *testing.T, params testConvergeManifestsParams) {
 		test := testCreateConvergeManifestTest(t, params)
 
 		testCreateSecret(
@@ -241,22 +241,22 @@ provider:
 			),
 		)
 
-		test.do(t)
+		test.assetAndRun(t)
 	}
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsAfter,
 		testName:             "provider: normal update",
 	})
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore: paramsBefore,
 		commanderStateAfter:  paramsBefore,
 		testName:             "provider: no update",
 	})
 
-	testUpdateWithoutError(t, testConvergeManifestsParams{
+	assertUpdateWithoutError(t, testConvergeManifestsParams{
 		commanderStateBefore:   paramsBefore,
 		commanderStateAfter:    paramsAfter,
 		doNotHaveCommanderUUID: true,
@@ -270,12 +270,12 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	type beforeTest func(t *testing.T, params testConvergeManifestsParams, test *testConvergeManifests)
 
-	errorTest := func(t *testing.T, params testConvergeManifestsParams, before beforeTest) {
+	assertError := func(t *testing.T, params testConvergeManifestsParams, before beforeTest) {
 		tst := testCreateConvergeManifestTest(t, params)
 
 		before(t, params, tst)
 
-		tst.doWithError(t)
+		tst.assertWithError(t)
 	}
 
 	staticClusterConvergeParams := testConvergeManifestsParams{
@@ -321,41 +321,41 @@ func TestErrorConvergeManifests(t *testing.T) {
 		)
 	}
 
-	errorTest(t, staticClusterConvergeParams.CopyWithName("no cluster uuid"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, staticClusterConvergeParams.CopyWithName("no cluster uuid"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createEmptyStaticConfigurationSecret(t, tst)
 		tst.metaConfig.UUID = ""
 	})
 
 	// empty cluster configuration, because commander does not support managed clusters
-	errorTest(t, staticClusterConvergeParams.CopyWithName("no cluster config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, staticClusterConvergeParams.CopyWithName("no cluster config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createEmptyStaticConfigurationSecret(t, tst)
 		tst.metaConfig.ClusterConfig = nil
 	})
 
 	// empty cluster type, because commander does not support managed clusters
-	errorTest(t, staticClusterConvergeParams.CopyWithName("empty cluster type"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, staticClusterConvergeParams.CopyWithName("empty cluster type"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createEmptyStaticConfigurationSecret(t, tst)
 		tst.metaConfig.ClusterType = ""
 	})
 
-	errorTest(t, staticClusterConvergeParams.CopyWithName("incorrect cluster type"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, staticClusterConvergeParams.CopyWithName("incorrect cluster type"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createEmptyStaticConfigurationSecret(t, tst)
 		tst.metaConfig.ClusterType = "incorrect"
 	})
 
-	errorTest(t, staticClusterConvergeParams.CopyWithName("incorrect static config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, staticClusterConvergeParams.CopyWithName("incorrect static config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createEmptyStaticConfigurationSecret(t, tst)
 		tst.metaConfig.StaticClusterConfig = map[string]json.RawMessage{
 			"something": json.RawMessage(`{"a": "}`),
 		}
 	})
 
-	errorTest(t, yandexClusterConvergeParams.CopyWithName("no provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, yandexClusterConvergeParams.CopyWithName("no provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createYandexConfigurationSecret(t, tst, params)
 		tst.metaConfig.ProviderClusterConfig = nil
 	})
 
-	errorTest(t, yandexClusterConvergeParams.CopyWithName("incorrect provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
+	assertError(t, yandexClusterConvergeParams.CopyWithName("incorrect provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
 		createYandexConfigurationSecret(t, tst, params)
 		tst.metaConfig.ProviderClusterConfig = map[string]json.RawMessage{
 			"something": json.RawMessage(`{"a": "}`),
@@ -424,7 +424,7 @@ func (tt *testConvergeManifests) assertConfiguration(t *testing.T) {
 	}
 }
 
-func (tt *testConvergeManifests) do(t *testing.T) {
+func (tt *testConvergeManifests) assetAndRun(t *testing.T) {
 	t.Run(fmt.Sprintf("converge %s", tt.testName), func(t *testing.T) {
 		tt.assertGeneral(t)
 
@@ -456,7 +456,7 @@ func (tt *testConvergeManifests) do(t *testing.T) {
 	})
 }
 
-func (tt *testConvergeManifests) doWithError(t *testing.T) {
+func (tt *testConvergeManifests) assertWithError(t *testing.T) {
 	t.Run(fmt.Sprintf("has error %s", tt.testName), func(t *testing.T) {
 		tt.assertGeneral(t)
 
