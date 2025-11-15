@@ -7,16 +7,20 @@ package tasks
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // NodeCordoner waits for shutdown signal and cordons the node.
 type NodeCordoner struct {
-	NodeName           string
-	StartCordonCh      <-chan struct{}
-	UnlockInhibitorsCh <-chan struct{}
+	NodeName      string
+	StartCordonCh <-chan struct{}
+	UnlockCtx     context.Context
+	CordonEnabled bool
+	Klient        *kubernetes.Klient
 }
 
 func (n *NodeCordoner) Name() string {
@@ -24,28 +28,32 @@ func (n *NodeCordoner) Name() string {
 }
 
 func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
-	// Stage 1. Wait for a signal to start.
-	fmt.Printf("nodeCordoner: wait for a signal to cordon node\n")
-	select {
-	case <-ctx.Done():
-		fmt.Printf("nodeCordoner: stop on global exit\n")
-		// Return now, cordon is not needed in case of the global stop.
-		return
-	case <-n.StartCordonCh:
-		fmt.Printf("nodeCordoner: catch a signal, cordon node\n")
-	case <-n.UnlockInhibitorsCh:
-		fmt.Printf("nodeCordoner: unlock signal received, cordon is not needed, exiting\n")
+	if !n.CordonEnabled {
+		dlog.Info("node cordoner: cordoning disabled, skipping", slog.String("node", n.NodeName))
 		return
 	}
 
-	kubectl := kubernetes.NewDefaultKubectl()
-	output, err := kubectl.Cordon(n.NodeName)
-	if err != nil {
-		fmt.Printf("nodeCordoner: fail to cordon node: %v\n, output: %s\n", err, output)
+	// Stage 1. Wait for a signal to start.
+	dlog.Info("node cordoner: waiting for cordon signal", slog.String("node", n.NodeName))
+	select {
+	case <-ctx.Done():
+		dlog.Info("node cordoner: stop on context cancel", slog.String("node", n.NodeName))
+		// Return now, cordon is not needed in case of the global stop.
+		return
+	case <-n.StartCordonCh:
+		dlog.Info("node cordoner: received cordon signal", slog.String("node", n.NodeName))
+	case <-n.UnlockCtx.Done():
+		dlog.Info("node cordoner: unlock signal received, skipping cordon", slog.String("node", n.NodeName))
 		return
 	}
-	output, err = kubectl.SetCordonAnnotation(n.NodeName)
-	if err != nil {
-		fmt.Printf("nodeCordoner: fail set cordon annotation: %v\n, output: %s\n", err, output)
+
+	node := n.Klient.GetNode(ctx, n.NodeName).Cordon(ctx)
+	if err := node.Err(); err != nil {
+		dlog.Error("node cordoner: failed to cordon node", slog.String("node", n.NodeName), dlog.Err(err))
+		return
+	}
+
+	if err := n.Klient.GetNode(ctx, n.NodeName).SetCordonAnnotation(ctx).Err(); err != nil {
+		dlog.Error("node cordoner: failed to set cordon annotation", slog.String("node", n.NodeName), dlog.Err(err))
 	}
 }

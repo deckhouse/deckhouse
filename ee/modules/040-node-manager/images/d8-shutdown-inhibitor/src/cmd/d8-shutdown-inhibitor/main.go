@@ -6,52 +6,74 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"fmt"
+	"context"
+	"flag"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"d8_shutdown_inhibitor/pkg/app"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func main() {
+func run(cordonEnabled bool) error {
 	nodeName, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("START Error: get hostname: %v\n", err)
-		os.Exit(1)
+		dlog.Fatal("failed to get hostname", dlog.Err(err))
 	}
 
 	// Start application.
-	app := app.NewApp(app.AppConfig{
+	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
+	if err != nil {
+		dlog.Fatal("failed to create kubernetes client", dlog.Err(err))
+	}
+	a := app.NewApp(app.AppConfig{
 		PodLabel:              app.InhibitNodeShutdownLabel,
 		InhibitDelayMax:       app.InhibitDelayMaxSec,
 		PodsCheckingInterval:  app.PodsCheckingInterval,
 		WallBroadcastInterval: app.WallBroadcastInterval,
 		NodeName:              nodeName,
-	})
+		CordonEnabled:         cordonEnabled,
+	}, kubeClient)
 
-	err = app.Start()
-	if err != nil {
-		fmt.Printf("START Error: %s\n", err.Error())
-		os.Exit(1)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Wait for signal to stop application.
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(interruptCh)
+
+	if err := a.Start(ctx, cancel); err != nil {
+		dlog.Fatal("application start failed", dlog.Err(err))
+	}
 
 	select {
 	case sig := <-interruptCh:
-		fmt.Printf("Grace shutdown by '%s' signal\n", sig.String())
-		app.Stop()
-		<-app.Done()
-	case <-app.Done():
-		fmt.Printf("Application stopped\n")
+		dlog.Info("received shutdown signal", slog.String("signal", sig.String()))
+		cancel()
+		a.Stop()
+		<-a.Done()
+	case <-a.Done():
+		dlog.Info("application stopped by internal signal")
 	}
 
-	err = app.Err()
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err.Error())
+	if err := a.Err(); err != nil {
+		dlog.Fatal("application error", dlog.Err(err))
+	}
+
+	return nil
+}
+
+func main() {
+	noCordon := flag.Bool("no-cordon", false, "Disable node cordoning")
+	flag.Parse()
+
+	cordonEnabled := !*noCordon
+
+	if err := run(cordonEnabled); err != nil {
 		os.Exit(1)
 	}
 }

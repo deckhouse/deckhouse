@@ -5,43 +5,57 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package kubernetes
 
-type PodMatcher func(pod Pod) bool
+import (
+	corev1 "k8s.io/api/core/v1"
+)
 
-func WithLabel(label string) func(pod Pod) bool {
-	return func(pod Pod) bool {
+type PodMatcher func(pod corev1.Pod) bool
+
+func WithLabel(label string) func(pod corev1.Pod) bool {
+	return func(pod corev1.Pod) bool {
 		if label == "" {
 			return false
 		}
-		_, ok := pod.Metadata.Labels[label]
+		if pod.Labels == nil {
+			return false
+		}
+		_, ok := pod.Labels[label]
 		return ok
 	}
 }
 
-func WithRunningPhase() func(pod Pod) bool {
-	return func(pod Pod) bool {
-		return pod.Status != nil && pod.Status.Phase == "Running"
+func WithRunningPhase() func(pod corev1.Pod) bool {
+	return func(pod corev1.Pod) bool {
+		return pod.Status.Phase == corev1.PodRunning
 	}
 }
 
-func FilterPods(pods []Pod, matchers ...PodMatcher) []Pod {
+func (c *Klient) FilterPods(podList *corev1.PodList, matchers ...PodMatcher) []corev1.Pod {
 	if len(matchers) == 0 {
-		return pods
+		out := make([]corev1.Pod, len(podList.Items))
+		for i := range podList.Items {
+			out[i] = *podList.Items[i].DeepCopy()
+		}
+		return out
 	}
 
-	filtered := make([]Pod, 0)
-	for _, pod := range pods {
-		isMatched := true
+	filtered := make([]corev1.Pod, 0, len(podList.Items))
+	
+	for i := range podList.Items {
+		pod := podList.Items[i]
+		matched := true
 		for _, matcher := range matchers {
-			if matcher != nil && matcher(pod) {
+			if matcher == nil {
 				continue
 			}
-			isMatched = false
-			break
+			if !matcher(pod) {
+				matched = false
+				break
+			}
 		}
-		if isMatched {
-			filtered = append(filtered, pod)
+		if matched {
+			filtered = append(filtered, *pod.DeepCopy())
 		}
 	}
-
 	return filtered
 }
