@@ -90,7 +90,7 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		for range t.C {
 			modulesCount, err := svc.channelMappingEditor.getModulesCount()
 			if err != nil {
-				svc.logger.Warn("can not read modules count from channel mapping editor")
+				svc.logger.Warn("can not read modules count from channel mapping editor", log.Err(err))
 			}
 
 			ms.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
