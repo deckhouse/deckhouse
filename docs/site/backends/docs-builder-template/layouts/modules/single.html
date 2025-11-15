@@ -77,9 +77,7 @@
 
           {{- if or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") }}
             {{/* Add the warning for CRDs */}}
-            {{< alert level="info" >}}
-              {{ T "module_crd_warning_1" }}
-            {{< /alert >}}
+             {{- partial "alert" ( dict "level" "info" "content" (T "module_crd_warning_1") ) }}
           {{- end }}
 
           {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
