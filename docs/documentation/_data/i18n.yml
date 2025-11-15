@@ -322,6 +322,9 @@ common:
   note_ce_notguaranteed:
     en: Functionality in Community Edition is not guaranteed
     ru: Работоспособность в Community Edition не гарантируется
+  module_crd_warning_1:
+    en: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+    ru: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
