@@ -8,6 +8,16 @@ properties:
     x-required-for-helm:
       - ingressControllers
     properties:
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
+      customStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
       admissionCertificate:
         type: object
         default: {}
@@ -215,12 +225,18 @@ properties:
                 geoIP2:
                   type: object
                   properties:
+                    maxmindMirror:
+                      type: string
+                    maxmindMirrorSkipTLSVerify:
+                      type: boolean
                     maxmindLicenseKey:
                       type: string
                     maxmindEditionIDs:
                       type: array
                       items:
                         type: string
+                    maxmindAccountID:
+                      type: integer
                 legacySSL:
                   type: boolean
                 disableHTTP2:

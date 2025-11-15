@@ -7,3 +7,12 @@ properties:
       Ручное управление режимом отказоустойчивости.
 
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+  storageClass:
+    description: |-
+      Имя StorageClass, который будет использоваться для хранения баз GeoIP (StatefulSet `geoproxy`).
+
+      Если значение не указано, используется StorageClass существующей PVC. Если PVC ещё нет, будет использован StorageClass согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+
+      Глобальный параметр `storageClass` учитывается только при включении модуля. Изменение параметра при включённом модуле не приводит к автоматическому перезаказу диска.
+
+      При значении `false` будет использоваться `emptyDir`.

@@ -14,3 +14,14 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  storageClass:
+    type: string
+    x-examples: ["ceph-ssd", "false"]
+    description: |-
+      The name of the StorageClass to use for storing GeoIP databases (the `geoproxy` StatefulSet).
+
+      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be chosen according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+
+      The global `storageClass` parameter is only considered when the module is enabled. Changing it while the module is enabled will not trigger automatic disk re-provisioning.
+
+      If `false` is specified, `emptyDir` will be used.
