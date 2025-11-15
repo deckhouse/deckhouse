@@ -67,6 +67,20 @@ func LocalTimezoneAfterSourceTransform() *DynamicTransform {
 	}
 }
 
+func FileSourceHostTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "file_source_host",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.FileSourceHostRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 type LogSourceConfig struct {
 	SourceType string
 
@@ -81,6 +95,10 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 
 	if cfg.SourceType == v1alpha1.SourceKubernetesPods {
 		transforms = append(transforms, OwnerReferenceSourceTransform())
+	}
+
+	if cfg.SourceType == v1alpha1.SourceFile {
+		transforms = append(transforms, FileSourceHostTransform())
 	}
 
 	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
