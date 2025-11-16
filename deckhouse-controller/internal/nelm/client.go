@@ -83,14 +83,14 @@ func WithTimeout(timeout time.Duration) Option {
 // WithLabels sets labels to be applied to all releases
 func WithLabels(labels map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Labels, labels)
+		o.Labels = labels
 	}
 }
 
 // WithAnnotations sets annotations to be applied to all releases
 func WithAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Annotations, annotations)
+		o.Annotations = annotations
 	}
 }
 
