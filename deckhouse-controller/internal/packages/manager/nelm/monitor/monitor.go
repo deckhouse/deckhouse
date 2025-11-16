@@ -69,6 +69,7 @@ type resourcesMonitor struct {
 	namespace string                                // Release namespace
 	rendered  string                                // rendered manifest YAML (cleared after parsing to save memory)
 	resources map[namespacedGVK]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
+	parsed    bool                                  // true if manifest has been parsed (even if resulted in 0 resources)
 
 	nelm  *nelm.Client
 	cache runtimecache.Cache
@@ -216,13 +217,20 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 
 	// Lazy initialization: parse manifest on first check (mutex protected)
 	m.mtx.Lock()
-	if len(m.resources) == 0 {
+	if !m.parsed {
 		if err := m.buildNamespacedGVK(); err != nil {
 			m.mtx.Unlock()
 			return fmt.Errorf("build namespaced gvk: %w", err)
 		}
+		m.parsed = true
 	}
 	m.mtx.Unlock()
+
+	// If no resources to monitor, nothing to check
+	if len(m.resources) == 0 {
+		m.logger.Debug("no resources to monitor")
+		return nil
+	}
 
 	// Check all resources in parallel using errgroup
 	g, ctx := errgroup.WithContext(ctx)
@@ -282,31 +290,50 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 // parseManifest parses a multi-document YAML manifest into PartialObjectMetadata.
 // Only extracts metadata (name, namespace, GVK), not the full resource spec.
 func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObjectMetadata, error) {
+	m.logger.Debug("parse manifest", slog.String("rendered", m.rendered))
+
 	dec := yaml.NewYAMLOrJSONDecoder(strings.NewReader(rendered), 4096)
 
 	var res []*metav1.PartialObjectMetadata
+	docCount := 0
 	for {
 		obj := new(metav1.PartialObjectMetadata)
 		if err := dec.Decode(obj); err != nil {
 			if err == io.EOF {
+				m.logger.Debug("parseManifest EOF", slog.Int("total_docs", docCount))
 				break
 			}
 
 			// Skip empty YAML documents (e.g., standalone '---')
 			if strings.Contains(err.Error(), "empty") {
+				m.logger.Debug("parseManifest skip empty doc", slog.String("error", err.Error()))
 				continue
 			}
 
+			m.logger.Error("parseManifest decode error", log.Err(err))
 			return nil, err
 		}
 
+		docCount++
+
 		// Skip completely empty objects
 		if obj.APIVersion == "" && obj.Kind == "" {
+			m.logger.Debug("parseManifest skip empty object", slog.Int("doc", docCount))
 			continue
 		}
 
+		m.logger.Debug("parseManifest decoded object",
+			slog.Int("doc", docCount),
+			slog.String("kind", obj.Kind),
+			slog.String("apiVersion", obj.APIVersion),
+			slog.String("name", obj.GetName()),
+			slog.String("namespace", obj.GetNamespace()))
+
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Empty() {
+			m.logger.Error("parseManifest empty gvk",
+				slog.String("kind", obj.Kind),
+				slog.String("apiVersion", obj.APIVersion))
 			return nil, errors.New("object has no gvk")
 		}
 
