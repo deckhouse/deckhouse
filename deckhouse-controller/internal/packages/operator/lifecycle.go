@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
@@ -82,10 +81,10 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		}
 	}
 
-	// Cancel previous tasks before enqueueing new ones
-	ctx = o.packages[name].renewContext(ctx)
-
 	if o.packages[name].status.Phase == Pending {
+		// Cancel previous tasks before enqueueing new ones
+		ctx = o.packages[name].renewContext(ctx)
+
 		packageName := inst.Definition.Name
 		packageVersion := inst.Definition.Version
 		reg := registry.BuildRegistryByRepository(repo)
@@ -104,6 +103,8 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 	}
 
 	if o.manager.SettingsChanged(name, inst.Settings) {
+		// Cancel previous tasks before enqueueing new ones
+		ctx = o.packages[name].renewContext(ctx)
 		o.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(name, inst.Settings, o.manager, o.logger))
 		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
 	}
@@ -168,8 +169,7 @@ type dump struct {
 type packageDump struct {
 	Status
 	schedule.State
-	Meta   addonutils.Values `yaml:"meta" json:"meta"`
-	Values addonutils.Values `yaml:"values,omitempty" json:"values,omitempty"`
+	apps.Info
 }
 
 // Dump returns a YAML snapshot of all packages and their current state.
@@ -177,7 +177,7 @@ type packageDump struct {
 // Includes for each package:
 //   - Status: Current phase (Pending/Loaded/Running)
 //   - State: Scheduler state (enabled/disabled with reason)
-//   - Values: Current package configuration values
+//   - Info: Instance name and namespace, current package configuration values and hooks
 //
 // Used for debugging and introspection of operator internal state.
 // Skips packages that have been removed from the manager.
@@ -190,16 +190,10 @@ func (o *Operator) Dump() []byte {
 	}
 
 	for name, pkg := range o.packages {
-		app := o.manager.GetApplication(name)
-		if app == nil {
-			continue
-		}
-
 		d.Packages[name] = packageDump{
 			pkg.status,
 			o.scheduler.State(name),
-			app.GetMetaValues(),
-			app.GetValues(),
+			o.manager.GetAppInfo(name),
 		}
 	}
 

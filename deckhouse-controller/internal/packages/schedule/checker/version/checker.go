@@ -57,7 +57,6 @@ func NewChecker(getter Getter, constraints *semver.Constraints) *Checker {
 func (c *Checker) Check() checker.Result {
 	version, err := c.versionGetter()
 	if err != nil {
-		// TODO: Consider caching last known good version for transient failures
 		return checker.Result{
 			Enabled: false,
 			Reason:  fmt.Sprintf("get version: %s", err.Error()),
@@ -74,6 +73,5 @@ func (c *Checker) Check() checker.Result {
 
 	return checker.Result{
 		Enabled: true,
-		// Reason left empty when enabled
 	}
 }

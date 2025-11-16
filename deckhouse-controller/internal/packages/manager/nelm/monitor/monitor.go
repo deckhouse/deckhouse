@@ -95,7 +95,7 @@ func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, re
 		cache: cache,
 		nelm:  nelm,
 
-		logger: logger.Named(fmt.Sprintf("monitor-%s", name)),
+		logger: logger.Named(fmt.Sprintf("monitor.%s", name)),
 	}
 }
 
@@ -249,6 +249,8 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 	if err != nil {
 		return fmt.Errorf("parse manifest: %w", err)
 	}
+
+	m.logger.Debug("build namespaced gvk", slog.Int("parsed", len(objs)))
 
 	for _, obj := range objs {
 		// Skip list kinds rendered by Helm, if any

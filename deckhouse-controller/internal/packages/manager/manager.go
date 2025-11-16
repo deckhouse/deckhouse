@@ -331,3 +331,15 @@ func (m *Manager) GetApplication(name string) *apps.Application {
 
 	return m.apps[name]
 }
+
+func (m *Manager) GetAppInfo(name string) apps.Info {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		return apps.Info{}
+	}
+
+	return app.GetInfo()
+}

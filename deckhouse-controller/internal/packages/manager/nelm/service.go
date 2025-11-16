@@ -59,7 +59,9 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback, logger *log.Logger) *Service {
-	nelmClient := nelm.New(logger)
+	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
+		"heritage": "deckhouse",
+	}))
 
 	return &Service{
 		tmpDir:         os.TempDir(),
