@@ -118,83 +118,14 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, commanderUUID, kubeCl))
 	}
 
-	switch metaConfig.ClusterType {
-	case config.CloudClusterType:
-		cloudTask, err := getCloudClusterSettingsTask(ctx, kubeCl, metaConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		tasks = append(tasks, *cloudTask)
-	case config.StaticClusterType:
-		staticTask, err := getStaticClusterSettingsTask(ctx, kubeCl, metaConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		tasks = append(tasks, *staticTask)
-	case "":
-		return nil, fmt.Errorf("Cannot converge deckhouse manifest because commander does not support managed installations")
-	default:
-		return nil, fmt.Errorf("Unsupported cluster type: '%s'", metaConfig.ClusterType)
+	providerSpecifiedTask, err := config.DoByClusterType(ctx, metaConfig, &taskProviderForCluster{kubeCl: kubeCl})
+	if err != nil {
+		return nil, err
 	}
+
+	tasks = append(tasks, *providerSpecifiedTask)
 
 	return tasks, nil
-}
-
-func getCloudClusterSettingsTask(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
-	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to get provider cluster config yaml from MetaConfig: %w", err)
-	}
-
-	if len(providerClusterConfig) == 0 {
-		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
-	}
-
-	const secretName = "d8-provider-cluster-configuration"
-
-	return &actions.ManifestTask{
-		Name: fmt.Sprintf(`Secret "%s"`, secretName),
-		Manifest: func() interface{} {
-			return manifests.SecretWithProviderClusterConfig(
-				providerClusterConfig, nil,
-			)
-		},
-		CreateFunc: func(manifest interface{}) error {
-			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
-		},
-	}, nil
-}
-
-func getStaticClusterSettingsTask(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
-	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to get static cluster config: %w", err)
-	}
-
-	if len(staticClusterConfig) == 0 {
-		// static cluster configuration can be empty because we have auto discovering interfaces
-		log.DebugLn("No static cluster configuration section found. Rewrite with empty data because we have auto discovery")
-	}
-
-	const secretName = "d8-static-cluster-configuration"
-
-	return &actions.ManifestTask{
-		Name: fmt.Sprintf(`Secret "%s"`, secretName),
-		Manifest: func() interface{} {
-			return manifests.SecretWithStaticClusterConfig(staticClusterConfig)
-		},
-		CreateFunc: func(manifest interface{}) error {
-			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
-		},
-	}, nil
 }
 
 func convergeManifestsCreateSecret(ctx context.Context, kubeCl *client.KubernetesClient, manifest any, secretType string) error {
@@ -227,4 +158,74 @@ func convergeManifestsPatchSecret(ctx context.Context, kubeCl *client.Kubernetes
 	)
 
 	return err
+}
+
+type taskProviderForCluster struct {
+	kubeCl *client.KubernetesClient
+}
+
+func (t *taskProviderForCluster) Cloud(ctx context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get provider cluster config yaml from MetaConfig: %w", err)
+	}
+
+	if len(providerClusterConfig) == 0 {
+		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+	}
+
+	const secretName = "d8-provider-cluster-configuration"
+
+	kubeCl := t.kubeCl
+
+	return &actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "%s"`, secretName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithProviderClusterConfig(
+				providerClusterConfig, nil,
+			)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
+		},
+	}, nil
+}
+
+func (t *taskProviderForCluster) Static(ctx context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get static cluster config: %w", err)
+	}
+
+	if len(staticClusterConfig) == 0 {
+		// static cluster configuration can be empty because we have auto discovering interfaces
+		log.DebugLn("No static cluster configuration section found. Rewrite with empty data because we have auto discovery")
+	}
+
+	const secretName = "d8-static-cluster-configuration"
+
+	kubeCl := t.kubeCl
+
+	return &actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "%s"`, secretName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithStaticClusterConfig(staticClusterConfig)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
+		},
+	}, nil
+}
+func (t *taskProviderForCluster) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	if metaConfig.ClusterType == "" {
+		return nil, fmt.Errorf("Cannot converge deckhouse manifest because commander does not support managed installations")
+	}
+
+	return nil, config.UnsupportedClusterTypeErr(metaConfig)
 }

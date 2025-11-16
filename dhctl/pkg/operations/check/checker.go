@@ -165,30 +165,47 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
 	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
-		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
+		return "", fmt.Errorf("Unable to get cluster config yaml: %w", err)
 	}
-	providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
+
+	// we use static or provider config because commander does not support managed cluster
+	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, metaConfig)
 	if err != nil {
-		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		return "", fmt.Errorf("Unable to get static/provider cluster config yaml: %w", err)
 	}
 
 	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
 	if err != nil {
-		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
-	}
-	inClusterConfigurationData, err := inClusterMetaConfig.ClusterConfigYAML()
-	if err != nil {
-		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
-	}
-	inClusterProviderClusterConfigurationData, err := inClusterMetaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
 
-	if inClusterMetaConfig.UUID == metaConfig.UUID && bytes.Equal(clusterConfigurationData, inClusterConfigurationData) && bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData) {
-		return CheckStatusInSync, nil
+	inClusterConfigurationData, err := inClusterMetaConfig.ClusterConfigYAML()
+	if err != nil {
+		return "", fmt.Errorf("Unable to get in-cluster cluster config yaml: %w", err)
 	}
-	return CheckStatusOutOfSync, nil
+
+	// we use static or provider config because commander does not support managed cluster
+	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inClusterMetaConfig)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get in-cluster static/provider cluster config yaml: %w", err)
+	}
+
+	checks := []checkFunc{
+		equalByOperatorCheck(metaConfig.UUID, inClusterMetaConfig.UUID, "cluster UUID"),
+		equalBytesCheck(clusterConfigurationData, inClusterConfigurationData, "cluster configuration"),
+		equalBytesCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
+	}
+
+	syncStatus := CheckStatusInSync
+
+	for _, check := range checks {
+		if err := check(); err != nil {
+			syncStatus = CheckStatusOutOfSync
+			c.logger.LogInfoLn(err.Error())
+		}
+	}
+
+	return syncStatus, nil
 }
 
 type InfraResult struct {
@@ -280,4 +297,51 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}
 	return kubeCl, nil
+}
+
+type clusterSpecificConfigProvider struct{}
+
+func (f *clusterSpecificConfigProvider) Cloud(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+	return metaConfig.ProviderClusterConfigYAML()
+}
+func (f *clusterSpecificConfigProvider) Static(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+	return metaConfig.StaticClusterConfigYAML()
+}
+
+func (f *clusterSpecificConfigProvider) Incorrect(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+	return nil, config.UnsupportedClusterTypeErr(metaConfig)
+}
+
+func getClusterSpecificConfig(ctx context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+	return config.DoByClusterType(ctx, metaConfig, &clusterSpecificConfigProvider{})
+}
+
+type checkFunc func() error
+
+func checkError(kind string) error {
+	return fmt.Errorf("Commander state meta config %s does not equal in-cluster meta config %s", kind, kind)
+}
+
+func equalByFuncCheck[T any](expected, data T, equal func(T, T) bool, kind string) checkFunc {
+	return func() error {
+		if equal(expected, data) {
+			return nil
+		}
+
+		return checkError(kind)
+	}
+}
+
+func equalBytesCheck(expected, data []byte, kind string) checkFunc {
+	return equalByFuncCheck(expected, data, bytes.Equal, kind)
+}
+
+func equalByOperatorCheck[T comparable](expected, val T, kind string) checkFunc {
+	return func() error {
+		if expected == val {
+			return nil
+		}
+
+		return checkError(kind)
+	}
 }

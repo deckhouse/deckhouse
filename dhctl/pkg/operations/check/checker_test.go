@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package check
 
-const (
-	ShowDeckhouseLogs = true
-	HideDeckhouseLogs = false
-
-	MasterNodeGroupName = "master"
-
-	ConvergeNodeUserName = "d8-dhctl-converger"
-	ConvergeNodeUserUID  = 64536
-
-	D8SystemNamespace = "d8-system"
-
-	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
-
-	ConfigsNS = "kube-system"
+import (
+	"testing"
 )
+
+func TestCheckClusterConfig(t *testing.T) {
+}
