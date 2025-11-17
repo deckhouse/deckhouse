@@ -84,6 +84,10 @@ func (s *Storage) InjectDigests(digests map[string]string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if len(digests) == 0 {
+		return nil
+	}
+
 	scheme := s.schemaStorage.Schemas[validation.ValuesSchema]
 	if scheme == nil {
 		return nil
