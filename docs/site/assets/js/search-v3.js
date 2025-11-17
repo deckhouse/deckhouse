@@ -281,7 +281,7 @@ class ModuleSearch {
       }
 
       // Close search results when clicking outside, but not if there are loading/error messages
-      const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
+      const hasLoadingOrError = this.searchResults.querySelector('.loading > .spinner-small, .no-results');
       if (!hasLoadingOrError) {
         this.searchResults.style.display = 'none';
       }

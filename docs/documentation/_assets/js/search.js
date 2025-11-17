@@ -63,13 +63,10 @@ class ModuleSearch {
                              this.searchResults.contains(e.target) ||
                              e.target.closest('.searchV3');
 
-      // Don't close if clicking on search elements
-      if (isClickOnSearch) {
-        return;
-      }
-
       // Close search results when clicking outside
-      this.searchResults.style.display = 'none';
+      if (!isClickOnSearch) {
+        this.searchResults.style.display = 'none';
+      }
     });
 
     // Prevent search results from closing when clicking on buttons inside results
