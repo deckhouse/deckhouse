@@ -12,6 +12,8 @@
         <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
         <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
       </svg>
+      {%- elsif productName == "prompp" or productName == "delivery-kit" or productName == "development-platform" or productName == "observability-platform" %}
+        <img src="/wp-content/themes/unitheme/assets/images/products/{{ productCode  }}/logo-mini.svg" alt="{{ productName }}">
       {%- else %}
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
         <use xlink:href="{{ productLogoURL }}"></use>
