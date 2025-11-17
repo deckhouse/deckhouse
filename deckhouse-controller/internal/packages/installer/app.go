@@ -123,6 +123,9 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 
 	logger.Debug("download package")
 
+	i.mtx.Lock()
+	defer i.mtx.Unlock()
+
 	// /deckhouse/downloaded/<package>
 	packagePath := filepath.Join(i.downloaded, name)
 	if err := os.MkdirAll(packagePath, 0755); err != nil {
@@ -177,6 +180,9 @@ func (i *Installer) Install(ctx context.Context, name, packageName, version stri
 
 	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
 	logger.Debug("install application")
+
+	i.mtx.Lock()
+	defer i.mtx.Unlock()
 
 	// /deckhouse/downloaded/apps/<app>
 	mountPoint := filepath.Join(i.mount, name)
