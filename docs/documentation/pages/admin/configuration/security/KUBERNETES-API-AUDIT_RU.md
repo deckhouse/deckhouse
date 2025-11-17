@@ -85,10 +85,10 @@ spec:
    - [статья из блога компании «Флант» на Habr](https://habr.com/ru/companies/flant/articles/468679/);
    - [код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
-## Как формировать содержимого файла `audit-policy.yaml`
+## Как формировать содержимое файла `audit-policy.yaml`
 
-[Документация Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)  
-[Структура полей ресурса Policy](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)  
+[Документация Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
+[Структура полей ресурса Policy](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)
 
 Политика аудита в Kubernetes задается в файле формата YAML и состоит из набора правил, определяющих какие события и с каким уровнем детализации будут зафиксированы в журнале.
 Файл имеет следующую структуру:
@@ -108,40 +108,39 @@ rules:                       # Набор правил для аудита
 Массив `rules` описывает правила аудита.
 Каждое правило содержит следующие поля:
 
-**level** — уровень детализации логируемого события.  
-Возможные значения (от самого детализированного к наименее):
-- **None** — не логировать вообще
-- **Metadata** — только метаданные запроса (кто, когда, что, откуда; без содержимого объекта)
-- **Request** — также сохраняет тело запроса (только для запросов на изменение)
-- **RequestResponse** — сохраняет и тело запроса и содержимое ответа
+- `level` — уровень детализации логируемого события.
+  Возможные значения (от наиболее детализированного к наименее):
+  - `None` — не логировать вообще,
+  - `Metadata` — только метаданные запроса (кто, когда, что, откуда; без содержимого объекта),
+  - `Request` — также сохраняет тело запроса (только для запросов на изменение),
+  - `RequestResponse` — сохраняет и тело запроса и содержимое ответа.
 
-**users** — перечень имен пользователей, на которых действует правило (например, `["admin"]`)  
-Если это сервисные аккаунты, то имя обычно выглядит как `system:serviceaccount:<namespace>:<serviceaccount-name>`.  
-Для обычных пользователей — имя зависит от настроек системы аутентификации.
-Для объектов `deckhouse.io/v1` `Users` в качестве имени используется `email`.  
+- `users` — перечень имен пользователей, на которых действует правило (например, `["admin"]`).
+Если это сервисные аккаунты, то имя обычно выглядит как `system:serviceaccount:<namespace>:<serviceaccount-name>`.
+Для обычных пользователей имя зависит от настроек системы аутентификации.
+Для объектов `deckhouse.io/v1` `Users` в качестве имени используется `email`.
 
-**userGroups** — группы пользователей (например, `["system:authenticated"]`)
-После аутентификации kube-apiserver присваивает каждому пользователю список групп (например, все аутентифицированные пользователи — часть `system:authenticated`, сервисные аккаунты — в  дополнительных группах).
-Если запрос пришёл от пользователя, который состоит хотя бы в одной из групп, указанных в userGroups, то правило применяется к этому запросу.
-Встроенные группы Kubernetes:
-- `system:authenticated` — все, кто прошёл аутентификацию.  
-- `system:unauthenticated` — запросы от анонимных пользователей.  
-- `system:serviceaccounts` — все сервисные аккаунты всех namespaces.  
-- `system:serviceaccounts:<namespace>` — сервисные аккаунты в конкретном namespace.  
+- `userGroups` — группы пользователей (например, `["system:authenticated"]`).
+После аутентификации kube-apiserver присваивает каждому пользователю список групп (например, все аутентифицированные пользователи — часть `system:authenticated`, сервисные аккаунты — в дополнительных группах).
+Если запрос пришёл от пользователя, который состоит хотя бы в одной из групп, указанных в `userGroups`, то правило применяется к этому запросу.
 
-**verbs** — список операций API (`get`, `list`, `create`, `delete` и т.д.)
+  Встроенные группы Kubernetes:
+  - `system:authenticated` — все, кто прошёл аутентификацию.
+  - `system:unauthenticated` — запросы от анонимных пользователей.
+  - `system:serviceaccounts` — все сервисные аккаунты всех namespaces.
+  - `system:serviceaccounts:<namespace>` — сервисные аккаунты в конкретном namespace.
 
-**resources** — массив целевых ресурсов:
-- **group** — API группа (например, `"apps"`, `"batch"`, `""` для core)
-- **resources** — виды ресурсов (например, `["pods", "deployments"]`)
-Полный перечень ресурсов и их групп может быть получен с помощью команды `kubectl api-resources`
+- `verbs` — список операций API (`get`, `list`, `create`, `delete` и т.д.).
 
-**namespaces** — массив пространств имен (namespaces), в которых применяется правило
+- `resources` — массив целевых ресурсов:
+  - `group` — API-группа (например, `"apps"`, `"batch"`, `""` для core),
+  - `resources` — виды ресурсов (например, `["pods", "deployments"]`). Полный перечень ресурсов и их групп может быть получен с помощью команды `kubectl api-resources`.
 
-**nonResourceURLs** —— набор URL-путей, подлежащих аудиту. Символ `*` разрешен, но только в качестве полного, последнего шага пути.
-Примеры:  
-- `/metrics` — регистрировать запросы к метрикам apiserver
-- `/healthz*` — регистрировать все health-запросы
+- `namespaces` — массив пространств имен (namespaces), в которых применяется правило.
+
+- `nonResourceURLs` —— набор URL-путей, подлежащих аудиту. Символ `*` разрешен, но только в качестве полного, последнего шага пути. Примеры:
+  - `/metrics` — регистрировать запросы к метрикам apiserver,
+  - `/healthz*` — регистрировать все health-запросы.
 
 ### Примеры
 
@@ -224,12 +223,11 @@ rules:
 
 ## Работа с лог-файлом аудита
 
-Предполагается, что на master-узлах кластера Deckhouse установлен инструмент
-для отслеживания лог-файла `/var/log/kube-audit/audit.log`: `log-shipper`, `promtail` или `filebeat`.
+Предполагается, что на master-узлах кластера Deckhouse Kubernetes Platform установлен инструмент для отслеживания лог-файла `/var/log/kube-audit/audit.log`: `log-shipper`, `promtail` или `filebeat`.
 
 Параметры ротации логов в файле предустановлены и не подлежат изменению:
 
-- максимальный размер файла: 1000 МБ;
+- максимальный размер файла: 1000 МБ,
 - максимальная глубина записи: 30 дней.
 
 В зависимости от настроек политики и объема запросов к API-серверу количество записей может быть очень большим.
@@ -261,7 +259,7 @@ rules:
 
 По умолчанию лог аудита сохраняется в файл `/var/log/kube-audit/audit.log` на master-узлах.
 При необходимости вы можете перенаправить его вывод в stdout процесса `kube-apiserver` вместо файла,
-установив [параметр `apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) модуля [`control-plane-manager`](/modules/control-plane-manager/) в значение `Stdout`:
+установив параметр [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) модуля [`control-plane-manager`](/modules/control-plane-manager/) в значение `Stdout`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

@@ -108,43 +108,43 @@ rules:                          # Set of rules for auditing
 The `rules` array describes the audit rules.
 Each rule contains the following fields:
 
-**level** — The detail level of the logged event.
-Possible values ​​(from most to least detailed):
-- **None** — do not log at all
-- **Metadata** — only request metadata (who, when, what, where; without object contents)
-- **Request** — also stores the request body (for update requests only)
-- **RequestResponse** — stores both the request body and the response content
+- `level` — The detail level of the logged event.
 
-**users** — a list of usernames the rule applies to (e.g., `["admin"]`)
+  Possible values ​​(from most to least detailed):
+  - `None`: Do not log at all.
+  - `Metadata`: Only request metadata (who, when, what, where; without object contents).
+  - `Request`: Also stores the request body (for update requests only).
+  - `RequestResponse`: Stores both the request body and the response content.
+
+- `users`: A list of usernames the rule applies to (e.g., `["admin"]`).
 For service accounts, the name typically looks like `system:serviceaccount:<namespace>:<serviceaccount-name>`.
-
 For regular users, the name depends on the authentication system settings.
-
 For `deckhouse.io/v1` `Users` objects, `email` is used as the name.
 
-**userGroups** — user groups (e.g., `["system:authenticated"]`)
-After authentication, kube-apiserver assigns a list of groups to each user (e.g., all authenticated users are part of `system:authenticated`, service accounts are in additional groups).  
+- `userGroups`: User groups (e.g., `["system:authenticated"]`).
+After authentication, kube-apiserver assigns a list of groups to each user (e.g., all authenticated users are part of `system:authenticated`, service accounts are in additional groups).
 If a request comes from a user who is a member of at least one of the groups specified in userGroups, the rule is applied to that request.
 
-Kubernetes built-in groups:
-- `system:authenticated` — everyone who has been authenticated.
-- `system:unauthenticated` — requests from anonymous users.
-- `system:serviceaccounts` — all service accounts from all namespaces.
-- `system:serviceaccounts:<namespace>` — service accounts in a specific namespace.
+  Kubernetes built-in groups:
 
-**verbs** — List of API operations (get, list, create, delete, etc.)
+  - `system:authenticated`: Everyone who has been authenticated.
+  - `system:unauthenticated`: Requests from anonymous users.
+  - `system:serviceaccounts`: All service accounts from all namespaces.
+  - `system:serviceaccounts:<namespace>`: Service accounts in a specific namespace.
 
-**resources** — Array of target resources:
-- **group** — API group (e.g., "apps", "batch", """ for core)
-- **resources** — Resource types (e.g., "[pods", "deployments"])
-A full list of resources and their groups can be obtained using the `kubectl api-resources` command
+- `verbs`: List of API operations (get, list, create, delete, etc.).
 
-**namespaces** — Array of namespaces where the rule applies
+- `resources`: Array of target resources:
+  - `group`: API group (e.g.,`"apps"`, `"batch"`, `"""` for core).
+  - `resources`: Resource types (e.g., `"[pods", "deployments"]`).
+  A full list of resources and their groups can be obtained using the `kubectl api-resources` command
 
-**nonResourceURLs** — A set of URL paths to audit. The * character is allowed, but only as a full, final step of the path.
-Examples:
-- `/metrics`  — log requests to apiserver metrics
-- `/healthz*` — log all health requests
+- `namespaces`: Array of namespaces where the rule applies.
+
+- `nonResourceURLs`: A set of URL paths to audit. The * character is allowed, but only as a full, final step of the path.
+  Examples:
+  - `/metrics` — log requests to apiserver metrics
+  - `/healthz*` — log all health requests
 
 ### Examples
 
@@ -160,7 +160,7 @@ rules:
 
 {% alert level="warning" %}
 **Warning!**
-Not recommended for production environments.  
+Not recommended for production environments.
 A high event flow may result in increased load on the control-plane disk subsystem of cluster nodes.
 {% endalert %}
 
