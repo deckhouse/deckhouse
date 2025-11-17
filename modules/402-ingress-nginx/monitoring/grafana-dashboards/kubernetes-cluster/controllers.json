@@ -10700,6 +10700,159 @@
       },
       "id": 79,
       "panels": [
+	{
+	  "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "#00000000",
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "left",
+                "cellOptions": {
+                  "mode": "basic",
+                  "type": "color-background"
+                },
+                "filterable": false,
+                "inspect": false
+              },
+              "links": [],
+              "mappings": [
+                {
+                  "options": {
+                    "0": {
+                      "index": 0,
+                      "text": "GeoIP DB not ready"
+                    },
+                    "1": {
+                      "index": 1,
+                      "text": "GeoIP DB ready (stale)"
+                    },
+                    "2": {
+                      "index": 2,
+                      "text": "GeoIP DB ready"
+                    }
+                  },
+                  "type": "value"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#dfdfdf",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byValue",
+                  "options": {
+                    "op": "lt",
+                    "reducer": "lastNotNull",
+                    "value": 2
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "",
+                        "url": "https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 11
+          },
+          "id": 245,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "enablePagination": false,
+              "fields": [],
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true
+          },
+          "pluginVersion": "10.4.19",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "P0D6E4079E36703EB"
+              },
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "min by(controller) (geoip_version{controller=~\"$controller\"})",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "__auto",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "GeoIP DB status per controller",
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value": false,
+                  "__name__": false,
+                  "app": true,
+                  "controller": false
+                },
+                "includeByName": {},
+                "indexByName": {},
+                "renameByName": {
+                  "controller": ""
+                }
+              }
+            },
+            {
+              "id": "rowsToFields",
+              "options": {
+                "mappings": []
+              }
+            }
+          ],
+          "transparent": true,
+          "type": "table"
+        },
         {
           "circleMaxSize": "10",
           "circleMinSize": 2,
