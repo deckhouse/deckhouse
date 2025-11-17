@@ -5,8 +5,8 @@ description: |
  Информация по установке Deckhouse Kubernetes Platform, включая подготовку инфраструктуры, конфигурацию и запуск инсталлятора.
 lang: ru
 search: deckhouse installation, kubernetes installation, platform setup, infrastructure preparation, installer configuration, установка Deckhouse, установка Kubernetes, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора
-extracted_links_max: 2
-related_links:
+extractedLinksMax: 2
+relatedLinks:
   - title: "Поддерживаемые версии ОС и Kubernetes"
     url: ../reference/supported_versions.html
   - title: "Интеграция с инфраструктурой"
