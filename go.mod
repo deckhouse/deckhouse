@@ -84,9 +84,7 @@ require (
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/mod v0.27.0
 	golang.org/x/text v0.29.0
-	k8s.io/cli-runtime v0.32.10
 	k8s.io/code-generator v0.32.10
-	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/kubectl v0.32.10
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -121,6 +119,8 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	k8s.io/cli-runtime v0.32.10 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 )
 
 require (
