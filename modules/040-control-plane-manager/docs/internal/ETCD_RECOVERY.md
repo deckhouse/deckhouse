@@ -13,18 +13,24 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ### Restoring from a backup
 
+see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node
+
+## Multi-master
+
+### Complete data loss or recovery to previous state from a backup
+
 **Prefer this first:** high‑level, minimal‑impact recovery
 
 1. Enable HA for the control plane.
    Make sure the cluster is prepared for running multiple control plane nodes (HA mode enabled in the Deckhouse configuration).
 
-2. Temporarily remove the master role from all but one node.
+2. Temporarily remove the master role from all but one node, then wait until the control-plane-manager queue is empty.
    Follow the official guide:  
    `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`  
    In short: remove the master labels and control-plane configuration from the extra nodes so that only a single control plane node remains active.
 
 3. Restore the cluster from a backup as a single‑master control plane.
-   Use the documented procedure:  
+   Use the documented procedure:
    `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node`
 
 4. Wait until the control-plane-manager queue is empty, then re‑enable multi‑master.
@@ -34,61 +40,6 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 **FAQ / Notes**
 
 - Can a Pod be in `Running` state even if its data is already missing from etcd?
-
-
-**If that doesn’t help:** follow the extended steps in this section (they mostly mirror the official guide).
-
-Follow these steps to restore from a backup:
-
-1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
-
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
-
-   ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
-   ```
-
-1. Stop etcd.
-
-   ```shell
-   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-   ```
-
-1. Back up your files.
-
-   ```shell
-   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
-   ```
-
-1. Delete the data directory.
-
-   ```shell
-   rm -rf /var/lib/etcd/member/
-   ```
-
-1. Copy backup file to `~/etc-backup.snapshot`.
-
-1. Restore the etcd database.
-
-   ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
-   ```
-
-1. Start etcd.
-
-   ```shell
-   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-   ```
-
-## Multi-master
-
-### Complete data loss or recovery to previous state from a backup
-
-**Prefer this first:** Follow Deckhouse [Restoring a multi-master cluster](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-multi-master-cluster).
-
-In short: enable HA mode, temporarily converge to a single master (remove other master nodes), restore etcd from the snapshot on that node, clean up old masters, then return the cluster to multi-master mode.
 
 **If that doesn’t help:** use the advanced recovery scenario below with `--force-new-cluster` and manual control-plane relabeling.
 
