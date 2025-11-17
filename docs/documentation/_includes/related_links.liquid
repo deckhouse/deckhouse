@@ -10,12 +10,12 @@
   {%- assign relatedLinks = "" | split: "" %}
 {%- endif %}
 
-{%- assign all_related_links = relatedLinks | concat: extractedLinks %}
-{%- if all_related_links and all_relatedLinks.size > 0 %}
+{%- assign allRelatedLinks = relatedLinks | concat: extractedLinks %}
+{%- if allRelatedLinks and allRelatedLinks.size > 0 %}
 
 <h2>{{ site.data.i18n.common['related_additional_resources'][page.lang] }}</h2>
 <ul>
-{%- for link in all_related_links %}
+{%- for link in allRelatedLinks %}
 <li><a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a></li>
 {%- endfor %}
 </ul>
