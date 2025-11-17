@@ -89,6 +89,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		packageVersion := inst.Definition.Version
 		reg := registry.BuildRegistryByRepository(repo)
 
+		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskload.NewTask(inst.Namespace, name, inst.Settings, o.manager, o.logger),
 			queue.WithOnDone(func() {
