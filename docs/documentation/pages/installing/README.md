@@ -3,8 +3,8 @@ title: "Installation"
 permalink: en/installing/
 description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
-extracted_links_max: 2
-related_links:
+extractedLinksMax: 2
+relatedLinks:
   - title: "Supported Kubernetes and OS versions"
     url: ../reference/supported_versions.html
   - title: "Integration with IaaS providers"
