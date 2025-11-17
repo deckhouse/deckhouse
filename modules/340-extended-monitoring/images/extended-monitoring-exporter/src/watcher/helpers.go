@@ -106,7 +106,6 @@ func (w *Watcher) updateMetrics(
 			thresholdVec.With(labels).Set(thresholdValue(labels, key, defaultValue))
 		}
 	} else {
-		enabledVec.DeletePartialMatch(labels)
 		thresholdVec.DeletePartialMatch(labels)
 	}
 	met.UpdateLastObserved()
