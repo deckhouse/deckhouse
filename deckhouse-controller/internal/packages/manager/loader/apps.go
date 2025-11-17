@@ -16,6 +16,7 @@ package loader
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -35,6 +36,8 @@ import (
 
 const (
 	appLoaderTracer = "application-loader"
+
+	digestsFile = "images_digests.json"
 )
 
 var (
@@ -126,9 +129,17 @@ func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Applic
 		return nil, fmt.Errorf("convert app definition: %w", err)
 	}
 
+	digests, err := loadDigests(path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
 	// Build application configuration
 	conf := apps.ApplicationConfig{
 		Definition: appDef,
+
+		Digests: digests,
 
 		StaticValues: static,
 		ConfigSchema: config,
@@ -164,4 +175,26 @@ func loadDefinition(packageDir string) (*dto.Definition, error) {
 	}
 
 	return def, nil
+}
+
+// loadDigests reads and parses the images_digests.json file from package directory.
+// The file contains package images hashes
+func loadDigests(packageDir string) (map[string]string, error) {
+	path := filepath.Join(packageDir, digestsFile)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	return digests, nil
 }

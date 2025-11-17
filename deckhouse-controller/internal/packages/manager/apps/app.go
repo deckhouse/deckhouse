@@ -66,6 +66,8 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
+	Digests map[string]string // Package images digests
+
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
@@ -100,6 +102,10 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
+	}
+
+	if err = a.values.InjectDigests(cfg.Digests); err != nil {
+		return nil, fmt.Errorf("inject digests: %v", err)
 	}
 
 	return a, nil
