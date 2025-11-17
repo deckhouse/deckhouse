@@ -138,8 +138,10 @@ spec:
                           minItems: 1
                           type: array
                         vipAddress:
-                          description: Virtual IP address
-                          type: string
+                          description: Virtual IP address (one or many)
+                          items:
+                            type: string
+                          type: array
                       required:
                         - flavorName
                         - imageName

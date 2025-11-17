@@ -125,9 +125,11 @@ spec:
                     If filled, enables Virtual IP for all nodes in this instance class. 
                     
                     `Auto` or IPv4 address are expected.
-                  type: string
-                  pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^Auto$
-                  x-doc-examples: ['Auto']
+                  type: array
+                  items:
+                    type: string
+                    pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^Auto$
+                  x-doc-examples: [["Auto", "10.20.30.40"]]
                   x-doc-required: false
               x-kubernetes-validations:
                 - message: "Fields 'subnets' and 'mainNetwork'/'additionalNetworks' are exclusive. Specify only one."
