@@ -15,12 +15,19 @@
 package loader
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+)
+
+const (
+	digestsFile = "images_digests.json"
+
+	digestsValueKey = "digests"
 )
 
 // loadValues loads all values-related files for a package.
@@ -52,6 +59,15 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	// Example: values.yaml contains {"myApp": {...}} → return just {...}
 	if static.HasKey(valuesPackageName) {
 		static = static.GetKeySection(valuesPackageName)
+	}
+
+	if len(static) == 0 {
+		static = addonutils.Values{}
+	}
+
+	static[digestsValueKey], err = loadDigests(path)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("load digests: %w", err)
 	}
 
 	// Load OpenAPI schemas (config-values.yaml and values.yaml)
@@ -91,4 +107,26 @@ func loadPackageSchemas(packageDir string) ([]byte, []byte, error) {
 	}
 
 	return configValues, values, nil
+}
+
+// loadDigests reads and parses the images_digests.json file from package directory.
+// The file contains package images hashes
+func loadDigests(packageDir string) (map[string]string, error) {
+	path := filepath.Join(packageDir, digestsFile)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	return digests, nil
 }
