@@ -110,7 +110,8 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 
 		secretData, ok := customCertificates[secretName]
 		if !ok {
-			return fmt.Errorf("custom certificate secret name is configured, but secret with this name doesn't exist")
+			input.Logger.Warn("custom certificate secret name is configured, but secret with this name doesn't exist")
+			return nil
 		}
 
 		var c cert
