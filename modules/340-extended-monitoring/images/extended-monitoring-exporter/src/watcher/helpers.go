@@ -103,7 +103,7 @@ func (w *Watcher) updateMetrics(
 	if enabled {
 		for key, defaultValue := range thresholds {
 			labels["threshold"] = key
-			thresholdVec.With(labels).Set(thresholdValue(labels, key, defaultValue))
+			thresholdVec.With(labels).Set(thresholdValue(resourceLabels, key, defaultValue))
 		}
 	} else {
 		thresholdVec.DeletePartialMatch(labels)
