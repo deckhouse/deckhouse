@@ -105,7 +105,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Spec: v1coord.LeaseSpec{
 				HolderIdentity: &testCase.Name,
 				RenewTime:      &metav1.MicroTime{Time: testCase.RenewTime()},
-			}}
+			},
+		}
 
 		var err error
 		_, err = f.KubeClient().CoordinationV1().Leases("kube-node-lease").Create(context.TODO(), &testLease, metav1.CreateOptions{})
@@ -114,7 +115,11 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		// add test pod
 		testPod := v1core.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: testCase.Name,
+				Name:      testCase.Name,
+				Namespace: testCase.Name,
+			},
+			Spec: v1core.PodSpec{
+				NodeName: testCase.Name,
 			},
 		}
 
@@ -135,7 +140,6 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		podExists := pod != nil
 		Expect(podExists).To(BeEquivalentTo(want.podExists))
 	},
-
 		Entry("Node with enabled fencing and lease updated in time", testCaseParams{
 			Name:               "everything-ok",
 			FencingEnabled:     true,
