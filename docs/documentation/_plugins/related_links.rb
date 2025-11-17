@@ -13,7 +13,7 @@ module Jekyll
       localhost
       127.0.0.1
     ].freeze
-    def self.extract_links_from_content(content, base_url = '', site_data = nil, page_lang = 'en', jekyll_context = nil)
+    def self.extract_links_from_content(content, base_url = '', siteData = nil, page_lang = 'en', jekyll_context = nil)
       return [] unless content
 
       links = []
@@ -34,33 +34,33 @@ module Jekyll
         title = text.strip
         if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
           module_name = extract_module_name(final_url)
-          if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
+          if module_name && siteData && siteData['i18n'] && siteData['i18n']['common']
             case link_type
             when 'module_conf'
-              template = site_data['i18n']['common']['module_x_parameters'][page_lang]
+              template = siteData['i18n']['common']['module_x_parameters'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
             when 'module_cluster_conf'
-              template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+              template = siteData['i18n']['common']['module_x_cluster_configuration'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
             when 'module_crds'
-              template = site_data['i18n']['common']['module_x_crds'][page_lang]
+              template = siteData['i18n']['common']['module_x_crds'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
             when 'module_doc'
-              template = site_data['i18n']['common']['module_x_documentation'][page_lang]
+              template = siteData['i18n']['common']['module_x_documentation'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
             end
           end
         elsif link_type == 'global_crds' || link_type == 'global_conf'
           # Extract resource name from global reference URL
-          resource_name = extract_global_resource_name(url)
-          if resource_name
-            title = "Global #{resource_name} custom resource"
+          resourceName = extract_global_resource_name(url)
+          if resourceName
+            title = "Global #{resourceName} custom resource"
           else
             # Use translation based on link type
             if link_type == 'global_crds'
-              title = site_data['i18n']['common']['global_crds'][page_lang]
+              title = siteData['i18n']['common']['global_crds'][page_lang]
             elsif link_type == 'global_conf'
-              title = site_data['i18n']['common']['global_parameters'][page_lang]
+              title = siteData['i18n']['common']['global_parameters'][page_lang]
             end
           end
         else
@@ -122,34 +122,34 @@ module Jekyll
           # Determine title based on link type
           if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
             module_name = extract_module_name(final_url)
-            if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
+            if module_name && siteData && siteData['i18n'] && siteData['i18n']['common']
               case link_type
               when 'module_conf'
-                template = site_data['i18n']['common']['module_x_parameters'][page_lang]
+                template = siteData['i18n']['common']['module_x_parameters'][page_lang]
                 title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
               when 'module_cluster_conf'
-                template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+                template = siteData['i18n']['common']['module_x_cluster_configuration'][page_lang]
                 title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
               when 'module_crds'
-                template = site_data['i18n']['common']['module_x_crds'][page_lang]
+                template = siteData['i18n']['common']['module_x_crds'][page_lang]
                 title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
               when 'module_doc'
-                template = site_data['i18n']['common']['module_x_documentation'][page_lang]
+                template = siteData['i18n']['common']['module_x_documentation'][page_lang]
                 title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
               end
             end
           elsif link_type == 'global_crds' || link_type == 'global_conf'
             # Extract resource name from global reference URL
-            resource_name = extract_global_resource_name(url)
-            if resource_name
-              title = "Global #{resource_name} custom resource"
+            resourceName = extract_global_resource_name(url)
+            if resourceName
+              title = "Global #{resourceName} custom resource"
             else
               # Use translation based on link type
-              if site_data && site_data['i18n'] && site_data['i18n']['common']
+              if siteData && siteData['i18n'] && siteData['i18n']['common']
                 if link_type == 'global_crds'
-                  title = site_data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+                  title = siteData['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
                 elsif link_type == 'global_conf'
-                  title = site_data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+                  title = siteData['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
                 end
               end
             end
@@ -355,91 +355,91 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       }
     }
 
-    extracted_links = Jekyll::LinksExtractor.extract_links_from_content(page.content, base_url, site.data, page_lang, jekyll_context)
+    extractedLinks = Jekyll::LinksExtractor.extract_links_from_content(page.content, base_url, site.data, page_lang, jekyll_context)
 
-    # Get existing related_links from page metadata
-    existing_links = page.data['related_links'] || []
+    # Get existing relatedLinks from page metadata
+    existing_links = page.data['relatedLinks'] || []
 
     # Validate existing_links structure and add type if missing
-    valid_existing_links = []
+    validExistingLinks = []
     if existing_links.any?
       begin
         existing_links.each do |link|
           if link.is_a?(Hash) && link.key?('url') && !link['url'].to_s.strip.empty?
             # Create a copy of the link to avoid modifying the original
-            processed_link = link.dup
+            processedLink = link.dup
 
             # Add type if missing
-            unless processed_link.key?('type')
-              link_type = Jekyll::LinksExtractor.determine_link_type(processed_link['url'], processed_link['url'])
-              processed_link['type'] = link_type
+            unless processedLink.key?('type')
+              link_type = Jekyll::LinksExtractor.determine_link_type(processedLink['url'], processedLink['url'])
+              processedLink['type'] = link_type
             end
 
             # Add module property and standardized title for module links if missing
-            if processed_link['type'] == 'module_doc' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_cluster_conf'
-              module_name = Jekyll::LinksExtractor.extract_module_name(processed_link['url'])
+            if processedLink['type'] == 'module_doc' || processedLink['type'] == 'module_conf' || processedLink['type'] == 'module_crds' || processedLink['type'] == 'module_cluster_conf'
+              module_name = Jekyll::LinksExtractor.extract_module_name(processedLink['url'])
               if module_name
                 # Add module property if missing
-                processed_link['module'] = module_name unless processed_link.key?('module')
+                processedLink['module'] = module_name unless processedLink.key?('module')
 
                 # Update title to standardized format using translations
                 if site.data && site.data['i18n'] && site.data['i18n']['common']
-                  case processed_link['type']
+                  case processedLink['type']
                   when 'module_conf'
                     template = site.data['i18n']['common']['module_x_parameters'][page_lang]
-                    processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
+                    processedLink['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
                   when 'module_cluster_conf'
                     template = site.data['i18n']['common']['module_x_cluster_configuration'][page_lang]
-                    processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
+                    processedLink['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
                   when 'module_crds'
                     template = site.data['i18n']['common']['module_x_crds'][page_lang]
-                    processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
+                    processedLink['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
                   when 'module_doc'
                     template = site.data['i18n']['common']['module_x_documentation'][page_lang]
-                    processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
+                    processedLink['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
                   end
                 end
               end
-            elsif processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
+            elsif processedLink['type'] == 'global_crds' || processedLink['type'] == 'global_conf'
               # Update title for global reference links
-              resource_name = Jekyll::LinksExtractor.extract_global_resource_name(processed_link['url'])
-              if resource_name
-                processed_link['title'] = "Global #{resource_name} custom resource"
+              resourceName = Jekyll::LinksExtractor.extract_global_resource_name(processedLink['url'])
+              if resourceName
+                processedLink['title'] = "Global #{resourceName} custom resource"
               else
                 # Use translation based on link type
-                if processed_link['type'] == 'global_crds'
-                  processed_link['title'] = site.data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
-                elsif processed_link['type'] == 'global_conf'
-                  processed_link['title'] = site.data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+                if processedLink['type'] == 'global_crds'
+                  processedLink['title'] = site.data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+                elsif processedLink['type'] == 'global_conf'
+                  processedLink['title'] = site.data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
                 end
               end
             end
 
             # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
-            if processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_cluster_conf' || processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
-              processed_link['url'] = processed_link['url'].split('#')[0]
+            if processedLink['type'] == 'module_crds' || processedLink['type'] == 'module_conf' || processedLink['type'] == 'module_cluster_conf' || processedLink['type'] == 'global_crds' || processedLink['type'] == 'global_conf'
+              processedLink['url'] = processedLink['url'].split('#')[0]
             end
 
-            valid_existing_links << processed_link
+            validExistingLinks << processedLink
           else
-            puts "Warning: Skip link with invalid structure in related_links for #{page.url}: #{link.inspect}"
+            puts "Warning: Skip link with invalid structure in relatedLinks for #{page.url}: #{link.inspect}"
           end
         end
 
       rescue => e
-        puts "Warning: Error processing related_links for #{page.url}: #{e.message}. Using only extracted_links."
-        valid_existing_links = []
+        puts "Warning: Error processing relatedLinks for #{page.url}: #{e.message}. Using only extractedLinks."
+        validExistingLinks = []
       end
     end
 
-    page.data['related_links'] = valid_existing_links
+    page.data['relatedLinks'] = validExistingLinks
 
-    # Remove items from extracted_links if there is an item with the same url in related_links
-    valid_existing_links_urls = valid_existing_links.map { |link| link['url'] }
-    extracted_links = extracted_links.reject { |link| valid_existing_links_urls.include?(link['url']) }
+    # Remove items from extractedLinks if there is an item with the same url in relatedLinks
+    validExistingLinksUrls = validExistingLinks.map { |link| link['url'] }
+    extractedLinks = extractedLinks.reject { |link| validExistingLinksUrls.include?(link['url']) }
 
     # If there are items with the same module and one has type 'module_doc', keep only the 'module_doc' item
-    extracted_links = extracted_links.group_by { |link| link['module'] }.flat_map do |module_name, links|
+    extractedLinks = extractedLinks.group_by { |link| link['module'] }.flat_map do |module_name, links|
       if module_name && links.any? { |link| link['type'] == 'module_doc' }
         # Keep only the module_doc item for this module
         links.select { |link| link['type'] == 'module_doc' }
@@ -449,24 +449,24 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       end
     end
 
-    # Limit extracted_links to the first extracted_links_max items if specified
-    if valid_existing_links.size > 0
-      if page.data['extracted_links_max'] && page.data['extracted_links_max'].is_a?(Integer) && page.data['extracted_links_max'] >= 0
-        max_links = page.data['extracted_links_max']
+    # Limit extractedLinks to the first extractedLinksMax items if specified
+    if validExistingLinks.size > 0
+      if page.data['extractedLinksMax'] && page.data['extractedLinksMax'].is_a?(Integer) && page.data['extractedLinksMax'] >= 0
+        max_links = page.data['extractedLinksMax']
       else
         max_links = 2
       end
     else
-      if page.data['extracted_links_only_max'] && page.data['extracted_links_only_max'].is_a?(Integer) && page.data['extracted_links_only_max'] >= 0
-        max_links = page.data['extracted_links_only_max']
+      if page.data['extractedLinksOnlyMax'] && page.data['extractedLinksOnlyMax'].is_a?(Integer) && page.data['extractedLinksOnlyMax'] >= 0
+        max_links = page.data['extractedLinksOnlyMax']
       else
         max_links = 6
       end
     end
-    extracted_links = extracted_links.first(max_links)
+    extractedLinks = extractedLinks.first(max_links)
 
-    # Sort extracted_links: first global_conf/global_crds, then others sorted by module
-    extracted_links = extracted_links.sort_by do |link|
+    # Sort extractedLinks: first global_conf/global_crds, then others sorted by module
+    extractedLinks = extractedLinks.sort_by do |link|
       if link['type'] == 'global_conf' || link['type'] == 'global_crds'
         [0, '']  # Global links come first
       else
@@ -474,7 +474,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       end
     end
 
-    page.data['extracted_links'] = extracted_links
+    page.data['extractedLinks'] = extractedLinks
 
   end
 

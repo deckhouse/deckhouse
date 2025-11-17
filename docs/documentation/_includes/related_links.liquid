@@ -1,17 +1,17 @@
-{%- if page.extracted_links and page.extracted_links.size > 0 %}
-  {%- assign extracted_links = page.extracted_links %}
+{%- if page.extractedLinks and page.extractedLinks.size > 0 %}
+  {%- assign extractedLinks = page.extractedLinks %}
 {%-  else %}
-  {%- assign extracted_links = "" | split: "" %}
+  {%- assign extractedLinks = "" | split: "" %}
 {%- endif %}
 
-{%- if page.related_links and page.related_links.size > 0 %}
-  {%- assign related_links = page.related_links %}
+{%- if page.relatedLinks and page.relatedLinks.size > 0 %}
+  {%- assign relatedLinks = page.relatedLinks %}
 {%-  else %}
-  {%- assign related_links = "" | split: "" %}
+  {%- assign relatedLinks = "" | split: "" %}
 {%- endif %}
 
-{%- assign all_related_links = related_links | concat: extracted_links %}
-{%- if all_related_links and all_related_links.size > 0 %}
+{%- assign all_related_links = relatedLinks | concat: extractedLinks %}
+{%- if all_related_links and all_relatedLinks.size > 0 %}
 
 <h2>{{ site.data.i18n.common['related_additional_resources'][page.lang] }}</h2>
 <ul>

@@ -2,8 +2,8 @@
 title: "Monitoring in Deckhouse Kubernetes Platform"
 permalink: en/admin/configuration/monitoring/
 description: "Configure comprehensive monitoring for Deckhouse Kubernetes Platform with Prometheus and Grafana. Metrics collection, alerting, dashboards, and SLA monitoring for cluster health."
-extracted_links_max: 0
-related_links:
+extractedLinksMax: 0
+relatedLinks:
   - title: "The list of alerts"
     url: ../../../reference/alerts.html
   - title: "Integration with external monitoring systems"
