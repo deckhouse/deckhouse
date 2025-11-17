@@ -81,7 +81,7 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 		DeleteFunc: func(obj any) { w.deleteNamespace(obj.(*v1.Namespace)) },
 	})
 	if err != nil {
-		log.Printf("[NS] AddEventHandler failed: %v", err)
+		log.Printf("[NAMESPACE] AddEventHandler failed: %v", err)
 	}
 
 	go informer.Run(ctx.Done())
@@ -91,7 +91,7 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledOnNamespace(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
-	log.Printf("[NS ADD] %s", ns.Name)
+	log.Printf("[NAMESPACE ADDED] %s", ns.Name)
 
 	if enabled {
 		nsCtx, cancel := context.WithCancel(ctx)
@@ -112,7 +112,7 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledLabel(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
-	log.Printf("[NS UPDATE] %s", ns.Name)
+	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
 	w.mu.Lock()
 	cancel, exists := w.nsWatchers[ns.Name]
@@ -126,7 +126,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 
 		w.cleanupNamespaceResources(ns.Name)
 
-		log.Printf("[NS DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
+		log.Printf("[NAMESPACE DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
 	}
 
 	if enabled && !exists {
@@ -142,7 +142,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 		go w.StartIngressWatcher(nsCtx, ns.Name)
 		go w.StartCronJobWatcher(nsCtx, ns.Name)
 
-		log.Printf("[NS ENABLED] %s watchers started", ns.Name)
+		log.Printf("[NAMESPACE ENABLED] %s watchers started", ns.Name)
 	}
 	met.UpdateLastObserved()
 }
@@ -153,7 +153,7 @@ func (w *Watcher) deleteNamespace(ns *v1.Namespace) {
 	if cancel, exists := w.nsWatchers[ns.Name]; exists {
 		cancel()
 		delete(w.nsWatchers, ns.Name)
-		log.Printf("[NS DELETE] %s watchers stopped", ns.Name)
+		log.Printf("[NAMESPACE DELETED] %s watchers stopped", ns.Name)
 		met.UpdateLastObserved()
 	}
 	w.mu.Unlock()
@@ -190,7 +190,7 @@ func (w *Watcher) StartDaemonSetWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().DaemonSets().Informer()
-	runInformer[appsv1.DaemonSet](ctx, informer, w.updateDaemonSet, "DS")
+	runInformer[appsv1.DaemonSet](ctx, informer, w.updateDaemonSet, "DAEMONSET")
 }
 
 func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet, deleted bool) {
@@ -214,7 +214,7 @@ func (w *Watcher) StartStatefulSetWatcher(ctx context.Context, namespace string)
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().StatefulSets().Informer()
-	runInformer[appsv1.StatefulSet](ctx, informer, w.updateStatefulSet, "STS")
+	runInformer[appsv1.StatefulSet](ctx, informer, w.updateStatefulSet, "STATEFULSET")
 }
 
 func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet, deleted bool) {
@@ -237,7 +237,7 @@ func (w *Watcher) StartDeploymentWatcher(ctx context.Context, namespace string) 
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().Deployments().Informer()
-	runInformer[appsv1.Deployment](ctx, informer, w.updateDeployment, "DEP")
+	runInformer[appsv1.Deployment](ctx, informer, w.updateDeployment, "DEPLOYMENT")
 }
 
 func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
@@ -251,7 +251,6 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
 		deploymentThresholdMap,
 		prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name},
 	)
-	log.Printf("[DEP UPDATE] %s/%s", dep.Namespace, dep.Name)
 }
 
 // ---------------- Ingress Watcher ----------------
@@ -261,7 +260,7 @@ func (w *Watcher) StartIngressWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Networking().V1().Ingresses().Informer()
-	runInformer[networkingv1.Ingress](ctx, informer, w.updateIngress, "ING")
+	runInformer[networkingv1.Ingress](ctx, informer, w.updateIngress, "INGRESS")
 }
 
 func (w *Watcher) updateIngress(ing *networkingv1.Ingress, deleted bool) {
