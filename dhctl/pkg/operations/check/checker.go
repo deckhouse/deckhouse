@@ -15,12 +15,13 @@
 package check
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -162,16 +163,25 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	return res, cleaner, nil
 }
 
+const (
+	clusterConfigKind = "cluster config"
+)
+
 func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
-	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
+	const (
+		commanderSource = "commander"
+		inClusterSource = "in-cluster"
+	)
+
+	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
-		return "", fmt.Errorf("Unable to get cluster config yaml: %w", err)
+		return "", err
 	}
 
 	// we use static or provider config because commander does not support managed cluster
-	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, metaConfig)
+	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, metaConfig, commanderSource)
 	if err != nil {
-		return "", fmt.Errorf("Unable to get static/provider cluster config yaml: %w", err)
+		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
 	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
@@ -179,21 +189,21 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
 
-	inClusterConfigurationData, err := inClusterMetaConfig.ClusterConfigYAML()
+	inClusterConfig, err := getClusterConfig(inClusterMetaConfig, inClusterSource)
 	if err != nil {
-		return "", fmt.Errorf("Unable to get in-cluster cluster config yaml: %w", err)
+		return "", err
 	}
 
 	// we use static or provider config because commander does not support managed cluster
-	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inClusterMetaConfig)
+	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inClusterMetaConfig, inClusterSource)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster static/provider cluster config yaml: %w", err)
 	}
 
 	checks := []checkFunc{
 		equalByOperatorCheck(metaConfig.UUID, inClusterMetaConfig.UUID, "cluster UUID"),
-		equalBytesCheck(clusterConfigurationData, inClusterConfigurationData, "cluster configuration"),
-		equalBytesCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
+		equalMapByDeepEqualFuncCheck(clusterConfig, inClusterConfig, clusterConfigKind),
+		equalMapByDeepEqualFuncCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
 	}
 
 	syncStatus := CheckStatusInSync
@@ -299,21 +309,79 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 	return kubeCl, nil
 }
 
-type clusterSpecificConfigProvider struct{}
+type configTypeForCompare map[string]any
 
-func (f *clusterSpecificConfigProvider) Cloud(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
-	return metaConfig.ProviderClusterConfigYAML()
-}
-func (f *clusterSpecificConfigProvider) Static(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
-	return metaConfig.StaticClusterConfigYAML()
+type clusterSpecificConfigProvider struct {
+	kind string
 }
 
-func (f *clusterSpecificConfigProvider) Incorrect(_ context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+func (f *clusterSpecificConfigProvider) Cloud(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
+	providerConfig, err := metaConfig.ProviderClusterConfigYAML()
+	if err != nil {
+		return nil, err
+	}
+
+	// provider cluster config should present
+	return unmarshalToCompare(providerConfig, false, "provider cluster config", f.kind)
+}
+
+func (f *clusterSpecificConfigProvider) Static(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
+	staticConfig, err := metaConfig.StaticClusterConfigYAML()
+	if err != nil {
+		return nil, err
+	}
+
+	// empty static configuration is ok because we have auto discovery
+	return unmarshalToCompare(staticConfig, true, "static cluster config", f.kind)
+}
+
+func (f *clusterSpecificConfigProvider) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
 	return nil, config.UnsupportedClusterTypeErr(metaConfig)
 }
 
-func getClusterSpecificConfig(ctx context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
-	return config.DoByClusterType(ctx, metaConfig, &clusterSpecificConfigProvider{})
+func getClusterConfig(metaConfig *config.MetaConfig, stateSource string) (configTypeForCompare, error) {
+	clusterConfigData, err := metaConfig.ClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get '%s' yaml from '%s': %w", clusterConfigKind, stateSource, err)
+	}
+
+	// commander does not support managed cluster, cluster config should present
+	return unmarshalToCompare(clusterConfigData, false, clusterConfigKind, stateSource)
+}
+
+func getClusterSpecificConfig(ctx context.Context, metaConfig *config.MetaConfig, kind string) (configTypeForCompare, error) {
+	return config.DoByClusterType(ctx, metaConfig, &clusterSpecificConfigProvider{kind: kind})
+}
+
+func handleEmpty(canBeEmpty bool, kind, stateSource string) (configTypeForCompare, error) {
+	// always return nil to prevent compare empty map and nil
+	if canBeEmpty {
+		return nil, nil
+	}
+
+	return nil, fmt.Errorf("'%s' for '%s' cannot be empty", kind, stateSource)
+}
+
+// unmarshalToCompare
+// we need marshal and unmarshal to map[string]any because json.RawMessage is []byte
+// and it can ba marshal in random order in every time
+// thus we need to compare two maps
+func unmarshalToCompare(content []byte, canBeEmpty bool, kind, stateSource string) (configTypeForCompare, error) {
+	if len(content) == 0 {
+		return handleEmpty(canBeEmpty, kind, stateSource)
+	}
+
+	var res configTypeForCompare
+	err := yaml.Unmarshal(content, &res)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot unmarshal '%s' from '%s': %w", kind, stateSource, err)
+	}
+
+	if len(res) == 0 {
+		return handleEmpty(canBeEmpty, kind, stateSource)
+	}
+
+	return res, nil
 }
 
 type checkFunc func() error
@@ -322,18 +390,14 @@ func checkError(kind string) error {
 	return fmt.Errorf("Commander state meta config %s does not equal in-cluster meta config %s", kind, kind)
 }
 
-func equalByFuncCheck[T any](expected, data T, equal func(T, T) bool, kind string) checkFunc {
+func equalMapByDeepEqualFuncCheck(expected, data configTypeForCompare, kind string) checkFunc {
 	return func() error {
-		if equal(expected, data) {
+		if reflect.DeepEqual(expected, data) {
 			return nil
 		}
 
 		return checkError(kind)
 	}
-}
-
-func equalBytesCheck(expected, data []byte, kind string) checkFunc {
-	return equalByFuncCheck(expected, data, bytes.Equal, kind)
 }
 
 func equalByOperatorCheck[T comparable](expected, val T, kind string) checkFunc {
