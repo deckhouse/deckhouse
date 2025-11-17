@@ -16,6 +16,7 @@
 
 import base64
 import logging
+import yaml
 from typing import Optional, List
 from deckhouse import hook
 from dotmap import DotMap
@@ -66,6 +67,39 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
+def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
+    encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
+    if not encoded_version:
+        return None
+    
+    try:
+        decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
+        if decoded_version:
+            return decoded_version
+    except Exception as e:
+        logging.error(f"Failed to decode deckhouse default Kubernetes version from base64: {e}")
+    
+    return None
+
+
+def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
+    encoded_config = secret_data.get('cluster-configuration.yaml')
+    if not encoded_config:
+        return None
+    
+    try:
+        decoded_config = base64.b64decode(encoded_config).decode('utf-8')
+        config_dict = yaml.safe_load(decoded_config)
+        if config_dict and isinstance(config_dict, dict):
+            kubernetes_version = config_dict.get('kubernetesVersion')
+            if kubernetes_version and isinstance(kubernetes_version, str):
+                return kubernetes_version
+    except Exception as e:
+        logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
+    
+    return None
+
+
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
@@ -79,18 +113,14 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
     if not data:
         return None
     
-    encoded_version = data.get('maxUsedControlPlaneKubernetesVersion')
-    if not encoded_version:
+    k8s_version = get_k8s_version_from_cluster_config(data)
+    if not k8s_version:
         return None
     
-    try:
-        decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
-        if decoded_version:
-            return decoded_version
-    except Exception as e:
-        logging.error(f"Failed to decode Kubernetes version from base64: {e}")
+    if k8s_version.lower() == "automatic":
+        k8s_version = get_deckhouse_default_version_from_secret(data)
     
-    return None
+    return k8s_version
 
 
 def validate(ctx: DotMap) -> List[str]:
