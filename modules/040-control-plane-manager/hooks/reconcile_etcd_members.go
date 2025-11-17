@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -137,18 +138,22 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 		return errors.Wrap(err, "list etcd members failed")
 	}
 
-	removeList := make([]uint64, 0)
+	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
 		if _, ok := discoveredMasterMap[mem.Name]; !ok {
-			removeList = append(removeList, mem.ID)
+			removeListIDs = append(removeListIDs, mem.ID)
+			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 		}
 	}
 
-	if len(removeList) == len(etcdMembersResp.Members) {
+	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs))
+
+	if len(removeListIDs) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
 
-	for _, rm := range removeList {
+	for _, rm := range removeListIDs {
+		input.Logger.Warn("removing etcd member", slog.Uint64("memberID", rm))
 		_, err = etcdcli.MemberRemove(ctx, rm)
 		if err != nil {
 			return errors.Wrap(err, "remove etcd member failed")
