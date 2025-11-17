@@ -1689,7 +1689,7 @@ alerts:
         - The remote API endpoint is not reachable.
         - The remote ServiceAccount token is invalid or expired.
         - There is a TLS or certificate issue between the clusters.
-        - If you are using Istio version 1.25, this alert will continue to be fired until the neighboring cluster has been updated to the same version.
+        - Remote and local Istio versions mismatch.
       summary: |
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
       severity: "4"
