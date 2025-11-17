@@ -87,10 +87,6 @@
     color: #0066FF !important;
 }
 
-.submenu-parent {
-    /* position: relative; */
-}
-
 .submenu-parent:not(.disabled):hover .submenu-container {
     visibility: visible;
     opacity: 1;
