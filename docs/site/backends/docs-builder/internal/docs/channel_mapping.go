@@ -155,10 +155,6 @@ func (m *channelMappingEditor) getModulesCount() (int, error) {
 	path := filepath.Join(m.baseDir, modulesDir, "channels.yaml")
 	f, err := os.Open(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// File doesn't exist yet, return 0 modules count
-			return 0, nil
-		}
 		return -1, fmt.Errorf("open %q: %w", path, err)
 	}
 	defer f.Close()

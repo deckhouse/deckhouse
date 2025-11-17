@@ -288,7 +288,11 @@ func EnsureModuleDocumentation(
 		}
 	}
 
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+	// Check if path needs to be migrated from old format (e.g., "/module/v1.0.0" or "/module/dev")
+	// to new format ("/modules/module")
+	needsPathUpdate := !strings.HasPrefix(md.Spec.Path, "/modules/")
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum || needsPathUpdate {
 		// update module documentation
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion
