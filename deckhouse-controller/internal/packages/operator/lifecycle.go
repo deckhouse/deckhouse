@@ -81,7 +81,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		}
 	}
 
-	if o.packages[name].status.Phase == Pending {
+	if o.packages[name].status.Phase == Pending || o.manager.VersionChanged(name, inst.Definition.Version) {
 		// Cancel previous tasks before enqueueing new ones
 		ctx = o.packages[name].renewContext(ctx)
 

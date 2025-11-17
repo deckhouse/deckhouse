@@ -137,6 +137,18 @@ func (m *Manager) SettingsChanged(name string, settings addonutils.Values) bool 
 	return app.GetSettingsChecksum() != settings.Checksum()
 }
 
+func (m *Manager) VersionChanged(name, version string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		return false
+	}
+
+	return app.GetVersion() != version
+}
+
 // StartupPackage runs OnStartup hooks for a package.
 // This must be called after InitializeHooks and before RunPackage.
 func (m *Manager) StartupPackage(ctx context.Context, name string) error {

@@ -157,6 +157,10 @@ func (a *Application) GetNamespace() string {
 	return a.namespace
 }
 
+func (a *Application) GetVersion() string {
+	return a.definition.Version
+}
+
 // GetPath returns path to the package dir
 func (a *Application) GetPath() string {
 	return a.path
