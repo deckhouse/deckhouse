@@ -13,9 +13,28 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ### Restoring from a backup
 
-**Prefer this first:** Use the official Deckhouse [Backup and restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html) guide for single control-plane clusters.
+**Prefer this first:** high‑level, minimal‑impact recovery
 
-It covers: preparing the correct `etcdutl`/`etcdctl` version, stopping etcd by moving the static Pod manifest, backing up `/var/lib/etcd/member/`, wiping `/var/lib/etcd`, copying the snapshot, running `snapshot restore`, and restoring the manifest so kubelet restarts etcd.
+1. Enable HA for the control plane.
+   Make sure the cluster is prepared for running multiple control plane nodes (HA mode enabled in the Deckhouse configuration).
+
+2. Temporarily remove the master role from all but one node.
+   Follow the official guide:  
+   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`  
+   In short: remove the master labels and control-plane configuration from the extra nodes so that only a single control plane node remains active.
+
+3. Restore the cluster from a backup as a single‑master control plane.
+   Use the documented procedure:  
+   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node`
+
+4. Wait until the control-plane-manager queue is empty, then re‑enable multi‑master.
+   When all control plane tasks are processed and the system has stabilized, add the master role back to the remaining nodes according to:  
+   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios`
+
+**FAQ / Notes**
+
+- Can a Pod be in `Running` state even if its data is already missing from etcd?
+
 
 **If that doesn’t help:** follow the extended steps in this section (they mostly mirror the official guide).
 
