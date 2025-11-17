@@ -63,8 +63,14 @@ class ModuleSearch {
                              this.searchResults.contains(e.target) ||
                              e.target.closest('.searchV3');
 
-      // Close search results when clicking outside
-      if (!isClickOnSearch) {
+      // Don't close if clicking on search elements
+      if (isClickOnSearch) {
+        return;
+      }
+
+      // Close search results when clicking outside, but not if there are loading/error messages
+      const hasLoadingOrError = this.searchResults.querySelector('.loading > .spinner-small, .no-results');
+      if (!hasLoadingOrError) {
         this.searchResults.style.display = 'none';
       }
     });
