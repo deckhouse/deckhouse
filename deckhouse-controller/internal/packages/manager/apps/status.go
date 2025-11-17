@@ -23,7 +23,7 @@ type Info struct {
 	Namespace  string            `json:"namespace" yaml:"namespace"`
 	Definition Definition        `json:"definition" yaml:"definition"`
 	Values     addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
-	Hooks      []string          `yaml:"hooks,omitempty" yaml:"hooks,omitempty"`
+	Hooks      []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
 }
 
 func (a *Application) GetInfo() Info {
