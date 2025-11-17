@@ -67,11 +67,14 @@ Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required 
 ### Dynamic terminated pod garbage collection threshold
 
 Automatically configures the optimal `--terminated-pod-gc-threshold` based on cluster size:
-- **Small clusters** (nodes <100): 1000 terminated Pods
-- **Medium clusters** (100≤ nodes <300): 3000 terminated Pods  
-- **Large clusters** (nodes ≥300): 6000 terminated Pods
 
-*Note: This feature only takes effect in environments where the `terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
+- **Small clusters** (less than 100 nodes): 1000 terminated Pods.
+- **Medium clusters** (from 100 to 300 nodes): 3000 terminated Pods.
+- **Large clusters** (more than 300 nodes): 6000 terminated Pods.
+
+{% alert level="info" %}
+Note. This feature only takes effect in environments where the `terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
+{% endalert %}
 
 ## Version control
 
