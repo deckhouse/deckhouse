@@ -28,6 +28,8 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 5. Wait until the single remaining master and Deckhouse fully stabilize (control‑plane‑manager queue is empty, all control plane Pods are `Ready`).
 6. (Under discussion) Optionally remove all containers on the remaining master as well before re‑enabling HA; this is still being validated and should be used with extra caution.
 7. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.
+8. Add annotations `control-plane-manager.deckhouse.io/approved` if control-plane-manager want (see logs)
+
 
 **Prefer this first:** high‑level, minimal‑impact recovery
 
