@@ -15,7 +15,7 @@ apiVersions:
         d8 system edit provider-cluster-configuration
         ```
 
-        > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+        > After updating the node parameters, you need to run the [dhctl converge](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html) command to apply the changes.
       x-doc-search: |
         ProviderClusterConfiguration
       x-examples:

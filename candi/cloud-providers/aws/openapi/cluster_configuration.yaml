@@ -14,7 +14,7 @@ apiVersions:
       d8 system edit provider-cluster-configuration
       ```
 
-      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+      > After updating the node parameters, you need to run the [dhctl converge](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-examples:
@@ -470,7 +470,7 @@ apiVersions:
         description: |
           The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
 
-          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
+          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
 
           More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
     allOf:

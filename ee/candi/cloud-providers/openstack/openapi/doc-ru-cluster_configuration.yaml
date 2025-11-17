@@ -13,7 +13,7 @@ apiVersions:
       d8 system edit provider-cluster-configuration
       ```
 
-      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html), чтобы изменения вступили в силу.
     x-doc-search: |
       ProviderClusterConfiguration
     properties:
