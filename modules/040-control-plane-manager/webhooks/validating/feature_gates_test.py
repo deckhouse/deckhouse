@@ -17,6 +17,7 @@
 import unittest
 import json
 import base64
+import yaml
 
 import feature_gates_generated
 from feature_gates import main, validate, CLUSTER_CONFIG_SNAPSHOT_NAME
@@ -25,13 +26,19 @@ from dotmap import DotMap
 
 
 TEST_FEATURE_GATES_MAP = {
-    "1.29": {
+    "1.30": {
         "kubelet": ["CPUManager", "MemoryManager"],
         "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
         "kubeControllerManager": ["CronJobsScheduledAnnotation"],
         "kubeScheduler": ["SchedulerQueueingHints"],
     },
-    "1.30": {
+    "1.31": {
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.32": {
         "kubelet": ["CPUManager", "MemoryManager"],
         "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
         "kubeControllerManager": ["CronJobsScheduledAnnotation"],
@@ -39,6 +46,12 @@ TEST_FEATURE_GATES_MAP = {
     },
     "1.33": {
         "forbidden": ["SomeProblematicFeature"],
+        "kubelet": ["CPUManager", "MemoryManager"],
+        "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
+        "kubeControllerManager": ["CronJobsScheduledAnnotation"],
+        "kubeScheduler": ["SchedulerQueueingHints"],
+    },
+    "1.34": {
         "kubelet": ["CPUManager", "MemoryManager"],
         "apiserver": ["APIServerIdentity", "StorageVersionAPI"],
         "kubeControllerManager": ["CronJobsScheduledAnnotation"],
@@ -118,11 +131,17 @@ def _prepare_validation_binding_context(k8s_version: str, enabled_feature_gates:
     ctx.review.request.object.spec.settings.enabledFeatureGates = enabled_feature_gates
     
     if k8s_version:
-        encoded_version = base64.b64encode(k8s_version.encode('utf-8')).decode('utf-8')
+        cluster_config = {'kubernetesVersion': k8s_version}
+        cluster_config_yaml = yaml.dump(cluster_config)
+        encoded_config = base64.b64encode(cluster_config_yaml.encode('utf-8')).decode('utf-8')
+        
+        encoded_default_version = base64.b64encode("1.30.0".encode('utf-8')).decode('utf-8')
+        
         secret_snapshot = [DotMap({
             "object": {
                 "data": {
-                    "maxUsedControlPlaneKubernetesVersion": encoded_version
+                    "cluster-configuration.yaml": encoded_config,
+                    "deckhouseDefaultKubernetesVersion": encoded_default_version
                 }
             }
         })]
@@ -136,7 +155,7 @@ def _prepare_validation_binding_context(k8s_version: str, enabled_feature_gates:
 class TestFeatureGatesValidationWebhook(unittest.TestCase):
     
     def test_validate_with_valid_feature_gate_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.29.0', ['CPUManager'])
+        ctx = _prepare_validation_binding_context('1.30.0', ['CPUManager'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
@@ -146,9 +165,9 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         tests.assert_validation_allowed(self, out, "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied")
     
     def test_validate_with_multiple_feature_gates(self):
-        ctx = _prepare_validation_binding_context('1.29.0', ['CPUManager', 'MemoryManager', 'UnknownGate'])
+        ctx = _prepare_validation_binding_context('1.30.0', ['CPUManager', 'MemoryManager', 'UnknownGate'])
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.29 and will not be applied")
+        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.30 and will not be applied")
     
     def test_validate_with_apiserver_feature_gate(self):
         ctx = _prepare_validation_binding_context('1.30.0', ['APIServerIdentity'])
@@ -166,14 +185,14 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_missing_feature_gates_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.29.0', None)
+        ctx = _prepare_validation_binding_context('1.30.0', None)
         if hasattr(ctx.review.request.object.spec.settings, 'enabledFeatureGates'):
             del ctx.review.request.object.spec.settings.enabledFeatureGates
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_none_feature_gates_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.29.0', None)
+        ctx = _prepare_validation_binding_context('1.30.0', None)
         ctx.review.request.object.spec.settings.enabledFeatureGates = None
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
@@ -185,6 +204,11 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
     
     def test_validate_without_snapshot_should_allow(self):
         ctx = _prepare_validation_binding_context(None, ['CPUManager'])
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
+    
+    def test_validate_with_automatic_version_should_use_default(self):
+        ctx = _prepare_validation_binding_context('Automatic', ['CPUManager'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
