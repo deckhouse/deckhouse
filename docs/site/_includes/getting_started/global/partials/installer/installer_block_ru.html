@@ -27,7 +27,7 @@
           <div id="tab-mac" class="tab-content active">
             <div class="tabs">
               <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Контейнером</button>
-              <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-script')">Скриптом</button>
+              <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-trdl')">С помощью trdl</button>
               <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
             </div>
             <div id="tab-mac-content-container" class="tab-content active">
@@ -48,14 +48,33 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {% endcapture %}
 {{ command | markdownify }}
             </div>
-            <div id="tab-mac-content-script" class="tab-content">
-              <p>Выполните команду:</p>
+            <div id="tab-mac-content-trdl" class="tab-content">
+              <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
+              <ol>
+                <li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
+                <li><p>Добавьте репозиторий Deckhouse CLI в trdl:</p>
 {% capture command %}
 ```bash
-curl -sSf https://deckhouse.ru/downloads/installer | bash
+URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
+ROOT_VERSION=1
+ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | cut -c 1-128)
+REPO=d8-installer
+trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+```
+{% endcapture %}
+{{ command | markdownify }}                  
+                </li>
+                <li>
+                  <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
+{% capture command %}
+```bash
+. $(trdl use -d d8-installer 0 ea) && version
 ```
 {% endcapture %}
 {{ command | markdownify }}
+                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>
+                </li>
+              </ol>
             </div>
             <div id="tab-mac-content-file" class="tab-content">
               <p>Скачайте установщик:
@@ -76,7 +95,7 @@ xattr -c d8install-darwin-arm64
           <div id="tab-linux" class="tab-content">
             <div class="tabs">
               <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Контейнером</button>
-              <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-script')">Скриптом</button>
+              <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-trdl')">С помощью trdl</button>
               <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">Файлом</button>
             </div>
             <div id="tab-linux-content-container" class="tab-content active">
@@ -88,14 +107,33 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {% endcapture %}
 {{ command | markdownify }}
             </div>
-            <div id="tab-linux-content-script" class="tab-content">
-              <p>Выполните команду:</p>
+            <div id="tab-linux-content-trdl" class="tab-content">
+              <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
+              <ol>
+                <li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
+                <li><p>Добавьте репозиторий Deckhouse CLI в trdl:</p>
 {% capture command %}
 ```bash
-curl -sSf https://deckhouse.ru/downloads/installer | bash
+URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
+ROOT_VERSION=1
+ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | cut -c 1-128)
+REPO=d8-installer
+trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+```
+{% endcapture %}
+{{ command | markdownify }}                  
+                </li>
+                <li>
+                  <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
+{% capture command %}
+```bash
+. $(trdl use -d d8-installer 0 ea) && version
 ```
 {% endcapture %}
 {{ command | markdownify }}
+                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>               
+                </li>
+              </ol>
             </div>
             <div id="tab-linux-content-file" class="tab-content">
               <p>Скачайте установщик: <a href="/downloads/installer/latest/d8install-linux-amd64" class="download-btn">d8install-linux-amd64</a></p>
@@ -164,7 +202,7 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 
   function openMacTab(evt, subTabName) {
       document.getElementById("tab-mac-content-container").classList.remove("active");
-      document.getElementById("tab-mac-content-script").classList.remove("active");
+      document.getElementById("tab-mac-content-trdl").classList.remove("active");
       document.getElementById("tab-mac-content-file").classList.remove("active");
 
       document.getElementById("tab-buttons-mac-container").classList.remove("active");
@@ -177,7 +215,7 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 
   function openLinuxTab(evt, subTabName) {
       document.getElementById("tab-linux-content-container").classList.remove("active");
-      document.getElementById("tab-linux-content-script").classList.remove("active");
+      document.getElementById("tab-linux-content-trdl").classList.remove("active");
       document.getElementById("tab-linux-content-file").classList.remove("active");
 
       document.getElementById("tab-buttons-linux-container").classList.remove("active");
