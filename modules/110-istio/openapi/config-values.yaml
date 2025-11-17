@@ -82,7 +82,7 @@ properties:
               - ee
               - cse-pro
             default: []
-            x-examples: [[{"address": "172.16.0.5", "port": 15443}]]
+            x-examples: [[{"address": "172.16.0.5", "port": 15443}],[{"address": "somehost.example.com", "port": 15443}]]
             items:
               type: object
               required: ["address", "port"]
