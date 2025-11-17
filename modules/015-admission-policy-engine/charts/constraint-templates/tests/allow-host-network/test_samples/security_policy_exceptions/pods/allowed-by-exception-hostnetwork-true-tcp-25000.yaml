@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-hostnetwork-true-tcp-25000
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
+spec:
+  hostNetwork: true
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 9000
+          hostPort: 25000
+          protocol: TCP
+

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: disallowed-daemonset-disallowed-capability
+  namespace: testns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          securityContext:
+            capabilities:
+              add:
+              - NET_ADMIN
+              drop:
+              - ALL
+

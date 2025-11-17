@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-multiple-profiles
+spec:
+  securityContext:
+    appArmorProfile:
+      allowedValues:
+      - runtime/default
+      - unconfined
+      - localhost/custom-profile
+
