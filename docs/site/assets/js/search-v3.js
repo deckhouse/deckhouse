@@ -276,15 +276,16 @@ class ModuleSearch {
                              e.target.closest('.searchV3');
 
       // Don't close if clicking on search elements
-      if (isClickOnSearch) {
-        return;
+      if (!isClickOnSearch) {
+        this.searchResults.style.display = 'none';
+        // return;
       }
 
       // Close search results when clicking outside, but not if there are loading/error messages
-      const hasLoadingOrError = this.searchResults.querySelector('.loading > .spinner-small, .no-results');
-      if (!hasLoadingOrError) {
-        this.searchResults.style.display = 'none';
-      }
+      // const hasLoadingOrError = this.searchResults.querySelector('.loading > .spinner-small, .no-results');
+      // if (!hasLoadingOrError) {
+      //   this.searchResults.style.display = 'none';
+      // }
     });
 
     // Prevent search results from closing when clicking on buttons inside results

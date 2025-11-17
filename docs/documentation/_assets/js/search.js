@@ -68,11 +68,7 @@ class ModuleSearch {
         return;
       }
 
-      // Close search results when clicking outside, but not if there are loading/error messages
-      const hasLoadingOrError = this.searchResults.querySelector('.loading > .spinner-small, .no-results');
-      if (!hasLoadingOrError) {
-        this.searchResults.style.display = 'none';
-      }
+      this.searchResults.style.display = 'none';
     });
 
     // Prevent search results from closing when clicking on buttons inside results
