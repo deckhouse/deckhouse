@@ -1,4 +1,4 @@
-2524
+2525
 1GB
 2GB
 5XX
@@ -24,6 +24,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -56,8 +57,8 @@ APIVersion
 app
 apparmor
 AppArmor
-app’s
 apps
+app’s
 Aps
 aren
 argocd
@@ -266,8 +267,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMap’s
 ConfigMaps
+ConfigMap’s
 configOverrides
 configs
 configurator
@@ -411,8 +412,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfile’s
 Dockerfiles
+Dockerfile’s
 dockerignore
 dockersamples
 documentation
@@ -962,6 +963,7 @@ NGINX’s
 NIC
 NICs
 NLB
+Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -970,7 +972,6 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
-Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1130,6 +1131,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
