@@ -19,6 +19,16 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 
 ### Complete data loss or recovery to previous state from a backup
 
+**Very short multi‑master checklist (experimental, to try first):**
+
+1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailable mode.
+2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`, `control-plane-manager` labels).
+3. On the two detached nodes, stop etcd and perform a hard cleanup of Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below.
+4. (Under discussion) On the detached nodes, you may additionally remove **all** containers so that no workloads from the "old" control plane continue to run unnoticed by the restored etcd state.
+5. Wait until the single remaining master and Deckhouse fully stabilize (control‑plane‑manager queue is empty, all control plane Pods are `Ready`).
+6. (Under discussion) Optionally remove all containers on the remaining master as well before re‑enabling HA; this is still being validated and should be used with extra caution.
+7. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.
+
 **Prefer this first:** high‑level, minimal‑impact recovery
 
 1. Enable HA for the control plane.
@@ -39,7 +49,8 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 
 **FAQ / Notes**
 
-- Can a Pod be in `Running` state even if its data is already missing from etcd?
+- Can a Pod be in `Running` state even if its data is already missing from etcd?  
+  Yes: if you restore etcd from an older snapshot, containers for Pods created after that snapshot can keep running on nodes, but the restored API no longer knows about them. This "orphaned" state is unsafe; in such scenarios, you should plan to clean up containers on affected nodes so that only workloads present in the restored etcd state continue to run.
 
 **If that doesn’t help:** use the advanced recovery scenario below with `--force-new-cluster` and manual control-plane relabeling.
 
