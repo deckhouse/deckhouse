@@ -43,7 +43,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}
-
+  
   {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
   {{- if (((.images).registrypackages).pause) }}
     {{ $sandbox_image = "deckhouse.local/images:pause" }}
@@ -53,7 +53,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- if .nodeGroup.gpu }}
     {{ $default_runtime = "nvidia" }}
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
-sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS
+sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS 
   {{- end }}
 
 systemd_cgroup=true
@@ -116,8 +116,8 @@ oom_score = 0
       config_path = "/etc/containerd/registry.d"
 
     [plugins.'io.containerd.cri.v1.images'.image_decryption]
-      key_model = ''
-
+      key_model = ''    
+    
   [plugins.'io.containerd.cri.v1.runtime']
     enable_selinux = false
     selinux_category_range = 1024
@@ -214,7 +214,7 @@ oom_score = 0
 
   [plugins.'io.containerd.monitor.container.v1.restart']
     interval = "10s"
-
+    
   [plugins.'io.containerd.monitor.task.v1.cgroups']
     no_prometheus = false
 
@@ -242,7 +242,7 @@ oom_score = 0
     max_concurrent_uploaded_layers = 3
     check_platform_supported = false
     config_path = ''
-
+    
 [cgroup]
   path = ""
 
@@ -448,7 +448,7 @@ additional_configs() {
   local full_conf_path="$root_path/$conf_dir"
 
   rm -rf "$root_path/$unusable_conf_dir/"
-
+  
   if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
     toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
   else
