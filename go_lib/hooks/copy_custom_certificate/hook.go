@@ -103,6 +103,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 
 		rawsecretName, _ := module.GetValuesFirstDefined(input, fmt.Sprintf("%s.https.customCertificate.secretName", moduleName), "global.modules.https.customCertificate.secretName")
 		secretName := rawsecretName.String()
+		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
 
 		if secretName == "" {
 			return nil
@@ -111,6 +112,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		secretData, ok := customCertificates[secretName]
 		if !ok {
 			input.Logger.Warn("custom certificate secret name is configured, but secret with this name doesn't exist")
+			input.Values.Set(path, "")
 			return nil
 		}
 
@@ -120,7 +122,6 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 			return err
 		}
 
-		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
 		input.Values.Set(path, c)
 		return nil
 	}
