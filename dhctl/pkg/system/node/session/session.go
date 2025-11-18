@@ -265,6 +265,7 @@ func (s *Session) Copy() *Session {
 	ses.BastionHost = s.BastionHost
 	ses.BastionPort = s.BastionPort
 	ses.BastionUser = s.BastionUser
+	ses.BastionPassword = s.BastionPassword
 	ses.ExtraArgs = s.ExtraArgs
 	ses.host = s.host
 
