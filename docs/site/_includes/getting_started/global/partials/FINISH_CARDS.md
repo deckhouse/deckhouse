@@ -36,7 +36,7 @@ Essentials
 🧭 <span class="cards-item__title-text">Deckhouse web UI</span>
 </h3>
 <div class="cards-item__text">
-<p>A convenient tool for managing your cluster and its key components.</p>
+<p>Try the <a href="/products/kubernetes-platform/documentation/v1/user/web/ui.html" target="_blank">web UI</a> for managing the cluster and its main components.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
 </div>
 </div>

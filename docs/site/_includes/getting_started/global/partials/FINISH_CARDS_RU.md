@@ -36,7 +36,7 @@
 🧭 <span class="cards-item__title-text">Веб-интерфейс Deckhouse</span>
 </h3>
 <div class="cards-item__text">
-<p>Удобный инструмент для управления кластером и его основными компонентами.</p>
+<p>Попробуйте <a href="/products/kubernetes-platform/documentation/v1/user/web/ui.html" target="_blank">веб-интерфейс</a> управления кластером и его основными компонентами.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
 </div>
 </div>
