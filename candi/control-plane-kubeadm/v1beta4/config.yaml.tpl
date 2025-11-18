@@ -143,7 +143,6 @@ apiServer:
       value: {{ $featureGates | quote }}
     - name: runtime-config
       value: {{ $runtimeConfig }}
-    {{- end }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
