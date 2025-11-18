@@ -191,16 +191,16 @@ To decommission a node from the cluster and clean up the server (VM), run the fo
 
 ### For control-plane nodes
 
-1. Remove the label control-plane and master:
+1. Remove the labels `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` from the node:
 
    ```shell
    d8 k label node <node> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
-1. Make sure that the node being deleted by the control-plane is missing from the list of etcd cluster nodes:
+1. Make sure the removed node with control-plane has disappeared from the list of etcd cluster members:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
 1. Delete a node from the Kubernetes cluster:
@@ -220,11 +220,11 @@ To decommission a node from the cluster and clean up the server (VM), run the fo
 
 1. After restarting the node [run](#how-do-i-add-a-static-node-to-a-cluster) the script `bootstrap.sh`.
 
-1. Wait for the Deckhouse queues to pass and make sure that the etcd cluster member is back online:
+1. Wait for the Deckhouse queues to be processed and ensure that the etcd cluster member has reappeared in the list:
   
-  ```shell
-  d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
-  ```
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
 
 ### Can I delete a StaticInstance?
 

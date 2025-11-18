@@ -265,16 +265,16 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ### Для узлов control-plane
 
-1. Снимите label control-plane и master:
+1. Снимите лейблы `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master` и `node.deckhouse.io/group` с узла:
 
    ```shell
    d8 k label node <node> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
-1. Убедитесь, что удаляемый control-plane узел пропал из списка узлов кластера etcd:
+1. Убедитесь, что удаляемый узел с control-plane пропал из списка членов кластера etcd:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
 1. Удалите узел из кластера Kubernetes:
@@ -294,11 +294,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
 
-1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова в строю:
+1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова появился в списке:
   
-  ```shell
-  d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
-  ```
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
 
 ## Как понять, что что-то пошло не так?
 
