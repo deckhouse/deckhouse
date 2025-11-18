@@ -130,6 +130,11 @@ The following describes the conversion of a multi-master cluster into a single-m
 The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
 {% endalert %}
 
+{% alert level="warning" %}
+Before adding or removing a master, in case of using the **Stronghold** module, ensure that the module has fully returned to a stable and operational state.
+It is also strongly [recommended to create a backup of the **Stronghold** module](https://deckhouse.io/modules/stronghold/stable/auto_snapshot.html) data prior to making any changes.
+{% endalert %}
+
 1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
