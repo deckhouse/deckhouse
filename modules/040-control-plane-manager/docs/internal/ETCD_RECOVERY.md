@@ -432,10 +432,6 @@ Do the following:
 
 ##### If this error affect one node
 
-**Prefer this first:** Follow the pattern from Deckhouse [Scaling and changing master nodes](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html): safely drain/clean one master, remove its control-plane role and manifests/PKI, then re-add it cleanly instead of editing etcd data by hand.
-
-**If that doesn’t help:** use your scenario below: clear the node, relabel it as control-plane, and wait for pods to become Ready and etcd membership to converge.
-
 1. Defragment etcd on another (two) nodes (if necessary).
    see `https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-etcd-in-a-cluster-with-multiple-master-nodes`
 
