@@ -142,7 +142,7 @@ func (l *hookLoader) searchPackageShellHooks() ([]*kind.ShellHook, error) {
 		return nil, nil
 	}
 
-	hooksRelativePaths, err := l.getHookExecutablePaths(hooksDir, false)
+	hooksRelativePaths, err := l.getHookExecutablePaths(hooksPath, false)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (l *hookLoader) searchPackageBatchHooks() ([]*kind.BatchHook, error) {
 		return nil, nil
 	}
 
-	hooksRelativePaths, err := l.getHookExecutablePaths(hooksDir, true)
+	hooksRelativePaths, err := l.getHookExecutablePaths(hooksPath, true)
 	if err != nil {
 		return nil, err
 	}

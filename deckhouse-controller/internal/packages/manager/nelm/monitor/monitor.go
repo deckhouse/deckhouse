@@ -66,6 +66,7 @@ type resourcesMonitor struct {
 	wg         *sync.WaitGroup
 
 	name      string                                // Helm release name
+	namespace string                                // Release namespace
 	rendered  string                                // rendered manifest YAML (cleared after parsing to save memory)
 	resources map[namespacedGVK]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
 
@@ -81,11 +82,12 @@ type namespacedGVK struct {
 	namespace string // empty for cluster-scoped resources
 }
 
-func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, name, rendered string, logger *log.Logger) *resourcesMonitor {
+func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, rendered string, logger *log.Logger) *resourcesMonitor {
 	return &resourcesMonitor{
 		wg:   new(sync.WaitGroup),
 		once: sync.Once{},
 
+		namespace: namespace,
 		name:      name,
 		rendered:  rendered,
 		resources: make(map[namespacedGVK]map[string]struct{}),
@@ -93,7 +95,7 @@ func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, name, rendered stri
 		cache: cache,
 		nelm:  nelm,
 
-		logger: logger.Named(fmt.Sprintf("monitor-%s", name)),
+		logger: logger.Named(fmt.Sprintf("monitor.%s", name)),
 	}
 }
 
@@ -172,7 +174,7 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 					}
 
 					// check release status
-					_, status, err := m.nelm.LastStatus(m.ctx, m.name)
+					_, status, err := m.nelm.LastStatus(m.ctx, m.namespace, m.name)
 					if err != nil {
 						m.logger.Error("failed to get helm release status", log.Err(err))
 						continue
@@ -247,6 +249,8 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 	if err != nil {
 		return fmt.Errorf("parse manifest: %w", err)
 	}
+
+	m.logger.Debug("build namespaced gvk", slog.Int("parsed", len(objs)))
 
 	for _, obj := range objs {
 		// Skip list kinds rendered by Helm, if any

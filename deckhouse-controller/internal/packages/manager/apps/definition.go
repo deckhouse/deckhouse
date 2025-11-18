@@ -20,28 +20,28 @@ import (
 
 // Definition represents application metadata.
 type Definition struct {
-	Name    string
-	Version string
-	Stage   string
+	Name    string `json:"name" yaml:"name"`
+	Version string `json:"version" yaml:"version"`
+	Stage   string `json:"stage" yaml:"stage"`
 
-	Requirements   Requirements
-	DisableOptions DisableOptions
+	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
+	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the application.
 type Requirements struct {
-	Kubernetes *semver.Constraints
-	Deckhouse  *semver.Constraints
-	Modules    map[string]Dependency
+	Kubernetes *semver.Constraints   `json:"kubernetes" yaml:"kubernetes"`
+	Deckhouse  *semver.Constraints   `json:"deckhouse" yaml:"deckhouse"`
+	Modules    map[string]Dependency `json:"modules" yaml:"modules"`
 }
 
 type Dependency struct {
-	Constraints *semver.Constraints
-	Optional    bool
+	Constraints *semver.Constraints `json:"constraints" yaml:"constraints"`
+	Optional    bool                `json:"optional" yaml:"optional"`
 }
 
 // DisableOptions configures application disablement behavior.
 type DisableOptions struct {
-	Confirmation bool   // Whether confirmation is required to disable
-	Message      string // Message to display when disabling
+	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
+	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }

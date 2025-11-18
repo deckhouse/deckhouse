@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -41,17 +41,15 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
 	operatorTracer = "operator"
 
-	// TODO(ipaqsa): tmp solution
-	namespace = "d8-system"
-
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
-	kubernetesVersionValue  = "discovery.kubernetesVersion"
-	deckhouseVersionValue   = "deckhouse.version"
+	kubernetesVersionValue  = "kubernetesVersion"
+	deckhouseVersionValue   = "version"
 )
 
 type Operator struct {
@@ -73,6 +71,10 @@ type Operator struct {
 	logger *log.Logger
 }
 
+type moduleManager interface {
+	GetGlobal() *modules.GlobalModule
+}
+
 // New creates and initializes a new Operator instance with all subsystems.
 //
 // Initialization order is important:
@@ -89,7 +91,7 @@ type Operator struct {
 //   - NELM monitor: Tuned QPS for Helm resource monitoring
 //
 // The event handler starts immediately to begin processing events.
-func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Logger) (*Operator, error) {
+func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
 	o.packages = make(map[string]*Package)
@@ -101,7 +103,7 @@ func New(globalValues addonutils.Values, dc dependency.Container, logger *log.Lo
 	o.installer = installer.New(dc, o.logger)
 
 	// Initialize scheduler with enabling/disabling callbacks
-	o.buildScheduler(globalValues)
+	o.buildScheduler(moduleManager)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := o.buildNelmService(); err != nil {
@@ -228,6 +230,15 @@ func (o *Operator) buildKubeEventsManager() error {
 	}
 
 	o.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(context.Background(), client, o.logger.Named("kube-events-manager"))
+
+	// Initialize metric storage for the kube events manager
+	// This is required to record metrics during hook initialization and execution
+	metricStorage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithLogger(o.logger.Named("kube-events-metrics")),
+		metricsstorage.WithNewRegistry(),
+	)
+	o.kubeEventsManager.WithMetricStorage(metricStorage)
+
 	return nil
 }
 
@@ -276,7 +287,7 @@ func (o *Operator) buildNelmService() error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	o.nelmService = nelm.NewService(namespace, cache, func(name string) {
+	o.nelmService = nelm.NewService(cache, func(name string) {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 
@@ -306,9 +317,14 @@ func (o *Operator) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (o *Operator) buildScheduler(globalValues addonutils.Values) {
+func (o *Operator) buildScheduler(moduleManager moduleManager) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := globalValues[deckhouseVersionValue]
+		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		if len(discovery) == 0 {
+			return nil, fmt.Errorf("discovery section not found in global values")
+		}
+
+		value, ok := discovery[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -322,7 +338,12 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		value, ok := globalValues[kubernetesVersionValue]
+		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		if len(discovery) == 0 {
+			return nil, fmt.Errorf("discovery section not found in global values")
+		}
+
+		value, ok := discovery[kubernetesVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("kubernetes version not found in global values")
 		}
@@ -337,7 +358,7 @@ func (o *Operator) buildScheduler(globalValues addonutils.Values) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := globalValues[bootstrappedGlobalValue]
+		value, ok := moduleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}

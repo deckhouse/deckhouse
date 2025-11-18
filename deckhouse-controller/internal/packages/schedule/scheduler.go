@@ -163,11 +163,11 @@ func (s *Scheduler) Add(pkg Package) {
 
 	// Add version constraint checkers (all are blockers)
 	if checks.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes))
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, "kubernetes version unmet"))
 	}
 
 	if checks.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse))
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, "deckhouse version unmet"))
 	}
 
 	if len(checks.Modules) > 0 && s.dependencyGetter != nil {
@@ -176,7 +176,7 @@ func (s *Scheduler) Add(pkg Package) {
 
 	// Add bootstrap condition as blocker (prevents enabling during startup)
 	if s.bootstrapCondition != nil {
-		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition))
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, "cluster not bootstrap yet"))
 	}
 
 	ctx, cancel := context.WithCancel(s.ctx)

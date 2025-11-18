@@ -29,13 +29,15 @@ type Condition func() bool
 // Checker wraps a condition function as a checker.Checker implementation.
 type Checker struct {
 	condition Condition // Function to evaluate
+	reason    string
 }
 
 // NewChecker creates a condition checker.
-func NewChecker(condition Condition) *Checker {
+func NewChecker(condition Condition, reason string) *Checker {
 	ch := new(Checker)
 
 	ch.condition = condition
+	ch.reason = reason
 
 	return ch
 }
@@ -45,6 +47,6 @@ func NewChecker(condition Condition) *Checker {
 func (c *Checker) Check() checker.Result {
 	return checker.Result{
 		Enabled: c.condition(),
-		Reason:  "", // Conditions don't provide reasons
+		Reason:  c.reason,
 	}
 }

@@ -19,6 +19,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
@@ -48,8 +49,10 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name string // Application instance name
-	path string // path to the package dir on fs
+	name      string // Package name(namespace.name)
+	instance  string // Application instance name
+	namespace string // Application instance namespace
+	path      string // path to the package dir on fs
 
 	definition Definition // Application definition
 
@@ -63,6 +66,8 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
+	Digests map[string]string // Package images digests
+
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
@@ -73,10 +78,19 @@ type ApplicationConfig struct {
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
+func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
 
+	splits := strings.Split(name, ".")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("invalid application name: %s", name)
+	}
+
+	a.namespace = splits[0]
+	a.instance = splits[1]
+
 	a.name = name
+	a.path = path
 	a.definition = cfg.Definition
 
 	a.hooks = hooks.NewStorage()
@@ -85,9 +99,13 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 	}
 
 	var err error
-	a.values, err = values.NewStorage(name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
+	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
+	}
+
+	if err = a.values.InjectDigests(cfg.Digests); err != nil {
+		return nil, fmt.Errorf("inject digests: %v", err)
 	}
 
 	return a, nil
@@ -120,14 +138,33 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "namespace:name".
+// GetMetaValues returns values that is not part of schema(name, namespace, version)
+func (a *Application) GetMetaValues() addonutils.Values {
+	return addonutils.Values{
+		"Name":      a.instance,
+		"Namespace": a.namespace,
+		"Package":   a.definition.Name,
+		"Version":   a.definition.Version,
+	}
+}
+
+// GetName returns the full application identifier in format "namespace.name".
 func (a *Application) GetName() string {
 	return a.name
 }
 
-// BuildName returns the full application identifier in format "namespace:name".
+// BuildName returns the full application identifier in format "namespace.name".
 func BuildName(namespace, name string) string {
-	return fmt.Sprintf("%s:%s", namespace, name)
+	return fmt.Sprintf("%s.%s", namespace, name)
+}
+
+// GetNamespace returns the application namespace.
+func (a *Application) GetNamespace() string {
+	return a.namespace
+}
+
+func (a *Application) GetVersion() string {
+	return a.definition.Version
 }
 
 // GetPath returns path to the package dir
@@ -254,6 +291,12 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //
 // Returns error if hook execution or patch application fails.
 func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
+	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("hook", h.GetName()))
+	span.SetAttributes(attribute.String("name", a.GetName()))
+
 	hookConfigValues := a.values.GetConfigValues()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()

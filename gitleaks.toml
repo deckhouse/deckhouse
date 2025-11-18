@@ -30,3 +30,20 @@ regexes = [
     '''AKIAIOSFODNN7EXAMPLE''',
     '''wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY''',
 ]
+
+# Custom rules for hashi/openbao/werf tokens
+[[rules]]
+id = "werf-secret-key"
+description = "Identified a Werf Secret Key."
+regex = '''\b([a-f0-9]{32})\b'''
+path = '''\.werf_secret_key$'''
+
+[[rules]]
+id = "hashicorp-vault-token"
+description = "Identified a HashiCorp Vault token (hvs, hvb, or hvr prefix)."
+regex = '''\b(hv[sbr]\.[A-Za-z0-9_-]{20,})\b'''
+
+[[rules]]
+id = "openbao-token"
+description = "Identified an OpenBao token (S. prefix)."
+regex = '''\b(S\.[A-Za-z0-9_-]{20,})\b'''

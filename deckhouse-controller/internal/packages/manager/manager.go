@@ -88,11 +88,12 @@ func New(conf Config, logger *log.Logger) *Manager {
 
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
-func (m *Manager) LoadPackage(ctx context.Context, name string) error {
+func (m *Manager) LoadPackage(ctx context.Context, namespace, name string) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("namespace", namespace))
 
 	app, err := m.loader.Load(ctx, name)
 	if err != nil {
@@ -134,6 +135,18 @@ func (m *Manager) SettingsChanged(name string, settings addonutils.Values) bool 
 	}
 
 	return app.GetSettingsChecksum() != settings.Checksum()
+}
+
+func (m *Manager) VersionChanged(name, version string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		return false
+	}
+
+	return app.GetVersion() != version
 }
 
 // StartupPackage runs OnStartup hooks for a package.
@@ -234,12 +247,12 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 //  5. Stop all Kubernetes event monitors
 //  6. Remove package from manager store
 func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) error {
-	_, span := otel.Tracer(managerTracer).Start(ctx, "DeletePackage")
+	_, span := otel.Tracer(managerTracer).Start(ctx, "DisablePackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	m.logger.Debug("delete package", slog.String("name", name))
+	m.logger.Debug("disable package", slog.String("name", name))
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -253,8 +266,9 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	m.nelm.RemoveMonitor(name)
 
 	if !keep {
+		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err := m.nelm.Delete(ctx, name); err != nil {
+		if err := m.nelm.Delete(ctx, app); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
@@ -271,12 +285,14 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	// Disable all schedule-based hooks
 	schHooks := app.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range schHooks {
+		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
 		hook.GetHookController().DisableScheduleBindings()
 	}
 
 	// Stop all Kubernetes event monitors
 	kubeHooks := app.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
+		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
 		hook.GetHookController().StopMonitors()
 	}
 
@@ -293,6 +309,7 @@ func (m *Manager) UnlockKubernetesMonitors(name, hook string, monitors ...string
 		return
 	}
 
+	m.logger.Debug("unlock kubernetes monitors", slog.String("name", name), slog.String("hook", hook))
 	app.UnlockKubernetesMonitors(hook, monitors...)
 }
 
@@ -329,4 +346,16 @@ func (m *Manager) GetApplication(name string) *apps.Application {
 	defer m.mu.Unlock()
 
 	return m.apps[name]
+}
+
+func (m *Manager) GetAppInfo(name string) apps.Info {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		return apps.Info{}
+	}
+
+	return app.GetInfo()
 }
