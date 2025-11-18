@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.23.0",
+  "version": "v0.24.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -20498,6 +20498,11 @@
               "shorthand": "",
               "global": false
             },
+            "subresource": {
+              "description": "If specified, apply will operate on the subresource of the requested object.  Only allowed when using --server-side. This flag is beta and may change in the future.",
+              "shorthand": "",
+              "global": false
+            },
             "template": {
               "description": "Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].",
               "shorthand": "",
@@ -20534,7 +20539,7 @@
               "global": true
             },
             "validate": {
-              "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+              "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
               "shorthand": "",
               "global": false
             },
@@ -20731,7 +20736,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -26058,7 +26063,7 @@
               "global": true
             },
             "validate": {
-              "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+              "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
               "shorthand": "",
               "global": false
             },
@@ -26265,7 +26270,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -26468,7 +26473,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -26673,7 +26678,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -26873,7 +26878,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -27073,7 +27078,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -27278,7 +27283,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -27471,7 +27476,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -27656,7 +27661,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -27856,7 +27861,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -28056,7 +28061,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -28256,7 +28261,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -28449,7 +28454,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -28657,7 +28662,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -28912,7 +28917,7 @@
                       "global": false
                     },
                     "from-file": {
-                      "description": "Key files can be specified using their file path, in which case a default name will be given to them, or optionally with a name and file path, in which case the given name will be used.  Specifying a directory will iterate each named file in the directory that is a valid secret key.",
+                      "description": "Key files can be specified using their file path, in which case a default name of .dockerconfigjson will be given to them, or optionally with a name and file path, in which case the given name will be used. Specifying a directory will iterate each named file in the directory that is a valid secret key. For this command, the key should always be .dockerconfigjson.",
                       "shorthand": "",
                       "global": false
                     },
@@ -29012,7 +29017,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -29220,7 +29225,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -29418,7 +29423,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -29757,7 +29762,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -29950,7 +29955,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -30138,7 +30143,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -30331,7 +30336,7 @@
                       "global": true
                     },
                     "validate": {
-                      "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                      "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                       "shorthand": "",
                       "global": false
                     },
@@ -30518,7 +30523,7 @@
                   "global": true
                 },
                 "validate": {
-                  "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+                  "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
                   "shorthand": "",
                   "global": false
                 },
@@ -30566,7 +30571,7 @@
                   "global": false
                 },
                 "bound-object-kind": {
-                  "description": "Kind of an object to bind the token to. Supported kinds are Pod, Secret. If set, --bound-object-name must be provided.",
+                  "description": "Kind of an object to bind the token to. Supported kinds are Node, Pod, Secret. If set, --bound-object-name must be provided.",
                   "shorthand": "",
                   "global": false
                 },
@@ -30795,6 +30800,11 @@
               "shorthand": "",
               "global": false
             },
+            "custom": {
+              "description": "Path to a JSON or YAML file containing a partial container spec to customize built-in debug profiles.",
+              "shorthand": "",
+              "global": false
+            },
             "disable-compression": {
               "description": "If true, opt-out of response compression for all requests to the server",
               "shorthand": "",
@@ -30824,6 +30834,36 @@
               "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
               "shorthand": "",
               "global": true
+            },
+            "keep-annotations": {
+              "description": "If true, keep the original pod annotations.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-init-containers": {
+              "description": "Run the init containers for the pod. Defaults to true.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-labels": {
+              "description": "If true, keep the original pod labels.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-liveness": {
+              "description": "If true, keep the original pod liveness probes.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-readiness": {
+              "description": "If true, keep the original pod readiness probes.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
+            },
+            "keep-startup": {
+              "description": "If true, keep the original startup probes.(This flag only works when used with '--copy-to')",
+              "shorthand": "",
+              "global": false
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
@@ -31617,11 +31657,6 @@
               "shorthand": "",
               "global": false
             },
-            "delete-local-data": {
-              "description": "Continue even if there are pods using emptyDir (local data that will be deleted when the node is drained).",
-              "shorthand": "",
-              "global": false
-            },
             "disable-compression": {
               "description": "If true, opt-out of response compression for all requests to the server",
               "shorthand": "",
@@ -31916,7 +31951,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, edit will operate on the subresource of the requested object. Must be one of [status]. This flag is beta and may change in the future.",
+              "description": "If specified, edit will operate on the subresource of the requested object. This flag is beta and may change in the future.",
               "shorthand": "",
               "global": false
             },
@@ -31951,7 +31986,7 @@
               "global": true
             },
             "validate": {
-              "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+              "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
               "shorthand": "",
               "global": false
             },
@@ -32340,7 +32375,7 @@
           "subcommands": null
         },
         {
-          "name": "explain TYPE [--recursive=FALSE|TRUE] [--api-version=api-version-group] [--output=plaintext|plaintext-openapiv2]",
+          "name": "explain TYPE [--recursive=FALSE|TRUE] [--api-version=api-version-group] [-o|--output=plaintext|plaintext-openapiv2]",
           "description": "Get documentation for a resource",
           "aliases": null,
           "flags": {
@@ -32426,7 +32461,7 @@
             },
             "output": {
               "description": "Format in which to render the schema. Valid values are: (plaintext, plaintext-openapiv2).",
-              "shorthand": "",
+              "shorthand": "o",
               "global": false
             },
             "password": {
@@ -32961,7 +32996,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, gets the subresource of the requested object. Must be one of [status scale]. This flag is beta and may change in the future.",
+              "description": "If specified, gets the subresource of the requested object. This flag is beta and may change in the future.",
               "shorthand": "",
               "global": false
             },
@@ -33105,6 +33140,11 @@
             },
             "helm-command": {
               "description": "helm command (path to executable)",
+              "shorthand": "",
+              "global": false
+            },
+            "helm-debug": {
+              "description": "Enable debug output from the Helm chart inflator generator.",
               "shorthand": "",
               "global": false
             },
@@ -33471,6 +33511,11 @@
           "flags": {
             "all-containers": {
               "description": "Get all containers' logs in the pod(s).",
+              "shorthand": "",
+              "global": false
+            },
+            "all-pods": {
+              "description": "Get logs from all pod(s). Sets prefix to true.",
               "shorthand": "",
               "global": false
             },
@@ -33991,7 +34036,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, patch will operate on the subresource of the requested object. Must be one of [status scale]. This flag is beta and may change in the future.",
+              "description": "If specified, patch will operate on the subresource of the requested object. This flag is beta and may change in the future.",
               "shorthand": "",
               "global": false
             },
@@ -34867,7 +34912,7 @@
               "global": false
             },
             "subresource": {
-              "description": "If specified, replace will operate on the subresource of the requested object. Must be one of [status scale]. This flag is beta and may change in the future.",
+              "description": "If specified, replace will operate on the subresource of the requested object. This flag is beta and may change in the future.",
               "shorthand": "",
               "global": false
             },
@@ -34907,7 +34952,7 @@
               "global": true
             },
             "validate": {
-              "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+              "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
               "shorthand": "",
               "global": false
             },
@@ -38347,7 +38392,7 @@
               "global": true
             },
             "validate": {
-              "description": "Must be one of: strict (or true), warn, ignore (or false).\n\t\t\"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not.\n\t\t\"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise.\n\t\t\"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
+              "description": "Must be one of: strict (or true), warn, ignore (or false). \"true\" or \"strict\" will use a schema to validate the input and fail the request if invalid. It will perform server side validation if ServerSideFieldValidation is enabled on the api-server, but will fall back to less reliable client-side validation if not. \"warn\" will warn about unknown or duplicate fields without blocking the request if server-side field validation is enabled on the API server, and behave as \"ignore\" otherwise. \"false\" or \"ignore\" will not perform any schema validation, silently dropping any unknown or duplicate fields.",
               "shorthand": "",
               "global": false
             },
@@ -39172,7 +39217,7 @@
           "subcommands": null
         },
         {
-          "name": "wait ([-f FILENAME] | resource.group/resource.name | resource.group [(-l label | --all)]) [--for=delete|--for condition=available|--for=jsonpath='{}'[=value]]",
+          "name": "wait ([-f FILENAME] | resource.group/resource.name | resource.group [(-l label | --all)]) [--for=create|--for=delete|--for condition=available|--for=jsonpath='{}'[=value]]",
           "description": "Experimental: Wait for a specific condition on one or many resources",
           "aliases": null,
           "flags": {
@@ -39252,7 +39297,7 @@
               "global": false
             },
             "for": {
-              "description": "The condition to wait on: [delete|condition=condition-name[=condition-value]|jsonpath='{JSONPath expression}'=[JSONPath value]]. The default condition-value is true.  Condition values are compared after Unicode simple case folding, which is a more general form of case-insensitivity.",
+              "description": "The condition to wait on: [create|delete|condition=condition-name[=condition-value]|jsonpath='{JSONPath expression}'=[JSONPath value]]. The default condition-value is true. Condition values are compared after Unicode simple case folding, which is a more general form of case-insensitivity.",
               "shorthand": "",
               "global": false
             },
@@ -39337,7 +39382,7 @@
               "global": false
             },
             "timeout": {
-              "description": "The length of time to wait before giving up.  Zero means check once and don't wait, negative means wait for a week.",
+              "description": "The length of time to wait before giving up. Zero means check once and don't wait, negative means wait for a week.",
               "shorthand": "",
               "global": false
             },
