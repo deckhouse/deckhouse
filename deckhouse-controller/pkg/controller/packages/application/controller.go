@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,9 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -47,162 +47,29 @@ const (
 )
 
 type reconciler struct {
-	client        client.Client
-	dc            dependency.Container
-	pm            applicationpackage.PackageManager
-	statusService *StatusService
-	logger        *log.Logger
-}
+	client   client.Client
+	operator *packageoperator.Operator
+	status   *status.Service
 
-type StatusService struct {
-	client       client.Client
-	logger       *log.Logger
-	pm           applicationpackage.PackageManager
-	dc           dependency.Container
-	eventChannel <-chan packagestatusservice.PackageEvent
-
-	mu sync.RWMutex
-	wg sync.WaitGroup
-}
-
-func (svc *StatusService) Start(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				svc.wg.Done()
-				return
-			case event := <-svc.eventChannel:
-				svc.wg.Add(1)
-				svc.HandleEvent(ctx, event)
-				svc.wg.Done()
-			}
-		}
-	}()
-}
-
-func (svc *StatusService) HandleEvent(ctx context.Context, event packagestatusservice.PackageEvent) {
-	logger := svc.logger.With(
-		slog.String("package", event.PackageName),
-		slog.String("name", event.Name),
-		slog.String("namespace", event.Namespace),
-		slog.String("version", event.Version),
-		slog.String("type", event.Type),
-	)
-
-	app := &v1alpha1.Application{}
-	err := svc.client.Get(ctx, types.NamespacedName{
-		Name:      event.Name,
-		Namespace: event.Namespace,
-	}, app)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Debug("application not found, skipping")
-			return
-		}
-		logger.Warn("failed to get application", log.Err(err))
-		return
-	}
-
-	if app.Spec.ApplicationPackageName != event.PackageName || app.Spec.Version != event.Version {
-		logger.Debug("application spec mismatch, skipping")
-		return
-	}
-
-	status, err := svc.pm.GetPackageStatus(ctx, event.PackageName, event.Namespace, event.Version, event.Type)
-	if err != nil {
-		logger.Warn("failed to get package status", log.Err(err))
-		return
-	}
-
-	original := app.DeepCopy()
-	svc.applyConditions(app, status.Conditions)
-	svc.applyInternalConditions(app, status.InternalConditions)
-	err = svc.client.Status().Patch(ctx, app, client.MergeFrom(original))
-	if err != nil {
-		logger.Warn("failed to patch application status", log.Err(err))
-	}
-}
-
-func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationStatusCondition) {
-	now := metav1.NewTime(svc.dc.GetClock().Now())
-
-	prev := make(map[string]v1alpha1.ApplicationStatusCondition)
-	for _, c := range app.Status.Conditions {
-		prev[c.Type] = c
-	}
-
-	applied := make([]v1alpha1.ApplicationStatusCondition, 0, len(newConds))
-	for _, c := range newConds {
-		cond := c
-		cond.LastProbeTime = now
-
-		p, ok := prev[cond.Type]
-		if ok {
-			cond.LastTransitionTime = p.LastTransitionTime
-		}
-
-		if p.Status != cond.Status {
-			cond.LastTransitionTime = now
-		}
-		applied = append(applied, cond)
-	}
-
-	app.Status.Conditions = applied
-}
-
-func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationInternalStatusCondition) {
-	now := metav1.NewTime(svc.dc.GetClock().Now())
-	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
-	for _, c := range app.Status.InternalConditions {
-		prev[c.Type] = c
-	}
-
-	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(newConds))
-	for _, c := range newConds {
-		cond := c
-		cond.LastProbeTime = now
-
-		p, ok := prev[cond.Type]
-		if ok {
-			cond.LastTransitionTime = p.LastTransitionTime
-		}
-
-		if p.Status != cond.Status {
-			cond.LastTransitionTime = now
-		}
-		applied = append(applied, cond)
-	}
-
-	app.Status.InternalConditions = applied
+	dc     dependency.Container
+	logger *log.Logger
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
+	operator *packageoperator.Operator,
 	dc dependency.Container,
-	pm applicationpackage.PackageManager,
 	logger *log.Logger,
 ) error {
-	eventChannel := make(chan packagestatusservice.PackageEvent, 100)
-
-	statusService := &StatusService{
-		client:       runtimeManager.GetClient(),
-		logger:       logger.Named("status-service"),
-		pm:           pm,
-		dc:           dc,
-		eventChannel: eventChannel,
-	}
-
-	pm.SetEventChannel(eventChannel)
-	go statusService.Start(context.Background())
-
 	r := &reconciler{
-		client:        runtimeManager.GetClient(),
-		dc:            dc,
-		pm:            pm,
-		statusService: statusService,
-		logger:        logger,
+		client:   runtimeManager.GetClient(),
+		operator: operator,
+		dc:       dc,
+		logger:   logger,
 	}
+
+	r.status = status.NewService(r.client, operator.GetPackageCondition, r.logger)
+	r.status.Start(context.Background(), operator.GetEventCh())
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -215,14 +82,6 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
 		Complete(applicationController)
-}
-
-func (svc *StatusService) WaitForIdle(_ context.Context) error {
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
-
-	svc.wg.Wait()
-	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -308,6 +167,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
+	repository := new(v1alpha1.PackageRepository)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: app.Spec.Repository}, repository); err != nil {
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.Repository, err)
+	}
+
+	r.operator.Update(ctx, repository, packageoperator.Instance{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+		Definition: apps.Definition{
+			Name:    apv.Status.PackageName,
+			Version: apv.Status.Version,
+		},
+		Settings: app.Spec.Settings,
+	})
+
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
@@ -326,9 +200,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, app, &apv.Status)
-
 	logger.Debug("handle Application complete")
 
 	return nil
@@ -339,7 +210,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 	logger.Debug("deleting Application")
 
-	r.pm.RemoveApplication(ctx, app)
+	r.operator.Remove(ctx, app.Namespace, app.Name)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
