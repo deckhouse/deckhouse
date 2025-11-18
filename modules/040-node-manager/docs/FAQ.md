@@ -170,9 +170,61 @@ This method is valid for both manually configured nodes (using the bootstrap scr
 
 To decommission a node from the cluster and clean up the server (VM), run the following command on the node:
 
-```shell
-bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
-```
+### For all nodes except the control-plane
+
+1. Delete a node from the Kubernetes cluster:
+
+   ```shell
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
+   d8 k delete node <node>
+   ```
+
+1. Run the cleanup script on the node:
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. After restarting the node [run](#how-do-i-add-a-static-node-to-a-cluster) the script `bootstrap.sh`.
+
+### For control-plane nodes
+
+1. Remove the label control-plane and master:
+
+   ```shell
+   d8 k label node <node> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Make sure that the node being deleted by the control-plane is missing from the list of etcd cluster nodes.:
+
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+1. Delete a node from the Kubernetes cluster:
+
+   ```shell
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
+   d8 k delete node <node>
+   ```
+
+1. Run the cleanup script on the node:
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. After restarting the node [run](#how-do-i-add-a-static-node-to-a-cluster) the script `bootstrap.sh`.
+
+1. Wait for the Deckhouse queues to pass and make sure that the etcd cluster member is back online:
+  
+  ```shell
+  d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
+  ```
 
 ### Can I delete a StaticInstance?
 
