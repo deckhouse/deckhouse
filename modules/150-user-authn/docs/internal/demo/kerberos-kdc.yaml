@@ -43,22 +43,32 @@ spec:
     spec:
       containers:
       - name: kdc
-        image: bitnami/krb5:1.19.4
-        imagePullPolicy: IfNotPresent
+        image: debian:12-slim
+        imagePullProgressDeadlineSeconds: 600
+        securityContext: { runAsUser: 0 }
         command: ["/bin/bash","-lc"]
         args:
           - |
-            install -Dm0644 /config/krb5.conf /etc/krb5.conf;
-            install -Dm0644 /config/kdc.conf /etc/krb5kdc/kdc.conf;
-            install -Dm0644 /config/kadm5.acl /etc/krb5kdc/kadm5.acl;
-            [ -f /var/lib/krb5kdc/principal ] || kdb5_util create -s -P changeme;
+            set -e
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y krb5-kdc krb5-admin-server
+            cp /config/krb5.conf /etc/krb5.conf
+            cp /config/kdc.conf /etc/krb5kdc/kdc.conf
+            cp /config/kadm5.acl /etc/krb5kdc/kadm5.acl
+            if [ ! -f /var/lib/krb5kdc/principal ]; then
+              kdb5_util create -s -r EXAMPLE.COM -P adminpass || true
+              kadmin.local -q "addprinc -pw adminpass admin/admin" || true
+            fi
             krb5kdc -n &
             exec kadmind -nofork
         volumeMounts:
         - { name: kdc-config, mountPath: /config }
+        - { name: kdc-data,   mountPath: /var/lib/krb5kdc }
       volumes:
       - name: kdc-config
         configMap: { name: kdc-config }
+      - name: kdc-data
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -78,6 +88,7 @@ spec:
     port: 88
     targetPort: 88
     protocol: UDP
+    nodePort: 30088
   - name: kadm
     port: 749
     targetPort: 749
