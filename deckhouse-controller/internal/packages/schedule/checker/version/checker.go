@@ -34,6 +34,7 @@ type Getter func() (*semver.Version, error)
 type Checker struct {
 	versionGetter Getter              // Function to get current version
 	constraints   *semver.Constraints // Required version constraint (e.g., ">=1.21, <2.0")
+	reason        string
 }
 
 // NewChecker creates a new version checker with the given getter and constraints.
@@ -43,10 +44,11 @@ type Checker struct {
 //   - ">=1.21, <2.0"     - Range from 1.21 to 2.0
 //   - "~1.21"            - Patch releases of 1.21
 //   - "^1.21"            - Minor releases of 1.x
-func NewChecker(getter Getter, constraints *semver.Constraints) *Checker {
+func NewChecker(getter Getter, constraints *semver.Constraints, reason string) *Checker {
 	return &Checker{
 		versionGetter: getter,
 		constraints:   constraints,
+		reason:        reason,
 	}
 }
 
@@ -57,7 +59,6 @@ func NewChecker(getter Getter, constraints *semver.Constraints) *Checker {
 func (c *Checker) Check() checker.Result {
 	version, err := c.versionGetter()
 	if err != nil {
-		// TODO: Consider caching last known good version for transient failures
 		return checker.Result{
 			Enabled: false,
 			Reason:  fmt.Sprintf("get version: %s", err.Error()),
@@ -68,12 +69,11 @@ func (c *Checker) Check() checker.Result {
 	if _, errs := c.constraints.Validate(version); len(errs) != 0 {
 		return checker.Result{
 			Enabled: false,
-			Reason:  errs[0].Error(), // Return first validation error
+			Reason:  fmt.Sprintf("%s: %s", c.reason, errs[0].Error()), // Return first validation error with reason
 		}
 	}
 
 	return checker.Result{
 		Enabled: true,
-		// Reason left empty when enabled
 	}
 }
