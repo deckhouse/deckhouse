@@ -242,7 +242,7 @@ function handlerResolveData(data = '', licenseToken = '', messageElement = '', i
 function handlerRejectData(licenseToken, messageElement, inputField, message = null, revision = '', redactions = null) {
   let rejectionMessage = null;
   
-  if (revision && redactions && Array.isArray(redactions)) {
+  if (revision && redactions && Array.isArray(redactions) && redactions.length > 0) {
     const revisionUpper = revision.toUpperCase();
     const redactionsUpper = redactions.map(r => r.toUpperCase());
     if (!redactionsUpper.includes(revisionUpper)) {
