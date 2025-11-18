@@ -27,9 +27,9 @@ type Info struct {
 }
 
 func (a *Application) GetInfo() Info {
-	var hooks []string
-	for _, hook := range a.hooks.GetHooks() {
-		hooks = append(hooks, hook.GetName())
+	hooks := make([]string, len(a.hooks.GetHooks()))
+	for idx, hook := range a.hooks.GetHooks() {
+		hooks[idx] = hook.GetName()
 	}
 
 	return Info{
