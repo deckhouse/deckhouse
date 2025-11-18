@@ -24,7 +24,7 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailability mode.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability`.
 
-2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`, `control-plane-manager` labels) so that only one control‑plane node remains active.  
+2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`) so that only one control‑plane node remains active.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
 3. On the two detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.
