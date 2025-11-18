@@ -161,11 +161,12 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 
 		if !featureExistsInAnyComponent {
 			unknownFeatureGates[featureName] = true
-		} else {
-			isDeprecatedInFuture, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName)
-			if isDeprecatedInFuture {
-				deprecatedFeatureGates[featureName] = deprecatedVersion
-			}
+			continue
+		}
+
+		isDeprecatedInFuture, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName)
+		if isDeprecatedInFuture {
+			deprecatedFeatureGates[featureName] = deprecatedVersion
 		}
 	}
 
