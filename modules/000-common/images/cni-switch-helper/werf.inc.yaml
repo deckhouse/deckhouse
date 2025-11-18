@@ -32,7 +32,7 @@ shell:
   setup:
   - cd /src
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o /src/cni-switch-helper
+  - go build -ldflags="-s -w" -o /src/cni-switch-helper ./cmd/main.go
   - chmod 0755 /src/cni-switch-helper
   - chown 64535:64535 /src/cni-switch-helper
 ---
