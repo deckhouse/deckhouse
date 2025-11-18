@@ -107,7 +107,7 @@ provider:
 	tests := []testCheckClusterConfigParams{
 		{
 			testCheckClusterConfigBase: testCheckClusterConfigBase{
-				testName:           "static cluster without static cluster config equal",
+				testName:           "static cluster without static cluster config equal in sync",
 				expectedSyncStatus: CheckStatusInSync,
 				isError:            false,
 				clusterType:        config.StaticClusterType,
@@ -170,6 +170,48 @@ provider:
 
 		{
 			testCheckClusterConfigBase: testCheckClusterConfigBase{
+				testName:           "static cluster without static cluster config not equal cluster conf",
+				expectedSyncStatus: CheckStatusOutOfSync,
+				isError:            false,
+				clusterType:        config.StaticClusterType,
+			},
+
+			commanderClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionOld),
+			inClusterClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionNew),
+
+			commanderStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "")),
+			inClusterStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "")),
+
+			commanderCloudConfig: "",
+			inClusterCloudConfig: "",
+
+			commanderClusterUUID: clusterUUIDOld.String(),
+			inClusterClusterUUID: clusterUUIDOld.String(),
+		},
+
+		{
+			testCheckClusterConfigBase: testCheckClusterConfigBase{
+				testName:           "static cluster with static cluster config not equal cluster conf",
+				expectedSyncStatus: CheckStatusOutOfSync,
+				isError:            false,
+				clusterType:        config.StaticClusterType,
+			},
+
+			commanderClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionOld),
+			inClusterClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionNew),
+
+			commanderStaticConfig: nil,
+			inClusterStaticConfig: nil,
+
+			commanderCloudConfig: "",
+			inClusterCloudConfig: "",
+
+			commanderClusterUUID: clusterUUIDOld.String(),
+			inClusterClusterUUID: clusterUUIDOld.String(),
+		},
+
+		{
+			testCheckClusterConfigBase: testCheckClusterConfigBase{
 				testName:           "static cluster without static cluster config not equal uuid and cluster",
 				expectedSyncStatus: CheckStatusOutOfSync,
 				isError:            false,
@@ -220,6 +262,27 @@ provider:
 
 			commanderClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionOld),
 			inClusterClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionNew),
+
+			commanderStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "")),
+			inClusterStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "- 10.10.0.0/24")),
+
+			commanderCloudConfig: "",
+			inClusterCloudConfig: "",
+
+			commanderClusterUUID: clusterUUIDOld.String(),
+			inClusterClusterUUID: clusterUUIDOld.String(),
+		},
+
+		{
+			testCheckClusterConfigBase: testCheckClusterConfigBase{
+				testName:           "static cluster with static cluster config different not sync",
+				expectedSyncStatus: CheckStatusOutOfSync,
+				isError:            false,
+				clusterType:        config.StaticClusterType,
+			},
+
+			commanderClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionOld),
+			inClusterClusterConfig: fmt.Sprintf(staticClusterFmt, k8sVersionOld),
 
 			commanderStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "")),
 			inClusterStaticConfig: pointer.String(fmt.Sprintf(staticClusterConfigFmt, "- 10.10.0.0/24")),
@@ -398,6 +461,48 @@ provider:
 
 			commanderClusterUUID: clusterUUIDOld.String(),
 			inClusterClusterUUID: clusterUUIDNew.String(),
+		},
+		{
+			testCheckClusterConfigBase: testCheckClusterConfigBase{
+				testName:           "cloud cluster not sync with different cluster conf",
+				expectedSyncStatus: CheckStatusOutOfSync,
+				isError:            false,
+				clusterType:        config.CloudClusterType,
+			},
+
+			commanderClusterConfig: fmt.Sprintf(cloudConfigFmt, clusterDomainOld),
+			inClusterClusterConfig: fmt.Sprintf(cloudConfigFmt, clusterDomainNew),
+
+			commanderStaticConfig: nil,
+			inClusterStaticConfig: nil,
+
+			// cores in master
+			commanderCloudConfig: fmt.Sprintf(cloudClusterConfigFmt, "1"),
+			inClusterCloudConfig: fmt.Sprintf(cloudClusterConfigFmt, "1"),
+
+			commanderClusterUUID: clusterUUIDOld.String(),
+			inClusterClusterUUID: clusterUUIDOld.String(),
+		},
+		{
+			testCheckClusterConfigBase: testCheckClusterConfigBase{
+				testName:           "cloud cluster not sync with different provider conf",
+				expectedSyncStatus: CheckStatusOutOfSync,
+				isError:            false,
+				clusterType:        config.CloudClusterType,
+			},
+
+			commanderClusterConfig: fmt.Sprintf(cloudConfigFmt, clusterDomainOld),
+			inClusterClusterConfig: fmt.Sprintf(cloudConfigFmt, clusterDomainOld),
+
+			commanderStaticConfig: nil,
+			inClusterStaticConfig: nil,
+
+			// cores in master
+			commanderCloudConfig: fmt.Sprintf(cloudClusterConfigFmt, "1"),
+			inClusterCloudConfig: fmt.Sprintf(cloudClusterConfigFmt, "3"),
+
+			commanderClusterUUID: clusterUUIDOld.String(),
+			inClusterClusterUUID: clusterUUIDOld.String(),
 		},
 	}
 
