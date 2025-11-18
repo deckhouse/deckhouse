@@ -3,8 +3,6 @@ apiVersion: aquasecurity.github.io/v1alpha1
 kind: ClusterComplianceReport
 metadata:
   name: cis
-  platform: k8s
-  type: cis
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   cron: 0 */6 * * *

@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+
+  name: allow-multiple-sysctls
+spec:
+  securityContext:
+    sysctls:
+      allowedValues:
+      - net.core.rmem_max
+      - kernel.msgmax
+      - net.core.wmem_max

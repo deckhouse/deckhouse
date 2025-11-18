@@ -26,31 +26,56 @@ spec:
             information, see https://kubernetes.io/docs/concepts/security/pod-security-standards/
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.pod_security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.pod_security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            c := input_containers[_]
-            input_allow_privilege_escalation(c)
-            msg := sprintf("Privilege escalation container is not allowed: %v", [c.name])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                c := input_containers[_]
+                not allowed_by_any(c)
+                msg := sprintf("Privilege escalation container is not allowed: %v", [c.name])
+              }
 
-        input_allow_privilege_escalation(c) {
-            not has_field(c, "securityContext")
-        }
-        input_allow_privilege_escalation(c) {
-            not c.securityContext.allowPrivilegeEscalation == false
-        }
-        input_containers[c] {
-            c := input.review.object.spec.containers[_]
-        }
-        input_containers[c] {
-            c := input.review.object.spec.initContainers[_]
-        }
-        input_containers[c] {
-            c := input.review.object.spec.ephemeralContainers[_]
-        }
-        # has_field returns whether an object has a field
-        has_field(object, field) = true {
-            object[field]
-        }
+              allowed_by_any(c) if {
+                allowed_by_securitypolicyexception(c)
+              }
+
+              allowed_by_any(c) if {
+                allowed_by_securitypolicy(c)
+              }
+
+              allowed_by_securitypolicyexception(c) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                exception.spec.securityContext.allowPrivilegeEscalation.allowedValue == c.securityContext.allowPrivilegeEscalation
+              }
+
+              allowed_by_securitypolicy(c) if {
+                has_field(c, "securityContext")
+                c.securityContext.allowPrivilegeEscalation == false
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
+              }

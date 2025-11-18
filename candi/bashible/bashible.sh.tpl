@@ -36,12 +36,12 @@ bb-kubectl-exec() {
     host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
     port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z "$host" "$port"; then
+    if ! nc -z -w 3 "$host" "$port" 2>/dev/null; then
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         host=$(echo "$server" | cut -d: -f1)
         port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z "$host" "$port"; then
+        if nc -z -w 3 "$host" "$port" 2>/dev/null; then
           args="--server=https://$server"
           break
         fi
@@ -75,6 +75,14 @@ bb-label-node-bashible-first-run-finished() {
 export -f bb-kubectl-exec
 export -f bb-label-node-bashible-first-run-finished
 
+bb-indent-text() {
+    local indent="$1"
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%s%s\n' "$indent" "$line"
+    done
+}
+
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
     # bashible step and used events.k8s.io/v1 apiVersion.
@@ -90,7 +98,14 @@ function bb-event-error-create() {
     eventName="$(echo -n $(bb-d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
     nodeName=$(bb-d8-node-name)
     eventLog="/var/lib/bashible/step.log"
+    if [[ -f "${eventLog}" ]]; then
+      eventNote="$(tail -c 500 "${eventLog}")"
+    else
+      eventNote="bashible step log is not available."
+    fi
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      indent="            " # 12 spaces
+      logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
       bb-kubectl-exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
@@ -101,7 +116,8 @@ function bb-event-error-create() {
             kind: Node
             name: ${nodeName}
             uid: ${nodeName}
-          note: '$(tail -c 500 ${eventLog})'
+          note: |
+${logs}
           reason: BashibleStepFailed
           type: Warning
           reportingController: bashible

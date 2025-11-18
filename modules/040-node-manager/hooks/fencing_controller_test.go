@@ -22,11 +22,13 @@ import (
 	"text/template"
 	"time"
 
+	klient "github.com/flant/kube-client/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	v1coord "k8s.io/api/coordination/v1"
 	v1core "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -72,6 +74,15 @@ func TemplateToYAML(tmpl string, params interface{}) string {
 	return output.String()
 }
 
+func doesPodExist(ctx context.Context, client *klient.Client, namespace, name string) bool {
+	_, err := client.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false
+	}
+	Expect(err).ShouldNot(HaveOccurred())
+	return true
+}
+
 var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
@@ -105,7 +116,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 			Spec: v1coord.LeaseSpec{
 				HolderIdentity: &testCase.Name,
 				RenewTime:      &metav1.MicroTime{Time: testCase.RenewTime()},
-			}}
+			},
+		}
 
 		var err error
 		_, err = f.KubeClient().CoordinationV1().Leases("kube-node-lease").Create(context.TODO(), &testLease, metav1.CreateOptions{})
@@ -114,7 +126,11 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		// add test pod
 		testPod := v1core.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: testCase.Name,
+				Name:      testCase.Name,
+				Namespace: testCase.Name,
+			},
+			Spec: v1core.PodSpec{
+				NodeName: testCase.Name,
 			},
 		}
 
@@ -131,11 +147,9 @@ var _ = Describe("Modules :: nodeManager :: hooks :: fencing_controller ::", fun
 		Expect(node.Exists()).To(BeEquivalentTo(want.nodeExists))
 
 		By("Check pods")
-		pod, _ := f.KubeClient().CoreV1().Pods(testCase.Name).Get(context.TODO(), testCase.Name, metav1.GetOptions{})
-		podExists := pod != nil
+		podExists := doesPodExist(context.TODO(), f.KubeClient(), testCase.Name, testCase.Name)
 		Expect(podExists).To(BeEquivalentTo(want.podExists))
 	},
-
 		Entry("Node with enabled fencing and lease updated in time", testCaseParams{
 			Name:               "everything-ok",
 			FencingEnabled:     true,

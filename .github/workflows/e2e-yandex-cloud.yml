@@ -286,7 +286,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'yandex-cloud';
-            const kubernetesDefaultVersion = '1.30';
+            const kubernetesDefaultVersion = '1.32';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});

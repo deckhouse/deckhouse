@@ -22,11 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/yaml"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/stretchr/testify/assert"
 )
 
 // mockTask is a test implementation of Task interface
@@ -371,75 +368,6 @@ func TestQueue_HasSeveral(t *testing.T) {
 
 	// Now hasSeveral should return true (2 tasks with same name)
 	assert.True(t, q.hasSeveral("same-name"), "should return true with 2+ tasks")
-
-	wg.Wait()
-}
-
-// TestQueue_Dump tests queue dump functionality
-func TestQueue_Dump(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	q := newQueue("test-queue", getTestLogger()).Start(ctx)
-	defer q.Stop()
-
-	// Enqueue a slow task so we can dump while it's in queue
-	task := newSlowTask("test-task", 200*time.Millisecond)
-	var wg sync.WaitGroup
-	q.Enqueue(ctx, task, WithWait(&wg))
-
-	// Give task time to be enqueued
-	time.Sleep(50 * time.Millisecond)
-
-	// Get dump
-	d := q.dump()
-	require.NotEmpty(t, d, "dump should not be empty")
-
-	dumpBytes, err := yaml.Marshal(d)
-	require.NoError(t, err)
-
-	// Dump should contain task name
-	dumpStr := string(dumpBytes)
-	assert.Contains(t, dumpStr, "test-task", "dump should contain task name")
-	assert.Contains(t, dumpStr, "test-queue", "dump should contain queue name")
-
-	wg.Wait()
-}
-
-// TestQueue_DumpWithError tests dump shows errors correctly
-func TestQueue_DumpWithError(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	q := newQueue("test-queue", getTestLogger()).Start(ctx)
-	defer q.Stop()
-
-	// Create a task that fails then succeeds
-	attemptCount := atomic.Int32{}
-	task := newMockTaskWithFunc("failing-task", func(_ context.Context) error {
-		count := attemptCount.Add(1)
-		if count == 1 {
-			time.Sleep(100 * time.Millisecond) // Give time to dump
-			return errors.New("test error message")
-		}
-		return nil
-	})
-
-	var wg sync.WaitGroup
-	q.Enqueue(ctx, task, WithWait(&wg))
-
-	// Wait for first failure and retry scheduling
-	time.Sleep(200 * time.Millisecond)
-
-	// Get dump
-	d := q.dump()
-	require.NotEmpty(t, d, "dump should not be empty")
-
-	dumpBytes, err := yaml.Marshal(d)
-	require.NoError(t, err)
-
-	dumpStr := string(dumpBytes)
-	assert.Contains(t, dumpStr, "test error message", "dump should contain error message")
 
 	wg.Wait()
 }

@@ -8,6 +8,7 @@ modules2: modules
 module: module
 module_versions: Module versions
 module_version: Module version
+module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 channel_or_version: "Channel/version"
 channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse

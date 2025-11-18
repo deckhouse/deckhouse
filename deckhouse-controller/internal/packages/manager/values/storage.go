@@ -86,6 +86,13 @@ func (s *Storage) GetValuesChecksum() string {
 	return s.resultValues.Checksum()
 }
 
+func (s *Storage) GetConfigChecksum() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.configValues.Checksum()
+}
+
 func (s *Storage) GetValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()

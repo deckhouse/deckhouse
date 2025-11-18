@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -86,6 +87,10 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	if suite.T().Skipped() {
 		return
 	}
+
+	ctx := context.Background()
+	err := suite.ctr.statusService.WaitForIdle(ctx)
+	require.NoError(suite.T(), err)
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
@@ -181,11 +186,28 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.Application{}).
 		Build()
 
+	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
+	eventChannel := make(chan packagestatusservice.PackageEvent)
+	pm.SetEventChannel(eventChannel)
+
+	statusService := &StatusService{
+		client:       kubeClient,
+		logger:       log.NewNop(),
+		pm:           pm,
+		dc:           dependency.NewMockedContainer(),
+		eventChannel: eventChannel,
+	}
+
+	// go statusService.Start(context.Background())
+
+	pm.SetStatusService(statusService)
+
 	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		pm:     applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop()),
-		dc:     dependency.NewMockedContainer(),
+		client:        kubeClient,
+		logger:        log.NewNop(),
+		pm:            pm,
+		dc:            dependency.NewMockedContainer(),
+		statusService: statusService,
 		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
@@ -287,6 +309,50 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 	suite.Run("version is draft", func() {
 		suite.setupController("version-is-draft.yaml")
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("successful reconcile with some falses", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("successful-reconcile-some-falses.yaml", withDependencyContainer(dc))
+
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("successful reconcile with all falses", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("successful-reconcile-all-falses.yaml", withDependencyContainer(dc))
+
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},

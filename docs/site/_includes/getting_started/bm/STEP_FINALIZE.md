@@ -342,7 +342,11 @@ sudo -i d8 k create -f $PWD/user.yml
 </div>
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
-  <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
+  <ul><li>Identify the public IP address of the node where the Ingress Controller is running:
+  <div class="highlight">
+  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
+  </div>
+  </li>
   <li>If you have the DNS server and you can add a DNS records:
   <ul>
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.

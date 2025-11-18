@@ -26,9 +26,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v3.18.3 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
+  - git clone --depth 1 --branch v3.20.1 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  #- git apply /patches/*.patch --verbose
   - rm -rf website
   - rm -rf .git
 ---

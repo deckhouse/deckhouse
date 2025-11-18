@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-multiple-containers-all-allowed-via-constraint-or-exception
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        readOnlyRootFilesystem: false
+    - name: redis
+      image: redis
+      securityContext:
+        readOnlyRootFilesystem: true
+

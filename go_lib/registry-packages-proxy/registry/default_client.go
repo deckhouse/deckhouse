@@ -57,6 +57,17 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		repository.Digest(digest),
 		remoteOpts...)
 
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return 0, "", nil, ErrPackageNotFound
+			}
+		}
+		return 0, "", nil, err
+	}
+
 	manifest, err := image.Manifest()
 	if err != nil {
 		return 0, "", nil, err
@@ -70,16 +81,6 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		}
 	}
 
-	if err != nil {
-		e := &transport.Error{}
-		if errors.As(err, &e) {
-			log.Error(e.Error())
-			if e.StatusCode == http.StatusNotFound {
-				return 0, "", nil, ErrPackageNotFound
-			}
-		}
-		return 0, "", nil, err
-	}
 
 	layers, err := image.Layers()
 	if err != nil {

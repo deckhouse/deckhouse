@@ -3,38 +3,49 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-proc-mount
 tests:
-  - name: pod-security-standards-baseline
+  - name: pss-baseline
     template: ../../templates/security/allowed-proc-mount.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-procmount
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-no-procmount.yaml
         assertions:
           - violations: no
-      - name: example-allowed-empty
+
+      - name: allowed-default-procmount-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed_empty.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-default-procmount-container.yaml
         assertions:
           - violations: no
-      - name: example-allowed-undefined
+
+      - name: allowed-default-procmount-pod
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/allowed_undefined.yaml
+        object: test_samples/constraint_templates/pss_baseline/allowed-default-procmount-pod.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: disallowed-unmasked-procmount-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/disallowed.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-unmasked-procmount-container.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-ephemeral
+
+      - name: disallowed-unmasked-procmount-pod
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/pss_baseline/disallowed_ephemeral.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-unmasked-procmount-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-multiple-containers-one-unmasked
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-containers-one-unmasked.yaml
         assertions:
           - violations: yes
 
@@ -42,15 +53,100 @@ tests:
     template: ../../templates/security/allowed-proc-mount.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-no-procmount
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-no-procmount.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: allowed-unmasked-procmount-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed_default_with_unmasked.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-unmasked-procmount-container.yaml
         assertions:
           - violations: no
+
+      - name: allowed-unmasked-procmount-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-unmasked-procmount-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-default-procmount-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-default-procmount-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-default-procmount-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-default-procmount-pod.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-multiple-containers-both-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-multiple-containers-both-allowed.yaml
+        assertions:
+          - violations: no
+
+  - name: pss-baseline-with-exception
+    template: ../../templates/security/allowed-proc-mount.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: allowed-by-exception-unmasked-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-unmasked.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-unmasked-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-default-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-default.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-default-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-by-exception-procmount-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-default.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-procmount-mismatch.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-by-exception-multiple-containers-one-mismatch
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-default.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-containers-one-mismatch.yaml
+        assertions:
+          - violations: yes
+
+  - name: security-policy-with-exception
+    template: ../../templates/security/allowed-proc-mount.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: allowed-by-exception-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-default.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+

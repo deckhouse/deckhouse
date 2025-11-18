@@ -61,7 +61,7 @@ To delete a cluster, several steps need to be followed:
    ```
 
    where:
-   - `<USER>` — the user of the remote machine from which the installation was performed;
+   - `<USER>` — the user of the remote machine from which the installation was performed. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
    - `<MASTER_IP>` — IP address of the master node in the cluster.
 
    The installer will connect to the master node and remove all Deckhouse components and the Kubernetes cluster from it.

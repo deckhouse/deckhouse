@@ -35,12 +35,12 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		defer restore()
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
+	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.ParseConfig(
 		ctx,
 		app.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(b.logger),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 	)
 	if err != nil {
 		return err

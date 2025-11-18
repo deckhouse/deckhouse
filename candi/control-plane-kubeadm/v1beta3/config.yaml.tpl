@@ -8,7 +8,15 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
     {{- $featureGates = list $featureGates "StructuredAuthenticationConfiguration=true" | join "," }}
 {{- end }}
-
+{{- $nodesCount := .nodesCount | default 0 | int }}
+{{- $gcThresholdCount := 1000}}
+{{- if lt $nodesCount 100 }}
+    {{- $gcThresholdCount = 1000 }}
+{{- else if lt $nodesCount 300 }}
+    {{- $gcThresholdCount = 3000 }}
+{{- else }}
+    {{- $gcThresholdCount = 6000 }}
+{{- end }}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
@@ -157,7 +165,7 @@ controllerManager:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "false"
-    terminated-pod-gc-threshold: "12500"
+    terminated-pod-gc-threshold: {{ $gcThresholdCount | quote }}
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"

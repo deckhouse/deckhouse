@@ -15,7 +15,6 @@
 package cron
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -27,7 +26,7 @@ import (
 )
 
 func newTestManager() *Manager {
-	return NewManager(context.Background(), log.NewNop())
+	return NewManager(log.NewNop())
 }
 
 func TestAddAndRemoveEntry(t *testing.T) {

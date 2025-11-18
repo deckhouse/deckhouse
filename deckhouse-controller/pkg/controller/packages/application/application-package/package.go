@@ -21,16 +21,28 @@ import (
 	"log/slog"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type PackageManager interface {
 	PackageAdder
 	PackageRemover
+	PackageStatusChecker
+}
+
+type PackageStatusChecker interface {
+	GetPackageStatus(ctx context.Context, packageName, namespace, version, packageType string) (PackageStatus, error)
+	SetEventChannel(ch chan<- packagestatusservice.PackageEvent)
+}
+
+type PackageStatus struct {
+	Conditions         []v1alpha1.ApplicationStatusCondition
+	InternalConditions []v1alpha1.ApplicationInternalStatusCondition
 }
 
 type PackageAdder interface {
-	AddApplication(ctx context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus)
+	AddApplication(ctx context.Context, app *v1alpha1.Application, apvStatus *v1alpha1.ApplicationPackageVersionStatus)
 	AddClusterApplication(ctx context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus)
 	AddModule(ctx context.Context, metadata *v1alpha1.ModuleReleaseSpec)
 }
@@ -42,7 +54,8 @@ type PackageRemover interface {
 }
 
 type PackageOperator struct {
-	logger *log.Logger
+	logger       *log.Logger
+	eventChannel chan<- packagestatusservice.PackageEvent
 }
 
 func NewPackageOperator(logger *log.Logger) *PackageOperator {
@@ -51,8 +64,25 @@ func NewPackageOperator(logger *log.Logger) *PackageOperator {
 	}
 }
 
-func (o *PackageOperator) AddApplication(_ context.Context, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
-	o.logger.Debug("adding application", slog.String("name", apvStatus.PackageName), slog.String("version", apvStatus.Version))
+func (o *PackageOperator) SetEventChannel(ch chan<- packagestatusservice.PackageEvent) {
+	o.eventChannel = ch
+}
+
+func (o *PackageOperator) AddApplication(_ context.Context, app *v1alpha1.Application, apvStatus *v1alpha1.ApplicationPackageVersionStatus) {
+	o.logger.Debug("adding application",
+		slog.String("name", app.Name),
+		slog.String("namespace", app.Namespace),
+		slog.String("package", apvStatus.PackageName),
+		slog.String("version", apvStatus.Version))
+
+	// initial event
+	o.SendEvent(packagestatusservice.PackageEvent{
+		PackageName: apvStatus.PackageName,
+		Name:        app.Name,
+		Namespace:   app.Namespace,
+		Version:     apvStatus.Version,
+		Type:        "application",
+	})
 }
 
 func (o *PackageOperator) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
@@ -73,4 +103,25 @@ func (o *PackageOperator) RemoveClusterApplication(_ context.Context, capvStatus
 
 func (o *PackageOperator) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	o.logger.Debug("removing module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
+}
+
+func (o *PackageOperator) GetPackageStatus(_ context.Context, packageName, namespace, version, packageType string) (PackageStatus, error) {
+	o.logger.Debug("getting package status",
+		slog.String("package", packageName),
+		slog.String("namespace", namespace),
+		slog.String("version", version),
+		slog.String("type", packageType))
+
+	return PackageStatus{
+		Conditions:         []v1alpha1.ApplicationStatusCondition{},
+		InternalConditions: []v1alpha1.ApplicationInternalStatusCondition{},
+	}, nil
+}
+
+func (o *PackageOperator) SendEvent(event packagestatusservice.PackageEvent) {
+	select {
+	case o.eventChannel <- event:
+	default:
+		o.logger.Warn("event channel is full, dropping event", slog.Any("event", event))
+	}
 }

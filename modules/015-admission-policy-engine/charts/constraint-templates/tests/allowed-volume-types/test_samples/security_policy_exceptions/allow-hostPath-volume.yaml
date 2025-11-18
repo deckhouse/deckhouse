@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostPath-volume
+spec:
+  volumes:
+    types:
+      allowedValues:
+      - hostPath
+

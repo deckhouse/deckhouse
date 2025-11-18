@@ -58,8 +58,10 @@ type taskWrapper struct {
 	ctx context.Context // Task-specific context
 	wg  *sync.WaitGroup
 
-	id   string // Unique task identifier
-	task Task   // The task to execute
+	id         string    // Unique task identifier
+	task       Task      // The task to execute
+	enqueuedAt time.Time // The time task enqueued
+	onDone     func()    // Callback to track done status
 
 	err error // last task error
 
@@ -85,6 +87,7 @@ func newQueue(name string, logger *log.Logger) *queue {
 type EnqueueOptions struct {
 	wg     *sync.WaitGroup // Optional WaitGroup to track task completion
 	unique bool
+	onDone func()
 }
 
 // EnqueueOption is a functional option for configuring Enqueue.
@@ -104,10 +107,17 @@ func WithUnique() EnqueueOption {
 	}
 }
 
+func WithOnDone(onDone func()) EnqueueOption {
+	return func(o *EnqueueOptions) {
+		o.onDone = onDone
+	}
+}
+
 // Enqueue adds a task to the queue's tail.
 // If a WaitGroup is provided via WithWait, WaitGroup sticks with task, add Done will be called after task success
 func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	opt := new(EnqueueOptions)
+
 	for _, o := range opts {
 		o(opt)
 	}
@@ -116,13 +126,19 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 		opt.wg.Add(1)
 	}
 
+	if opt.onDone == nil {
+		opt.onDone = func() {}
+	}
+
 	wrapper := &taskWrapper{
-		ctx:       ctx,
-		wg:        opt.wg,
-		id:        uuid.New().String(),
-		task:      task,
-		backoff:   backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
-		nextRetry: time.Now(),
+		ctx:        ctx,
+		wg:         opt.wg,
+		id:         uuid.New().String(),
+		task:       task,
+		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
+		nextRetry:  time.Now(),
+		enqueuedAt: time.Now(),
+		onDone:     opt.onDone,
 	}
 
 	q.logger.Debug("enqueue task", slog.String("id", wrapper.id), slog.String("name", wrapper.task.String()))
@@ -273,14 +289,15 @@ func (q *queue) processOne() bool {
 		}
 	}
 
+	if t.wg != nil {
+		t.wg.Done()
+	}
+	t.onDone()
+
 	// Task succeeded, remove from queue
 	q.mu.Lock()
 	q.deque.PopFront()
 	q.mu.Unlock()
-
-	if t.wg != nil {
-		t.wg.Done()
-	}
 
 	return true // Task was processed successfully
 }

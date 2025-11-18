@@ -24,7 +24,6 @@ search: monitoring architecture, prometheus architecture, monitoring components,
 | **upmeter**                 | Модуль для оценки доступности компонентов DKP.                                                                                                                                                                                                                                                  |
 | **trickster**               | Кэширующий прокси, снижающий нагрузку на Prometheus. В ближайшем времени будет deprecated.                                                                                                                                                                                                       |
 
-
 ### Внешние компоненты
 
 DKP может интегрироваться с большим количеством разнообразных решений следующими способами:
@@ -33,7 +32,6 @@ DKP может интегрироваться с большим количест
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanager'ы могут быть подключены к Prometheus и Grafana и находиться как в кластере DKP, так и за его пределами.|
 | **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из DKP в большое количество хранилищ, включающее [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
-
 
 ## Prometheus
 
@@ -68,7 +66,6 @@ Prometheus устанавливается модулем `prometheus-operator` D
   * config — примонтированный secret (два файла: `prometheus.yaml` и `configmaps.json`). Подключен в оба контейнера;
   * rules — `emptyDir`, который наполняет `prometheus-config-reloader`, а читает `prometheus`. Подключен в оба контейнера, но в `prometheus` в режиме read only;
   * data — данные Prometheus. Подмонтирован только в `prometheus`.
-
 
 ### Как настраивается Prometheus?
 
@@ -112,7 +109,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
         names:                            # искать endpoint'ы только в этих namespace'ах
         - foo
         - baz
-    # Настройки "фильтрации" (какие enpoint'ы брать, а какие нет) и "релейблинга" (какие лейблы добавить или удалить, на все получаемые метрики)
+    # Настройки "фильтрации" (какие эндпоинты брать, а какие нет) и "релейблинга" (какие лейблы добавить или удалить, на все получаемые метрики)
     relabel_configs:
     # Фильтр по значению label'а prometheus_custom_target (полученного из связанного с endpoint'ом service'а)
     - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
@@ -157,7 +154,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
   * добавление и удаление сервисов (точнее endpoint'ов) в указанных пространствах имён;
 * Изменение конфига требуется в следующих случаях:
   * нужно добавить новый scrape config (обычно — новый вид сервисов, которые надо мониторить);
-  * нужно изменить список пространст имён.
+  * нужно изменить список пространств имён.
 
 ### Как обрабатываются Service Monitor'ы?
 
@@ -197,4 +194,3 @@ Prometheus устанавливается модулем `prometheus-operator` D
 - **smoke-mini** — поддерживает постоянное *smoke-тестирование* с помощью StatefulSet.
 
 Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Kubernetes Platform.
-

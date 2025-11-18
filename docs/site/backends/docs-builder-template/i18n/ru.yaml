@@ -8,6 +8,7 @@ modules2: модулей
 module: модуль
 module_versions: Версии модуля
 module_version: Версия модуля
+module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 channel_or_version: "Канал/версия"
 channel_or_version_of_module: "Канал/версия модуля"
 deckhouse: deckhouse

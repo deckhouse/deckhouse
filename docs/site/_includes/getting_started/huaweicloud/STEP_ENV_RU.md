@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Для взаимодействия с ресурсами в облаке Huawei Cloud компоненты Deckhouse используют API Huawei Cloud. Для настройки этого подключения требуется создать пользователя в сервисе Huawei Cloud IAM и назначить ему соответствующие права доступа.
+Для взаимодействия с ресурсами в облаке Huawei Cloud компоненты Deckhouse Kubernetes Platform используют API Huawei Cloud. Для настройки этого подключения требуется создать пользователя в сервисе Huawei Cloud IAM и назначить ему соответствующие права доступа.
 
 ## Настройка IAM через веб-интерфейс
 

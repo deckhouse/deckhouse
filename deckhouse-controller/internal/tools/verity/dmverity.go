@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -58,19 +57,19 @@ const (
 // CreateMapper creates device mapper for the erofs image.
 // It creates two loop devices and attach image and hash file for them.
 // Equivalent shell command:
-// veritysetup open <imagePath> <module> <hashPath> <hash>
-func CreateMapper(ctx context.Context, imagePath, hash string) error {
+// veritysetup open <imagePath> <name> <hashPath> <hash>
+func CreateMapper(ctx context.Context, name, imagePath, hash string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateMapper")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("imagePath", imagePath))
 
-	return waitUntilMapperCreated(ctx, imagePath, hash)
+	return waitUntilMapperCreated(ctx, name, imagePath, hash)
 }
 
-// waitUntilMapperCreated waits until /dev/mapper/<module> appears.
+// waitUntilMapperCreated waits until /dev/mapper/<name> appears.
 // veritysetup open can return loop attaching error, it happens due to kernel race, so retry until ready
-func waitUntilMapperCreated(ctx context.Context, imagePath, hash string) error {
+func waitUntilMapperCreated(ctx context.Context, name, imagePath, hash string) error {
 	// magic numbers
 	interval := 200 * time.Millisecond
 	timeout := 3 * time.Second
@@ -78,17 +77,16 @@ func waitUntilMapperCreated(ctx context.Context, imagePath, hash string) error {
 
 	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		hashPath := fmt.Sprintf("%s.verity", imagePath)
-		module := filepath.Base(filepath.Dir(imagePath))
 
 		args := []string{
 			openArg,
 			imagePath,
-			module,
+			name,
 			hashPath,
 			hash,
 		}
 
-		// veritysetup open <imagePath> <module> <hashPath> <hash>
+		// veritysetup open <imagePath> <name> <hashPath> <hash>
 		cmd := exec.CommandContext(ctx, verityCommand, args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			lastErr = fmt.Errorf("veritysetup open: %w (last output: %s)", err, string(out))

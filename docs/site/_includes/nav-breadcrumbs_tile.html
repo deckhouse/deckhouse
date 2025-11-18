@@ -1,6 +1,6 @@
 <div class="breadcrumbs-container breadcrumbs-container__tile">
     <div class="breadcrumbs__left">
-        {% if page.search_bage_enabled %}
+        {% if page.searchBageEnabled %}
             <!--start search-->
             <div class="search">
                 <form action='{{ "search.html" | prepend: '/documentation/' | prepend: page.product_code | true_relative_url }}' method="get">

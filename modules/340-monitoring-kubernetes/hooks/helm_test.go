@@ -303,7 +303,7 @@ clusterType: Static
 podSubnetCIDR: 10.122.0.0/16
 podSubnetNodeCIDRPrefix: "26"
 serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 `
 		stateConcreteVersion = `
 apiVersion: v1
@@ -345,7 +345,7 @@ data:
 			})
 		})
 
-		Context("check for kubernetesVersion: \"1.29\"", func() {
+		Context("check for kubernetesVersion: \"1.30\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
 				var sec corev1.Secret

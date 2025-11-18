@@ -28,23 +28,46 @@ spec:
             https://kubernetes.io/docs/concepts/security/pod-security-standards/
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            c := input_containers[_]
-            c.securityContext.privileged
-            msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                c := input_containers[_]
+                not allowed_by_any(c)
+                msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.containers[_]
-        }
+              allowed_by_any(c) if {
+                allowed_by_securitypolicyexception(c)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.initContainers[_]
-        }
+              allowed_by_any(c) if {
+                allowed_by_securitypolicy(c)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.ephemeralContainers[_]
-        }
+              allowed_by_securitypolicyexception(c) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                exception.spec.securityContext.privileged.allowedValue == c.securityContext.privileged
+              }
+
+              allowed_by_securitypolicy(c) if {
+                not c.securityContext.privileged
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }

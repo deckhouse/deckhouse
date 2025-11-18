@@ -6,7 +6,6 @@ layout: sidebar
         <h1 class="docs__title">{{ page.title }}</h1>
     </div>
 
-    {%- include related_links.liquid %}
     <div class="post-content">
 
     {%- if page.summary %}
@@ -45,6 +44,8 @@ layout: sidebar
         {%- endif %}
 
     </div>
+
+    {%- include related_links.liquid %}
 
     {%- if page.showPrevNextButton %}
       {%- include navigation.html -%}

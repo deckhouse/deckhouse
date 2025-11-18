@@ -57,13 +57,13 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(ctx context.Context, namespace string, cache runtimecache.Cache, cb monitor.AbsentCallback, logger *log.Logger) *Service {
+func NewService(namespace string, cache runtimecache.Cache, absentCallback monitor.AbsentCallback, logger *log.Logger) *Service {
 	nelmClient := nelm.New(namespace, logger)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(ctx, cache, nelmClient, cb, logger),
+		monitorManager: monitor.New(cache, nelmClient, absentCallback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }

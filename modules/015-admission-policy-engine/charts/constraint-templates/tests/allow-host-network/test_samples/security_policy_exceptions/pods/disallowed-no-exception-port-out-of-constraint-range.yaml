@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-no-exception-port-out-of-constraint-range
+  namespace: testns
+spec:
+  hostNetwork: true
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 9000
+          hostPort: 5000
+          protocol: TCP
+

@@ -214,9 +214,9 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
 		if !nsDeletionTimestampExists {
 			err := k8sClient.CoreV1().Namespaces().Delete(context.TODO(), ns.GetName(), metav1.DeleteOptions{})
-			if err != nil {
+			if err != nil && !k8serrors.IsNotFound(err) {
 				input.Logger.Warnf("Failed to delete namespace %s: %v", ns.GetName(), err)
-			} else {
+			} else if err == nil {
 				input.Logger.Infof("Namespace %s deleted", ns.GetName())
 			}
 		}

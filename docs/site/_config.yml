@@ -92,12 +92,16 @@ defaults:
       multilang: true
       comparable: true
       product_code: kubernetes-platform
-      search_bage_enabled: true
+      searchBageEnabled: true
       lang: en
       showPrevNextButton: true
       feedback: true
-      # Maximum number of related links to display
-      related_links_max: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has NO defined relative_links
+      extractedLinksOnlyMax: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has defined relative_links
+      extractedLinksMax: 2
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -107,7 +111,7 @@ defaults:
       sitemap_include: false
       layout: none
       # Maximum number of related links to display
-      related_links_max: 0
+      relatedLinksMax: 0
   - scope:
       path: "pages/guides"
       type: "pages"
@@ -115,7 +119,7 @@ defaults:
       toc_in_sidebar: true
       toc: false
       layout: guide
-      search_bage_enabled: false
+      searchBageEnabled: false
   - scope:
       path: "pages/code"
     values:
@@ -123,7 +127,7 @@ defaults:
       toc: false
       product_code: code
       documentation_state: develop
-      search_bage_enabled: true
+      searchBageEnabled: true
       sidebar: code
       sitemap_include: false
   - scope:
@@ -133,7 +137,7 @@ defaults:
       toc: false
       product_code: virtualization-platform
       documentation_state: develop
-      search_bage_enabled: true
+      searchBageEnabled: true
       sidebar: virtualization-platform
       sitemap_include: false
   - scope:
@@ -151,7 +155,7 @@ defaults:
       toc: false
       product_code: stronghold
       documentation_state: develop
-      search_bage_enabled: true
+      searchBageEnabled: true
       sidebar: stronghold
       sitemap_include: false
 timezone: Europe/Moscow

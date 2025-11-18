@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-net-admin
+spec:
+  securityContext:
+    capabilities:
+      allowedValues:
+        add:
+        - NET_ADMIN
+

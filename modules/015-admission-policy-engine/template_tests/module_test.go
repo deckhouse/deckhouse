@@ -51,7 +51,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.29.14"
+  kubernetesVersion: "1.30.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -295,7 +295,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			})
 
 			It("Creates ValidatingWebhookConfiguration after bootstrap", func() {
-				checkVWC(f, 1, trackedResourcesRules)
+				checkVWC(f, 2, trackedResourcesRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 1, trackedResourcesRules)' after full migration to securityPolicyExtensions in all modules
 			})
 		})
 
@@ -323,7 +323,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			})
 
 			It("Creates ValidatingWebhookConfiguration after bootstrap with trivy provider config", func() {
-				checkVWC(f, 2, trivyProviderRules, trackedResourcesRules)
+				checkVWC(f, 3, trivyProviderRules, trackedResourcesRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 2, trivyProviderRules, trackedResourcesRules)' after full migration to securityPolicyExtensions in all modules
 			})
 		})
 	})

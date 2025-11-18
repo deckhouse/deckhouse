@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-privileged-false
+spec:
+  securityContext:
+    privileged:
+      allowedValue: false
+

@@ -15,6 +15,8 @@
 package queue
 
 import (
+	"time"
+
 	"sigs.k8s.io/yaml"
 )
 
@@ -23,15 +25,15 @@ type dump struct {
 }
 
 type dumpQueue struct {
-	Name   string     `json:"name" yaml:"name"`
-	Number int        `json:"number" yaml:"number"`
+	Length int        `json:"length" yaml:"length"`
 	Tasks  []dumpTask `json:"tasks,omitempty" yaml:"tasks,omitempty"`
 }
 
 type dumpTask struct {
-	Index int     `json:"index" yaml:"index"`
-	Name  string  `json:"name" yaml:"name"`
-	Error *string `json:"error,omitempty" yaml:"error,omitempty"`
+	Index    int     `json:"index" yaml:"index"`
+	Name     string  `json:"name" yaml:"name"`
+	Enqueued string  `json:"enqueued" yaml:"enqueued"`
+	Error    *string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // Dump creates dump of all queues
@@ -59,8 +61,7 @@ func (q *queue) dump() dumpQueue {
 	tasks := q.getTasksDump()
 
 	return dumpQueue{
-		Name:   q.name,
-		Number: len(tasks),
+		Length: len(tasks),
 		Tasks:  tasks,
 	}
 }
@@ -77,9 +78,10 @@ func (q *queue) getTasksDump() []dumpTask {
 		}
 
 		tasks = append(tasks, dumpTask{
-			Index: index,
-			Name:  wrapper.task.String(),
-			Error: errStr,
+			Index:    index,
+			Name:     wrapper.task.String(),
+			Enqueued: time.Since(wrapper.enqueuedAt).String(),
+			Error:    errStr,
 		})
 
 		index++

@@ -30,7 +30,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -72,7 +71,7 @@ func (i *Installer) Uninstall(ctx context.Context, app string) error {
 
 	logger := i.logger.With(slog.String("name", app))
 
-	logger.Debug("uninstall application")
+	logger.Debug("uninstall app")
 
 	// /deckhouse/downloaded/app/<app>
 	mountPath := filepath.Join(i.mount, app)
@@ -106,21 +105,81 @@ func (i *Installer) Uninstall(ctx context.Context, app string) error {
 	return nil
 }
 
-// Ensure ensures the package image is present, verified, and mounted.
-func (i *Installer) Ensure(ctx context.Context, repo *v1alpha1.PackageRepository, app, packageName, version string) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Ensure")
+// Download ensures the package image is present, verified, and mounted.
+func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("app", app))
+	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("registry", reg.Name))
+	span.SetAttributes(attribute.String("repository", reg.Repository))
+
+	logger := i.logger.With(
+		slog.String("name", name),
+		slog.String("version", version),
+		slog.String("registry", reg.Name),
+		slog.String("repository", reg.Repository))
+
+	logger.Debug("download package")
+
+	// /deckhouse/downloaded/<package>
+	packagePath := filepath.Join(i.downloaded, name)
+	if err := os.MkdirAll(packagePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create package dir '%s': %w", packagePath, err)
+	}
+
+	// <version>.erofs
+	image := fmt.Sprintf("%s.erofs", version)
+	// /deckhouse/downloaded/<package>/<version>.erofs
+	imagePath := filepath.Join(packagePath, image)
+
+	rootHash, err := i.registry.GetImageRootHash(ctx, reg, name, version)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("get image root hash: %w", err)
+	}
+
+	logger.Debug("verify package")
+	if err = i.verifyPackage(ctx, name, version, rootHash); err == nil {
+		logger.Debug("package verified")
+
+		return nil
+	}
+
+	logger.Warn("verify package failed", log.Err(err))
+
+	img, err := i.registry.GetImageReader(ctx, reg, name, version)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("download package image: %w", err)
+	}
+	defer img.Close()
+
+	logger.Debug("create erofs image from package image", slog.String("path", imagePath))
+	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("extract package image to erofs: %w", err)
+	}
+
+	return nil
+}
+
+// Install creates device mapper for application and mounts it
+func (i *Installer) Install(ctx context.Context, name, packageName, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("version", version))
-	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	logger := i.logger.With(slog.String("name", app), slog.String("version", version))
+	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
 	logger.Debug("install application")
 
 	// /deckhouse/downloaded/apps/<app>
-	mountPoint := filepath.Join(i.mount, app)
+	mountPoint := filepath.Join(i.mount, name)
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
 	if err := verity.Unmount(ctx, mountPoint); err != nil {
@@ -129,110 +188,56 @@ func (i *Installer) Ensure(ctx context.Context, repo *v1alpha1.PackageRepository
 	}
 
 	logger.Debug("close old device mapper")
-	if err := verity.CloseMapper(ctx, app); err != nil {
+	if err := verity.CloseMapper(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("close app mapper: %w", err)
 	}
 
-	// /deckhouse/downloaded/<app>
-	appPath := filepath.Join(i.downloaded, app)
-	if err := os.MkdirAll(appPath, 0755); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create app dir '%s': %w", app, err)
-	}
-
+	// /deckhouse/downloaded/<package>
+	packagePath := filepath.Join(i.downloaded, packageName)
 	// <version>.erofs
 	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<app>/<version>.erofs
-	imagePath := filepath.Join(appPath, image)
-
-	rootHash, err := i.registry.GetImageRootHash(ctx, registry.CredentialByRepository(repo), packageName, version)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("get image root hash: %w", err)
-	}
-
-	logger.Debug("verify app")
-	if err = i.verifyApplication(ctx, app, version, rootHash); err == nil {
-		logger.Debug("app verified")
-
-		// TODO(ipaqsa): temp solution before all packages have hash
-		logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-		if rootHash, err = verity.CreateImageHash(ctx, imagePath); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("create image hash: %w", err)
-		}
-
-		logger.Debug("create device mapper", slog.String("path", imagePath))
-		if err = verity.CreateMapper(ctx, imagePath, rootHash); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("create device mapper: %w", err)
-		}
-
-		logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
-		if err = verity.Mount(ctx, app, mountPoint); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("mount erofs image: %w", err)
-		}
-
-		return nil
-	}
-
-	logger.Warn("verify app failed", log.Err(err))
-
-	img, err := i.registry.GetImageReader(ctx, registry.CredentialByRepository(repo), packageName, version)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download app image: %w", err)
-	}
-	defer img.Close()
-
-	logger.Debug("create erofs image from app image", slog.String("path", imagePath))
-	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("extract app image to erofs: %w", err)
-	}
+	// /deckhouse/downloaded/<package>/<version>.erofs
+	imagePath := filepath.Join(packagePath, image)
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-	hash, err := verity.CreateImageHash(ctx, imagePath)
+	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create image hash: %w", err)
 	}
 
-	logger.Debug("create device mapper")
-	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
+	logger.Debug("create device mapper", slog.String("path", imagePath))
+	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
-	logger.Debug("mount erofs image mapper")
-	if err = verity.Mount(ctx, app, mountPoint); err != nil {
+	logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
+	if err = verity.Mount(ctx, name, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
 
-	logger.Debug("app ensured")
-
 	return nil
 }
 
-// verifyApplication checks that the image and hash exist and verified
-func (i *Installer) verifyApplication(_ context.Context, app, version, _ string) error {
-	// /deckhouse/downloaded/<app>
-	appPath := filepath.Join(i.downloaded, app)
+// verifyPackage checks that the image and hash exist and verified
+func (i *Installer) verifyPackage(_ context.Context, pack, version, _ string) error {
+	// /deckhouse/downloaded/<package>
+	packagePath := filepath.Join(i.downloaded, pack)
 	// <version>.erofs
 	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<app>/<version>.erofs
-	imagePath := filepath.Join(appPath, image)
+	// /deckhouse/downloaded/<package>/<version>.erofs
+	imagePath := filepath.Join(packagePath, image)
 
-	// /deckhouse/downloaded/<app>/<version>.erofs
+	// /deckhouse/downloaded/<package>/<version>.erofs
 	if _, err := os.Stat(imagePath); err != nil {
-		return fmt.Errorf("stat app image '%s': %w", imagePath, err)
+		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
 
 	// TODO(ipaqsa): wait for all apps have root hash
-	// /deckhouse/downloaded/<app>/<version>.erofs.verity
+	// /deckhouse/downloaded/<package>/<version>.erofs.verity
 	// hashPath := fmt.Sprintf("%s.verity", imagePath)
 	// if _, err := os.Stat(hashPath); err != nil {
 	// 	return fmt.Errorf("stat verity hash file '%s': %w", hashPath, err)
