@@ -31,10 +31,10 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/eventhandler"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/disable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
@@ -71,6 +71,8 @@ type Operator struct {
 	mu       sync.Mutex
 	packages map[string]*Package
 
+	ch chan Event
+
 	logger *log.Logger
 }
 
@@ -104,6 +106,7 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 	o.scheduleManager = cron.NewManager(o.logger)
 	o.queueService = queue.NewService(o.logger)
 	o.installer = installer.New(dc, o.logger)
+	o.ch = make(chan Event, 10000)
 
 	// Initialize scheduler with enabling/disabling callbacks
 	o.buildScheduler(moduleManager)
@@ -408,6 +411,9 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 
 				if _, ok := o.packages[name]; ok {
 					o.packages[name].status.Phase = Running
+					o.setConditionTrue(o.packages[name], "Operated")
+					o.setConditionTrue(o.packages[name], "Ready")
+					o.setConditionTrue(o.packages[name], "Installed")
 				}
 			}), queue.WithUnique())
 		}

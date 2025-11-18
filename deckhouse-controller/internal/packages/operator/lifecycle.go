@@ -73,7 +73,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 	name := apps.BuildName(inst.Namespace, inst.Name)
 
-	if _, ok := o.packages[name]; !ok {
+	if _, ok := o.packages[name]; !ok || o.manager.VersionChanged(name, inst.Definition.Version) {
 		o.packages[name] = &Package{
 			name: name,
 			status: Status{
@@ -99,7 +99,10 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.manager, o.logger),
 			queue.WithOnDone(func() {
 				o.mu.Lock()
-				o.packages[name].status.Phase = Loaded
+				if _, ok := o.packages[name]; ok {
+					o.packages[name].status.Phase = Loaded
+					o.setConditionTrue(o.packages[name], "ConfigurationApplied")
+				}
 				o.mu.Unlock()
 
 				o.scheduler.Add(o.manager.GetApplication(name))
