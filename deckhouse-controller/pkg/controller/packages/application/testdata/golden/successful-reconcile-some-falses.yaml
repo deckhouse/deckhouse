@@ -11,13 +11,19 @@ metadata:
 spec:
   applicationPackageName: test
   repository: deckhouse
-  version: v1.0.1
+  version: v1.0.2
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: Processed
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: A newer version v1.0.2 is available.
+    reason: NewerVersionAvailable
+    status: "False"
+    type: UpdateAvailable
   internalConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
@@ -31,12 +37,12 @@ metadata:
   labels:
     package: test
     repository: deckhouse
-  name: deckhouse-test-v1.0.1
+  name: deckhouse-test-v1.0.2
   resourceVersion: "1"
 spec:
   packageName: test
   repository: deckhouse
-  version: v1.0.1
+  version: v1.0.2
 status:
   conditions:
   - lastProbeTime: null
@@ -53,7 +59,7 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
-  version: v1.0.1
+  version: v1.0.2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
