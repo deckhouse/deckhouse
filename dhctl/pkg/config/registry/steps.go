@@ -54,7 +54,10 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 				return fmt.Errorf("registry is not initialized")
 			}
 
-			return initSecretRemove(ctx, kubeClient)
+			if err := initSecretRemove(ctx, kubeClient); err != nil {
+				return fmt.Errorf("failed to remove registry init secret: %w", err)
+			}
+			return nil
 		})
 }
 
