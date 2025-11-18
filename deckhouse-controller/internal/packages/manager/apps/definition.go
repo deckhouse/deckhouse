@@ -32,7 +32,12 @@ type Definition struct {
 type Requirements struct {
 	Kubernetes *semver.Constraints
 	Deckhouse  *semver.Constraints
-	Modules    map[string]*semver.Constraints
+	Modules    map[string]Dependency
+}
+
+type Dependency struct {
+	Constraints *semver.Constraints
+	Optional    bool
 }
 
 // DisableOptions configures application disablement behavior.

@@ -122,7 +122,7 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 		opt(defaultOpts)
 	}
 
-	if len(defaultOpts.Annotations) > 0 {
+	if len(defaultOpts.Annotations) == 0 {
 		defaultOpts.Annotations = make(map[string]string)
 	}
 

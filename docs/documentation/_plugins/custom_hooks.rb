@@ -18,6 +18,12 @@ end
 
 # Inserts the module-editions.liquid block into the module pages content.
 # The block is inserted at the beginning of the page's content if the page content is not empty.
+def insert_crd_warning_block(page)
+    additional_content = "\n{% include module-crd-warning.liquid %}\n\n"
+
+    page.content.prepend(additional_content) if page.content
+end
+
 def insert_module_edition_block(page)
     additional_content = "\n{% include module-editions.liquid %}\n\n"
 
@@ -168,6 +174,10 @@ Jekyll::Hooks.register :site, :pre_render do |site|
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
         insert_module_edition_block(page)
       end
+    end
+
+    if page.data['module-kebab-name'] and page.name.match?(/CR(\.ru|_RU)?\.md$/)
+      insert_crd_warning_block(page)
     end
 
     next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )

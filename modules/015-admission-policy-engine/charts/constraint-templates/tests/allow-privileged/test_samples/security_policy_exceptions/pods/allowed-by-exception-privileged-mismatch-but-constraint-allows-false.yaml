@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-privileged-mismatch-but-constraint-allows-false
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-privileged-true
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+

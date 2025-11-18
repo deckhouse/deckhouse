@@ -58,7 +58,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.29.14")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.30.14")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")

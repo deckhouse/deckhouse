@@ -201,7 +201,10 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to validate module dependencies: %s", err.Error()))
 		return validateErr
 	}
-	enabledModules := e.modulesStateHelper()
+	enabledModules := []string{}
+	if e.modulesStateHelper != nil {
+		enabledModules = e.modulesStateHelper()
+	}
 
 	// check if the new requirements are satisfied
 	for _, parentModule := range req.matcher.GetConstraintsNames() {
@@ -244,6 +247,9 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 	// check if the new module's version breaks current constraints
 	for dependent, r := range e.modules {
+		if r == nil || r.matcher == nil {
+			continue
+		}
 		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if '%s' module release is installed: %s", dependent, moduleRelease, err.Error()))
 		}

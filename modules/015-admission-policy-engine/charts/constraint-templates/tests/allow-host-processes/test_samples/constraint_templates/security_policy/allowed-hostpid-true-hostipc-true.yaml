@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-hostpid-true-hostipc-true
+  namespace: testns
+spec:
+  hostPID: true
+  hostIPC: true
+  containers:
+    - name: nginx
+      image: nginx
+

@@ -82,15 +82,19 @@ properties:
               - ee
               - cse-pro
             default: []
-            x-examples: [[{"address": "172.16.0.5", "port": 15443}]]
+            x-examples: [[{"address": "172.16.0.5", "port": 15443}],[{"address": "somehost.example.com", "port": 15443}]]
             items:
               type: object
               required: ["address", "port"]
               properties:
                 address:
-                  type: string
-                  example: "172.16.0.5"
-                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                  anyOf:
+                  - type: string
+                    example: "somehost.example.com"
+                    pattern: '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$'
+                  - type: string
+                    example: "172.16.0.5"
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
                 port:
                   type: integer
                   minimum: 1024

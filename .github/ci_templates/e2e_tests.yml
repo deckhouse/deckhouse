@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.30
+1.32
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
   LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
@@ -99,6 +99,7 @@
   LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- else if eq $provider "vcd" }!}
+  TEMPLATE_ID: "a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
   LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
   LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -301,6 +302,8 @@ run: |
   export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
   export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
   export LAYOUT_STATIC_BASTION_IP=80.249.129.56
+  export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if eq $provider "static" }!}
   export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
@@ -433,7 +436,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
@@ -843,7 +846,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}

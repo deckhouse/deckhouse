@@ -37,25 +37,59 @@ spec:
               description: "Allowed access to host IPC namespacse."
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-          fields := ["hostPID", "hostIPC"]
-          field := fields[_]
-          msg := check_violations(input, field)
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                fields := ["hostPID", "hostIPC"]
+                field := fields[_]
+                msg := check_violations(input.review.object, field)
+              }
 
-        check_violations(i, field) = msg {
-          i.review.object.spec[field]
-          not allowed(i.parameters, field)
-          msg := sprintf("Sharing the %v namespace is not allowed: %v", [field, i.review.object.metadata.name])
-        }
+              check_violations(obj, field) := msg if {
+                not allowed_by_any(obj, field)
+                msg := sprintf("Sharing the %v namespace is not allowed: %v", [field, input.review.object.metadata.name])
+              }
 
-        allowed(params,"hostIPC") {
-          params.allowHostIPC == true
-        }
+              allowed_by_any(obj, field) if {
+                allowed_by_securitypolicyexeption(obj, field)
+              }
 
-        allowed(params,"hostPID") {
-          params.allowHostPID == true
-        }
+              allowed_by_any(obj, field) if {
+                allowed_by_securitypolicy(obj, field)
+              }
+
+              allowed_by_securitypolicyexeption(obj, field) if {
+                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := obj.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                obj.spec[field] == exception.spec.network[field].allowedValue
+              }
+
+              allowed_by_securitypolicyexeption(obj, field) if {
+                not obj.spec[field]
+              }
+
+              allowed_by_securitypolicy(obj, "hostIPC") if {
+                not obj.spec.hostIPC
+                input.parameters.allowHostIPC
+              }
+
+              allowed_by_securitypolicy(obj, "hostIPC") if {
+                obj.spec.hostIPC
+                input.parameters.allowHostIPC
+              }
+
+              allowed_by_securitypolicy(obj, "hostPID") if {
+                not obj.spec.hostPID
+                input.parameters.allowHostPID
+              }
+
+              allowed_by_securitypolicy(obj, "hostPID") if {
+                obj.spec.hostPID
+                input.parameters.allowHostPID
+              }
