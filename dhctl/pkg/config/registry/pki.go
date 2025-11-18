@@ -68,7 +68,7 @@ func (manager *ClusterPKIManager) Get() (PKI, error) {
 	defer manager.mu.Unlock()
 
 	if manager.pki == nil {
-		pki, err := initSecretFetch(context.TODO(), manager.kubeClient)
+		pki, err := fetchInitSecret(context.TODO(), manager.kubeClient)
 		if err != nil {
 			return PKI{}, fmt.Errorf("failed to fetch registry PKI from cluster: %w", err)
 		}
