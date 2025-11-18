@@ -24,13 +24,13 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailability mode.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability`.
 
-2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`) so that only one control‑plane node remains active.  
+2. Temporarily detach all except one control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`) so that only one control‑plane node remains active.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-3. On the two detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.
+3. On the detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-4. (Optional) On the detached nodes, you may additionally remove **all** containers so that no workloads from the "old" etcd state continue to run unnoticed by the restored control plane.
+4. (Optional) On the detached nodes, you may additionally remove **all** containers so that only containers which were backuped will be in cluster.
 
 5. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, 1 control plane Pod and 1 deckhouse Pod are `Ready`).
 
@@ -183,18 +183,12 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ### etcd quorum loss
 
-**Prefer this first:** Use the control-plane recovery flow described in Deckhouse [Managing control plane: FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html).
-
-Typical approach: remove `etcd.yaml` manifests from failed nodes, add `--force-new-cluster` to etcd manifest on the surviving node, start etcd, then remove the flag after successful start, effectively bootstrapping a new cluster from the last healthy member.
-
-**If that doesn’t help:** follow the detailed bootstrap variant in this section.
-
 Perform the following steps to restore the quorum in the etcd cluster:
 1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
 1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
-1. Remove control-plane role label from nodes objects expect selected (recover in current time) (Sometimes this point can be skipped)
+1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
    kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
@@ -276,12 +270,6 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ## "Failed to find database snapshot file (snap: snapshot file doesn't exist)"
 
-**Prefer this first:** As noted in Deckhouse [Managing control plane: FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html) and upstream etcd docs, this error is often caused by `quota-backend-bytes` exhaustion.
-
-Start with: increasing `quota-backend-bytes` in `/etc/kubernetes/manifests/etcd.yaml`, disarming `NOSPACE` (`etcdctl alarm disarm`), and tuning `maxDbSize` in the control-plane-manager configuration.
-
-**If that doesn’t help:** use the methods below: removing broken `.snap` files or restoring from a snapshot.
-
 This error may occur after restarting etcd if etcd has reached the `quota-backend-bytes` limit.
 
 Below is an example of the corresponding etcd logs:
@@ -313,10 +301,6 @@ main.main()
 This [issue](https://github.com/etcd-io/etcd/issues/11949) suggests that such an error can also occur after etcd has been terminated incorrectly.
 
 ### Solving the problem - First method
-
-**Prefer this first:** This method aligns with the guidance from [Managing control plane: FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html) and etcd maintenance docs: increase `quota-backend-bytes` if needed, clear `NOSPACE` alarms, and run defragmentation.
-
-**If that doesn’t help:** continue with the extended scenario below (remove stale `.snap`, adjust quota, restart etcd, verify status).
 
 First method works on the single and multi-master environments both.
 
@@ -362,6 +346,7 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
    ```
 
 1. Defragment etcd (if necessary):
+   see: `https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-etcd`
 
    ```shell
    kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
@@ -436,6 +421,7 @@ Do the following:
    ```
 
 1. Defragment etcd (if necessary).
+   see `https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-an-etcd-node-in-a-single-master-cluster`
 
    ```shell
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
@@ -451,6 +437,7 @@ Do the following:
 **If that doesn’t help:** use your scenario below: clear the node, relabel it as control-plane, and wait for pods to become Ready and etcd membership to converge.
 
 1. Defragment etcd on another (two) nodes (if necessary).
+   see `https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-etcd-in-a-cluster-with-multiple-master-nodes`
 
    ```shell
    kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
@@ -497,10 +484,6 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 ```
 
 ##### If this error affect > 1 nodes
-
-**Prefer this first:** Deckhouse recommends converging to a single healthy master and restoring etcd there, as described in [Restoring a multi-master cluster](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-multi-master-cluster), then rebuilding HA.
-
-**If that doesn’t help:** use your advanced scenario below: restore on one chosen node, start with `--force-new-cluster`, adjust quota if needed, then rejoin remaining control-plane nodes and validate membership.
 
 1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
