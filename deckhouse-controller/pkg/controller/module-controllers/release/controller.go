@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,6 +58,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -76,6 +79,10 @@ const (
 	restartCheckDuration = 15 * time.Second
 
 	outdatedReleasesKeepCount = 3
+)
+
+var (
+	ErrConversionsDirectoryPathEmpty = errors.New("conversions directory path is empty")
 )
 
 func RegisterController(
@@ -1326,6 +1333,36 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 
+	// load conversions
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	var conversions []v1alpha1.ModuleSettingsConversion
+	if _, err = os.Stat(conversionsDir); err == nil {
+		logger.Debug("conversions for the module found", slog.String("name", def.Name))
+		if err = conversion.Store().Add(def.Name, conversionsDir); err != nil {
+			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
+
+		// load conversions for settings
+		conversions, err = r.loadConversions(conversionsDir)
+		if err != nil {
+			if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
+				return fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
+			}
+			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+
+	rawConfig, _, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	if err != nil {
+		return fmt.Errorf("read openapi files: %w", err)
+	}
+
+	if err = r.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
+		return fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	}
+
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
@@ -1380,6 +1417,92 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	}
 
 	return nil
+}
+
+// loadConversions loads all conversion rules from the module's conversions directory
+func (r *reconciler) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettingsConversion, error) {
+	if conversionsDir == "" {
+		return nil, ErrConversionsDirectoryPathEmpty
+	}
+
+	// Read all files from conversions directory
+	files, err := os.ReadDir(conversionsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read conversions directory: %w", err)
+	}
+
+	// Regex to match version files like v1.yaml, v2.yaml, etc.
+	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
+
+	var allConversions []v1alpha1.ModuleSettingsConversion
+
+	// Process each version file
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		matches := versionFileRe.FindStringSubmatch(file.Name())
+		if matches == nil {
+			continue // Skip non-version files
+		}
+
+		// Read and parse the conversion file
+		filePath := filepath.Join(conversionsDir, file.Name())
+		conversion, err := r.readConversionFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
+		}
+
+		if conversion != nil {
+			allConversions = append(allConversions, *conversion)
+		}
+	}
+
+	return allConversions, nil
+}
+
+// readConversionFile reads a single conversion file and extracts conversions and description
+func (r *reconciler) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse YAML directly into a temporary struct
+	var fileContent struct {
+		Conversions []string                                       `yaml:"conversions"`
+		Description *v1alpha1.ModuleSettingsConversionDescriptions `yaml:"description"`
+	}
+
+	if err := yaml.Unmarshal(data, &fileContent); err != nil { //nolint:musttag
+		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
+	}
+
+	return &v1alpha1.ModuleSettingsConversion{
+		Expr:         fileContent.Conversions,
+		Descriptions: fileContent.Description,
+	}, nil
+}
+
+func (r *reconciler) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("get the '%s' module settings: %w", module, err)
+	}
+
+	if err := settings.SetVersion(rawConfig, conversions); err != nil {
+		return fmt.Errorf("set the module settings: %w", err)
+	}
+
+	// settings not found
+	if settings.UID == "" {
+		settings.Name = module
+		settings.Labels = map[string]string{"heritage": "deckhouse"}
+		return r.client.Create(ctx, settings)
+	}
+
+	return r.client.Update(ctx, settings)
 }
 
 var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
