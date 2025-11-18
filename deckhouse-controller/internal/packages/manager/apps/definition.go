@@ -24,19 +24,19 @@ type Definition struct {
 	Version string `json:"version" yaml:"version"`
 	Stage   string `json:"stage" yaml:"stage"`
 
-	Requirements   Requirements   `json:"requirements"`
-	DisableOptions DisableOptions `json:"disableOptions"`
+	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
+	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the application.
 type Requirements struct {
-	Kubernetes *semver.Constraints   `yaml:"kubernetes" json:"kubernetes"`
-	Deckhouse  *semver.Constraints   `json:"deckhouse" json:"deckhouse"`
-	Modules    map[string]Dependency `yaml:"modules" yaml:"modules"`
+	Kubernetes *semver.Constraints   `json:"kubernetes" yaml:"kubernetes"`
+	Deckhouse  *semver.Constraints   `json:"deckhouse" yaml:"deckhouse"`
+	Modules    map[string]Dependency `json:"modules" yaml:"modules"`
 }
 
 type Dependency struct {
-	Constraints *semver.Constraints `json:"constraints" json:"constraints"`
+	Constraints *semver.Constraints `json:"constraints" yaml:"constraints"`
 	Optional    bool                `json:"optional" yaml:"optional"`
 }
 
