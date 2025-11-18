@@ -10701,7 +10701,7 @@
       "id": 79,
       "panels": [
 	{
-	  "datasource": {
+          "datasource": {
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
@@ -10714,7 +10714,7 @@
               "custom": {
                 "align": "left",
                 "cellOptions": {
-                  "mode": "basic",
+                  "mode": "gradient",
                   "type": "color-background"
                 },
                 "filterable": false,
@@ -10765,20 +10765,32 @@
             "overrides": [
               {
                 "matcher": {
-                  "id": "byValue",
-                  "options": {
-                    "op": "lt",
-                    "reducer": "lastNotNull",
-                    "value": 2
-                  }
+                  "id": "byName",
+                  "options": "Docs"
                 },
                 "properties": [
                   {
-                    "id": "links",
+                    "id": "mappings",
                     "value": [
                       {
-                        "title": "",
-                        "url": "https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2"
+                        "options": {
+                          "2": {
+                            "index": 1,
+                            "text": "-"
+                          }
+                        },
+                        "type": "value"
+                      },
+                      {
+                        "options": {
+                          "from": 0,
+                          "result": {
+                            "index": 0,
+                            "text": "https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2"
+                          },
+                          "to": 1
+                        },
+                        "type": "range"
                       }
                     ]
                   }
@@ -10787,10 +10799,10 @@
             ]
           },
           "gridPos": {
-            "h": 4,
+            "h": 6,
             "w": 24,
             "x": 0,
-            "y": 11
+            "y": 86
           },
           "id": 245,
           "options": {
@@ -10839,14 +10851,23 @@
                 "includeByName": {},
                 "indexByName": {},
                 "renameByName": {
-                  "controller": ""
+                  "Value": "GeoIP DB Status",
+                  "controller": "Controller Name"
                 }
               }
             },
             {
-              "id": "rowsToFields",
+              "id": "calculateField",
               "options": {
-                "mappings": []
+                "alias": "Docs",
+                "mode": "unary",
+                "reduce": {
+                  "reducer": "sum"
+                },
+                "unary": {
+                  "fieldName": "GeoIP DB Status",
+                  "operator": "abs"
+                }
               }
             }
           ],
