@@ -3,7 +3,7 @@ response:
     resolve: 'Key valid'
     reject: 'Invalid key or&nbsp;license has expired'
     empty_input: 'Enter license key'
-    invalid_revision: 'This license key is for: '
+    invalid_revision: 'The license key is not valid for this edition. Valid editions for the specified license key: '
   ru:
     resolve: 'Ключ действителен'
     reject: 'Неверный ключ или&nbsp;лицензия истекла'
