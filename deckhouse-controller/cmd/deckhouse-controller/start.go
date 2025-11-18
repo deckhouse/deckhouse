@@ -51,6 +51,9 @@ import (
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	admetrics "github.com/flant/shell-operator/pkg/metrics"
+	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 )
 
 const (
@@ -101,6 +104,11 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			metricsstorage.WithNewRegistry(),
 			metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
 		)
+
+		// Initialize metric names with the configured prefix
+		shmetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		// Initialize addon-operator specific metrics
+		admetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
 
 		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage, addonoperator.WithLogger(logger.Named("addon-operator")))
 
