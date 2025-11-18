@@ -32,9 +32,9 @@ shell:
   setup:
   - cd /src
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o /src/cni-switch-helper ./cmd/main.go
-  - chmod 0755 /src/cni-switch-helper
-  - chown 64535:64535 /src/cni-switch-helper
+  - go build -ldflags="-s -w" -o /cni-switch-helper ./cmd/main.go
+  - chmod 0755 /cni-switch-helper
+  - chown 64535:64535 /cni-switch-helper
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -45,4 +45,6 @@ import:
     before: setup
 imageSpec:
   config:
+    workingDir: /
+    user: "64535"
     entrypoint: ["/cni-switch-helper"]
