@@ -1354,14 +1354,33 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
-	rawConfig, _, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
-	if err != nil {
-		return fmt.Errorf("read openapi files: %w", err)
+	if len(conversions) > 0 {
+		logger.Debug("conversions found for the module", slog.Int("count", len(conversions)))
+		for _, conversion := range conversions {
+			logger.Debug("conversion", slog.String("expression", strings.Join(conversion.Expr, ",")))
+		}
 	}
 
-	if err = r.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
-		return fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	config := new(v1alpha1.ModuleConfig)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: def.Name}, config); err != nil {
+		return fmt.Errorf("get the '%s' module config: %w", def.Name, err)
 	}
+
+	// apply conversions to values
+	_, newSettings, err := conversion.Store().Get(def.Name).ConvertToLatest(config.Spec.Version, values)
+	if err != nil {
+		return fmt.Errorf("convert values to latest version: %w", err)
+	}
+	values = newSettings
+
+	// rawConfig, _, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	// if err != nil {
+	// 	return fmt.Errorf("read openapi files: %w", err)
+	// }
+
+	// if err = r.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
+	// 	return fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	// }
 
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
