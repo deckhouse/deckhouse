@@ -244,10 +244,14 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно перенесите ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/faq.html#как-выгнать-ресурсы-с-узла).
 {% endalert %}
 
+### Для всех узлов кроме control-plane
+
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
    d8 k delete node <node>
    ```
 
@@ -258,6 +262,43 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    ```
 
 1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
+
+### Для узлов control-plane
+
+1. Снимите лейблы `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master` и `node.deckhouse.io/group` с узла:
+
+   ```shell
+   d8 k label node <node> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Убедитесь, что удаляемый узел с control-plane пропал из списка членов кластера etcd:
+
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+1. Удалите узел из кластера Kubernetes:
+
+   ```shell
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
+   d8 k delete node <node>
+   ```
+
+1. Запустите на узле скрипт очистки:
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
+
+1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова появился в списке:
+  
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
 
 ## Как понять, что что-то пошло не так?
 
@@ -529,7 +570,7 @@ capiEmergencyBrake: true
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы компонентов control plane (например, удалена директория `/var/lib/containerd`).
-В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
+В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.ru`.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -540,7 +581,7 @@ capiEmergencyBrake: true
 ```shell
 d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
+jq -r '.auths."registry.deckhouse.ru".auth'
 ```
 
 Вывод команды нужно скопировать и присвоить переменной `AUTH` на поврежденном master-узле.
@@ -1031,7 +1072,7 @@ spec:
 
 ##### Как настроить сертификат для дополнительного registry (актуальный способ)?
 
-Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
+Пример настройки сертификата для дополнительного registry при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

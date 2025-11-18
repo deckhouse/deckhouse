@@ -57,7 +57,7 @@ spec:
   policies:
     allowedRepos:
       - myrepo.example.com
-      - registry.deckhouse.io
+      - registry.deckhouse.ru
     requiredResources:
       limits:
         - memory

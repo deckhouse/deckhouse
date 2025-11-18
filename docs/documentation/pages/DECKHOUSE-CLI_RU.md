@@ -12,7 +12,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
     Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
 * `d8 dk` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
-    Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
+    Например, вместо `werf plan --repo registry.deckhouse.ru` можно выполнить `d8 d plan --repo registry.deckhouse.ru`.
 
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива Deckhouse Platform Certified Security Edition в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.

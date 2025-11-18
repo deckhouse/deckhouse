@@ -10,7 +10,7 @@ title: "Модуль user-authz: примеры конфигурации"
 
 Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
 
-Пример назначения прав администратору кластера (User `joe`):
+Пример назначения прав администратору кластера (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
