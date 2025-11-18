@@ -64,6 +64,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/chrony/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/chrony/faq.html
         - title:
             en: control-plane-manager
             ru: control-plane-manager
@@ -73,9 +77,25 @@ entries:
                 ru: Описание
               url: /modules/control-plane-manager/
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/control-plane-manager/configuration.html
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/control-plane-manager/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/control-plane-manager/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/control-plane-manager/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/control-plane-manager/faq.html
         - title:
             en: node-manager
             ru: node-manager
@@ -96,6 +116,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/node-manager/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/node-manager/examples.html
             - title:
                 en: FAQ
                 ru: FAQ
@@ -121,6 +145,14 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/local-path-provisioner/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/local-path-provisioner/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/local-path-provisioner/faq.html
         - title:
             en: namespace-configurator
             ru: namespace-configurator
@@ -183,9 +215,24 @@ entries:
                 ru: Описание
               url: /modules/commander/
             - title:
+                ru: Установка
+              url: /modules/commander/install.html
+            - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/commander/configuration.html
+            - title:
+                ru: Руководство администратора
+              url: /modules/commander/admin_guide.html
+            - title:
+                ru: Руководство пользователя
+              url: /modules/commander/user_guide.html
+            - title:
+                ru: API интеграции
+              url: /modules/commander/integration_api.html
+            - title:
+                ru: Шаблонизация кластеров
+              url: /modules/commander/templates_guide.html
         - title:
             en: deckhouse
             ru: deckhouse
@@ -198,6 +245,14 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/deckhouse/configuration.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/deckhouse/usage.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/deckhouse/faq.html
         - title:
             en: deckhouse-tools
             ru: deckhouse-tools
@@ -210,6 +265,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/deckhouse-tools/examples.html
         - title:
             en: documentation
             ru: documentation
@@ -250,6 +309,14 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/admission-policy-engine/cr.html
+                - title:
+                    en: Custom Resources (Gatekeeper)
+                    ru: Custom Resources (Gatekeeper)
+                  url: /modules/admission-policy-engine/gatekeeper-cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/admission-policy-engine/faq.html
         - title:
             en: cert-manager
             ru: cert-manager
@@ -320,9 +387,21 @@ entries:
                 ru: Описание
               url: /modules/operator-trivy/
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/operator-trivy/configuration.html
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/operator-trivy/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/operator-trivy/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/operator-trivy/faq.html
         - title:
             en: user-authn
             ru: user-authn
@@ -343,6 +422,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/user-authn/cr.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/user-authn/usage.html
             - title:
                 en: FAQ
                 ru: FAQ
@@ -367,6 +450,14 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/user-authz/cr.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/user-authz/usage.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/user-authz/faq.html
         - title:
             en: runtime-audit-engine
             ru: runtime-audit-engine
@@ -494,6 +585,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/extended-monitoring/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/extended-monitoring/faq.html
         - title:
             en: loki
             ru: loki
@@ -506,6 +601,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/loki/configuration.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/loki/examples.html
         - title:
             en: log-shipper
             ru: log-shipper
@@ -528,8 +627,16 @@ entries:
                   url: /modules/log-shipper/cr.html
             - title:
                 en: Examples
+                ru: Расширенная конфигурация
+              url: /modules/log-shipper/advanced_usage.html
+            - title:
+                en: Examples
                 ru: Примеры
               url: /modules/log-shipper/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/log-shipper/faq.html
         - title:
             en: monitoring-custom
             ru: monitoring-custom
@@ -615,9 +722,17 @@ entries:
                 ru: Описание
               url: /modules/operator-prometheus/
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/operator-prometheus/configuration.html
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/operator-prometheus/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/operator-prometheus/cr.html
         - title:
             en: prometheus
             ru: prometheus
@@ -639,6 +754,14 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/prometheus/cr.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/prometheus/usage.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/prometheus/faq.html
         - title:
             en: upmeter
             ru: upmeter
@@ -716,6 +839,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/prometheus-metrics-adapter/cr.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/prometheus-metrics-adapter/usage.html
         - title:
             en: vertical-pod-autoscaler
             ru: vertical-pod-autoscaler
@@ -730,9 +857,17 @@ entries:
                 ru: Примеры
               url: /modules/vertical-pod-autoscaler/examples.html
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/vertical-pod-autoscaler/configuration.html
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/vertical-pod-autoscaler/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/vertical-pod-autoscaler/cr.html
             - title:
                 en: FAQ
                 ru: FAQ
@@ -798,6 +933,14 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/ingress-nginx/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/ingress-nginx/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/ingress-nginx/faq.html
         - title:
             en: istio
             ru: istio
@@ -818,6 +961,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/istio/cr.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources (istio)
+                  url: /modules/istio/istio-cr.html
             - title:
                 en: Examples
                 ru: Примеры
@@ -834,6 +981,14 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/kube-dns/configuration.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/kube-dns/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/kube-dns/faq.html
         - title:
             en: metallb
             ru: metallb
@@ -848,9 +1003,17 @@ entries:
                 ru: Примеры
               url: /modules/metallb/examples.html
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/metallb/configuration.html
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/metallb/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/metallb/cr.html
         - title:
             en: node-local-dns
             ru: node-local-dns
@@ -1153,6 +1316,18 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/cloud-provider-dvp/configuration.html
+                - title:
+                    en: Configuration
+                    ru: Настройки провайдера
+                  url: /modules/cloud-provider-dvp/cluster_configuration.html
+                - title:
+                    en: Configuration
+                    ru: Настройки окружения
+                  url: /modules/cloud-provider-dvp/environment.html
+                - title:
+                    en: Configuration
+                    ru: Схемы размещения
+                  url: /modules/cloud-provider-dvp/layouts.html
                 - title:
                     en: Custom Resources
                     ru: Custom Resources
