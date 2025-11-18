@@ -36,7 +36,8 @@ type Package struct {
 }
 
 type Status struct {
-	Phase Phase `json:"phase" yaml:"phase"`
+	Phase      Phase       `json:"phase" yaml:"phase"`
+	Conditions []Condition `json:"conditions" yaml:"conditions"`
 }
 
 func (p *Package) renewContext(ctx context.Context) context.Context {
