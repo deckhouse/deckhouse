@@ -16,7 +16,7 @@ data:
         success 39936 30 5 # <cache size> <TTL max> <TTL min>
         denial 9984 5 5    # <cache size> <TTL max> <TTL min>
         prefetch 10 1m 25%
-        serve_stale 1h immediate
+        serve_stale 1h {{ include "helm_lib_is_ha_to_value" (list . "immediate" "verify") }}
         servfail 0 # disable caching servfail
       }
       kubeforward {
