@@ -2,41 +2,37 @@
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: openldap-demo
+  name: corp-ldap
 spec:
   type: LDAP
-  displayName: OpenLDAP Demo (Kerberos)
+  displayName: "LDAP (Kerberos SSO)"
   ldap:
-    host: ldap-service.openldap-demo:389
-    insecureSkipVerify: true
+    host: "openldap.d8-user-authn.svc:389"
     insecureNoSSL: true
 
-    bindDN: cn=admin,dc=example,dc=org
-    bindPW: admin
-
-    usernamePrompt: Email Address
+    bindDN: "cn=admin,dc=example,dc=com"
+    bindPW: "admin"
 
     userSearch:
-      baseDN: ou=People,dc=example,dc=org
-      filter: "(objectClass=person)"
-      username: mail
-      idAttr: DN
-      emailAttr: mail
-      nameAttr: cn
+      baseDN: "dc=example,dc=com"
+      filter: "(objectClass=inetOrgPerson)"
+      username: "cn"
+      idAttr: "cn"
+      emailAttr: "mail"
+      nameAttr: "cn"
 
     groupSearch:
-      baseDN: ou=Groups,dc=example,dc=org
+      baseDN: "dc=example,dc=com"
       filter: "(objectClass=groupOfNames)"
       userMatchers:
-        - userAttr: DN
-          groupAttr: member
-      nameAttr: cn
+        - userAttr: "DN"
+          groupAttr: "member"
+      nameAttr: "cn"
 
     kerberos:
       enabled: true
-      keytabSecretName: dex-kerberos-keytab
+      keytabSecretName: dex-kerberos-test
       usernameFromPrincipal: Localpart
-      expectedRealm: EXAMPLE.COM
       fallbackToPassword: false
 
 
