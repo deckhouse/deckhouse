@@ -299,6 +299,10 @@ func TestCreateEmptyTmpFile(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				app.TmpDirName = c.tmpDirName
+				uid := os.Geteuid()
+				if uid == 0 && c.wantErr {
+					t.Skip("Test TestCreateEmptyTmpFile was skipped, cannot try to access unaccessible dir from root user")
+				}
 				filename, err := CreateEmptyTmpFile()
 				if !c.wantErr {
 					require.NoError(t, err)
