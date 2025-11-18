@@ -114,6 +114,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	deprecatedFeatureGates := make(map[string]KubernetesVersion)
 	currentlyDeprecatedFeatureGates := make(map[string]bool)
 	currentlyForbiddenFeatureGates := make(map[string]bool)
+	unknownFeatureGates := make(map[string]bool)
 
 	currentFeatures, ok := FeatureGatesMap[string(currentVersion)]
 	if !ok {
@@ -127,25 +128,24 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		if currentFeatures.IsDeprecated(featureName) {
-			currentlyDeprecatedFeatureGates[featureName] = true
-		}
-
-		isDeprecated, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName)
-		if isDeprecated {
-			deprecatedFeatureGates[featureName] = deprecatedVersion
-		}
-
 		if currentFeatures.IsForbidden(featureName) {
 			currentlyForbiddenFeatureGates[featureName] = true
 			continue
 		}
 
+		isCurrentlyDeprecated := currentFeatures.IsDeprecated(featureName)
+		if isCurrentlyDeprecated {
+			currentlyDeprecatedFeatureGates[featureName] = true
+			continue
+		}
+
 		components := []string{"apiserver", "kubeControllerManager", "kubeScheduler", "kubelet"}
+		featureExistsInAnyComponent := false
 		for _, component := range components {
 			info := currentFeatures.GetFeatureGateInfo(component, featureName)
 
 			if info.Exists {
+				featureExistsInAnyComponent = true
 				switch component {
 				case "apiserver":
 					result.APIServer = append(result.APIServer, featureName)
@@ -158,11 +158,19 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 				}
 			}
 		}
+
+		if !featureExistsInAnyComponent {
+			unknownFeatureGates[featureName] = true
+		} else {
+			isDeprecatedInFuture, deprecatedVersion := isFeatureGateDeprecatedInFutureVersions(currentVersion, featureName)
+			if isDeprecatedInFuture {
+				deprecatedFeatureGates[featureName] = deprecatedVersion
+			}
+		}
 	}
 
 	input.Values.Set("controlPlaneManager.internal.allowedFeatureGates", result)
 
-	// Metric for feature gates that are already deprecated in current version
 	for featureName := range currentlyDeprecatedFeatureGates {
 		input.MetricsCollector.Set(
 			"d8_control_plane_manager_problematic_feature_gate",
@@ -176,7 +184,6 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		)
 	}
 
-	// Metric for feature gates that will be deprecated in future versions
 	for featureName, deprecatedVersion := range deprecatedFeatureGates {
 		input.MetricsCollector.Set(
 			"d8_control_plane_manager_problematic_feature_gate",
@@ -190,21 +197,33 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		)
 	}
 
-	// Metric for feature gates that are forbidden in current version
 	for featureName := range currentlyForbiddenFeatureGates {
 		input.MetricsCollector.Set(
 			"d8_control_plane_manager_problematic_feature_gate",
 			1.0,
 			map[string]string{
 				"feature_gate":       featureName,
-				"deprecated_version": string(currentVersion),
+				"deprecated_version": "",
 				"current_version":    string(currentVersion),
 				"status":             "forbidden",
 			},
 		)
 	}
 
-	if len(deprecatedFeatureGates) == 0 && len(currentlyDeprecatedFeatureGates) == 0 && len(currentlyForbiddenFeatureGates) == 0 {
+	for featureName := range unknownFeatureGates {
+		input.MetricsCollector.Set(
+			"d8_control_plane_manager_problematic_feature_gate",
+			1.0,
+			map[string]string{
+				"feature_gate":       featureName,
+				"deprecated_version": "",
+				"current_version":    string(currentVersion),
+				"status":             "unknown",
+			},
+		)
+	}
+
+	if len(deprecatedFeatureGates) == 0 && len(currentlyDeprecatedFeatureGates) == 0 && len(currentlyForbiddenFeatureGates) == 0 && len(unknownFeatureGates) == 0 {
 		input.MetricsCollector.Set(
 			"d8_control_plane_manager_problematic_feature_gate",
 			0.0,

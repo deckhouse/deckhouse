@@ -33,6 +33,8 @@ func init() {
 			APIServer: []string{
 				"APIServerIdentity",
 				"StorageVersionAPI",
+				"DynamicResourceAllocation",
+				"TestDeprecatedGate",
 			},
 			KubeControllerManager: []string{
 				"CronJobsScheduledAnnotation",
@@ -55,6 +57,8 @@ func init() {
 			APIServer: []string{
 				"APIServerIdentity",
 				"StorageVersionAPI",
+				"DynamicResourceAllocation",
+				"TestDeprecatedGate",
 			},
 			KubeControllerManager: []string{
 				"CronJobsScheduledAnnotation",
@@ -77,6 +81,7 @@ func init() {
 			APIServer: []string{
 				"APIServerIdentity",
 				"StorageVersionAPI",
+				"TestDeprecatedGate",
 			},
 			KubeControllerManager: []string{
 				"CronJobsScheduledAnnotation",
@@ -250,6 +255,39 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 			"kubeScheduler": []
 		}`))
 		})
+
+		It("Must set metrics for non-existent feature gates", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+
+			Expect(m).To(HaveLen(2))
+
+			foundNonExistent := false
+			foundAnotherNonExistent := false
+
+			for _, metric := range m {
+				switch metric.Labels["feature_gate"] {
+				case "NonExistentFeature":
+					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
+					Expect(*metric.Value).To(BeNumerically("==", 1.0))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", ""))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("status", "unknown"))
+					foundNonExistent = true
+				case "AnotherNonExistentFeature":
+					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
+					Expect(*metric.Value).To(BeNumerically("==", 1.0))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", ""))
+					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("status", "unknown"))
+					foundAnotherNonExistent = true
+				}
+			}
+
+			Expect(foundNonExistent).To(BeTrue(), "NonExistentFeature metric not found")
+			Expect(foundAnotherNonExistent).To(BeTrue(), "AnotherNonExistentFeature metric not found")
+		})
 	})
 
 	Context("Feature gates deprecated in future versions", func() {
@@ -392,7 +430,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 				if metric.Labels["feature_gate"] == "SomeProblematicFeature" {
 					Expect(metric.Name).To(Equal("d8_control_plane_manager_problematic_feature_gate"))
 					Expect(*metric.Value).To(BeNumerically("==", 1.0))
-					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", "1.31"))
+					Expect(metric.Labels).To(HaveKeyWithValue("deprecated_version", ""))
 					Expect(metric.Labels).To(HaveKeyWithValue("current_version", "1.31"))
 					Expect(metric.Labels).To(HaveKeyWithValue("status", "forbidden"))
 				}
