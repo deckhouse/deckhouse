@@ -382,6 +382,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -627,8 +629,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -734,8 +736,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -890,6 +892,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1135,8 +1139,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -1242,8 +1246,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -1398,6 +1402,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1643,8 +1649,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -1750,8 +1756,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -1906,6 +1912,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2151,8 +2159,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -2258,8 +2266,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -2414,6 +2422,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2659,8 +2669,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -2766,8 +2776,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -2922,6 +2932,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3167,8 +3179,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -3274,8 +3286,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3430,6 +3442,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3675,8 +3689,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -3782,8 +3796,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3938,6 +3952,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4183,8 +4199,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -4290,8 +4306,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -4446,6 +4462,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4691,8 +4709,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -4798,8 +4816,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -4954,6 +4972,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -5199,8 +5219,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -5306,8 +5326,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -5462,6 +5482,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -5707,8 +5729,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -5814,8 +5836,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -5970,6 +5992,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -6215,8 +6239,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -6322,8 +6346,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -6478,6 +6502,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -6723,8 +6749,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -6830,8 +6856,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -6986,6 +7012,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -7231,8 +7259,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export CIS_ENABLED=${CIS_ENABLED}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -7338,8 +7366,8 @@ jobs:
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
           export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
           export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
