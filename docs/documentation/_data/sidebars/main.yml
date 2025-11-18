@@ -96,6 +96,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/node-manager/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/node-manager/faq.html
         - title:
             en: local-path-provisioner
             ru: local-path-provisioner
