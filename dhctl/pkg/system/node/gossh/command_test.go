@@ -694,7 +694,7 @@ func TestCommandSudoRun(t *testing.T) {
 		os.Remove(path)
 	})
 
-	t.Run("Run a command", func(t *testing.T) {
+	t.Run("Run a command with sudo", func(t *testing.T) {
 		cases := []struct {
 			title       string
 			sshClient   *Client

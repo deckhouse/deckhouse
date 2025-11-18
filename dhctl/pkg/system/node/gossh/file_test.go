@@ -202,7 +202,7 @@ func TestSSHFileUpload(t *testing.T) {
 		require.Equal(t, "Hello world", string(out))
 
 	})
-	t.Run("Equality of uploaded and local direcroty", func(t *testing.T) {
+	t.Run("Equality of uploaded and local directory", func(t *testing.T) {
 		f := sshClient.File()
 		err := f.Upload(context.Background(), testDir, "/tmp/upload")
 		require.NoError(t, err)
@@ -276,7 +276,7 @@ func TestSSHFileUploadBytes(t *testing.T) {
 }
 
 func TestCreateEmptyTmpFile(t *testing.T) {
-	t.Run("Upload files and directories to container via existing ssh client", func(t *testing.T) {
+	t.Run("Creating empty temp file", func(t *testing.T) {
 		cases := []struct {
 			title      string
 			tmpDirName string
@@ -373,7 +373,7 @@ func TestSSHFileDownload(t *testing.T) {
 		os.Remove(path)
 		os.RemoveAll(testDir)
 	})
-	t.Run("Upload files and directories to container via existing ssh client", func(t *testing.T) {
+	t.Run("Download files and directories to container via existing ssh client", func(t *testing.T) {
 		cases := []struct {
 			title   string
 			srcPath string

@@ -105,7 +105,7 @@ fi
 	envs := make(map[string]string)
 	envs["TEST_ENV"] = "test"
 
-	t.Run("Upload script to container via existing ssh client", func(t *testing.T) {
+	t.Run("Upload and execute script to container via existing ssh client", func(t *testing.T) {
 		cases := []struct {
 			title      string
 			scriptPath string
@@ -227,7 +227,7 @@ func TestUploadScriptExecuteBundle(t *testing.T) {
 	// in tests, app.TmpDirName doesn't exist
 	app.TmpDirName = os.TempDir()
 
-	t.Run("Upload script to container via existing ssh client", func(t *testing.T) {
+	t.Run("Upload and execute bundle to container via existing ssh client", func(t *testing.T) {
 		cases := []struct {
 			title       string
 			scriptPath  string

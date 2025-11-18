@@ -197,7 +197,7 @@ func TestClientStart(t *testing.T) {
 		bastion.RemoveConfig()
 	})
 
-	t.Run("Start ssh client against single host", func(t *testing.T) {
+	t.Run("Start ssh client", func(t *testing.T) {
 		cases := []struct {
 			title     string
 			settings  *session.Session
@@ -461,7 +461,7 @@ func TestClientKeepalive(t *testing.T) {
 }
 
 func TestClientLoop(t *testing.T) {
-	t.Run("Loop", func(t *testing.T) {
+	t.Run("SSH client Loop test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
 			AvailableHosts: []session.Host{{Host: "127.0.0.1", Name: "localhost"}, {Host: "127.0.0.2"}},
 			User:           "user",
@@ -490,7 +490,7 @@ func TestClientLoop(t *testing.T) {
 }
 
 func TestClientSettings(t *testing.T) {
-	t.Run("settings", func(t *testing.T) {
+	t.Run("SSH client settings test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
 			AvailableHosts: []session.Host{{Host: "127.0.0.1", Name: "localhost"}, {Host: "127.0.0.2"}},
 			User:           "user",
@@ -504,7 +504,7 @@ func TestClientSettings(t *testing.T) {
 }
 
 func TestClientLive(t *testing.T) {
-	t.Run("settings", func(t *testing.T) {
+	t.Run("SSH client live test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
 			AvailableHosts: []session.Host{{Host: "127.0.0.1", Name: "localhost"}, {Host: "127.0.0.2"}},
 			User:           "user",
