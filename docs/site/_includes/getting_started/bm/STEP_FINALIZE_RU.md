@@ -352,7 +352,7 @@ sudo -i d8 k create -f $PWD/user.yml
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
   <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер:
   <div class="highlight">
-  <pre class="highlight"><code>kubectl get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
+  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
   </div>
   </li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:

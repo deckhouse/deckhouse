@@ -344,7 +344,7 @@ sudo -i d8 k create -f $PWD/user.yml
 <li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
   <ul><li>Identify the public IP address of the node where the Ingress Controller is running:
   <div class="highlight">
-  <pre class="highlight"><code>kubectl get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
+  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
   </div>
   </li>
   <li>If you have the DNS server and you can add a DNS records:
