@@ -68,6 +68,7 @@ class ModuleSearch {
         return;
       }
 
+      // Close search results when clicking outside
       this.searchResults.style.display = 'none';
     });
 
