@@ -17,39 +17,38 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 
 ## Multi-master
 
-### Complete data loss or recovery to previous state from a backup
+### Recovery to previous state from a backup (multi‑master cluster is still alive)
 
 **Short multi‑master checklist (based on official flows):**
 
-1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailability mode.  
+1. Enable HA mode in the Global configuration so that the control plane is officially in High Availability mode.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability`.
 
 2. Temporarily detach all except one control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`) so that only one control‑plane node remains active.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-3. On the detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.
+3. On the detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-4. (Optional) On the detached nodes, you may additionally remove **all** containers so that only containers which were backuped will be in cluster.
-
-5. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, 1 control plane Pod and 1 deckhouse Pod are `Ready`).
+4. (Optional) On the detached nodes, you may additionally remove **all** containers so that only containers that existed at the time of the backup remain in the cluster after the restore.
 
 5. On the remaining master node, restore the cluster from a backup as a single‑master control plane.  
    See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node`.
 
-6. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, all control plane Pods are `Ready`).
+6. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, 1 Deckhouse Pod and 1 control‑plane‑manager Pod are `Ready`).
 
 7. On the detached nodes, start kubelet again (if you stopped it).
 
 8. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.  
-   If required by control‑plane‑manager (see its logs), add the `control-plane-manager.deckhouse.io/approved` annotation to the node objects.
+   If required by control‑plane-manager (see its logs), add the `control-plane-manager.deckhouse.io/approved` annotation to the node objects.
 
 9. If there are persistent errors for these nodes in the Deckhouse main queue, consider running `kubectl -n d8-system rollout restart deployment deckhouse` and wait until everything becomes `Ready`.
 
+### Complete data loss (multi‑master, cluster is down)
 
-**If that doesn’t help:** use the advanced recovery scenario below with `--force-new-cluster` and manual control-plane relabeling.
+If etcd data is completely lost or the control plane is not functional enough to enable HA mode and safely detach masters, use the following low‑level recovery flow with `--force-new-cluster` instead of the checklist above.
 
-If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
+Perform the following steps on all nodes of the etcd cluster:
 1. Stop etcd.
 
    ```shell
@@ -125,8 +124,8 @@ On the selected node do the following:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 Start kubelet on another nodes:
@@ -191,8 +190,8 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
@@ -252,7 +251,7 @@ To turn them into cluster members, do the following on those nodes:
 Add a control-plane role for each lost nodes:
 
 ```shell
-kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods to roll over and become `Ready`:
@@ -443,7 +442,7 @@ Do the following:
 1. Remove control-plane role label from affected node.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On the affected node:
@@ -463,7 +462,7 @@ On the affected node:
 1. Add control-plane role to affected node.
 
    ```shell
-   kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -583,8 +582,8 @@ On the selected node do the following:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On another nodes, start kubelet:
