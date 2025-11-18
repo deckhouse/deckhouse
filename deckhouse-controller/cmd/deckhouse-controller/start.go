@@ -50,6 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -92,7 +93,16 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 
 		ctx := context.Background()
 
-		operator := addonoperator.NewAddonOperator(ctx, addonoperator.WithLogger(logger.Named("addon-operator")))
+		metricsStorage := metricsstorage.NewMetricStorage(
+			metricsstorage.WithLogger(logger.Named("metric-storage")),
+		)
+
+		hookMetricStorage := metricsstorage.NewMetricStorage(
+			metricsstorage.WithNewRegistry(),
+			metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
+		)
+
+		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage, addonoperator.WithLogger(logger.Named("addon-operator")))
 
 		operator.StartAPIServer()
 
