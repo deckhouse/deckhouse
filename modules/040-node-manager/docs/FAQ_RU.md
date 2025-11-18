@@ -294,7 +294,7 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
 
-1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова в строю:git
+1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова в строю:
   
   ```shell
   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \ --endpoints https://127.0.0.1:2379/ member list -w table
