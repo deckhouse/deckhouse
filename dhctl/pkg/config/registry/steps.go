@@ -82,7 +82,7 @@ func initSecretStatus(ctx context.Context, kubeClient client.KubeClient) (isExis
 			return false, false, nil
 		}
 
-		return false, false, fmt.Errorf("failed to get secret '%s': %w", initSecretNamespace, err)
+		return false, false, fmt.Errorf("failed to get secret '%s/%s': %w", initSecretNamespace, initSecretName, err)
 	}
 
 	_, isApplied = secret.Annotations[initSecretAppliedAnnotation]
