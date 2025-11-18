@@ -2,7 +2,16 @@
 RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
-{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
+{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $featureGates = append $featureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- $featureGates := join "," $featureGates -}}
+{{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
+{{- end }}
+{{- $runtimeConfig := join "," $runtimeConfig -}}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- $gcThresholdCount := 1000}}
 {{- if lt $nodesCount 100 }}
@@ -133,7 +142,8 @@ apiServer:
     - name: feature-gates
       value: {{ $featureGates | quote }}
     - name: runtime-config
-      value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
+      value: {{ $runtimeConfig }}
+    {{- end }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
