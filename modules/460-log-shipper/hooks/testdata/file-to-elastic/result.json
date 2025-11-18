@@ -24,18 +24,18 @@
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "transform/source/test-source/00_file_source_host": {
+    "transform/source/test-source/00_file_source_host_ip": {
       "drop_on_abort": false,
       "inputs": [
         "cluster_logging_config/test-source"
       ],
-      "source": ".\"host\" = \"$POD_NODE_NAME\"",
+      "source": ".\"host_ip\" = \"$VECTOR_HOST_IP\"",
       "type": "remap"
     },
     "transform/source/test-source/01_local_timezone": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/00_file_source_host"
+        "transform/source/test-source/00_file_source_host_ip"
       ],
       "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
       "type": "remap"

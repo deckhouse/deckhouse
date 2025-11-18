@@ -48,18 +48,18 @@
       "source": "if !exists(.host) {\n  .host = .node\n};\n\nif exists(.timestamp_end) {\n  del(.timestamp_end)\n};\n\n.timestamp = parse_timestamp!(.\"timestamp\", format: \"%+\");\n\n. = flatten(.);\n\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
       "type": "remap"
     },
-    "transform/source/test-source/00_file_source_host": {
+    "transform/source/test-source/00_file_source_host_ip": {
       "drop_on_abort": false,
       "inputs": [
         "cluster_logging_config/test-source"
       ],
-      "source": ".\"host\" = \"$POD_NODE_NAME\"",
+      "source": ".\"host_ip\" = \"$VECTOR_HOST_IP\"",
       "type": "remap"
     },
     "transform/source/test-source/01_local_timezone": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/test-source/00_file_source_host"
+        "transform/source/test-source/00_file_source_host_ip"
       ],
       "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
       "type": "remap"
