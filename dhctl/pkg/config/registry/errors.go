@@ -19,5 +19,7 @@ import (
 )
 
 var (
-	ErrUnknownMode = errors.New("Unknown registry mode")
+	ErrUnknownMode    = errors.New("Unknown registry mode")
+	ErrIsNotReady     = errors.New("Registry is not ready")
+	ErrNotInitialized = errors.New("Registry is not initialized")
 )

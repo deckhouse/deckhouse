@@ -17,6 +17,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,73 +27,151 @@ import (
 	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	initSecretNamespace         = "d8-system"
+const (
+	secretsNamespace            = "d8-system"
 	initSecretName              = "registry-init"
+	stateSecretName             = "registry-state"
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	return retry.NewLoop("Check registry initialization", 20, 5*time.Second).
-		RunContext(ctx, func() error {
-			isExist, isApplied, err := initSecretStatus(ctx, kubeClient)
-			if err != nil {
-				return fmt.Errorf("failed to check registry init secret status: %w", err)
-			}
+	return retry.NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).RunContext(ctx, func() error {
+		if err := checkInit(ctx, kubeClient, config); err != nil {
+			log.DebugF("Error while checking registry init: %v\n", err)
+			return ErrIsNotReady
+		}
 
-			if !config.isModuleEnabled() || !isExist {
-				if err := initSecretRemove(ctx, kubeClient); err != nil {
-					return fmt.Errorf("failed to remove registry init secret: %w", err)
-				}
-				return nil
+		msg, err := checkReady(ctx, kubeClient, config)
+		if err != nil {
+			if msg != "" {
+				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
+				log.DebugF("Error while checking registry ready: %v\n", err)
+				return err
 			}
+			log.DebugF("Error while checking registry ready: %v\n", err)
+			return ErrIsNotReady
+		}
 
-			if !isApplied {
-				return fmt.Errorf("registry is not initialized")
-			}
+		if err := removeInitSecret(ctx, kubeClient); err != nil {
+			log.DebugF("Error while removing registry init secret: %v\n", err)
+			return ErrIsNotReady
+		}
 
-			if err := initSecretRemove(ctx, kubeClient); err != nil {
-				return fmt.Errorf("failed to remove registry init secret: %w", err)
-			}
-			return nil
-		})
+		return nil
+	})
 }
 
-func initSecretFetch(ctx context.Context, kubeClient client.KubeClient) (registry_init.Config, error) {
-	secret, err := kubeClient.CoreV1().Secrets(initSecretNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+func checkInit(ctx context.Context, kubeClient client.KubeClient, config Config) error {
+	if !config.isModuleEnabled() {
+		return nil
+	}
+
+	exists, applied, err := getInitSecretStatus(ctx, kubeClient)
 	if err != nil {
-		return registry_init.Config{}, fmt.Errorf("failed to get secret '%s/%s': %w", initSecretNamespace, initSecretName, err)
+		return err
+	}
+
+	if exists && !applied {
+		return ErrNotInitialized
+	}
+
+	return nil
+}
+
+func checkReady(ctx context.Context, kubeClient client.KubeClient, config Config) (string, error) {
+	if !config.isModuleEnabled() {
+		return "", nil
+	}
+
+	conditions, err := fetchStateSecret(ctx, kubeClient)
+	if err != nil {
+		return "", err
+	}
+
+	if len(conditions) == 0 {
+		return "", ErrIsNotReady
+	}
+
+	var msg strings.Builder
+	ready := true
+
+	for _, condition := range conditions {
+		if condition.Status == metav1.ConditionTrue {
+			continue
+		}
+		ready = false
+		if condition.Type == "Ready" {
+			continue
+		}
+
+		if msg.Len() > 0 {
+			msg.WriteString("\n")
+		}
+		fmt.Fprintf(&msg, "* %s: %s",
+			condition.Type,
+			strings.TrimSpace(strings.ReplaceAll(condition.Message, "\n", " ")),
+		)
+	}
+
+	if ready {
+		return "", nil
+	}
+	return msg.String(), ErrIsNotReady
+}
+
+func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
+	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, stateSecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
+	}
+
+	var conditions []metav1.Condition
+
+	conditionRaw, exists := secret.Data["conditions"]
+	if !exists {
+		return conditions, nil
+	}
+
+	if err := yaml.Unmarshal(conditionRaw, &conditions); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal secret data: %w", err)
+	}
+	return conditions, nil
+}
+
+func fetchInitSecret(ctx context.Context, kubeClient client.KubeClient) (registry_init.Config, error) {
+	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+	if err != nil {
+		return registry_init.Config{}, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
 	var config registry_init.Config
 	if err := yaml.Unmarshal(secret.Data["config"], &config); err != nil {
-		return registry_init.Config{}, fmt.Errorf("failed to unmarshal secret config: %w", err)
+		return registry_init.Config{}, fmt.Errorf("failed to unmarshal secret data: %w", err)
 	}
-
 	return config, nil
 }
 
-func initSecretStatus(ctx context.Context, kubeClient client.KubeClient) (isExist bool, isApplied bool, err error) {
-	secret, err := kubeClient.CoreV1().Secrets(initSecretNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (bool, bool, error) {
+	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, false, nil
 		}
-
-		return false, false, fmt.Errorf("failed to get secret '%s/%s': %w", initSecretNamespace, initSecretName, err)
+		return false, false, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
-	_, isApplied = secret.Annotations[initSecretAppliedAnnotation]
-	return true, isApplied, nil
+	_, applied := secret.Annotations[initSecretAppliedAnnotation]
+	return true, applied, nil
 }
 
-func initSecretRemove(ctx context.Context, kubeClient client.KubeClient) error {
-	err := kubeClient.CoreV1().Secrets(initSecretNamespace).Delete(ctx, initSecretName, metav1.DeleteOptions{})
+func removeInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
+	err := kubeClient.CoreV1().Secrets(secretsNamespace).Delete(ctx, initSecretName, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to remove secret '%s/%s': %w", initSecretNamespace, initSecretName, err)
+		return fmt.Errorf("failed to remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 	return nil
 }
