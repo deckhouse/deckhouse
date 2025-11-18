@@ -209,7 +209,7 @@ async function getLicenseToken(token = '', revision = '') {
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
-      if (revision && data.redactions && Array.isArray(data.redactions)) {
+      if (revision && data.redactions && Array.isArray(data.redactions) && data.redactions.length > 0) {
         const revisionUpper = revision.toUpperCase();
         const redactionsUpper = data.redactions.map(r => r.toUpperCase());
         if (!redactionsUpper.includes(revisionUpper)) {
