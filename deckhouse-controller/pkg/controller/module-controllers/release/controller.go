@@ -1335,7 +1335,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 	// load conversions
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
-	var conversions []v1alpha1.ModuleSettingsConversion
+	// var conversions []v1alpha1.ModuleSettingsConversion
 	if _, err = os.Stat(conversionsDir); err == nil {
 		logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, conversionsDir); err != nil {
@@ -1343,22 +1343,15 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		// load conversions for settings
-		conversions, err = r.loadConversions(conversionsDir)
-		if err != nil {
-			if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
-				return fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
-			}
-			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-		}
+		// conversions, err = r.loadConversions(conversionsDir)
+		// if err != nil {
+		// 	if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
+		// 		return fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
+		// 	}
+		// 	return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		// }
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-	}
-
-	if len(conversions) > 0 {
-		logger.Debug("conversions found for the module", slog.Int("count", len(conversions)))
-		for _, conversion := range conversions {
-			logger.Debug("conversion", slog.String("expression", strings.Join(conversion.Expr, ",")))
-		}
 	}
 
 	config := new(v1alpha1.ModuleConfig)
@@ -1372,15 +1365,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("convert values to latest version: %w", err)
 	}
 	values = newSettings
-
-	// rawConfig, _, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
-	// if err != nil {
-	// 	return fmt.Errorf("read openapi files: %w", err)
-	// }
-
-	// if err = r.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
-	// 	return fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
-	// }
 
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
@@ -1429,6 +1413,15 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 		return fmt.Errorf("install the module '%s': %w", moduleName, err)
 	}
+
+	// rawConfig, _, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	// if err != nil {
+	// 	return fmt.Errorf("read openapi files: %w", err)
+	// }
+
+	// if err = r.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
+	// 	return fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	// }
 
 	// disable target module hooks so as not to invoke them before restart
 	if r.moduleManager.GetModule(release.GetModuleName()) != nil {
