@@ -14,7 +14,7 @@ apiVersions:
       d8 system edit provider-cluster-configuration
       ```
 
-      > After updating the node parameters, you need to run the [dhctl converge](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html) command to apply the changes.
+      > After updating the node parameters, you need to run the `dhctl converge` command for the changes to take effect. For more information about changing the cluster configuration, see [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
