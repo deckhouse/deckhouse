@@ -133,8 +133,7 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		isCurrentlyDeprecated := currentFeatures.IsDeprecated(featureName)
-		if isCurrentlyDeprecated {
+		if currentFeatures.IsDeprecated(featureName) {
 			currentlyDeprecatedFeatureGates[featureName] = true
 			continue
 		}
