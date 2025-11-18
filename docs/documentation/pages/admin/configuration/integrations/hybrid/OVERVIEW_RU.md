@@ -286,9 +286,9 @@ volumeBindingMode: WaitForFirstConsumer
    ```
 
    Где:
-   - `mainNetwork` — имя сети, в которой будут размещаться облачные ноды в вашем VCD кластере.
+   - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
    - `internalNetworkCIDR` — CIDR-адресация указанной сети.
-   - `organization` — название вашей VCD организации.
+   - `organization` — название вашей организации в VCD.
    - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
    - `virtualDataCenter` — имя виртуального датацентра.
    - `template` — шаблон ВМ для создания узлов.
