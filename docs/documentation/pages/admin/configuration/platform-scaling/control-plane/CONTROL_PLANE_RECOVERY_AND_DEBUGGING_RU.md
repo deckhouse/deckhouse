@@ -285,7 +285,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 - Устанавливается лейбл `node-role.kubernetes.io/control-plane=""`.
 - DaemonSet запускает поды на новых узлах.
 - DKP создает или обновляет файлы в `/etc/kubernetes`: манифесты, конфигурации, сертификаты и т.д.
-- Все модули DKP с поддержкой отказоустойчивости автоматически включают её, если значение [глобальной настройки `highAvailability`](../../../reference/api/global.html#parameters-highavailability) не переопределено вручную.
+- Все модули DKP с поддержкой отказоустойчивости автоматически включают её, если значение [глобальной настройки `highAvailability`](../../../../reference/api/global.html#parameters-highavailability) не переопределено вручную.
 
 Удаление узлов control plane выполняется в обратном порядке:
 
