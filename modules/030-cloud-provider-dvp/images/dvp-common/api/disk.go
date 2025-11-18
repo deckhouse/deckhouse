@@ -138,6 +138,11 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
+	err = d.WaitDiskCreation(ctx, diskName)
+	if err != nil {
+		return nil, err
+	}
+
 	return newDisk, nil
 }
 
