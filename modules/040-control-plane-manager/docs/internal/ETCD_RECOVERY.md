@@ -19,40 +19,33 @@ see https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/con
 
 ### Complete data loss or recovery to previous state from a backup
 
-**Very short multi‑master checklist (experimental, to try first):**
+**Short multi‑master checklist (based on official flows):**
 
-1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailable mode.
-2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`, `control-plane-manager` labels).
-3. On the two detached nodes, stop etcd and perform a hard cleanup of Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below.
-4. (Under discussion) On the detached nodes, you may additionally remove **all** containers so that no workloads from the "old" control plane continue to run unnoticed by the restored etcd state.
-5. Wait until the single remaining master and Deckhouse fully stabilize (control‑plane‑manager queue is empty, all control plane Pods are `Ready`).
-6. (Under discussion) Optionally remove all containers on the remaining master as well before re‑enabling HA; this is still being validated and should be used with extra caution.
-7. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.
-8. Add annotations `control-plane-manager.deckhouse.io/approved` if control-plane-manager want (see logs)
+1. Enable HA mode in the Global configuration so that the control plane is officially in HighAvailability mode.  
+   See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability`.
 
+2. Temporarily detach two of three control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`, `control-plane-manager` labels) so that only one control‑plane node remains active.  
+   See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-**Prefer this first:** high‑level, minimal‑impact recovery
+3. On the two detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.
+   See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`.
 
-1. Enable HA for the control plane.
-   Make sure the cluster is prepared for running multiple control plane nodes (HA mode enabled in the Deckhouse configuration).
+4. (Optional) On the detached nodes, you may additionally remove **all** containers so that no workloads from the "old" etcd state continue to run unnoticed by the restored control plane.
 
-2. Temporarily remove the master role from all but one node, then wait until the control-plane-manager queue is empty.
-   Follow the official guide:  
-   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself`  
-   In short: remove the master labels and control-plane configuration from the extra nodes so that only a single control plane node remains active.
+5. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, 1 control plane Pod and 1 deckhouse Pod are `Ready`).
 
-3. Restore the cluster from a backup as a single‑master control plane.
-   Use the documented procedure:
-   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node`
+5. On the remaining master node, restore the cluster from a backup as a single‑master control plane.  
+   See: `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node`.
 
-4. Wait until the control-plane-manager queue is empty, then re‑enable multi‑master.
-   When all control plane tasks are processed and the system has stabilized, add the master role back to the remaining nodes according to:  
-   `https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios`
+6. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, all control plane Pods are `Ready`).
 
-**FAQ / Notes**
+7. On the detached nodes, start kubelet again (if you stopped it).
 
-- Can a Pod be in `Running` state even if its data is already missing from etcd?  
-  Yes: if you restore etcd from an older snapshot, containers for Pods created after that snapshot can keep running on nodes, but the restored API no longer knows about them. This "orphaned" state is unsafe; in such scenarios, you should plan to clean up containers on affected nodes so that only workloads present in the restored etcd state continue to run.
+8. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.  
+   If required by control‑plane‑manager (see its logs), add the `control-plane-manager.deckhouse.io/approved` annotation to the node objects.
+
+9. If there are persistent errors for these nodes in the Deckhouse main queue, consider running `kubectl -n d8-system rollout restart deployment deckhouse` and wait until everything becomes `Ready`.
+
 
 **If that doesn’t help:** use the advanced recovery scenario below with `--force-new-cluster` and manual control-plane relabeling.
 
