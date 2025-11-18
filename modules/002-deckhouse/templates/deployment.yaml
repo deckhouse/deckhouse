@@ -221,9 +221,9 @@ spec:
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
               value: "60"
             - name: KUBE_CLIENT_QPS
-              value: "20"
+              value: "30"
             - name: KUBE_CLIENT_BURST
-              value: "40"
+              value: "60"
             - name: GOGC
               value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
