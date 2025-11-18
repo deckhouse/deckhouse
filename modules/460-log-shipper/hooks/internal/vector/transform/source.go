@@ -67,15 +67,15 @@ func LocalTimezoneAfterSourceTransform() *DynamicTransform {
 	}
 }
 
-func FileSourceHostTransform() *DynamicTransform {
+func FileSourceHostIPTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name:   "file_source_host",
+			Name:   "file_source_host_ip",
 			Type:   "remap",
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        vrl.FileSourceHostRule.String(),
+			"source":        vrl.FileSourceHostIPRule.String(),
 			"drop_on_abort": false,
 		},
 	}
@@ -98,7 +98,7 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 	}
 
 	if cfg.SourceType == v1alpha1.SourceFile {
-		transforms = append(transforms, FileSourceHostTransform())
+		transforms = append(transforms, FileSourceHostIPTransform())
 	}
 
 	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
