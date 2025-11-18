@@ -116,15 +116,23 @@ func (s *Client) Start() error {
 		bastionConfig := &ssh.ClientConfig{}
 		log.DebugLn("Initialize bastion connection...")
 
-		if len(s.privateKeys) == 0 && len(app.SSHBastionPass) == 0 {
+		var bastionPass string
+
+		if s.Settings.BastionPassword != "" {
+			bastionPass = s.Settings.BecomePass
+		} else {
+			bastionPass = app.SSHBastionPass
+		}
+
+		if len(s.privateKeys) == 0 && len(bastionPass) == 0 {
 			return fmt.Errorf("No credentials present to connect to bastion host")
 		}
 
 		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(s.signers...)}
 
-		if len(app.SSHBastionPass) > 0 {
+		if len(bastionPass) > 0 {
 			log.DebugF("Initial password auth to bastion host\n")
-			AuthMethods = append(AuthMethods, ssh.Password(app.SSHBastionPass))
+			AuthMethods = append(AuthMethods, ssh.Password(bastionPass))
 		}
 
 		if socket != "" {
@@ -338,12 +346,12 @@ func DialTimeout(network, addr string, config *ssh.ClientConfig) (*ssh.Client, e
 
 // Tunnel is used to open local (L) and remote (R) tunnels
 func (s *Client) Tunnel(address string) node.Tunnel {
-	return NewTunnel(s.sshClient, address)
+	return NewTunnel(s, address)
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
 func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
-	return NewReverseTunnel(s.sshClient, address)
+	return NewReverseTunnel(s, address)
 }
 
 // Command is used to run commands on remote server
