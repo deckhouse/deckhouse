@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -23,10 +24,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
@@ -41,11 +43,19 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:  app.TmpDirName,
-			Logger:  logger,
-			IsDebug: app.IsDebug,
+			TmpDir:            app.TmpDirName,
+			Logger:            logger,
+			IsDebug:           app.IsDebug,
+			ResetInitialState: false,
 		})
-		return bootstraper.Bootstrap(context.Background())
+		err := bootstraper.Bootstrap(context.Background())
+		if err != nil {
+			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd

@@ -382,8 +382,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on the ability to create snapshots and volume wiping",
+        "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
     "tags": [

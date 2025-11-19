@@ -136,3 +136,8 @@ type ApplicationPackageVersionList struct {
 
 	Items []ApplicationPackageVersion `json:"items"`
 }
+
+// Returns a name following the format <repository>-<packageName>-<version>
+func MakeApplicationPackageVersionName(repository, packageName, version string) string {
+	return repository + "-" + packageName + "-" + version
+}

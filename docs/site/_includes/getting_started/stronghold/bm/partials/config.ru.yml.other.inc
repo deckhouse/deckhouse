@@ -7,9 +7,13 @@ kind: ClusterConfiguration
 clusterType: Static
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство подов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR and internalNetworkCIDRs.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство сети сервисов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR and internalNetworkCIDRs.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
@@ -150,7 +154,7 @@ spec:
       node-role.kubernetes.io/master: ""
     taints: []
 ---
-# [<en>] stronghold module settings.
+# [<en>] Stronghold module settings.
 # [<en>] https://deckhouse.io/modules/stronghold/configuration.html
 # [<ru>] Настройки модуля stronghold.
 # [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
@@ -159,5 +163,11 @@ kind: ModuleConfig
 metadata:
   name: stronghold
 spec:
-  version: 1
   enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins

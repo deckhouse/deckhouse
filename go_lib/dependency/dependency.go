@@ -34,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/helm"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
@@ -49,7 +48,6 @@ type Container interface {
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
-	GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error)
 	GetClientConfig() (*rest.Config, error)
 	GetClock() clockwork.Clock
 }
@@ -67,64 +65,25 @@ func init() {
 
 // NewDependencyContainer creates new Dependency container with external clients
 func NewDependencyContainer() Container {
-	return &dependencyContainer{
-		helmClient: clients{
-			clients: make(map[string]helm.Client),
-		},
-	}
-}
-
-type clients struct {
-	m       sync.Mutex
-	clients map[string]helm.Client
+	return &dependencyContainer{}
 }
 
 type dependencyContainer struct {
 	k8sClient     k8s.Client
 	vsphereClient vsphere.Client
 
-	m          sync.RWMutex
 	isTestEnv  *bool
-	helmClient clients
+	isTestOnce sync.Once
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
-	dc.m.RLock()
-	if dc.isTestEnv != nil {
-		defer dc.m.RUnlock()
-		return *dc.isTestEnv
-	}
-	dc.m.RUnlock()
-
-	isTestEnvStr := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
-	isTestEnv, _ := strconv.ParseBool(isTestEnvStr)
-	dc.m.Lock()
-	dc.isTestEnv = &isTestEnv
-	dc.m.Unlock()
+	dc.isTestOnce.Do(func() {
+		isTestEnvStr := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
+		isTestEnv, _ := strconv.ParseBool(isTestEnvStr)
+		dc.isTestEnv = &isTestEnv
+	})
 
 	return *dc.isTestEnv
-}
-
-func (dc *dependencyContainer) GetHelmClient(namespace string, options ...helm.Option) (helm.Client, error) {
-	if dc.isTestEnvironment() {
-		return TestDC.GetHelmClient(namespace, options...)
-	}
-
-	dc.helmClient.m.Lock()
-	defer dc.helmClient.m.Unlock()
-
-	if hc, ok := dc.helmClient.clients[namespace]; ok {
-		return hc, nil
-	}
-
-	hc, err := helm.NewClient(namespace, options...)
-	if err != nil {
-		return nil, err
-	}
-
-	dc.helmClient.clients[namespace] = hc
-
-	return hc, nil
 }
 
 func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -262,7 +221,6 @@ func WithExternalDependencies(f func(ctx context.Context, input *go_hook.HookInp
 type MockedContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
-	HelmClient    *helm.ClientMock
 	HTTPClient    *http.ClientMock
 	EtcdClient    *etcd.ClientMock
 	K8sClient     k8s.Client
@@ -271,11 +229,7 @@ type MockedContainer struct {
 	VsphereClient *vsphere.ClientMock
 	clock         clockwork.FakeClock
 
-	mu sync.Mutex
-}
-
-func (c *MockedContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
-	return c.HelmClient, nil
+	clockOnce sync.Once
 }
 
 func (c *MockedContainer) GetHTTPClient(_ ...http.Option) http.Client {
@@ -294,11 +248,13 @@ func (c *MockedContainer) GetK8sClient(_ ...k8s.Option) (k8s.Client, error) {
 	if c.K8sClient != nil {
 		return c.K8sClient, nil
 	}
+
 	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client, nil
 }
 
 func (c *MockedContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
 	k, _ := c.GetK8sClient(options...)
+
 	return k
 }
 
@@ -312,6 +268,7 @@ func (c *MockedContainer) GetRegistryClient(path string, _ ...cr.Option) (cr.Cli
 	if c.CRClient != nil {
 		return c.CRClient, nil
 	}
+
 	return nil, fmt.Errorf("no CR client")
 }
 
@@ -319,6 +276,7 @@ func (c *MockedContainer) GetVsphereClient(_ *vsphere.ProviderClusterConfigurati
 	if c.VsphereClient != nil {
 		return c.VsphereClient, nil
 	}
+
 	return nil, fmt.Errorf("no Vsphere client")
 }
 
@@ -343,20 +301,17 @@ func (c *MockedContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 }
 
 func (c *MockedContainer) GetClock() clockwork.Clock {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	return c.GetFakeClock()
 }
 
 func (c *MockedContainer) GetFakeClock() clockwork.FakeClock {
-	if c.clock != nil {
-		return c.clock
-	}
+	c.clockOnce.Do(func() {
+		t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
+		cc := clockwork.NewFakeClockAt(t)
+		c.clock = cc
+	})
 
-	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
-	cc := clockwork.NewFakeClockAt(t)
-	c.clock = cc
-	return cc
+	return c.clock
 }
 
 func NewMockedContainer() *MockedContainer {
@@ -365,7 +320,6 @@ func NewMockedContainer() *MockedContainer {
 	return &MockedContainer{
 		ctrl: ctrl,
 
-		HelmClient:    helm.NewClientMock(ctrl),
 		HTTPClient:    http.NewClientMock(ctrl),
 		EtcdClient:    etcd.NewClientMock(ctrl),
 		K8sClient:     fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,

@@ -19,6 +19,7 @@ package deckhouse_release
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"io"
@@ -27,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,7 +76,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.29"
+			"kubernetesVersion": "1.30"
 		},
 		"modulesImages": {
 			"registry": {
@@ -1624,5 +1626,60 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		// Should succeed after network errors are resolved
 		require.NoError(suite.T(), err)
 		require.GreaterOrEqual(suite.T(), attemptCount, 3)
+	})
+
+	suite.Run("Notification: minor release uses ReleaseApplyTime instead of ReleaseApplyAfterTime", func() {
+		// This test verifies that notification uses ReleaseApplyTime (the actual deploy time)
+		// instead of ReleaseApplyAfterTime. When canary and window are set,
+		// these times can differ: ReleaseApplyTime is adjusted by window,
+		// while ReleaseApplyAfterTime may retain the notification period time.
+		var httpBody string
+		var webhookData updater.WebhookData
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+			_ = json.Unmarshal(data, &webhookData)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		// Set a narrow window to ensure ReleaseApplyTime is adjusted
+		ds.Update.Windows = update.Windows{{From: "08:00", To: "09:00"}}
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
+
+		suite.setupControllerSettings("notifier-webhook-minor-release-apply-time.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		// Parse the applyTime from webhook message
+		require.NotEmpty(suite.T(), webhookData.ApplyTime, "ApplyTime should be set in webhook data")
+
+		// Parse the time from the message to verify it matches ApplyTime
+		// The message format is: "Release will be applied at: Friday, 18-Oct-19 08:00:00 UTC"
+		messageTimeMatch := regexp.MustCompile(`Release will be applied at: ([^"]+)`)
+		matches := messageTimeMatch.FindStringSubmatch(httpBody)
+		require.Len(suite.T(), matches, 2, "Message should contain 'Release will be applied at:'")
+
+		// Trim any trailing whitespace or quotes
+		messageTimeStr := strings.TrimSpace(matches[1])
+		messageTime, err := time.Parse(time.RFC850, messageTimeStr)
+		require.NoError(suite.T(), err, "Message time should be parseable")
+
+		applyTime, err := time.Parse(time.RFC3339, webhookData.ApplyTime)
+		require.NoError(suite.T(), err, "ApplyTime should be parseable")
+
+		// Verify that the time in message matches ApplyTime field (ReleaseApplyTime)
+		// The times should be approximately equal (within 1 minute tolerance for formatting differences)
+		require.WithinDuration(suite.T(), applyTime, messageTime, time.Minute,
+			"Message time should match ApplyTime field (ReleaseApplyTime), not ReleaseApplyAfterTime")
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available")
+		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 }

@@ -56,3 +56,29 @@ func TestRandomStrElement(t *testing.T) {
 		t.Errorf("RandomStrElement produces %d consecutive repetitions out of %d elements", maximumConsecutiveRepetitions, selectionSize)
 	}
 }
+
+func TestTrimLeftChars(t *testing.T) {
+	type tst struct {
+		name      string
+		input     string
+		trimCount int
+		expected  string
+	}
+
+	tests := []tst{
+		{name: "empty string", input: "", expected: "", trimCount: 2},
+		{name: "zero trim", input: "not empty", expected: "not empty", trimCount: 0},
+		{name: "one symbol ASCII", input: "E", expected: "", trimCount: 1},
+		{name: "one symbol UTF", input: "Ъ", expected: "", trimCount: 1},
+		{name: "multiple symbols UTF", input: "Ъъъъ", expected: "ъъ", trimCount: 2},
+		{name: "multiple symbols ASCII", input: "E mpty", expected: "mpty", trimCount: 2},
+		{name: "multiple symbols ASCII one trim", input: "Empty", expected: "mpty", trimCount: 1},
+		{name: "multiple symbols UTF one trim", input: "Ъъъъ", expected: "ъъъ", trimCount: 1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e := TrimLeftChars(test.input, test.trimCount)
+			require.Equal(t, test.expected, e)
+		})
+	}
+}

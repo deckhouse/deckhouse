@@ -14,9 +14,13 @@ cloud:
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
@@ -197,6 +201,9 @@ spec:
   rootDiskSize: 70
   template: *!CHANGE_TEMPLATE_NAME*
   mainNetwork: *!CHANGE_NETWORK_NAME*
+  # [<en>] Specify the path to a Datastore (relative to the datacenter) in which VirtualMachines will be cloned. Example: clStorage/LUN-3.
+  # [<ru>] Укажите путь до Datastore (относительно дата-центра), на котором будут созданы склонированные виртуальные машины. Пример: clStorage/LUN-3.
+  datastore: *!CHANGE_PATH_TO_DATASTORE*
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup

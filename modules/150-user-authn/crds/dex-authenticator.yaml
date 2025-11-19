@@ -187,6 +187,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.' 
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory)'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
                 additionalApplications:
                   type: array
                   description: |
@@ -373,6 +423,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory).'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

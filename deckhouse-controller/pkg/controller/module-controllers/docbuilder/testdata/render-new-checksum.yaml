@@ -6,7 +6,7 @@ metadata:
 spec:
   version: mpo-tag
   checksum: zxc
-  path: /testmodule/dev
+  path: /modules/testmodule
 status:
   conditions:
     - address: http://10-222-222-22.d8-system.pod.cluster.local:8081

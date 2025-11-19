@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-containers-all-false
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        allowPrivilegeEscalation: false
+    - name: redis
+      image: redis
+      securityContext:
+        allowPrivilegeEscalation: false
+

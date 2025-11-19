@@ -18,13 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"reflect"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
-	"golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -226,12 +223,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// first, parse and check cluster config
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
+	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(b.logger),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 	)
 	if err != nil {
 		return err
@@ -241,10 +238,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	// Check if static cluster without ssh-host
 	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
-		fd := int(os.Stdin.Fd())
-		isTerminal := term.IsTerminal(fd)
-
-		if isTerminal {
+		if input.IsTerminal() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
 			if !confirmation.Ask() {
@@ -255,7 +249,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 	}
 
-
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
@@ -265,7 +258,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
-	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
+	if govalue.IsNil(b.Params.NodeInterface) {
 		log.DebugLn("NodeInterface is nil")
 		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
@@ -295,7 +288,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				}
 			}
 
-			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
+			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
@@ -525,7 +518,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode); err != nil {
 		return err
 	}
 

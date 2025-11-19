@@ -27,10 +27,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTFResourceManagementTimeout(cmd)
@@ -63,7 +64,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 }
 
 func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineBashibleBundleFlags(cmd)
@@ -89,7 +90,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 }
 
 func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigsForResourcesPhaseFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
@@ -121,7 +122,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
@@ -142,7 +143,15 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:        logger,
 			IsDebug:       app.IsDebug,
 		})
-		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
+
+		err = bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to abort cluster: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd
@@ -161,14 +170,17 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			Logger:  logger,
 			IsDebug: app.IsDebug,
 		})
-		return bootstraper.BaseInfrastructure(context.Background())
+
+		err := bootstraper.BaseInfrastructure(context.Background())
+		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
+		return err
 	})
 
 	return cmd
 }
 
 func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 

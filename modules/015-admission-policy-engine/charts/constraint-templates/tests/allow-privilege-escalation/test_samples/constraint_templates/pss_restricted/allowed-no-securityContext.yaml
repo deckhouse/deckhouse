@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-no-securityContext
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+

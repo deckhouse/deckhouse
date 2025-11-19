@@ -4,31 +4,41 @@
       {
         "items": [
           {
+            "id": 29,
+            "parent_id": 0,
             "title": "Solutions",
             "url": "",
             "target": "",
             "rel": "",
             "items": [
               {
+                "id": 4203,
+                "parent_id": 29,
                 "title": "Technical Support",
                 "url": "/tech-support/",
                 "target": "",
                 "rel": ""
               },
               {
+                "id": 1230,
+                "parent_id": 29,
                 "title": "Security",
                 "url": "/security/",
                 "target": "",
                 "rel": ""
               },
               {
+                "id": 794,
+                "parent_id": 29,
                 "title": "Training &amp; Consulting",
                 "url": "/services/training-and-consulting/",
                 "target": "",
                 "rel": ""
               },
               {
-                "title": "Deckhouse vs KaaS",
+                "id": 1374,
+                "parent_id": 29,
+                "title": "Deckhouse vs&nbsp;KaaS",
                 "url": "/deckhouse-vs-kaas/",
                 "target": "",
                 "rel": ""
@@ -36,12 +46,16 @@
             ]
           },
           {
+            "id": 1576,
+            "parent_id": 0,
             "title": "Success stories",
             "url": "/success-stories/",
             "target": "",
             "rel": ""
           },
           {
+            "id": 695,
+            "parent_id": 0,
             "title": "Community",
             "url": "/community/",
             "target": "",
@@ -54,68 +68,98 @@
       {
         "items": [
           {
+            "id": 5607,
+            "parent_id": 0,
             "title": "Партнёры",
             "url": "",
             "target": "",
             "rel": "",
             "items": [
               {
-                "title": "Стать партнёром",
-                "url": "/become-partner/",
+                "id": 5611,
+                "parent_id": 5607,
+                "title": "Найти партнёра",
+                "url": "/partners/",
                 "target": "",
                 "rel": ""
               },
               {
-                "title": "Найти партнёра",
-                "url": "/partners/",
+                "id": 7551,
+                "parent_id": 5607,
+                "title": "Матрица совместимости",
+                "url": "/compatibility-table/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "id": 5608,
+                "parent_id": 5607,
+                "title": "Стать партнёром",
+                "url": "/become-partner/",
                 "target": "",
                 "rel": ""
               }
             ]
           },
           {
+            "id": 5610,
+            "parent_id": 0,
             "title": "Как купить",
             "url": "/how-to-buy/",
             "target": "",
             "rel": ""
           },
           {
+            "id": 4645,
+            "parent_id": 0,
             "title": "Обучение",
             "url": "/academy/",
             "target": "",
             "rel": ""
           },
           {
+            "id": 2863,
+            "parent_id": 0,
             "title": "Техподдержка",
             "url": "/tech-support/",
             "target": "",
             "rel": ""
           },
           {
+            "id": 4114,
+            "parent_id": 0,
             "title": "Ресурсы",
             "url": "",
             "target": "",
             "rel": "",
             "items": [
               {
+                "id": 2054,
+                "parent_id": 4114,
                 "title": "Истории успеха",
                 "url": "/success-stories/",
                 "target": "",
                 "rel": ""
               },
               {
+                "id": 8554,
+                "parent_id": 4114,
                 "title": "Блог",
-                "url": "https://blog.deckhouse.ru",
+                "url": "/blog/",
                 "target": "",
                 "rel": ""
               },
               {
+                "id": 4186,
+                "parent_id": 4114,
                 "title": "Новости",
                 "url": "/news/",
                 "target": "",
                 "rel": ""
               },
               {
+                "id": 4927,
+                "parent_id": 4114,
                 "title": "Вебинары",
                 "url": "/webinars/",
                 "target": "",

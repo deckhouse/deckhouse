@@ -15,11 +15,13 @@
 package values
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -78,6 +80,66 @@ func NewStorage(name string, staticValues addonutils.Values, configBytes, values
 	return s, nil
 }
 
+func (s *Storage) InjectDigests(digests map[string]string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(digests) == 0 {
+		return nil
+	}
+
+	scheme := s.schemaStorage.Schemas[validation.ValuesSchema]
+	if scheme == nil {
+		return nil
+	}
+
+	if len(scheme.Properties) == 0 {
+		scheme.Properties = make(map[string]spec.Schema)
+	}
+
+	// Inject digests property to allow map[string]string from images_digests.json
+	scheme.Properties["digests"] = spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type:        []string{"object"},
+			Description: "Image digests injected from images_digests.json",
+			AdditionalProperties: &spec.SchemaOrBool{
+				Allows: true,
+				Schema: &spec.Schema{
+					SchemaProps: spec.SchemaProps{
+						Type: []string{"string"},
+					},
+				},
+			},
+		},
+	}
+
+	if len(s.staticValues) == 0 {
+		s.staticValues = addonutils.Values{}
+	}
+
+	s.staticValues["digests"] = digests
+
+	if err := s.calculateResultValues(); err != nil {
+		return fmt.Errorf("calculate values: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Storage) GetValuesChecksum() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.resultValues.Checksum()
+}
+
+func (s *Storage) GetConfigChecksum() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.configValues.Checksum()
+}
+
 func (s *Storage) GetValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -93,18 +155,30 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	return s.configValues
 }
 
+// ApplyConfigValues validates and saves config values
+func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	if err := s.validateConfigValues(settings); err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+
+	s.configValues = settings
+
+	return s.calculateResultValues()
+}
+
 func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := addonutils.ValidateHookValuesPatch(patch, s.name); err != nil {
-		return fmt.Errorf("validate values patch: %w", err)
-	}
-
-	currentValues := s.resultValues
-
 	// Apply new patches in Strict mode. Hook should not return 'remove' with nonexistent path.
-	patched, changed, err := addonutils.ApplyValuesPatch(currentValues, patch, addonutils.Strict)
+	patched, changed, err := addonutils.ApplyValuesPatch(s.resultValues, patch, addonutils.Strict)
 	if err != nil {
 		return fmt.Errorf("try apply values patch: %w", err)
 	}
@@ -114,8 +188,8 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 	}
 
 	// Validate updated values against schema
-	if validationErr := s.validateValues(patched); validationErr != nil {
-		return fmt.Errorf("validate values patch: %w", validationErr)
+	if err = s.validateValues(patched); err != nil {
+		return fmt.Errorf("validate values patch: %w", err)
 	}
 
 	s.valuesPatches = addonutils.AppendValuesPatch(s.valuesPatches, patch)
@@ -147,12 +221,12 @@ func (s *Storage) calculateResultValues() error {
 		ops.Operations = append(ops.Operations, patch.Operations...)
 	}
 
-	merged, _, err := addonutils.ApplyValuesPatch(addonutils.Values{s.name: merged}, ops, addonutils.IgnoreNonExistentPaths)
+	merged, _, err := addonutils.ApplyValuesPatch(merged, ops, addonutils.IgnoreNonExistentPaths)
 	if err != nil {
 		return err
 	}
 
-	s.resultValues = merged.GetKeySection(s.name)
+	s.resultValues = merged
 
 	return nil
 }
@@ -168,4 +242,14 @@ func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
 	return s.schemaStorage.ValidateValues(s.name, validatableValues)
+}
+
+func (s *Storage) validateConfigValues(values addonutils.Values) error {
+	validatableValues := addonutils.Values{s.name: values}
+
+	if s.schemaStorage.Schemas[validation.ConfigValuesSchema] == nil && len(values) > 0 {
+		return errors.New("config schema is not defined but config values were provided")
+	}
+
+	return s.schemaStorage.ValidateConfigValues(s.name, validatableValues)
 }

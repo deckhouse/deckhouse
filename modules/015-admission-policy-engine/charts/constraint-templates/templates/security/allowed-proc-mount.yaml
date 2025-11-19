@@ -41,62 +41,94 @@ spec:
                 - Unmasked
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            c := input_containers[_]
-            allowedProcMount := get_allowed_proc_mount(input)
-            not input_proc_mount_type_allowed(allowedProcMount, c)
-            msg := sprintf("ProcMount type is not allowed, container: %v. Allowed procMount types: %v", [c.name, allowedProcMount])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                c := input_containers[_]
+                not allowed_by_any_procMount(c)
+                msg := sprintf("ProcMount type is not allowed, container: %v. Allowed procMount types: %v", [c.name, get_allowed_proc_mount(input)])
+              }
 
-        input_proc_mount_type_allowed(allowedProcMount, c) {
-            allowedProcMount == "default"
-            count(c.securityContext.procMount) == 0
-        }
-        input_proc_mount_type_allowed(allowedProcMount, c) {
-            allowedProcMount == "default"
-            lower(c.securityContext.procMount) == "default"
-        }
-        input_proc_mount_type_allowed(allowedProcMount, c) {
-            allowedProcMount == "unmasked"
-        }
+              allowed_by_any_procMount(c) if {
+                allowed_by_securitypolicyexception(c)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.containers[_]
-            c.securityContext.procMount
-        }
-        input_containers[c] {
-            c := input.review.object.spec.initContainers[_]
-            c.securityContext.procMount
-        }
-        input_containers[c] {
-            c := input.review.object.spec.ephemeralContainers[_]
-            c.securityContext.procMount
-        }
+              allowed_by_any_procMount(c) if {
+                allowed_by_securitypolicy(c)
+              }
 
-        get_allowed_proc_mount(arg) = out {
-            not arg.parameters
-            out = "default"
-        }
-        get_allowed_proc_mount(arg) = out {
-            not arg.parameters.allowedProcMount
-            out = "default"
-        }
-        get_allowed_proc_mount(arg) = out {
-            arg.parameters.allowedProcMount
-            not valid_proc_mount(arg.parameters.allowdeProcMount)
-            out = "default"
-        }
-        get_allowed_proc_mount(arg) = out {
-            valid_proc_mount(arg.parameters.allowedProcMount)
-            out = lower(arg.parameters.allowedProcMount)
-        }
+              allowed_by_securitypolicyexception(c) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                allowed_procMount := exception.spec.securityContext.procMount.allowedValues
+                lower(c.securityContext.procMount) in {pm | pm := lower(allowed_procMount[_])}
+              }
 
-        valid_proc_mount(str) {
-            lower(str) == "default"
-        }
-        valid_proc_mount(str) {
-            lower(str) == "unmasked"
-        }
+              allowed_by_securitypolicy(c) if {
+                allowedProcMount := get_allowed_proc_mount(input)
+                input_proc_mount_type_allowed(allowedProcMount, c)
+              }
+
+              input_proc_mount_type_allowed(allowedProcMount, c) if {
+                allowedProcMount == "default"
+                count(c.securityContext.procMount) == 0
+              }
+
+              input_proc_mount_type_allowed(allowedProcMount, c) if {
+                allowedProcMount == "default"
+                lower(c.securityContext.procMount) == "default"
+              }
+
+              input_proc_mount_type_allowed(allowedProcMount, c) if {
+                allowedProcMount == "unmasked"
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+                c.securityContext.procMount
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+                c.securityContext.procMount
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+                c.securityContext.procMount
+              }
+
+              get_allowed_proc_mount(arg) := out if {
+                not arg.parameters
+                out = "default"
+              }
+
+              get_allowed_proc_mount(arg) := out if {
+                not arg.parameters.allowedProcMount
+                out = "default"
+              }
+
+              get_allowed_proc_mount(arg) := out if {
+                arg.parameters.allowedProcMount
+                not valid_proc_mount(arg.parameters.allowedProcMount)
+                out = "default"
+              }
+
+              get_allowed_proc_mount(arg) := out if {
+                valid_proc_mount(arg.parameters.allowedProcMount)
+                out = lower(arg.parameters.allowedProcMount)
+              }
+
+              valid_proc_mount(str) if {
+                lower(str) == "default"
+              }
+
+              valid_proc_mount(str) if {
+                lower(str) == "unmasked"
+              }

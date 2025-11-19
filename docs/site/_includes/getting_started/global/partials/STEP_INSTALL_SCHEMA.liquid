@@ -24,7 +24,7 @@ The minimal preset will be used during the installation:
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
 
 The `{{ layout.name }}` layout will be used during the installation.
@@ -132,11 +132,23 @@ Scheme of Deckhouse installation in a private environment:<br />
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
    {% offtopic title="Requirements..." %}
+
+   {% alert level="warning" %}
+   In the next step of this guide, `ContainerdV2` is specified as the default container runtime on the cluster nodes.
+   To use `ContainerdV2` as the container runtime on cluster nodes, they must meet the following requirements:
+
+   - `CgroupsV2` support
+   - systemd version `244`
+   - `erofs` kernel module support
+
+   Some distributions do not meet these requirements, and the OS on the nodes must be brought into compliance before installing Deckhouse Kubernetes Platform. For more information, see the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+   {% endalert %}
+
    - at least 4 CPU cores
    - at least 8 GB of RAM
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
-   - Linux kernel version >= `5.8`
+   - Linux kernel version `5.8` or newer
    - **Unique hostname** within servers (virtual machines) of the cluster
    - one of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) should be installed
    - Python should be installed

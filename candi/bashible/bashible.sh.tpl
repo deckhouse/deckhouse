@@ -36,12 +36,12 @@ bb-kubectl-exec() {
     host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
     port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z "$host" "$port"; then
+    if ! nc -z -w 3 "$host" "$port" 2>/dev/null; then
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         host=$(echo "$server" | cut -d: -f1)
         port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z "$host" "$port"; then
+        if nc -z -w 3 "$host" "$port" 2>/dev/null; then
           args="--server=https://$server"
           break
         fi
@@ -51,8 +51,37 @@ bb-kubectl-exec() {
 {{ end }}
   kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
 }
+
+bb-label-node-bashible-first-run-finished() {
+  local max_attempts=25
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    if bb-kubectl-exec label nodes "$(bb-d8-node-name)" node.deckhouse.io/bashible-first-run-finished=true; then
+      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+      return 0
+    fi
+
+    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  exit 1
+}
+
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-label-node-bashible-first-run-finished
+
+bb-indent-text() {
+    local indent="$1"
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%s%s\n' "$indent" "$line"
+    done
+}
 
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
@@ -69,7 +98,14 @@ function bb-event-error-create() {
     eventName="$(echo -n $(bb-d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
     nodeName=$(bb-d8-node-name)
     eventLog="/var/lib/bashible/step.log"
+    if [[ -f "${eventLog}" ]]; then
+      eventNote="$(tail -c 500 "${eventLog}")"
+    else
+      eventNote="bashible step log is not available."
+    fi
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      indent="            " # 12 spaces
+      logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
       bb-kubectl-exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
@@ -80,7 +116,8 @@ function bb-event-error-create() {
             kind: Node
             name: ${nodeName}
             uid: ${nodeName}
-          note: '$(tail -c 500 ${eventLog})'
+          note: |
+${logs}
           reason: BashibleStepFailed
           type: Warning
           reportingController: bashible
@@ -220,6 +257,7 @@ function main() {
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
+  export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
@@ -276,6 +314,10 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
+ if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+    bb-label-node-bashible-first-run-finished
+    touch $BASHIBLE_INITIALIZED_FILE
+ fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
@@ -319,7 +361,7 @@ function main() {
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
+      >&2 echo -e "Failed to execute step "$step" ... retry in 10 seconds.\n"
       sleep 10
       echo ===
       echo === Step: $step

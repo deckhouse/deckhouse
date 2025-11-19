@@ -5,6 +5,5 @@ subsystems:
 namespace: kube-system
 
 requirements:
-  deckhouse: ">= 1.68"
   modules:
     kube-dns: '>= 0.0.0'

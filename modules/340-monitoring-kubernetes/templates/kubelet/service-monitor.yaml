@@ -98,23 +98,6 @@ spec:
         replacement: probes
       - targetLabel: tier
         replacement: cluster
-  # Pods resources metrics
-  - port: https-metrics
-    scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    tlsConfig:
-      insecureSkipVerify: true
-    path: /metrics/resource
-    honorLabels: true
-    relabelings:
-      - regex: endpoint|namespace|pod|service
-        action: labeldrop
-      - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
-        targetLabel: node
-      - targetLabel: scrape_endpoint
-        replacement: resources
-      - targetLabel: tier
-        replacement: cluster
   selector:
     matchLabels:
       k8s-app: kubelet

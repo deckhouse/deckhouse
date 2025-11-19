@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -45,10 +47,134 @@ const (
 )
 
 type reconciler struct {
-	client client.Client
-	dc     dependency.Container
-	pm     applicationpackage.PackageManager
-	logger *log.Logger
+	client        client.Client
+	dc            dependency.Container
+	pm            applicationpackage.PackageManager
+	statusService *StatusService
+	logger        *log.Logger
+}
+
+type StatusService struct {
+	client       client.Client
+	logger       *log.Logger
+	pm           applicationpackage.PackageManager
+	dc           dependency.Container
+	eventChannel <-chan packagestatusservice.PackageEvent
+
+	mu sync.RWMutex
+	wg sync.WaitGroup
+}
+
+func (svc *StatusService) Start(ctx context.Context) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				svc.wg.Done()
+				return
+			case event := <-svc.eventChannel:
+				svc.wg.Add(1)
+				svc.HandleEvent(ctx, event)
+				svc.wg.Done()
+			}
+		}
+	}()
+}
+
+func (svc *StatusService) HandleEvent(ctx context.Context, event packagestatusservice.PackageEvent) {
+	logger := svc.logger.With(
+		slog.String("package", event.PackageName),
+		slog.String("name", event.Name),
+		slog.String("namespace", event.Namespace),
+		slog.String("version", event.Version),
+		slog.String("type", event.Type),
+	)
+
+	app := &v1alpha1.Application{}
+	err := svc.client.Get(ctx, types.NamespacedName{
+		Name:      event.Name,
+		Namespace: event.Namespace,
+	}, app)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug("application not found, skipping")
+			return
+		}
+		logger.Warn("failed to get application", log.Err(err))
+		return
+	}
+
+	if app.Spec.ApplicationPackageName != event.PackageName || app.Spec.Version != event.Version {
+		logger.Debug("application spec mismatch, skipping")
+		return
+	}
+
+	status, err := svc.pm.GetPackageStatus(ctx, event.PackageName, event.Namespace, event.Version, event.Type)
+	if err != nil {
+		logger.Warn("failed to get package status", log.Err(err))
+		return
+	}
+
+	original := app.DeepCopy()
+	svc.applyConditions(app, status.Conditions)
+	svc.applyInternalConditions(app, status.InternalConditions)
+	err = svc.client.Status().Patch(ctx, app, client.MergeFrom(original))
+	if err != nil {
+		logger.Warn("failed to patch application status", log.Err(err))
+	}
+}
+
+func (svc *StatusService) applyConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationStatusCondition) {
+	now := metav1.NewTime(svc.dc.GetClock().Now())
+
+	prev := make(map[string]v1alpha1.ApplicationStatusCondition)
+	for _, c := range app.Status.Conditions {
+		prev[c.Type] = c
+	}
+
+	applied := make([]v1alpha1.ApplicationStatusCondition, 0, len(newConds))
+	for _, c := range newConds {
+		cond := c
+		cond.LastProbeTime = now
+
+		p, ok := prev[cond.Type]
+		if ok {
+			cond.LastTransitionTime = p.LastTransitionTime
+		}
+
+		if p.Status != cond.Status {
+			cond.LastTransitionTime = now
+		}
+		applied = append(applied, cond)
+	}
+
+	app.Status.Conditions = applied
+}
+
+func (svc *StatusService) applyInternalConditions(app *v1alpha1.Application, newConds []v1alpha1.ApplicationInternalStatusCondition) {
+	now := metav1.NewTime(svc.dc.GetClock().Now())
+	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	for _, c := range app.Status.InternalConditions {
+		prev[c.Type] = c
+	}
+
+	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(newConds))
+	for _, c := range newConds {
+		cond := c
+		cond.LastProbeTime = now
+
+		p, ok := prev[cond.Type]
+		if ok {
+			cond.LastTransitionTime = p.LastTransitionTime
+		}
+
+		if p.Status != cond.Status {
+			cond.LastTransitionTime = now
+		}
+		applied = append(applied, cond)
+	}
+
+	app.Status.InternalConditions = applied
 }
 
 func RegisterController(
@@ -57,11 +183,25 @@ func RegisterController(
 	pm applicationpackage.PackageManager,
 	logger *log.Logger,
 ) error {
+	eventChannel := make(chan packagestatusservice.PackageEvent, 100)
+
+	statusService := &StatusService{
+		client:       runtimeManager.GetClient(),
+		logger:       logger.Named("status-service"),
+		pm:           pm,
+		dc:           dc,
+		eventChannel: eventChannel,
+	}
+
+	pm.SetEventChannel(eventChannel)
+	go statusService.Start(context.Background())
+
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		dc:     dc,
-		pm:     pm,
-		logger: logger,
+		client:        runtimeManager.GetClient(),
+		dc:            dc,
+		pm:            pm,
+		statusService: statusService,
+		logger:        logger,
 	}
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -75,6 +215,14 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
 		Complete(applicationController)
+}
+
+func (svc *StatusService) WaitForIdle(_ context.Context) error {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+
+	svc.wg.Wait()
+	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -125,8 +273,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	original := app.DeepCopy()
 
-	// find ApplicationPackageVersion by spec.ApplicationPackageName and spec.version
-	apvName := app.Spec.ApplicationPackageName + "-" + app.Spec.Version
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.Repository, app.Spec.ApplicationPackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
 	if err != nil {
@@ -161,9 +308,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, &apv.Status)
-
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
@@ -181,6 +325,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err != nil {
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
+
+	// call PackageOperator method (maybe PackageAdder interface)
+	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	logger.Debug("handle Application complete")
 

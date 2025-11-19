@@ -76,13 +76,6 @@ data:
           default $preferred_browser_lang;
       }
 
-      # Handle case where lang still is not acceptable
-      #map $actual_lang $lang {
-      #    "ru" "ru";
-      #    "en" "en";
-      #    default "en";  # Fallback to "en" if still empty or invalid
-      #}
-
       # Set cookie only if not present
       map $cookie_lang $set_lang_cookie {
           "" "lang=$uri_lang; Path=/; Max-Age=31536000";
@@ -187,7 +180,8 @@ data:
         }
 
         location / {
-            try_files /docs-dkp${uri}index.html /docs-dkp$uri /docs-dkp$uri/ =404;
+            alias /app/docs-dkp/;
+            try_files $uri $uri/ =404;
         }
       }
     }

@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync/atomic"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -84,14 +85,17 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		svc.logger.Error("sync init folder with base dir", log.Err(err))
 	}
 
-	svc.metrics.AddCollectorFunc(func(s metricsstorage.Storage) {
-		modulesCount, err := svc.channelMappingEditor.getModulesCount()
-		if err != nil {
-			svc.logger.Warn("can not read modules count from channel mapping editor")
-		}
+	t := time.NewTicker(30 * time.Second)
+	go func() {
+		for range t.C {
+			modulesCount, err := svc.channelMappingEditor.getModulesCount()
+			if err != nil {
+				svc.logger.Warn("can not read modules count from channel mapping editor", log.Err(err))
+			}
 
-		s.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
-	})
+			ms.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
+		}
+	}()
 
 	return svc
 }

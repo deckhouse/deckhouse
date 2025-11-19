@@ -88,7 +88,7 @@ specify the target version in the [`kubernetesVersion`](/products/kubernetes-pla
 For example, `kubernetesVersion: 1.30`.
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.

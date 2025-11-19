@@ -168,5 +168,4 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-admission-controller",
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender",
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-updater",
-	"system:serviceaccount:kube-system:stale-dns-connections-cleaner",
 }

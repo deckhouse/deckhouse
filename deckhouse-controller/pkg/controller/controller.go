@@ -311,12 +311,12 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, loader.Installer(), dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
@@ -330,17 +330,17 @@ func NewDeckhouseController(
 	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
 		logger.Info("Package system controllers are enabled")
 
-		err = packagerepository.RegisterController(runtimeManager, logger.Named("package-repository-controller"))
+		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository controller: %w", err)
 		}
 
-		err = packagerepositoryoperation.RegisterController(runtimeManager, logger.Named("package-repository-operation-controller"))
+		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
 		}
 
-		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, logger.Named("cluster-application-package-version-controller"))
+		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("cluster-application-package-version-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
 		}
@@ -459,7 +459,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = c.defaultReleaseChannel
-			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
+			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release_channel", settings.ReleaseChannel))
 		}
 
 		c.embeddedPolicy.Set(settings)

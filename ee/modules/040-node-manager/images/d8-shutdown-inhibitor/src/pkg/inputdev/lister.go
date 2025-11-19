@@ -10,6 +10,10 @@ import (
 	"os"
 	"path"
 	"syscall"
+
+	"log/slog"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const DevInputDir = "/dev/input"
@@ -39,19 +43,22 @@ func ListInputDevicesWithAnyButton(buttons ...Button) ([]Device, error) {
 		// Open device file.
 		fd, err := syscall.Open(devPath, syscall.O_RDONLY, 0)
 		if err != nil {
-			fmt.Printf("Ignore input %s, error: %v\n", dirEntry.Name(), err)
+			dlog.Warn("input device: failed to open, skipping",
+				slog.String("entry", dirEntry.Name()),
+				dlog.Err(err),
+			)
 			continue
 		}
 
 		devName, err := GetDeviceName(fd)
 		if err != nil {
-			fmt.Printf("%s: error getting device name: %v\n", devPath, err)
+			dlog.Warn("input device: failed to get name", slog.String("path", devPath), dlog.Err(err))
 			continue
 		}
 
 		hasKeyEvents, err := IsReportingKeyEvents(fd)
 		if err != nil {
-			fmt.Printf("%s: error getting device event types: %v\n", devPath, err)
+			dlog.Warn("input device: failed to get event types", slog.String("path", devPath), dlog.Err(err))
 			continue
 		}
 
@@ -59,7 +66,7 @@ func ListInputDevicesWithAnyButton(buttons ...Button) ([]Device, error) {
 		if hasKeyEvents {
 			hasButtons, err = HasAnyButton(fd, buttons...)
 			if err != nil {
-				fmt.Printf("%s: error getting if power button supported: %v\n", devPath, err)
+				dlog.Warn("input device: failed to check buttons", slog.String("path", devPath), dlog.Err(err))
 				continue
 			}
 		}

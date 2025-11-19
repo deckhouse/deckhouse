@@ -8,5 +8,3 @@ description: |
 descriptions:
   en: |
     This module installs the prometheus operator for creating Prometheus installations
-requirements:
-  deckhouse: ">= 1.68"

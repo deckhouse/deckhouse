@@ -14,9 +14,13 @@ cloud:
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
@@ -242,10 +246,39 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<en>] LoadBalancer inlet parameters. The specified annotations are required when deploying the cluster to cloud.ru only.
+  # [<ru>] Настройки инлета LoadBalancer. Указанные аннотации необходимы только при развертывании кластера в облаке cloud.ru.
+  loadBalancer:
+    annotations:
+      kubernetes.io/elb.class: shared
+      kubernetes.io/elb.lb-algorithm: ROUND_ROBIN
+      kubernetes.io/elb.keep-eip: "false"
+      kubernetes.io/elb.eip-auto-create-option: |
+        {"ip_type": "5_bgp", "bandwidth_size": 5, "share_type": "PER"}
+  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NODE_GROUP_NAME> is set automatically.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
+---
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  version: 1
+  # [<en>] Enable cni-cilium module.
+  # [<ru>] Включить модуль cni-cilium.
+  enabled: true
+  settings:
+    # [<en>] cni-cilium module settings.
+    # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
+    # [<ru>] Настройки модуля cni-cilium.
+    # [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
+    tunnelMode: VXLAN
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/modules/140-user-authz/cr.html#clusterauthorizationrule

@@ -69,7 +69,7 @@ func (s *Client) initSigners() error {
 
 	signers := make([]ssh.Signer, 0, len(s.privateKeys))
 	for _, keypath := range s.privateKeys {
-		key, err := genssh.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
+		key, err := genssh.GetSSHPrivateKey(keypath.Key, keypath.Passphrase)
 		if err != nil {
 			return err
 		}

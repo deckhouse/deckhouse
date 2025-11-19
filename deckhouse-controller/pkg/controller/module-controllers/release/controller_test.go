@@ -49,6 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -892,7 +893,7 @@ type: Opaque
 
 	err := suite.Suite.SetupNoLock(initObjects)
 	require.NoError(suite.T(), err)
-	logger := log.NewLogger(log.WithLevel(slog.LevelDebug))
+	logger := log.NewNop()
 
 	rec := &reconciler{
 		client:               suite.Suite.Client(),
@@ -903,6 +904,7 @@ type: Opaque
 		moduleManager:        stubModulesManager{},
 		restartCheckTicker:   time.NewTicker(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(logger)),
+		installer:            &installermock.Installer{},
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(logger)), releaseUpdater.ModuleReleaseBlockedMetricName),

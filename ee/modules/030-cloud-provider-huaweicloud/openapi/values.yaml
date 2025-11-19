@@ -19,7 +19,7 @@ properties:
           Run the following command to change the configuration in a running cluster:
 
           ```shell
-          d8 platform edit provider-cluster-configuration
+          d8 system edit provider-cluster-configuration
           ```
         x-doc-search: |
           ProviderClusterConfiguration
@@ -232,6 +232,22 @@ properties:
                     Partial contents of the fields.
                   properties:
                     !!merge <<: *instanceClassProperties
+
+                    mainNetwork:
+                      type: string
+                      description: |
+                        Primary SUBNET ID for the VM's main NIC.
+                        If empty, the layout's default subnet (specified by name) will be resolved to an ID and used.
+                      x-examples: ["aaaff8f9-26af-43e3-9c49-c4d083e59c61"]
+
+                    additionalNetworks:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        Secondary SUBNET IDs for extra NICs attached after the main NIC.
+                      x-examples:
+                        - ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]
                 volumeTypeMap:
                   description: |
                     A dictionary of disk types for worker nodes of the group.

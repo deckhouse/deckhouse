@@ -19,6 +19,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
@@ -33,6 +34,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 )
 
 // DependencyContainer provides access to shared services needed by applications.
@@ -46,11 +49,12 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name      string // Application instance name
-	namespace string // Kubernetes namespace where app is deployed
+	name      string // Package name(namespace.name)
+	instance  string // Application instance name
+	namespace string // Application instance namespace
+	path      string // path to the package dir on fs
 
-	path        string
-	packageName string // Package name in values key format (e.g., "my-package")
+	definition Definition // Application definition
 
 	hooks  *hooks.Storage  // Hook storage with indices
 	values *values.Storage // Values storage with layering
@@ -60,8 +64,9 @@ type Application struct {
 type ApplicationConfig struct {
 	StaticValues addonutils.Values // Static values from values.yaml files
 
-	Namespace   string // Kubernetes namespace
-	PackageName string // Package name
+	Definition Definition // Application definition
+
+	Digests map[string]string // Package images digests
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -73,12 +78,20 @@ type ApplicationConfig struct {
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
+func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
 
+	splits := strings.Split(name, ".")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("invalid application name: %s", name)
+	}
+
+	a.namespace = splits[0]
+	a.instance = splits[1]
+
 	a.name = name
-	a.namespace = cfg.Namespace
-	a.packageName = addonutils.ModuleNameToValuesKey(cfg.PackageName)
+	a.path = path
+	a.definition = cfg.Definition
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -86,9 +99,13 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 	}
 
 	var err error
-	a.values, err = values.NewStorage(name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
+	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
+	}
+
+	if err = a.values.InjectDigests(cfg.Digests); err != nil {
+		return nil, fmt.Errorf("inject digests: %v", err)
 	}
 
 	return a, nil
@@ -104,7 +121,6 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 
 		// Configure logging and metrics labels for Kubernetes event hooks
 		for _, kubeCfg := range hook.GetHookConfig().OnKubernetesEvents {
-			kubeCfg.Monitor.Metadata.LogLabels["package"] = a.packageName
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
@@ -122,9 +138,33 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "namespace:name:packageName".
+// GetMetaValues returns values that is not part of schema(name, namespace, version)
+func (a *Application) GetMetaValues() addonutils.Values {
+	return addonutils.Values{
+		"Name":      a.instance,
+		"Namespace": a.namespace,
+		"Package":   a.definition.Name,
+		"Version":   a.definition.Version,
+	}
+}
+
+// GetName returns the full application identifier in format "namespace.name".
 func (a *Application) GetName() string {
-	return fmt.Sprintf("%s:%s:%s", a.namespace, a.name, a.packageName)
+	return a.name
+}
+
+// BuildName returns the full application identifier in format "namespace.name".
+func BuildName(namespace, name string) string {
+	return fmt.Sprintf("%s.%s", namespace, name)
+}
+
+// GetNamespace returns the application namespace.
+func (a *Application) GetNamespace() string {
+	return a.namespace
+}
+
+func (a *Application) GetVersion() string {
+	return a.definition.Version
 }
 
 // GetPath returns path to the package dir
@@ -135,13 +175,39 @@ func (a *Application) GetPath() string {
 // GetValuesChecksum returns a checksum of the current values.
 // Used to detect if values changed after hook execution.
 func (a *Application) GetValuesChecksum() string {
-	return a.values.GetValues().Checksum()
+	return a.values.GetValuesChecksum()
 }
 
-// GetHelmValues returns values for rendering
-func (a *Application) GetHelmValues() addonutils.Values {
-	return addonutils.Values{
-		a.packageName: a.values.GetValues(),
+// GetSettingsChecksum returns a checksum of the current config values.
+// Used to detect if settings changed.
+func (a *Application) GetSettingsChecksum() string {
+	return a.values.GetConfigChecksum()
+}
+
+// GetValues returns values for rendering
+func (a *Application) GetValues() addonutils.Values {
+	return a.values.GetValues()
+}
+
+// ApplySettings apply setting values to application
+func (a *Application) ApplySettings(settings addonutils.Values) error {
+	return a.values.ApplyConfigValues(settings)
+}
+
+// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
+func (a *Application) GetChecks() schedule.Checks {
+	deps := make(map[string]dependency.Dependency)
+	for module, dep := range a.definition.Requirements.Modules {
+		deps[module] = dependency.Dependency{
+			Constraint: dep.Constraints,
+			Optional:   dep.Optional,
+		}
+	}
+
+	return schedule.Checks{
+		Kubernetes: a.definition.Requirements.Kubernetes,
+		Deckhouse:  a.definition.Requirements.Deckhouse,
+		Modules:    deps,
 	}
 }
 
@@ -225,17 +291,17 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //
 // Returns error if hook execution or patch application fails.
 func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
-	hookConfigValues := addonutils.Values{
-		a.packageName: a.values.GetConfigValues(),
-	}
+	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
+	defer span.End()
 
-	hookValues := addonutils.Values{
-		a.packageName: a.values.GetValues(),
-	}
+	span.SetAttributes(attribute.String("hook", h.GetName()))
+	span.SetAttributes(attribute.String("name", a.GetName()))
 
+	hookConfigValues := a.values.GetConfigValues()
+	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.packageName, hookConfigValues, hookValues, nil)
+	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {

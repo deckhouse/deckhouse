@@ -75,6 +75,10 @@ data:
   dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
   {{- end }}
 
+  {{- if .Values.cniCilium.sctpEnabled }}
+  enable-sctp: "true"
+  {{- end }}
+
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"

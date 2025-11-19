@@ -1,0 +1,108 @@
+/*
+Copyright 2025 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package kubernetes
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"time"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	kubeclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	defaultUserAgent = "d8-shutdown-inhibitor"
+	defaultQPS       = 5
+	defaultBurst     = 10
+	defaultTimeout   = 15 * time.Second
+)
+
+var kubeAPIRetryBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   1.1,
+	Jitter:   0.1,
+	Steps:    43, // ~5 min
+}
+
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
+type Klient struct {
+	clientset kubeclient.Interface
+}
+
+func NewClientFromKubeconfig(path string) (*Klient, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags("", path)
+	if err != nil {
+		return nil, fmt.Errorf("build config from kubeconfig %q: %w", path, err)
+	}
+
+	return newClient(cfg)
+}
+
+func NewClientFromServiceAccount() (*Klient, error) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("build in-cluster config: %w", err)
+	}
+	return newClient(cfg)
+}
+
+func newClient(cfg *rest.Config) (*Klient, error) {
+	cfg = rest.CopyConfig(cfg)
+	cfg.UserAgent = defaultUserAgent
+	cfg.QPS = defaultQPS
+	cfg.Burst = defaultBurst
+	cfg.Timeout = defaultTimeout
+	clientset, err := kubeclient.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes clientset: %w", err)
+	}
+
+	return &Klient{clientset: clientset}, nil
+}
+
+func (c *Klient) Clientset() kubeclient.Interface {
+	return c.clientset
+}
+
+// ListPodsOnNode returns pods scheduled onto the provided node using a field selector.
+func (c *Klient) ListPodsOnNode(ctx context.Context, nodeName string) (*corev1.PodList, error) {
+	sel := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	var pods *corev1.PodList
+	var lastErr error
+	attempt := 0
+	err := wait.ExponentialBackoffWithContext(ctx, kubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		attempt++
+		var err error
+		pods, err = c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{FieldSelector: sel})
+		if err != nil {
+			dlog.Warn("list pods retry", slog.Int("attempt", attempt), dlog.Err(err))
+			lastErr = err
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		if isContextError(err) {
+			return nil, err
+		}
+		if lastErr != nil {
+			err = lastErr
+		}
+		return nil, fmt.Errorf("list pods on node %q: %w", nodeName, err)
+	}
+	return pods, nil
+}

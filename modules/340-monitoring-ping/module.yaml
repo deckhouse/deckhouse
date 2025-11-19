@@ -9,4 +9,3 @@ requirements:
     # node-exporter is required for this module to work because the exporter stores metrics as a text file on a node,
     # which then be read by a node-exporter
     monitoring-kubernetes: ">= 0.0.0"
-  deckhouse: ">= 1.68"

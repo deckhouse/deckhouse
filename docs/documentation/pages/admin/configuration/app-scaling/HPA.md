@@ -72,11 +72,20 @@ To configure HPA, follow these steps:
 
 1. Optionally, set the `stabilizationWindowSeconds` to delay scaling decisions and limit the pod growth rate:
 
+   Example for scaling up:
+
    ```yaml
    behavior:
     scaleUp:
       stabilizationWindowSeconds: 300
-    # This delays scaling up decisions and limits the speed of pod growth.
+   ```
+
+   Example for scaling down:
+
+   ```yaml
+   behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
    ```
 
 ## HPA configuration examples

@@ -464,6 +464,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
+DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
@@ -471,10 +472,16 @@ LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
 
 ## Tool Versions
-GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.7
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
+DECKHOUSE_CLI_VERSION ?= v0.24.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.30.11
 YQ_VERSION ?= v4.47.2
+
+## Generate tools documentation
+.PHONY: generate-docs
+generate-docs: deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(DECKHOUSE_CLI) help-json > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -519,6 +526,22 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
 
 ## Tool installations
+
+## Download deckhouse-cli locally if necessary.
+.PHONY: deckhouse-cli
+deckhouse-cli:
+	@if [ -f "$(DECKHOUSE_CLI)" ]; then \
+		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
+		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
+			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+		else \
+			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+		fi; \
+	else \
+		echo "d8 not found, downloading..."; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+	fi
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen

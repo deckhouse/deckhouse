@@ -12,7 +12,7 @@ shell:
 ---
 image: {{ .ModuleName }}/build-keepalived
 final: false
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine-3.21
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -48,6 +48,7 @@ import:
   before: install
 shell:
   install:
+  - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

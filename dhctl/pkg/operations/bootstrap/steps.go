@@ -18,12 +18,15 @@
 package bootstrap
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,7 +39,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
+	tplt "text/template"
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
@@ -114,8 +117,9 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 	})
 }
 
-func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
+func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCommanderMode(commanderMode)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
@@ -418,7 +422,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -468,12 +472,11 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
-			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
+			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; touch %s", DHCTLEndBootstrapBashiblePipeline))
 			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}
-
 			return nil
 		})
 	})
@@ -491,7 +494,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -530,7 +532,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
 		BreakIf(func(err error) bool {
 			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 		}).
@@ -545,7 +547,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 			log.DebugLn("Start execute bashible bundle routine")
 
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir, commanderMode)
 		})
 }
 
@@ -569,98 +571,121 @@ func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient) (func(), erro
 	return cleanUpTunnel, nil
 }
 
-func CheckDHCTLDependencies(ctx context.Context, nodeInteface node.Interface) error {
-	type checkResult struct {
-		name string
-		err  error
+const dependencyCheckTemplate = `
+for dep in {{range $i, $d := .Deps}}{{if $i}} {{end}}{{$d}}{{end}}; do
+  if command -v "$dep" >/dev/null 2>&1; then
+    echo "1 $dep"
+  else
+    echo "0 $dep"
+  fi
+done
+`
+
+func buildDependencyCheckScript(deps []string) (string, error) {
+	tmpl, err := tplt.New("dep-check").Parse(dependencyCheckTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse dependency template: %w", err)
 	}
 
-	checkDependency := func(dep string, resultsChan chan checkResult) error {
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, struct {
+		Deps []string
+	}{Deps: deps})
+	if err != nil {
+		return "", fmt.Errorf("failed to render dependency template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) error {
+	dependencies := []string{
+		"sudo", "rm", "tar", "mount", "awk",
+		"grep", "cut", "sed", "mkdir", "cp",
+		"join", "cat", "ps", "kill",
+	}
+
+	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
 		breakPredicate := func(err error) bool {
+			// Retry only for transient SSH connection issues
+			if err == nil {
+				return true
+			}
 			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				if ee.ExitCode() == 255 {
-					return false
-				}
+			if errors.As(err, &ee) && ee.ExitCode() == 255 {
+				log.WarnLn("SSH connection failed (exit 255), retrying in 5 seconds...\n")
+				return false
 			}
 			return true
 		}
 
-		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).
-			BreakIf(breakPredicate).RunContext(ctx, func() error {
-			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput(ctx)
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					log.DebugF("exit code: %v", ee)
-				}
-				e := fmt.Errorf("bashible dependency '%s' error: %v - %s",
-					dep,
-					err,
-					string(output),
-				)
-				resultsChan <- checkResult{
-					name: dep,
-					err:  e,
-				}
-				log.DebugF("Dependency check error: %v\n", e)
-				return e
-			}
-			return nil
-		})
-	}
+		var lastErr error
 
-	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
-		dependencyCommands := [][]string{
-			{"sudo", "rm", "tar", "mount", "awk"},
-			{"grep", "cut", "sed", "shopt", "mkdir"},
-			{"cp", "join", "cat", "ps", "kill"},
+		runErr := retry.NewSilentLoop("Check all DHCTL dependencies", 30, 5*time.Second).
+			BreakIf(breakPredicate).
+			RunContext(ctx, func() error {
+				bashScript, err := buildDependencyCheckScript(dependencies)
+				if err != nil {
+					return fmt.Errorf("failed to build dependency check script: %w", err)
+				}
+
+				log.DebugF("Generated dependency check bash script:\n%s\n", bashScript)
+				//Encode the script to avoid "\n" characters and safely pass it via SSH
+				encoded := base64.StdEncoding.EncodeToString([]byte(bashScript))
+				remoteCmd := fmt.Sprintf("echo %q | base64 -d | bash", encoded)
+				cmd := nodeInterface.Command("bash", "-c", remoteCmd)
+
+				output, err := cmd.CombinedOutput(ctx)
+				if err != nil {
+					var ee *exec.ExitError
+					if errors.As(err, &ee) {
+						log.DebugF("SSH exit code: %v\n", ee.ExitCode())
+					}
+					e := fmt.Errorf("remote dependency check failed: %w - %s", err, string(output))
+					log.DebugF("Dependency check error: %v\n", e)
+					return e
+				}
+
+				var missing []string
+				scanner := bufio.NewScanner(bytes.NewReader(output))
+				for scanner.Scan() {
+					fields := strings.Fields(scanner.Text())
+					if len(fields) != 2 {
+						continue
+					}
+					status, dep := fields[0], fields[1]
+
+					log.InfoF("Checking '%s' dependency\n", dep)
+					if status == "1" {
+						log.Success(fmt.Sprintf("Dependency '%s' is available\n", dep))
+					} else {
+						log.WarnLn(fmt.Sprintf("Dependency '%s' is missing!\n", dep))
+						missing = append(missing, dep)
+					}
+				}
+
+				if err := scanner.Err(); err != nil {
+					lastErr = fmt.Errorf("failed to read dependency output: %w", err)
+					return lastErr
+				}
+
+				if len(missing) > 0 {
+					lastErr = fmt.Errorf("missing dependencies: %v", missing)
+					return lastErr
+				}
+
+				log.InfoLn("All dependencies are present.")
+				return nil
+			})
+
+		if runErr != nil {
+			if lastErr != nil {
+				log.DebugF("Dependency checks exceeded maximum retries.\n")
+				return fmt.Errorf("dependency check failed after retries: %w", lastErr)
+			}
+			return runErr
 		}
 
-		resultsChan := make(chan checkResult)
-
-		exceedDependency := errors.New("All dependency checks was exceed")
-
-		go func() {
-			wg := sync.WaitGroup{}
-			for _, deps := range dependencyCommands {
-				for _, dep := range deps {
-					wg.Add(1)
-					dep := dep
-					log.InfoF("Check '%s' dependency\n", dep)
-					go func() {
-						defer wg.Done()
-						err := checkDependency(dep, resultsChan)
-						if err != nil {
-							err = errors.Join(exceedDependency, err)
-						}
-
-						resultsChan <- checkResult{
-							name: dep,
-							err:  err,
-						}
-					}()
-				}
-				time.Sleep(1 * time.Second)
-			}
-			log.DebugLn("Wait all dependency checks successful")
-			wg.Wait()
-			log.DebugLn("Close result chan")
-			close(resultsChan)
-		}()
-
-		for res := range resultsChan {
-			if res.err != nil {
-				if errors.Is(res.err, exceedDependency) {
-					return res.err
-				}
-				log.WarnLn(res.err)
-				continue
-			}
-			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
-		}
-
-		log.InfoLn("OK!")
 		return nil
 	})
 }

@@ -1,0 +1,19 @@
+- name: d8.loki.discards
+  rules:
+  - alert: LokiDiscardedSamplesWarning
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_loki_discards: "LokiDiscards,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |-
+        Loki is discarding samples during ingestion because they fail validation.
+        Samples are being discarded because of `{{ $labels.reason }}` at a rate of {{ .Value | humanize }} samples per second.
+        For more information, refer to the [`loki` FAQ](/modules/loki/faq.html).
+      summary: Loki is discarding samples during ingestion.
+    expr: |
+      sum by(reason) (rate(loki_discarded_samples_total[5m])) > 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster

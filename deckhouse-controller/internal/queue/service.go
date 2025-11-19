@@ -36,9 +36,9 @@ type Service struct {
 
 // NewService creates a new Service with the given context.
 // The context is used for all queues created by the Service.
-func NewService(ctx context.Context, logger *log.Logger) *Service {
+func NewService(logger *log.Logger) *Service {
 	return &Service{
-		ctx:    ctx,
+		ctx:    context.Background(),
 		queues: make(map[string]*queue),
 		logger: logger.Named("queue-service"),
 	}
@@ -90,7 +90,7 @@ func (s *Service) Stop() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.logger.Debug("stop worker")
+	s.logger.Debug("stop queues")
 
 	for name, q := range s.queues {
 		q.Stop()

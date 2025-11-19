@@ -27,7 +27,7 @@ spec:
 
                     Список поддерживаемых Deckhouse ОС и их версий можно найти на странице [Поддерживаемые версии Kubernetes и ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
 
-                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData` или `instances.imageName`.
+                    **По умолчанию** используется значение `HuaweiCloudDiscoveryData` или `instances.imageName`.
                 rootDiskSize:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
@@ -39,12 +39,28 @@ spec:
 
                     Параметр используется для указания типа тома, который будет использоваться для корневого диска.
 
-                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
+                    **По умолчанию** используется значение `HuaweiCloudDiscoveryData`.
+                mainNetwork:
+                  description: |
+                    ID основной сети для основного сетевого интерфейса (NIC) виртуальной машины.
+
+                    **По умолчанию** используется значение из `HuaweiCloudDiscoveryData`.
+                  type: string
+                  x-doc-required: false
+
+                additionalNetworks:
+                  description: |
+                    Список ID сетей (подсетей) для дополнительных сетевых интерфейсов (NIC).
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+
                 subnets:
                   description: |
-                    Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
+                    > Используйте поле [additionalNetworks](#huaweicloudinstanceclass-v1-spec-additionalnetworks) вместо этого параметра.
 
-                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
+                    Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
                 securityGroups:
                   description: |
                     Группы безопасности, которые будут применяться к сетевым портам виртуальных машин в дополнение к группам безопасности, установленным в конфигурации облачного провайдера.
@@ -54,3 +70,8 @@ spec:
                     Группа `SecurityGroups` может не поддерживаться поставщиком облачных услуг.
                 serverGroupID:
                   description: Группа серверов, в которую следует назначить машину.
+                vipAddress:
+                  description: |
+                    Если заполнен, виртуальный IP-адрес будет назначен на все узлы инстанс-класса.
+                    
+                    Допустимые значения: `Auto`, адрес IPv4.

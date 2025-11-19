@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-runAsUser-non-zero-pod
+  namespace: testns
+spec:
+  securityContext:
+    runAsUser: 1000
+  containers:
+    - name: nginx
+      image: nginx
+

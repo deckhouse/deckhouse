@@ -28,6 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -84,7 +85,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		return ctrl.Result{}, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
-	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending ||
+		instanceScope.MachineScope.StaticMachine.Spec.ProviderID == "" {
 		result, err := c.setStaticInstancePhaseToBootstrapping(ctx, instanceScope)
 		if err != nil {
 			return result, err
@@ -146,109 +148,193 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
+func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (result ctrl.Result, err error) {
+	instanceScope.Logger.Info("Starting reservation process",
+		"instance", instanceScope.Instance.Name,
+		"machine", instanceScope.MachineScope.StaticMachine.Name,
+		"machineUID", instanceScope.MachineScope.StaticMachine.UID,
+		"address", instanceScope.Instance.Spec.Address,
+	)
+
+	err = c.reserveStaticInstance(ctx, instanceScope)
+	if err != nil {
+		instanceScope.Logger.Error(err, "Failed to reserve StaticInstance",
+			"instance", instanceScope.Instance.Name,
+			"machine", instanceScope.MachineScope.StaticMachine.Name,
+		)
+		return ctrl.Result{}, err
+	}
+
+	instanceScope.Logger.Info("StaticInstance successfully reserved",
+		"instance", instanceScope.Instance.Name,
+		"machine", instanceScope.MachineScope.StaticMachine.Name,
+		"machineUID", instanceScope.MachineScope.StaticMachine.UID,
+	)
+
+	defer func() {
+		if err != nil {
+			instanceScope.Logger.Info("Releasing StaticInstance reservation due to error",
+				"instance", instanceScope.Instance.Name,
+				"machine", instanceScope.MachineScope.StaticMachine.Name,
+				"error", err.Error(),
+			)
+			c.releaseStaticInstance(ctx, instanceScope)
+		}
+	}()
+
 	address := net.JoinHostPort(instanceScope.Instance.Spec.Address, strconv.Itoa(instanceScope.Credentials.Spec.SSHPort))
 
 	delay := c.tcpCheckRateLimiter.When(address)
+	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
 
-	done := c.tcpCheckTaskManager.spawn(taskID(address), func() bool {
-		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
-		instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
-		conn, err := net.DialTimeout("tcp", address, delay)
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
-			if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
-				c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
-				instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
-				conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
-				err2 := instanceScope.Patch(ctx)
-				if err2 != nil {
+	tcpCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+	if tcpCondition == nil || tcpCondition.Status != corev1.ConditionTrue {
+		tcpTaskID := fmt.Sprintf("%s", address)
+		instanceScope.Logger.Info("Scheduling TCP check",
+			"address", address,
+			"timeout", delay,
+			"taskID", tcpTaskID,
+			"machine", instanceScope.MachineScope.StaticMachine.Name,
+		)
+		done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
+			start := time.Now()
+			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+			instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
+			conn, err := net.DialTimeout("tcp", address, delay)
+			if err != nil {
+				instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
+				if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+					c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
+					instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
+					conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
+					err2 := instanceScope.Patch(ctx)
+					if err2 != nil {
+						instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+					}
+				}
+				return false
+			}
+			defer conn.Close()
+			if status == nil || status.Status != corev1.ConditionTrue {
+				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+				err := instanceScope.Patch(ctx)
+				if err != nil {
 					instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
 				}
 			}
-			return false
+			instanceScope.Logger.Info("TCP connection check completed successfully",
+				"address", address,
+				"machine", instanceScope.MachineScope.StaticMachine.Name,
+				"elapsed", time.Since(start),
+			)
+			return true
+		})
+		if done == nil {
+			instanceScope.Logger.Info("TCP check still running, requeueing",
+				"address", address,
+				"machine", instanceScope.MachineScope.StaticMachine.Name,
+				"requeueAfter", delay,
+				"taskID", tcpTaskID,
+			)
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
-		defer conn.Close()
-		if status == nil || status.Status != corev1.ConditionTrue {
-			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
-			err := instanceScope.Patch(ctx)
-			if err != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
-			}
+		if !*done {
+			err = errors.New("Failed to connect via tcp")
+			instanceScope.Logger.Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
+			return ctrl.Result{}, err
 		}
-		return true
-	})
-	if done == nil {
-		return ctrl.Result{RequeueAfter: delay}, nil
-	}
-	if !*done {
-		err := errors.New("Failed to connect via tcp")
-		instanceScope.Logger.Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
-		return ctrl.Result{}, err
 	}
 
 	c.tcpCheckRateLimiter.Forget(address)
 
-	check := c.checkTaskManager.spawn(taskID(address), func() bool {
-		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
-		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
-			return false
-		}
-		data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
-		if err != nil {
-			scanner := bufio.NewScanner(strings.NewReader(data))
-			for scanner.Scan() {
-				str := scanner.Text()
-				if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
-					err := errors.New(str)
-					if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
-						c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
-						instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
-						conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
-						err2 := instanceScope.Patch(ctx)
-						if err2 != nil {
-							instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+	sshCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+	if sshCondition == nil || sshCondition.Status != corev1.ConditionTrue {
+		sshTaskID := fmt.Sprintf("%s", address)
+		check := c.checkTaskManager.spawn(taskID(sshTaskID), func() bool {
+			start := time.Now()
+			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+			var sshCl ssh.SSH
+			var err error
+			if instanceScope.SSHLegacyMode {
+				instanceScope.Logger.Info("using clissh")
+				sshCl, err = clissh.CreateSSHClient(instanceScope)
+			} else {
+				instanceScope.Logger.Info("using gossh")
+				sshCl, err = gossh.CreateSSHClient(instanceScope)
+			}
+			if err != nil {
+				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+				return false
+			}
+			data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
+			if err != nil {
+				scanner := bufio.NewScanner(strings.NewReader(data))
+				for scanner.Scan() {
+					str := scanner.Text()
+					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
+						err := errors.New(str)
+						if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+							c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
+							instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
+							conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
+							err2 := instanceScope.Patch(ctx)
+							if err2 != nil {
+								instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+							}
 						}
 					}
 				}
+				return false
 			}
-			return false
-		}
-		if status == nil || status.Status != corev1.ConditionTrue {
-			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-			err = instanceScope.Patch(ctx)
-			if err != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+			if status == nil || status.Status != corev1.ConditionTrue {
+				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+				err = instanceScope.Patch(ctx)
+				if err != nil {
+					instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+				}
 			}
+			instanceScope.Logger.Info("SSH connectivity check completed", "address", address, "elapsed", time.Since(start))
+			return true
+		})
+		if check == nil {
+			instanceScope.Logger.Info("SSH check still running, requeueing", "address", address, "requeueAfter", delay)
+			return ctrl.Result{RequeueAfter: delay}, nil
 		}
-		return true
-	})
-	if check == nil {
-		return ctrl.Result{RequeueAfter: delay}, nil
-	}
-	if !*check {
-		err := errors.New("Failed to connect via ssh")
-		instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
-		return ctrl.Result{}, err
+		if !*check {
+			err = errors.New("Failed to connect via ssh")
+			instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
+			return ctrl.Result{}, err
+		}
 	}
 
 	providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
 
 	instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
 
-	err := instanceScope.MachineScope.Patch(ctx)
+	err = instanceScope.MachineScope.Patch(ctx)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (c *Client) reserveStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) error {
+	currentRef := instanceScope.Instance.Status.MachineRef
+
+	if currentRef != nil && currentRef.UID == instanceScope.MachineScope.StaticMachine.UID {
+		if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
+			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
+			if err := instanceScope.Patch(ctx); err != nil {
+				return errors.Wrap(err, "failed to patch StaticInstance phase to Bootstrapping")
+			}
+		}
+
+		return nil
+	}
+
+	if currentRef != nil && currentRef.UID != instanceScope.MachineScope.StaticMachine.UID {
+		return errors.Errorf("StaticInstance already reserved for another StaticMachine: %s", currentRef.Name)
 	}
 
 	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
@@ -261,12 +347,28 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
 
-	err = instanceScope.Patch(ctx)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef and Phase")
+	if err := instanceScope.Patch(ctx); err != nil {
+		if apierrors.IsConflict(err) {
+			return errors.Wrap(err, "StaticInstance already reserved by another machine")
+		}
+		return errors.Wrap(err, "failed to reserve StaticInstance for StaticMachine")
 	}
 
-	return ctrl.Result{}, nil
+	return nil
+}
+
+func (c *Client) releaseStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) {
+	if instanceScope.Instance.Status.MachineRef == nil {
+		return
+	}
+
+	if instanceScope.Instance.Status.MachineRef.UID != instanceScope.MachineScope.StaticMachine.UID {
+		return
+	}
+
+	if err := instanceScope.ToPending(ctx); err != nil {
+		instanceScope.Logger.Error(err, "Failed to release StaticInstance reservation")
+	}
 }
 
 // setStaticInstancePhaseToRunning finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.

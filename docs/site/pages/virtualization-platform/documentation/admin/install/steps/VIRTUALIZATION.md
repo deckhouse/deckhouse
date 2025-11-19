@@ -10,7 +10,7 @@ To run the commands below, you need to have the [d8 utility](/products/kubernete
 After configuring the storage, you need to enable the `virtualization` module. Enabling and configuring the module can be done via the web interface or using the following command:
 
 ```shell
-d8 s module enable virtualization
+d8 system module enable virtualization
 ```
 
 Edit the module configuration using one of the [methods](#virtualization-module-configuration).

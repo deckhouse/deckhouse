@@ -46,6 +46,7 @@ spec:
       infrastructureRef:
         apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
+        namespace: d8-cloud-instance-manager
         name: {{ $template_name }}
   {{- if $ng.nodeDrainTimeoutSecond }}
       drainTimeout: {{$ng.nodeDrainTimeoutSecond}}s

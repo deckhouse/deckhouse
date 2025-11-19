@@ -88,7 +88,7 @@ General cluster parameters are defined in the [ClusterConfiguration](/products/k
 To modify these parameters, run the following command:
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.

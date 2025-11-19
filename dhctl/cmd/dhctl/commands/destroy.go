@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -44,7 +45,7 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 )
 
 func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
@@ -89,7 +90,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		return destroyer.DestroyCluster(context.Background(), app.SanityCheck)
+		err = destroyer.DestroyCluster(context.Background(), app.SanityCheck)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
+			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd

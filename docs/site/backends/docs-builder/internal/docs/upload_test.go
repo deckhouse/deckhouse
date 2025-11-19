@@ -102,11 +102,48 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"/app/hugo/data/modules/moduleName/stable/openapi",
 			true,
 		},
+		// Test cases for internal directories exclusion
+		{
+			"docs/internal/README.md",
+			"",
+			false,
+		},
+		{
+			"docs/internals/development.md",
+			"",
+			false,
+		},
+		{
+			"docs/development/HOWTO.md",
+			"",
+			false,
+		},
+		{
+			"docs/dev/debug.md",
+			"",
+			false,
+		},
+		{
+			"docs/internal/subfolder/file.md",
+			"",
+			false,
+		},
+		// Test that regular docs files still work
+		{
+			"docs/public/README.md",
+			"/app/hugo/content/modules/moduleName/stable/public/README.md",
+			true,
+		},
+		{
+			"docs/configuration.md",
+			"/app/hugo/content/modules/moduleName/stable/configuration.md",
+			true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
-			var svc = NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage(""))
+			var svc = NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage())
 
 			got, ok := svc.getLocalPath("moduleName", "stable", tt.fileName)
 			if got != tt.want || ok != tt.wantOK {

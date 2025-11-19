@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-multiple-containers-one-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-spc-t
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+    - name: redis
+      image: redis
+      securityContext:
+        seLinuxOptions:
+          type: wrongtype
+

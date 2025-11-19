@@ -44,13 +44,16 @@ const (
 
 	// scanInterval defines how often the monitor checks for absent resources
 	scanInterval = 4 * time.Minute
+
+	// default number of workers
+	workerNumber = 5
 )
 
 // ErrAbsentManifest is returned when one or more expected resources are missing from the cluster
 var ErrAbsentManifest = errors.New("absent manifest")
 
-// absentCallback is invoked when absent resources are detected
-type absentCallback func(name string)
+// AbsentCallback is invoked when absent resources are detected
+type AbsentCallback func(name string)
 
 // resourcesMonitor periodically checks if all Helm release resources exist in the cluster
 type resourcesMonitor struct {
@@ -63,6 +66,7 @@ type resourcesMonitor struct {
 	wg         *sync.WaitGroup
 
 	name      string                                // Helm release name
+	namespace string                                // Release namespace
 	rendered  string                                // rendered manifest YAML (cleared after parsing to save memory)
 	resources map[namespacedGVK]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
 
@@ -78,11 +82,12 @@ type namespacedGVK struct {
 	namespace string // empty for cluster-scoped resources
 }
 
-func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, name, rendered string, logger *log.Logger) *resourcesMonitor {
+func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, rendered string, logger *log.Logger) *resourcesMonitor {
 	return &resourcesMonitor{
 		wg:   new(sync.WaitGroup),
 		once: sync.Once{},
 
+		namespace: namespace,
 		name:      name,
 		rendered:  rendered,
 		resources: make(map[namespacedGVK]map[string]struct{}),
@@ -90,7 +95,7 @@ func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, name, rendered stri
 		cache: cache,
 		nelm:  nelm,
 
-		logger: logger.Named(fmt.Sprintf("monitor-%s", name)),
+		logger: logger.Named(fmt.Sprintf("monitor.%s", name)),
 	}
 }
 
@@ -136,7 +141,7 @@ func (m *resourcesMonitor) Resume() {
 }
 
 // Start creates a timer and checks if all deployed manifests are present in the cluster.
-func (m *resourcesMonitor) Start(ctx context.Context, callback absentCallback) {
+func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 	m.once.Do(func() {
 		m.logger.Info("start loop")
 
@@ -169,7 +174,7 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback absentCallback) {
 					}
 
 					// check release status
-					_, status, err := m.nelm.LastStatus(m.ctx, m.name)
+					_, status, err := m.nelm.LastStatus(m.ctx, m.namespace, m.name)
 					if err != nil {
 						m.logger.Error("failed to get helm release status", log.Err(err))
 						continue
@@ -221,6 +226,8 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 
 	// Check all resources in parallel using errgroup
 	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(workerNumber)
+
 	for res := range m.resources {
 		g.Go(func() error {
 			return m.checkResource(ctx, res)
@@ -242,6 +249,8 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 	if err != nil {
 		return fmt.Errorf("parse manifest: %w", err)
 	}
+
+	m.logger.Debug("build namespaced gvk", slog.Int("parsed", len(objs)))
 
 	for _, obj := range objs {
 		// Skip list kinds rendered by Helm, if any

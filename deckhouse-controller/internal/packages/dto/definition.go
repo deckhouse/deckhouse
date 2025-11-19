@@ -14,6 +14,15 @@
 
 package dto
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+)
+
 const (
 	// DefinitionFile is the filename for package metadata
 	DefinitionFile = "package.yaml"
@@ -40,11 +49,61 @@ type Descriptions struct {
 
 // Requirements specifies dependencies required by this package.
 type Requirements struct {
-	Modules map[string]string `yaml:"modules" json:"modules"`
+	Kubernetes string            `yaml:"kubernetes,omitempty" json:"kubernetes,omitempty"`
+	Deckhouse  string            `yaml:"deckhouse,omitempty" json:"deckhouse,omitempty"`
+	Modules    map[string]string `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 // DisableOptions configures package disablement behavior.
 type DisableOptions struct {
 	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+}
+
+// ToApplication converts package definition to application definition
+func (d *Definition) ToApplication() (apps.Definition, error) {
+	var err error
+
+	var kubernetesConstraint *semver.Constraints
+	if len(d.Requirements.Kubernetes) > 0 {
+		if kubernetesConstraint, err = semver.NewConstraint(d.Requirements.Kubernetes); err != nil {
+			return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+		}
+	}
+
+	var deckhouseConstraint *semver.Constraints
+	if len(d.Requirements.Deckhouse) > 0 {
+		if deckhouseConstraint, err = semver.NewConstraint(d.Requirements.Deckhouse); err != nil {
+			return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+		}
+	}
+
+	modules := make(map[string]apps.Dependency)
+	for module, rawConstraint := range d.Requirements.Modules {
+		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
+		constraint, err := semver.NewConstraint(raw)
+		if err != nil {
+			return apps.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
+		}
+
+		modules[module] = apps.Dependency{
+			Constraints: constraint,
+			Optional:    optional,
+		}
+	}
+
+	return apps.Definition{
+		Name:    d.Name,
+		Version: d.Version,
+		Stage:   d.Stage,
+		DisableOptions: apps.DisableOptions{
+			Confirmation: d.DisableOptions.Confirmation,
+			Message:      d.DisableOptions.Message,
+		},
+		Requirements: apps.Requirements{
+			Kubernetes: kubernetesConstraint,
+			Deckhouse:  deckhouseConstraint,
+			Modules:    modules,
+		},
+	}, nil
 }

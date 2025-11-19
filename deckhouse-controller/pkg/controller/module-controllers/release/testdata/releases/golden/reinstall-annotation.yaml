@@ -45,7 +45,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1003"
+  resourceVersion: "1002"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -54,7 +54,7 @@ status:
   approved: true
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: "2021-12-08T08:34:01Z"
 ---

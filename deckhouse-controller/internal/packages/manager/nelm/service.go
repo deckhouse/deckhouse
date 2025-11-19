@@ -16,6 +16,7 @@ package nelm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -56,14 +57,16 @@ type Service struct {
 	logger *log.Logger
 }
 
-// New creates a new nelm service for managing Helm releases.
-func New(namespace, tmpDir string, cache runtimecache.Cache, logger *log.Logger) *Service {
-	nelmClient := nelm.New(namespace, logger)
+// NewService creates a new nelm service for managing Helm releases.
+func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback, logger *log.Logger) *Service {
+	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
+		"heritage": "deckhouse",
+	}))
 
 	return &Service{
-		tmpDir:         tmpDir,
+		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(cache, nelmClient, logger),
+		monitorManager: monitor.New(cache, nelmClient, absentCallback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -72,12 +75,20 @@ func (s *Service) HasMonitor(name string) bool {
 	return s.monitorManager.HasMonitor(name)
 }
 
+func (s *Service) RemoveMonitor(name string) {
+	s.monitorManager.RemoveMonitor(name)
+}
+
 func (s *Service) PauseMonitor(name string) {
 	s.monitorManager.PauseMonitor(name)
 }
 
 func (s *Service) ResumeMonitor(name string) {
 	s.monitorManager.ResumeMonitor(name)
+}
+
+func (s *Service) StopMonitors() {
+	s.monitorManager.Stop()
 }
 
 // Render renders a Helm chart with the provided values and returns the manifests.
@@ -90,16 +101,20 @@ func (s *Service) ResumeMonitor(name string) {
 //  4. Return rendered YAML manifests
 //
 // Returns ErrPackageNotHelm if the path doesn't contain a valid Helm chart.
-func (s *Service) Render(ctx context.Context, name, path string, values addonutils.Values) (string, error) {
+func (s *Service) Render(ctx context.Context, app *apps.Application) (string, error) {
 	_, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Render")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("path", path))
+	span.SetAttributes(attribute.String("name", app.GetName()))
+	span.SetAttributes(attribute.String("namespace", app.GetNamespace()))
+	span.SetAttributes(attribute.String("path", app.GetPath()))
 
-	s.logger.Debug("render nelm chart", slog.String("path", path), slog.String("name", name))
+	s.logger.Debug("render nelm chart",
+		slog.String("path", app.GetPath()),
+		slog.String("namespace", app.GetNamespace()),
+		slog.String("name", app.GetName()))
 
-	isHelm, err := s.isHelmChart(path)
+	isHelm, err := s.isHelmChart(app.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", fmt.Errorf("check helm chart: %w", err)
@@ -110,15 +125,15 @@ func (s *Service) Render(ctx context.Context, name, path string, values addonuti
 	}
 
 	// Create temporary values file (cleaned up after rendering)
-	valuesPath, err := s.createTmpValuesFile(name, values)
+	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", fmt.Errorf("create temp values file: %w", err)
 	}
 	defer os.Remove(valuesPath)
 
-	return s.client.Render(ctx, name, nelm.InstallOptions{
-		Path:          path,
+	return s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
+		Path:          app.GetPath(),
 		ValuesPaths:   []string{valuesPath},
 		ReleaseLabels: nil,
 	})
@@ -128,17 +143,17 @@ func (s *Service) Render(ctx context.Context, name, path string, values addonuti
 // This removes all resources created by the release from the cluster.
 //
 // Returns error if the release doesn't exist or deletion fails.
-func (s *Service) Delete(ctx context.Context, name string) error {
+func (s *Service) Delete(ctx context.Context, app *apps.Application) error {
 	_, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Delete")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("name", app.GetName()))
+	span.SetAttributes(attribute.String("namespace", app.GetNamespace()))
+	span.SetAttributes(attribute.String("path", app.GetPath()))
 
-	s.logger.Debug("delete nelm release", slog.String("name", name))
+	s.logger.Debug("delete nelm release", slog.String("name", app.GetName()), slog.String("namespace", app.GetNamespace()))
 
-	defer s.monitorManager.RemoveMonitor(name)
-
-	return s.client.Delete(ctx, name)
+	return s.client.Delete(ctx, app.GetNamespace(), app.GetName())
 }
 
 // Upgrade installs or upgrades a Helm release for an application.
@@ -160,10 +175,11 @@ func (s *Service) Delete(ctx context.Context, name string) error {
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
 func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
-	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Install")
+	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", app.GetName()))
+	span.SetAttributes(attribute.String("namespace", app.GetNamespace()))
 	span.SetAttributes(attribute.String("path", app.GetPath()))
 
 	s.logger.Debug("install nelm release", slog.String("path", app.GetPath()), slog.String("name", app.GetName()))
@@ -178,17 +194,25 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		return ErrPackageNotHelm
 	}
 
-	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetHelmValues())
+	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create values file: %w", err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
+	marshalledMeta, err := json.Marshal(app.GetMetaValues())
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("marshal metadata values: %w", err)
+	}
+
 	// Render chart to get manifests for checksum calculation
-	renderedManifests, err := s.client.Render(ctx, app.GetName(), nelm.InstallOptions{
+	renderedManifests, err := s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
+		// Format as "Meta=<json>"
+		ExtraValues: fmt.Sprintf("Meta=%s", marshalledMeta),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -199,31 +223,35 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
 
 	// Determine if upgrade is actually needed (optimization)
-	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetName(), checksum)
+	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetNamespace(), app.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	if !shouldUpgrade {
+		s.monitorManager.AddMonitor(app.GetNamespace(), app.GetName(), renderedManifests)
 		s.logger.Debug("no need to upgrade", slog.String("name", app.GetName()))
+
 		return nil
 	}
 
 	// Install or upgrade the release
-	err = s.client.Install(ctx, app.GetName(), nelm.InstallOptions{
+	err = s.client.Install(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
+		// Format as "Meta=<json>"
+		ExtraValues: fmt.Sprintf("Meta=%s", marshalledMeta),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("install nelm release: %w", err)
 	}
 
-	s.monitorManager.AddMonitor(ctx, app.GetName(), renderedManifests)
+	s.monitorManager.AddMonitor(app.GetNamespace(), app.GetName(), renderedManifests)
 
 	return nil
 }
@@ -241,8 +269,8 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 // Returns:
 //   - bool: true if upgrade is needed
 //   - error: if checking conditions fails
-func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, checksum string) (bool, error) {
-	revision, status, err := s.client.LastStatus(ctx, releaseName)
+func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseName string, checksum string) (bool, error) {
+	revision, status, err := s.client.LastStatus(ctx, namespace, releaseName)
 	if err != nil {
 		return false, err
 	}
@@ -258,7 +286,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, releaseName string, 
 	}
 
 	// Check if manifests changed by comparing checksums
-	recordedChecksum, err := s.client.GetChecksum(ctx, releaseName)
+	recordedChecksum, err := s.client.GetChecksum(ctx, namespace, releaseName)
 	if err != nil {
 		return false, err
 	}
