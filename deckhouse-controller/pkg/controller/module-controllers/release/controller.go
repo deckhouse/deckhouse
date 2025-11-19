@@ -1314,10 +1314,10 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 	var valuesByConfig bool
 	values := make(addonutils.Values)
-	config := new(v1alpha1.ModuleConfig)
 	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 		values = module.GetConfigValues(false)
 	} else {
+		config := new(v1alpha1.ModuleConfig)
 		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
@@ -1328,18 +1328,20 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 
-	if valuesByConfig {
-		// load conversions
-		conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	// load conversions
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	if _, err = os.Stat(conversionsDir); err == nil {
+		logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		// create a temporary store to avoid writing not valid conversions to the main store
 		tmpStore := conversion.ConversionsStore{}
-		if _, err = os.Stat(conversionsDir); err == nil {
-			logger.Debug("conversions for the module found", slog.String("name", def.Name))
-			if err = tmpStore.Add(def.Name, conversionsDir); err != nil {
-				return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-			}
-		} else if !os.IsNotExist(err) {
+		if err = tmpStore.Add(def.Name, conversionsDir); err != nil {
 			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
+
+		config := new(v1alpha1.ModuleConfig)
+		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 		}
 
 		// apply conversions to values
@@ -1348,6 +1350,8 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			return fmt.Errorf("convert values to latest version: %w", err)
 		}
 		values = newSettings
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
 	configConfigurationErrorMetricsLabels := map[string]string{

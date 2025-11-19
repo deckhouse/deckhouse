@@ -435,16 +435,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
-	suite.Run("Process release with ModuleConfig", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("with-module-config.yaml"), withModulesNotInManager("echo"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease("echo-v1.5.0")
-			_, err := suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
-	})
-
 	suite.Run("Sequential processing", func() {
 		suite.Run("sequential processing with patch release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
@@ -843,13 +833,8 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 }
 
 func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
-	var modulesNotInMgr map[string]bool
-	if stub, ok := suite.ctr.moduleManager.(stubModulesManager); ok {
-		modulesNotInMgr = stub.modulesNotInMgr
-	}
 	suite.ctr.moduleManager = stubModulesManager{
-		modulePhase:     phase,
-		modulesNotInMgr: modulesNotInMgr,
+		modulePhase: phase,
 	}
 }
 
@@ -870,16 +855,6 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
 	return func(r *reconciler) {
 		r.moduleManager = stubModulesManager{modulePhase: phase}
-	}
-}
-
-func withModulesNotInManager(moduleNames ...string) reconcilerOption {
-	return func(r *reconciler) {
-		notInMgr := make(map[string]bool, len(moduleNames))
-		for _, name := range moduleNames {
-			notInMgr[name] = true
-		}
-		r.moduleManager = stubModulesManager{modulesNotInMgr: notInMgr}
 	}
 }
 
@@ -1014,12 +989,6 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = module
 
-	case v1alpha1.ModuleConfigGVK.Kind:
-		config := new(v1alpha1.ModuleConfig)
-		err = yaml.Unmarshal(raw, config)
-		require.NoError(suite.T(), err)
-		obj = config
-
 	case "Secret":
 		secret := new(corev1.Secret)
 		err = yaml.Unmarshal(raw, secret)
@@ -1082,8 +1051,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 }
 
 type stubModulesManager struct {
-	modulePhase     addonmodules.ModuleRunPhase
-	modulesNotInMgr map[string]bool // modules that should return nil (not in module manager)
+	modulePhase addonmodules.ModuleRunPhase
 }
 
 func (s stubModulesManager) AreModulesInited() bool {
@@ -1094,11 +1062,6 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
-	// If module is marked as not in manager, return nil
-	if s.modulesNotInMgr != nil && s.modulesNotInMgr[name] {
-		return nil
-	}
-
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
 	bm.SetPhase(addonmodules.Ready)
 	if s.modulePhase != "" {
