@@ -37,7 +37,7 @@ shell:
   - mv /src/which-{{ $version }} /src/which
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine
+fromImage: builder/alpine-3.22
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
