@@ -24,8 +24,6 @@ on:
 
 env:
   SCRIPT_DIR: ".github/scripts/python/e2e-commander-clean"
-  E2E_COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
-  E2E_COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
   PYTHON_VERSION: '3.13'
 
 jobs:
@@ -44,6 +42,10 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
     {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
     - uses: {!{ index (ds "actions") "actions/setup-python" }!}
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -51,6 +53,9 @@ jobs:
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         python ${SCRIPT_DIR}/main.py --auto
     {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
@@ -64,6 +69,10 @@ jobs:
     runs-on: [ self-hosted, regular ]
     steps:
     {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
     - uses: {!{ index (ds "actions") "actions/setup-python" }!}
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -71,6 +80,9 @@ jobs:
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
         if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then

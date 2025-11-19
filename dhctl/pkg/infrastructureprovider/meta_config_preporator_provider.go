@@ -27,8 +27,25 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// todo it is ugly solution because we validate some filds in providers only in bootstrap
+// need migration in cloud-provider-yandex in withNat layout
+type DhctlPhase string
+
+const (
+	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
+)
+
 type PreparatorProviderParams struct {
 	logger log.Logger
+	phase  DhctlPhase
+}
+
+func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
+	p.phase = phase
+}
+
+func (p *PreparatorProviderParams) WithPhaseBootstrap() {
+	p.WithPhase(DhctlPhaseBootstrap)
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -57,7 +74,11 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator(true).WithLogger(logger)
+			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
+			if params.phase == DhctlPhaseBootstrap {
+				yandexPreparator.EnableValidateWithNATLayout()
+			}
+			return yandexPreparator
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig:     true,

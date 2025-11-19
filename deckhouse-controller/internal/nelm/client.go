@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -99,7 +98,6 @@ func WithAnnotations(annotations map[string]string) Option {
 type Client struct {
 	opts *Options
 
-	namespace   string
 	driver      string // Helm storage driver (e.g., "secret", "configmap")
 	kubeContext string
 
@@ -108,22 +106,20 @@ type Client struct {
 
 // New creates a new nelm client for the specified namespace
 // It initializes the nelm logger and applies any provided options
-func New(namespace string, logger *log.Logger, opts ...Option) *Client {
+func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
 	nelmlog.Default = newNelmLogger(logger)
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
-		HistoryMax: 10,
+		HistoryMax:  10,
+		Annotations: make(map[string]string),
+		Labels:      make(map[string]string),
 	}
 
 	// Apply any provided options
 	for _, opt := range opts {
 		opt(defaultOpts)
-	}
-
-	if len(defaultOpts.Annotations) > 0 {
-		defaultOpts.Annotations = make(map[string]string)
 	}
 
 	defaultOpts.Annotations["werf.io/skip-logs"] = "true"
@@ -132,7 +128,6 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 	return &Client{
 		opts: defaultOpts,
 
-		namespace:   namespace,
 		driver:      os.Getenv("HELM_DRIVER"),
 		kubeContext: os.Getenv("KUBE_CONTEXT"),
 
@@ -140,52 +135,13 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 	}
 }
 
-// ListCharts returns a sorted list of all chart names from installed releases
-func (c *Client) ListCharts(ctx context.Context) ([]string, error) {
-	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListCharts")
-	defer span.End()
-
-	res, err := action.ReleaseList(ctx, action.ReleaseListOptions{
-		KubeConnectionOptions: common.KubeConnectionOptions{
-			KubeContextCurrent: c.kubeContext,
-		},
-		OutputNoPrint:        true,
-		ReleaseStorageDriver: c.driver,
-	})
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("list nelm releases: %w", err)
-	}
-
-	span.SetAttributes(attribute.Int("found", len(res.Releases)))
-
-	result := make([]string, len(res.Releases))
-	for idx, release := range res.Releases {
-		chartName := "unknown"
-		if release.Chart != nil {
-			chartName = release.Chart.Name
-		}
-
-		// Skip releases without a name
-		if release.Name == "" {
-			continue
-		}
-
-		result[idx] = chartName
-	}
-
-	sort.Strings(result)
-
-	return result, nil
-}
-
 // LastStatus returns the revision number and status of the latest release
 // Returns ("0", "", nil) if the release doesn't exist
-func (c *Client) LastStatus(ctx context.Context, releaseName string) (string, string, error) {
+func (c *Client) LastStatus(ctx context.Context, namespace, releaseName string) (string, string, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListStatus")
 	defer span.End()
 
-	res, err := c.getRelease(ctx, releaseName)
+	res, err := c.getRelease(ctx, namespace, releaseName)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		if errors.Is(err, ErrReleaseNotFound) {
@@ -201,13 +157,14 @@ func (c *Client) LastStatus(ctx context.Context, releaseName string) (string, st
 
 // GetChecksum retrieves the module checksum for a release
 // It checks the storage label "packageChecksum"
-func (c *Client) GetChecksum(ctx context.Context, releaseName string) (string, error) {
+func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string) (string, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetChecksum")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
 
-	res, err := c.getRelease(ctx, releaseName)
+	res, err := c.getRelease(ctx, namespace, releaseName)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
@@ -227,25 +184,33 @@ func (c *Client) GetChecksum(ctx context.Context, releaseName string) (string, e
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
+	ExtraValues string   // Extra values in json format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 }
 
 // Install installs a Helm chart as a release
-func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOptions) error {
+func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) error {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Install")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
-	if err := action.ReleaseInstall(ctx, releaseName, c.namespace, action.ReleaseInstallOptions{
+	var valuesSet []string
+	if len(opts.ExtraValues) > 0 {
+		valuesSet = append(valuesSet, opts.ExtraValues)
+	}
+
+	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles: opts.ValuesPaths,
+			ValuesFiles:    opts.ValuesPaths,
+			RuntimeSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
@@ -272,25 +237,18 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 
 // Render renders a nelm chart to YAML manifests without installing it
 // Returns the rendered manifests as a YAML string
-func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOptions) (string, error) {
+func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (string, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
-	extraAnnotations := make(map[string]string)
-	if len(c.opts.Annotations) > 0 {
-		maps.Copy(extraAnnotations, c.opts.Annotations)
-	}
-
-	// Convert maintenance label to annotation for resources
-	if opts.ReleaseLabels != nil {
-		maintenanceLabel, ok := opts.ReleaseLabels["maintenance.deckhouse.io/no-resource-reconciliation"]
-		if ok && maintenanceLabel == "true" {
-			extraAnnotations["maintenance.deckhouse.io/no-resource-reconciliation"] = ""
-		}
+	var valuesSet []string
+	if len(opts.ExtraValues) > 0 {
+		valuesSet = append(valuesSet, opts.ExtraValues)
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
@@ -298,7 +256,8 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 			KubeContextCurrent: c.kubeContext,
 		},
 		ValuesOptions: common.ValuesOptions{
-			ValuesFiles: opts.ValuesPaths,
+			ValuesFiles:    opts.ValuesPaths,
+			RuntimeSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
 		Chart:                  opts.Path,
@@ -306,9 +265,9 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       extraAnnotations,
+		ExtraAnnotations:       c.opts.Annotations,
 		ReleaseName:            releaseName,
-		ReleaseNamespace:       c.namespace,
+		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,
 		Remote:                 true,
 		ForceAdoption:          true,
@@ -339,20 +298,21 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 
 // Delete uninstalls a nelm release
 // Returns nil if the release doesn't exist (idempotent)
-func (c *Client) Delete(ctx context.Context, releaseName string) error {
+func (c *Client) Delete(ctx context.Context, namespace, releaseName string) error {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
 
-	if _, err := c.getRelease(ctx, releaseName); err != nil {
+	if _, err := c.getRelease(ctx, namespace, releaseName); err != nil {
 		if errors.Is(err, ErrReleaseNotFound) {
 			// Release doesn't exist, nothing to delete
 			return nil
 		}
 	}
 
-	if err := action.ReleaseUninstall(ctx, releaseName, c.namespace, action.ReleaseUninstallOptions{
+	if err := action.ReleaseUninstall(ctx, releaseName, namespace, action.ReleaseUninstallOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
@@ -372,8 +332,8 @@ func (c *Client) Delete(ctx context.Context, releaseName string) error {
 
 // getRelease is a helper method to retrieve a release by name
 // Converts nelm's ReleaseNotFoundError to ErrReleaseNotFound for consistent error handling
-func (c *Client) getRelease(ctx context.Context, releaseName string) (*action.ReleaseGetResultV1, error) {
-	res, err := action.ReleaseGet(ctx, releaseName, c.namespace, action.ReleaseGetOptions{
+func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (*action.ReleaseGetResultV1, error) {
+	res, err := action.ReleaseGet(ctx, releaseName, namespace, action.ReleaseGetOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},

@@ -29,37 +29,37 @@
 {%- if bundlesEnabledCount > 0 %}
   {%- if bundlesEnabledCount > 1 %}
 {% if page.lang == 'ru' -%}
-     Модуль **включен** по умолчанию в [наборах модулей]({{ "/#наборы-модулей" | true_relative_url }})
+     Модуль **включен** по умолчанию в [наборах модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей)
      {%- else -%}
-     The module is **enabled** by default in the following [bundles]({{ "/#module-bundles" | true_relative_url }})
+     The module is **enabled** by default in the following [bundles](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles)
      {%- endif %}: `{{ bundlesEnabledList }}`.
   {%- else %}
 {% if page.lang == 'ru' -%}
-     Модуль **включен** по умолчанию в [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}) `{{ bundlesEnabledList }}`.
+     Модуль **включен** по умолчанию в [наборе модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей) `{{ bundlesEnabledList }}`.
      {%- else -%}
-     The module is **enabled** by default in the `{{ bundlesEnabledList }}` [bundle]({{ "/#module-bundles" | true_relative_url }}).
+     The module is **enabled** by default in the `{{ bundlesEnabledList }}` [bundle](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
      {%- endif %}
   {%- endif %}
 {%- else %}
 {% if page.lang == 'ru' -%}
-  Модуль не включен по умолчанию в каком-либо [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}).
+  Модуль не включен по умолчанию в каком-либо [наборе модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей).
   {%- else -%}
-  The module is not enabled by default in any [bundles]({{ "/#module-bundles" | true_relative_url }}).
+  The module is not enabled by default in any [bundles](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
   {%- endif %}
 {%- endif %}
 
 {%- if bundlesDisabledCount > 0 and bundlesEnabledCount > 0 %}
   {%- if bundlesDisabledCount > 1 %}
 {% if page.lang == 'ru' -%}
-     Модуль **выключен** по умолчанию в [наборах модулей]({{ "/#наборы-модулей" | true_relative_url }})
+     Модуль **выключен** по умолчанию в [наборах модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей)
      {%- else -%}
-     The module is **disabled** by default in the following [bundles]({{ "/#module-bundles" | true_relative_url }})
+     The module is **disabled** by default in the following [bundles](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles)
      {%- endif %}: `{{ bundlesDisabledList }}`.
   {%- else %}
 {% if page.lang == 'ru' -%}
-     Модуль **выключен** по умолчанию в [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}) `{{ bundlesDisabledList }}`.
+     Модуль **выключен** по умолчанию в [наборе модулей](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей) `{{ bundlesDisabledList }}`.
      {%- else -%}
-     The module is **disabled** by default in the `{{ bundlesDisabledList }}` [bundle]({{ "/#module-bundles" | true_relative_url }}).
+     The module is **disabled** by default in the `{{ bundlesDisabledList }}` [bundle](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
      {%- endif %}
   {%- endif %}
 {%- endif %}

@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-default
+spec:
+  securityContext:
+    procMount:
+      allowedValues:
+      - Default
+
+

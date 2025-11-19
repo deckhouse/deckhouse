@@ -81,8 +81,8 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 			continue
 		}
 
-		// skip enabled dir
-		if entry.Name() == "modules" {
+		// skip enabled dirs
+		if entry.Name() == "modules" || entry.Name() == "apps" {
 			continue
 		}
 
@@ -93,11 +93,11 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 }
 
 func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
-	return i.registry.GetImageDigest(ctx, registry.CredentialBySource(source), moduleName, version)
+	return i.registry.GetImageDigest(ctx, registry.BuildRegistryBySource(source), moduleName, version)
 }
 
 func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
-	return i.registry.Download(ctx, registry.CredentialBySource(source), moduleName, version)
+	return i.registry.Download(ctx, registry.BuildRegistryBySource(source), moduleName, version)
 }
 
 // Install creates an erofs module image and enables the module(mount the image)
@@ -158,7 +158,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	}
 
 	logger.Debug("create device mapper")
-	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
+	if err = verity.CreateMapper(ctx, module, imagePath, hash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create device mapper: %w", err)
 	}
@@ -279,7 +279,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>/<version>.erofs
 	imagePath := filepath.Join(modulePath, image)
 
-	rootHash, err := i.registry.GetImageRootHash(ctx, registry.CredentialBySource(ms), module, version)
+	rootHash, err := i.registry.GetImageRootHash(ctx, registry.BuildRegistryBySource(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("get image root hash: %w", err)
@@ -297,7 +297,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 		}
 
 		logger.Debug("create device mapper", slog.String("path", imagePath))
-		if err = verity.CreateMapper(ctx, imagePath, rootHash); err != nil {
+		if err = verity.CreateMapper(ctx, module, imagePath, rootHash); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("create device mapper: %w", err)
 		}
@@ -313,7 +313,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Warn("verify module failed", log.Err(err))
 
-	img, err := i.registry.GetImageReader(ctx, registry.CredentialBySource(ms), module, version)
+	img, err := i.registry.GetImageReader(ctx, registry.BuildRegistryBySource(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("download module image: %w", err)
@@ -334,7 +334,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	}
 
 	logger.Debug("create device mapper")
-	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
+	if err = verity.CreateMapper(ctx, module, imagePath, hash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create device mapper: %w", err)
 	}

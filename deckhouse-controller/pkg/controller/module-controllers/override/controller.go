@@ -309,7 +309,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		_ = r.client.Update(ctx, mpo)
 	}
 
-	modulePath := fmt.Sprintf("/%s/dev", mpo.GetModuleName())
+	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
+	modulePath := fmt.Sprintf("/modules/%s", mpo.GetModuleName())
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha2.ModulePullOverrideGVK.GroupVersion().String(),
 		Kind:       v1alpha2.ModulePullOverrideGVK.Kind,

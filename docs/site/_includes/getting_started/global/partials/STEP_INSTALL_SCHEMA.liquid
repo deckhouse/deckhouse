@@ -24,7 +24,7 @@ The minimal preset will be used during the installation:
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
 
 The `{{ layout.name }}` layout will be used during the installation.
@@ -136,7 +136,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% alert level="warning" %}
    In the next step of this guide, `ContainerdV2` is specified as the default container runtime on the cluster nodes.
    To use `ContainerdV2` as the container runtime on cluster nodes, they must meet the following requirements:
-   
+
    - `CgroupsV2` support
    - systemd version `244`
    - `erofs` kernel module support

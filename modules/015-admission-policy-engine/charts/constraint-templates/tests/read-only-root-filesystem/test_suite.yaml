@@ -7,27 +7,146 @@ tests:
     template: ../../templates/security/read-only-root-filesystem.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: example-allowed
+      - name: allowed-readOnlyRootFilesystem-true-container
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-readOnlyRootFilesystem-true-container.yaml
         assertions:
           - violations: no
-      - name: example-disallowed
+
+      - name: disallowed-readOnlyRootFilesystem-true-pod-only
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-readOnlyRootFilesystem-true-pod-only.yaml
         assertions:
           - violations: yes
-      - name: example-disallowed-2
+
+      - name: allowed-multiple-containers-both-readonly
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed2.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-multiple-containers-both-readonly.yaml
         assertions:
-          - violations: yes
-      - name: example-disallowed-3
+          - violations: no
+
+      - name: allowed-init-container-readonly
         inventory:
           - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed3.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-init-container-readonly.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-readOnlyRootFilesystem-false-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-readOnlyRootFilesystem-false-container.yaml
         assertions:
           - violations: yes
+
+      - name: disallowed-no-readOnlyRootFilesystem-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-no-readOnlyRootFilesystem-container.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-multiple-containers-one-not-readonly
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-multiple-containers-one-not-readonly.yaml
+        assertions:
+          - violations: yes
+
+      - name: disallowed-init-container-not-readonly
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-init-container-not-readonly.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-deployment-readOnlyRootFilesystem-true-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-deployment-readOnlyRootFilesystem-true-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-deployment-readOnlyRootFilesystem-false-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-deployment-readOnlyRootFilesystem-false-container.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-daemonset-readOnlyRootFilesystem-true-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/allowed-daemonset-readOnlyRootFilesystem-true-container.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-daemonset-readOnlyRootFilesystem-false-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/disallowed-daemonset-readOnlyRootFilesystem-false-container.yaml
+        assertions:
+          - violations: no
+
+  - name: security-policy-with-exception
+    template: ../../templates/security/read-only-root-filesystem.yaml
+    constraint: constraint_security_policy.yaml
+    cases:
+      - name: allowed-by-exception-readOnlyRootFilesystem-false
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-readOnlyRootFilesystem-false.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-no-readOnlyRootFilesystem
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-no-readOnlyRootFilesystem.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-readOnlyRootFilesystem-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-readOnlyRootFilesystem-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: disallowed-no-exception-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
+        assertions:
+          - violations: yes
+
+      - name: allowed-by-exception-mismatch-but-constraint-allows
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-containers-all-allowed-via-constraint-or-exception
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-all-allowed-via-constraint-or-exception.yaml
+        assertions:
+          - violations: no
+
+      - name: allowed-by-exception-multiple-containers-all-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/allow-writable-root-filesystem.yaml
+        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-all-allowed.yaml
+        assertions:
+          - violations: no
+

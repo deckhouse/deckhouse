@@ -64,7 +64,7 @@
   padding: 1.5rem;
   z-index: 101;
   width: 70vw;
-  max-width: calc(100vw - 40px);
+  max-width: 1463px;
 }
 
 .searchV3 .results-group {

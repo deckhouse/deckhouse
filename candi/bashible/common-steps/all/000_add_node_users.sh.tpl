@@ -20,6 +20,10 @@
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
+API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
+
+
 # if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
 # this step runs normally after node reboot.
 if bb-flag? disruption && bb-flag? reboot; then
@@ -35,7 +39,7 @@ function nodeuser_patch() {
   # This step puts information "how to get bootstrap logs" into Instance resource.
   # It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
   local failure_count=0
-  local failure_limit=3
+  local failure_limit=1
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     json_file=$( mktemp -t patch_json.XXXXX )
@@ -51,10 +55,17 @@ function nodeuser_patch() {
       sleep 10
     done
     rm $json_file
+
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
+
     while [ "$patch_pending" = true ] ; do
-      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+      if [ ${#AVAILABLE_API_SERVERS[@]} -eq 0 ]; then
+        read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
+        bb-log-info "All servers failed once, resetting to original list and retrying"
+      fi
+      bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
+      for server in "${AVAILABLE_API_SERVERS[@]}"; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
           bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
@@ -73,9 +84,12 @@ function nodeuser_patch() {
 
           bb-log-info "Successfully patched NodeUser."
           patch_pending=false
-
           break
         else
+
+          AVAILABLE_API_SERVERS=($(printf '%s\n' "${AVAILABLE_API_SERVERS[@]}" | grep -v "^$server$"))
+          bb-log-info "Server $server failed once, removing from current list"
+
           failure_count=$((failure_count + 1))
 
           if [[ $failure_count -eq $failure_limit ]]; then
@@ -84,12 +98,12 @@ function nodeuser_patch() {
             break
           fi
 
-          bb-log-error "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
-          sleep 10
-          continue
+          bb-log-error "Failed to patch NodeUser via $server. ${failure_count} of ${failure_limit} attempts..."
+          sleep 3
         fi
       done
     done
+
   else
     bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
     exit 1

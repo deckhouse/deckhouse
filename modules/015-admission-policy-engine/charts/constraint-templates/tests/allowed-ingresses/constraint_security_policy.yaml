@@ -1,0 +1,16 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedIngresses
+metadata:
+  name: test
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["Ingress"]
+    namespaceSelector:
+      matchLabels:
+        enforce: deny-all
+  parameters:
+    blockWildcardDomains: false
+

@@ -20,7 +20,7 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
 
 {% alert level="info" %}
-The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/#module-sets).
+The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
 {% endalert %}
 
 ## Deployment Scenarios

@@ -20,6 +20,7 @@ import (
 
 	met "extended-monitoring/metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -50,28 +51,21 @@ func NewWatcher(clientSet *kubernetes.Clientset, metrics *met.ExporterMetrics) *
 func (w *Watcher) StartNodeWatcher(ctx context.Context) {
 	factory := informers.NewSharedInformerFactory(w.clientSet, 0)
 	informer := factory.Core().V1().Nodes().Informer()
-	runInformer[v1.Node](ctx, informer, w.updateNode, w.deleteNode, "NODE")
+	runInformer[v1.Node](ctx, informer, w.updateNode, "NODE")
 }
 
-func (w *Watcher) updateNode(node *v1.Node) {
+func (w *Watcher) updateNode(node *v1.Node, deleted bool) {
+	logLabel, labels := eventLabels(node.Labels, deleted)
+
+	log.Printf("[NODE %s] %s", logLabel, node.Name)
+
 	w.updateMetrics(
-		w.metrics.NodeEnabled.WithLabelValues,
-		w.metrics.NodeThreshold.WithLabelValues,
-		node.Labels,
+		w.metrics.NodeEnabled,
+		w.metrics.NodeThreshold,
+		labels,
 		nodeThresholdMap,
-		node.Name,
+		prometheus.Labels{"node": node.Name},
 	)
-	log.Printf("[NODE UPDATE] %s", node.Name)
-	met.UpdateIsPopulated()
-}
-
-func (w *Watcher) deleteNode(node *v1.Node) {
-	w.metrics.NodeEnabled.DeleteLabelValues(node.Name)
-	for key := range nodeThresholdMap {
-		w.metrics.NodeThreshold.DeleteLabelValues(node.Name, key)
-	}
-	log.Printf("[NODE DELETE] %s", node.Name)
-	met.UpdateLastObserved()
 	met.UpdateIsPopulated()
 }
 
@@ -82,12 +76,12 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 	informer := factory.Core().V1().Namespaces().Informer()
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { w.addNamespace(ctx, obj.(*v1.Namespace)) },
-		UpdateFunc: func(_, obj interface{}) { w.updateNamespace(ctx, obj.(*v1.Namespace)) },
-		DeleteFunc: func(obj interface{}) { w.deleteNamespace(obj.(*v1.Namespace)) },
+		AddFunc:    func(obj any) { w.addNamespace(ctx, obj.(*v1.Namespace)) },
+		UpdateFunc: func(_, obj any) { w.updateNamespace(ctx, obj.(*v1.Namespace)) },
+		DeleteFunc: func(obj any) { w.deleteNamespace(obj.(*v1.Namespace)) },
 	})
 	if err != nil {
-		log.Printf("[NS] AddEventHandler failed: %v", err)
+		log.Printf("[NAMESPACE] AddEventHandler failed: %v", err)
 	}
 
 	go informer.Run(ctx.Done())
@@ -97,7 +91,7 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledOnNamespace(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
-	log.Printf("[NS ADD] %s", ns.Name)
+	log.Printf("[NAMESPACE ADDED] %s", ns.Name)
 
 	if enabled {
 		nsCtx, cancel := context.WithCancel(ctx)
@@ -118,7 +112,7 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledLabel(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
-	log.Printf("[NS UPDATE] %s", ns.Name)
+	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
 	w.mu.Lock()
 	cancel, exists := w.nsWatchers[ns.Name]
@@ -132,7 +126,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 
 		w.cleanupNamespaceResources(ns.Name)
 
-		log.Printf("[NS DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
+		log.Printf("[NAMESPACE DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
 	}
 
 	if enabled && !exists {
@@ -148,7 +142,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 		go w.StartIngressWatcher(nsCtx, ns.Name)
 		go w.StartCronJobWatcher(nsCtx, ns.Name)
 
-		log.Printf("[NS ENABLED] %s watchers started", ns.Name)
+		log.Printf("[NAMESPACE ENABLED] %s watchers started", ns.Name)
 	}
 	met.UpdateLastObserved()
 }
@@ -159,7 +153,7 @@ func (w *Watcher) deleteNamespace(ns *v1.Namespace) {
 	if cancel, exists := w.nsWatchers[ns.Name]; exists {
 		cancel()
 		delete(w.nsWatchers, ns.Name)
-		log.Printf("[NS DELETE] %s watchers stopped", ns.Name)
+		log.Printf("[NAMESPACE DELETED] %s watchers stopped", ns.Name)
 		met.UpdateLastObserved()
 	}
 	w.mu.Unlock()
@@ -172,27 +166,21 @@ func (w *Watcher) StartPodWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Core().V1().Pods().Informer()
-	runInformer[v1.Pod](ctx, informer, w.updatePod, w.deletePod, "POD")
+	runInformer[v1.Pod](ctx, informer, w.updatePod, "POD")
 }
 
-func (w *Watcher) updatePod(pod *v1.Pod) {
+func (w *Watcher) updatePod(pod *v1.Pod, deleted bool) {
+	logLabel, labels := eventLabels(pod.Labels, deleted)
+
+	log.Printf("[POD %s] %s", logLabel, pod.Name)
+
 	w.updateMetrics(
-		w.metrics.PodEnabled.WithLabelValues,
-		w.metrics.PodThreshold.WithLabelValues,
-		pod.Labels,
+		w.metrics.PodEnabled,
+		w.metrics.PodThreshold,
+		labels,
 		podThresholdMap,
-		pod.Namespace, pod.Name,
+		prometheus.Labels{"namespace": pod.Namespace, "pod": pod.Name},
 	)
-	log.Printf("[POD UPDATE] %s/%s", pod.Namespace, pod.Name)
-}
-
-func (w *Watcher) deletePod(pod *v1.Pod) {
-	w.metrics.PodEnabled.DeleteLabelValues(pod.Namespace, pod.Name)
-	for key := range podThresholdMap {
-		w.metrics.PodThreshold.DeleteLabelValues(pod.Namespace, pod.Name, key)
-	}
-	log.Printf("[POD DELETE] %s/%s", pod.Namespace, pod.Name)
-	met.UpdateLastObserved()
 }
 
 // ---------------- DaemonSet Watcher ----------------
@@ -202,27 +190,21 @@ func (w *Watcher) StartDaemonSetWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().DaemonSets().Informer()
-	runInformer[appsv1.DaemonSet](ctx, informer, w.updateDaemonSet, w.deleteDaemonSet, "DS")
+	runInformer[appsv1.DaemonSet](ctx, informer, w.updateDaemonSet, "DAEMONSET")
 }
 
-func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet) {
+func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet, deleted bool) {
+	logLabel, labels := eventLabels(ds.Labels, deleted)
+
+	log.Printf("[DAEMONSET %s] %s", logLabel, ds.Name)
+
 	w.updateMetrics(
-		w.metrics.DaemonSetEnabled.WithLabelValues,
-		w.metrics.DaemonSetThreshold.WithLabelValues,
-		ds.Labels,
+		w.metrics.DaemonSetEnabled,
+		w.metrics.DaemonSetThreshold,
+		labels,
 		daemonSetThresholdMap,
-		ds.Namespace, ds.Name,
+		prometheus.Labels{"namespace": ds.Namespace, "daemonset": ds.Name},
 	)
-	log.Printf("[DS UPDATE] %s/%s", ds.Namespace, ds.Name)
-}
-
-func (w *Watcher) deleteDaemonSet(ds *appsv1.DaemonSet) {
-	w.metrics.DaemonSetEnabled.DeleteLabelValues(ds.Namespace, ds.Name)
-	for key := range daemonSetThresholdMap {
-		w.metrics.DaemonSetThreshold.DeleteLabelValues(ds.Namespace, ds.Name, key)
-	}
-	log.Printf("[DS DELETE] %s/%s", ds.Namespace, ds.Name)
-	met.UpdateLastObserved()
 }
 
 // ---------------- StatefulSet Watcher ----------------
@@ -232,27 +214,20 @@ func (w *Watcher) StartStatefulSetWatcher(ctx context.Context, namespace string)
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().StatefulSets().Informer()
-	runInformer[appsv1.StatefulSet](ctx, informer, w.updateStatefulSet, w.deleteStatefulSet, "STS")
+	runInformer[appsv1.StatefulSet](ctx, informer, w.updateStatefulSet, "STATEFULSET")
 }
 
-func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet) {
+func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet, deleted bool) {
+	logLabel, labels := eventLabels(sts.Labels, deleted)
+
+	log.Printf("[STATEFULSET %s] %s", logLabel, sts.Name)
 	w.updateMetrics(
-		w.metrics.StatefulSetEnabled.WithLabelValues,
-		w.metrics.StatefulSetThreshold.WithLabelValues,
-		sts.Labels,
+		w.metrics.StatefulSetEnabled,
+		w.metrics.StatefulSetThreshold,
+		labels,
 		statefulSetThresholdMap,
-		sts.Namespace, sts.Name,
+		prometheus.Labels{"namespace": sts.Namespace, "statefulset": sts.Name},
 	)
-	log.Printf("[STS UPDATE] %s/%s", sts.Namespace, sts.Name)
-}
-
-func (w *Watcher) deleteStatefulSet(sts *appsv1.StatefulSet) {
-	w.metrics.StatefulSetEnabled.DeleteLabelValues(sts.Namespace, sts.Name)
-	for key := range statefulSetThresholdMap {
-		w.metrics.StatefulSetThreshold.DeleteLabelValues(sts.Namespace, sts.Name, key)
-	}
-	log.Printf("[STS DELETE] %s/%s", sts.Namespace, sts.Name)
-	met.UpdateLastObserved()
 }
 
 // ---------------- Deployment Watcher ----------------
@@ -262,27 +237,20 @@ func (w *Watcher) StartDeploymentWatcher(ctx context.Context, namespace string) 
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().Deployments().Informer()
-	runInformer[appsv1.Deployment](ctx, informer, w.updateDeployment, w.deleteDeployment, "DEP")
+	runInformer[appsv1.Deployment](ctx, informer, w.updateDeployment, "DEPLOYMENT")
 }
 
-func (w *Watcher) updateDeployment(dep *appsv1.Deployment) {
+func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
+	logLabel, labels := eventLabels(dep.Labels, deleted)
+
+	log.Printf("[DEPLOYMENT %s] %s", logLabel, dep.Name)
 	w.updateMetrics(
-		w.metrics.DeploymentEnabled.WithLabelValues,
-		w.metrics.DeploymentThreshold.WithLabelValues,
-		dep.Labels,
+		w.metrics.DeploymentEnabled,
+		w.metrics.DeploymentThreshold,
+		labels,
 		deploymentThresholdMap,
-		dep.Namespace, dep.Name,
+		prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name},
 	)
-	log.Printf("[DEP UPDATE] %s/%s", dep.Namespace, dep.Name)
-}
-
-func (w *Watcher) deleteDeployment(dep *appsv1.Deployment) {
-	w.metrics.DeploymentEnabled.DeleteLabelValues(dep.Namespace, dep.Name)
-	for key := range deploymentThresholdMap {
-		w.metrics.DeploymentThreshold.DeleteLabelValues(dep.Namespace, dep.Name, key)
-	}
-	log.Printf("[DEP DELETE] %s/%s", dep.Namespace, dep.Name)
-	met.UpdateLastObserved()
 }
 
 // ---------------- Ingress Watcher ----------------
@@ -292,27 +260,20 @@ func (w *Watcher) StartIngressWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Networking().V1().Ingresses().Informer()
-	runInformer[networkingv1.Ingress](ctx, informer, w.updateIngress, w.deleteIngress, "ING")
+	runInformer[networkingv1.Ingress](ctx, informer, w.updateIngress, "INGRESS")
 }
 
-func (w *Watcher) updateIngress(ing *networkingv1.Ingress) {
+func (w *Watcher) updateIngress(ing *networkingv1.Ingress, deleted bool) {
+	logLabel, labels := eventLabels(ing.Labels, deleted)
+
+	log.Printf("[INGRESS %s] %s", logLabel, ing.Name)
 	w.updateMetrics(
-		w.metrics.IngressEnabled.WithLabelValues,
-		w.metrics.IngressThreshold.WithLabelValues,
-		ing.Labels,
+		w.metrics.IngressEnabled,
+		w.metrics.IngressThreshold,
+		labels,
 		ingressThresholdMap,
-		ing.Namespace, ing.Name,
+		prometheus.Labels{"namespace": ing.Namespace, "ingress": ing.Name},
 	)
-	log.Printf("[ING UPDATE] %s/%s", ing.Namespace, ing.Name)
-}
-
-func (w *Watcher) deleteIngress(ing *networkingv1.Ingress) {
-	w.metrics.IngressEnabled.DeleteLabelValues(ing.Namespace, ing.Name)
-	for key := range ingressThresholdMap {
-		w.metrics.IngressThreshold.DeleteLabelValues(ing.Namespace, ing.Name, key)
-	}
-	log.Printf("[ING DELETE] %s/%s", ing.Namespace, ing.Name)
-	met.UpdateLastObserved()
 }
 
 // ---------------- CronJob Watcher ----------------
@@ -322,18 +283,22 @@ func (w *Watcher) StartCronJobWatcher(ctx context.Context, namespace string) {
 		w.clientSet, 0, informers.WithNamespace(namespace),
 	)
 	informer := factory.Batch().V1().CronJobs().Informer()
-	runInformer[batchv1.CronJob](ctx, informer, w.updateCronJob, w.deleteCronJob, "CRONJOB")
+	runInformer[batchv1.CronJob](ctx, informer, w.updateCronJob, "CRONJOB")
 }
 
-func (w *Watcher) updateCronJob(job *batchv1.CronJob) {
-	enabled := enabledLabel(job.Labels)
-	w.metrics.CronJobEnabled.WithLabelValues(job.Namespace, job.Name).Set(boolToFloat64(enabled))
-	log.Printf("[CRONJOB UPDATE] %s/%s", job.Namespace, job.Name)
-	met.UpdateLastObserved()
-}
+func (w *Watcher) updateCronJob(job *batchv1.CronJob, deleted bool) {
+	logLabel, labels := eventLabels(job.Labels, deleted)
 
-func (w *Watcher) deleteCronJob(job *batchv1.CronJob) {
-	w.metrics.CronJobEnabled.DeleteLabelValues(job.Namespace, job.Name)
-	log.Printf("[CRONJOB DELETE] %s/%s", job.Namespace, job.Name)
+	log.Printf("[CRONJOB %s] %s", logLabel, job.Name)
+
+	metricLabels := prometheus.Labels{"namespace": job.Namespace, "cronjob": job.Name}
+
+	if deleted {
+		w.metrics.CronJobEnabled.DeletePartialMatch(metricLabels)
+		met.UpdateLastObserved()
+		return
+	}
+
+	w.metrics.CronJobEnabled.With(metricLabels).Set(boolToFloat64(enabledLabel(labels)))
 	met.UpdateLastObserved()
 }

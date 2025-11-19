@@ -1,0 +1,14 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-multiple-paths
+spec:
+  volumes:
+    hostPath:
+      allowedValues:
+      - path: /proc/etc
+        readOnly: false
+      - path: /etc/passwd
+        readOnly: true
+

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-containers-one-privileged-true
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+    - name: redis
+      image: redis
+      securityContext:
+        privileged: true
+

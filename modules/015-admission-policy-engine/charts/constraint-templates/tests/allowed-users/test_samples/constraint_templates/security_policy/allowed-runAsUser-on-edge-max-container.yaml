@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-runAsUser-on-edge-max-container
+  namespace: testns
+spec:
+  securityContext:
+    runAsUser: 10
+    runAsGroup: 50
+    fsGroup: 50
+    supplementalGroups:
+    - 50
+  containers:
+    - name: nginx
+      image: nginx
+

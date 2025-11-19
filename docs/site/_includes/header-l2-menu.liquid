@@ -1,0 +1,42 @@
+{%- assign productCode = page.product_code | default: "kubernetes-platform" %}
+{%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
+{%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+{%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
+{%- assign productName = productMenuData.title %}
+<div class="header header__product-menu">
+  <div class="container">
+    <div class="header__product-menu-logo">
+      {%- if productName == "Code" %}
+      <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+        <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+        <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
+      </svg>
+      {%- elsif productName == "prompp" or productName == "delivery-kit" or productName == "development-platform" or productName == "observability-platform" %}
+        <img src="/wp-content/themes/unitheme/assets/images/products/{{ productCode  }}/logo-mini.svg" alt="{{ productName }}">
+      {%- else %}
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <use xlink:href="{{ productLogoURL }}"></use>
+      </svg>
+      {%- endif %}
+      <span>{{ productName }}</span>
+    </div>
+    <ul class="nav header__nav">
+      {%- for item in productMenuData.items %}
+        {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.title == "Возможности" %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+        <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+          <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
+            {% if item.items %}
+              <div class="sub-menu-container">
+                <ul class="sub-menu">
+                  {% for item in item.items %}
+                    <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+          {% endif %}
+        </li>
+      {%- endfor %}
+    </ul>
+  </div>
+</div>

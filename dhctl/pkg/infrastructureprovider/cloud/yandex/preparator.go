@@ -31,7 +31,11 @@ var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
 	validatePrefix bool
-	logger         log.Logger
+	// validateWithNATLayout
+	// todo need migration for validate everywhere not only bootstrap
+	validateWithNATLayout bool
+
+	logger log.Logger
 }
 
 func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
@@ -46,6 +50,11 @@ func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparat
 		p.logger = logger
 	}
 
+	return p
+}
+
+func (p *MetaConfigPreparator) EnableValidateWithNATLayout() *MetaConfigPreparator {
+	p.validateWithNATLayout = true
 	return p
 }
 
@@ -117,6 +126,11 @@ func (p *MetaConfigPreparator) validateWithNATInstanceLayout(metaConfig *config.
 	// layout was prepared with strcase.ToKebab before calling preparator
 	if metaConfig.Layout != "with-nat-instance" {
 		p.logger.LogDebugF("Skip validate WithNATInstance layout. Got layout %v\n", metaConfig.Layout)
+		return nil
+	}
+
+	if !p.validateWithNATLayout {
+		p.logger.LogDebugLn("Skip validate WithNATInstance layout. Validation disabled")
 		return nil
 	}
 

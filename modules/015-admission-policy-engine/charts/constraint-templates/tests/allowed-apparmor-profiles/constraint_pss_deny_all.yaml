@@ -1,0 +1,17 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AppArmor
+metadata:
+  name: pss-deny-all
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchLabels:
+        enforce: deny-all
+  parameters:
+    allowedProfiles:
+    - runtime/default
+

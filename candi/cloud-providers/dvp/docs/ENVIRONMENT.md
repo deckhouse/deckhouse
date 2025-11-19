@@ -3,7 +3,7 @@ title: "Cloud provider — DVP: preparing environment"
 description: "Configuring Deckhouse for DVP cloud provider operation"
 ---
 
-Deckhouse components interact with DVP resources through the DVP API.
+Deckhouse Kubernetes Platform components interact with DVP resources through the DVP API.
 To configure this connection, create a new user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
 {% alert level="warning" %}

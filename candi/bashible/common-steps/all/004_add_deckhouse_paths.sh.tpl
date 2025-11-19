@@ -12,6 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+_chmod_dh_bin_path() {
+for f in /etc/bashrc.d/02-deckhouse-path.sh /etc/profile.d/02-deckhouse-path.sh; do
+  [ -f "$f" ] && chmod +x "$f"
+done
+}
+
+bb-event-on 'bb-sync-file-changed' '_chmod_dh_bin_path'
+
 bb-sync-file /etc/profile.d/02-deckhouse-path.sh - << "EOF"
 export PATH="/opt/deckhouse/bin:$PATH"
 EOF
+
+if [[ $(bb-is-bundle) == "altlinux" ]]; then
+bb-sync-file /etc/bashrc.d/02-deckhouse-path.sh - << "EOF"
+PROMPT_COMMAND='
+  if [ -z "$__deckhouse_path" ]; then
+    case ":$PATH:" in
+      *:/opt/deckhouse/bin:*) ;;
+      *) PATH="/opt/deckhouse/bin:$PATH" ;;
+    esac
+    __deckhouse_path=1
+  fi
+'"$PROMPT_COMMAND"
+EOF
+fi

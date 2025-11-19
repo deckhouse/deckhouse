@@ -26,10 +26,8 @@ import (
 
 // TestService_BasicEnqueue tests basic service enqueue functionality
 func TestService_BasicEnqueue(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	task := newMockTask("task1")
@@ -44,10 +42,8 @@ func TestService_BasicEnqueue(t *testing.T) {
 
 // TestService_MultipleQueues tests that service can manage multiple queues
 func TestService_MultipleQueues(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	task1 := newMockTask("task1")
@@ -70,10 +66,8 @@ func TestService_MultipleQueues(t *testing.T) {
 
 // TestService_QueueCreatedOnDemand tests that queues are created automatically
 func TestService_QueueCreatedOnDemand(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	// Initially no queues
@@ -95,10 +89,8 @@ func TestService_QueueCreatedOnDemand(t *testing.T) {
 
 // TestService_RemoveQueue tests queue removal
 func TestService_RemoveQueue(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	task := newMockTask("task")
@@ -119,10 +111,7 @@ func TestService_RemoveQueue(t *testing.T) {
 
 // TestService_RemoveNonExistentQueue tests removing a queue that doesn't exist
 func TestService_RemoveNonExistentQueue(_ *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	// Should not panic
@@ -132,8 +121,7 @@ func TestService_RemoveNonExistentQueue(_ *testing.T) {
 // TestService_StopAllQueues tests stopping all queues
 func TestService_StopAllQueues(t *testing.T) {
 	ctx := context.Background()
-
-	svc := NewService(ctx, getTestLogger())
+	svc := NewService(getTestLogger())
 
 	// Create multiple queues
 	task1 := newMockTask("task1")
@@ -157,10 +145,9 @@ func TestService_StopAllQueues(t *testing.T) {
 
 // TestService_EnqueueWithEmptyName tests enqueueing with empty queue name
 func TestService_EnqueueWithEmptyName(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 
-	svc := NewService(ctx, getTestLogger())
 	defer svc.Stop()
 
 	task := newMockTask("task")
@@ -182,10 +169,8 @@ func TestService_EnqueueWithEmptyName(t *testing.T) {
 
 // TestService_EnqueueWithWhitespaceName tests enqueueing with whitespace queue name
 func TestService_EnqueueWithWhitespaceName(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	task := newMockTask("task")
@@ -201,10 +186,8 @@ func TestService_EnqueueWithWhitespaceName(t *testing.T) {
 
 // TestService_EnqueueNilTask tests enqueueing nil task
 func TestService_EnqueueNilTask(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	// Should not panic
@@ -219,10 +202,8 @@ func TestService_EnqueueNilTask(t *testing.T) {
 
 // TestService_Dump tests service dump functionality
 func TestService_Dump(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	// Enqueue a slow task
@@ -245,10 +226,8 @@ func TestService_Dump(t *testing.T) {
 
 // TestService_ConcurrentEnqueueToSameQueue tests concurrent enqueues to same queue
 func TestService_ConcurrentEnqueueToSameQueue(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	const numTasks = 50
@@ -282,10 +261,8 @@ func TestService_ConcurrentEnqueueToSameQueue(t *testing.T) {
 
 // TestService_ConcurrentEnqueueToDifferentQueues tests concurrent enqueues to different queues
 func TestService_ConcurrentEnqueueToDifferentQueues(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	const numQueues = 10
@@ -317,47 +294,10 @@ func TestService_ConcurrentEnqueueToDifferentQueues(t *testing.T) {
 	assert.Equal(t, numQueues, queueCount, "should have created all queues")
 }
 
-// TestService_ContextCancellationStopsQueues tests that canceling service context stops queues
-func TestService_ContextCancellationStopsQueues(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	svc := NewService(ctx, getTestLogger())
-
-	// Enqueue a long-running task
-	task := newSlowTask("long-task", 10*time.Second)
-	var wg sync.WaitGroup
-	svc.Enqueue(ctx, "test-queue", task, WithWait(&wg))
-
-	// Give task time to start
-	time.Sleep(50 * time.Millisecond)
-
-	// Cancel service context
-	cancel()
-
-	// Wait for task completion (should be quick due to cancellation)
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// Success
-	case <-time.After(2 * time.Second):
-		t.Fatal("task should complete quickly after context cancellation")
-	}
-
-	// Clean up
-	svc.Stop()
-}
-
 // TestService_QueueReuse tests that enqueueing to the same queue name reuses the queue
 func TestService_QueueReuse(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	svc := NewService(ctx, getTestLogger())
+	ctx := context.Background()
+	svc := NewService(getTestLogger())
 	defer svc.Stop()
 
 	task1 := newMockTask("task1")
