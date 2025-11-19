@@ -112,20 +112,13 @@ resource "openstack_compute_instance_v2" "node" {
   metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : {}
 }
 
-resource "openstack_compute_floatingip_v2" "floating_ip" {
+resource "openstack_networking_floatingip_v2" "floating_ip" {
   count = length(local.floating_ip_pools)
   pool  = local.floating_ip_pools[count.index]
 }
 
-resource "openstack_compute_floatingip_associate_v2" "node" {
-  count                 = length(local.floating_ip_pools)
-  floating_ip           = openstack_compute_floatingip_v2.floating_ip[count.index].address
-  instance_id           = openstack_compute_instance_v2.node.id
-  wait_until_associated = true
-
-  lifecycle {
-    ignore_changes = [
-      wait_until_associated,
-    ]
-  }
+resource "openstack_networking_floatingip_associate_v2" "node" {
+  count       = length(local.floating_ip_pools)
+  floating_ip = openstack_networking_floatingip_v2.floating_ip[count.index].address
+  port_id     = openstack_networking_port_v2.port[count.index].id
 }
