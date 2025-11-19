@@ -320,6 +320,10 @@ This section describes the process of converting a multi-master cluster into a s
 The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
 {% endalert %}
 
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.

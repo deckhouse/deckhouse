@@ -131,8 +131,7 @@ The steps described below must be performed from the first in order of the maste
 {% endalert %}
 
 {% alert level="warning" %}
-Before adding or removing a master, in case of using the **Stronghold** module, ensure that the module has fully returned to a stable and operational state.
-It is also strongly [recommended to create a backup of the **Stronghold** module](https://deckhouse.io/modules/stronghold/stable/auto_snapshot.html) data prior to making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
 {% endalert %}
 
 1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
