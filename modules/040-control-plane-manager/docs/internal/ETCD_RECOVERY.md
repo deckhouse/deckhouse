@@ -625,18 +625,18 @@ For each another control-plane nodes:
 1. Add control-plane role.
 
    ```shell
-kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
-Wait for all control plane Pods rolling over and becoming `Ready`.
+1. Wait for all control plane Pods rolling over and becoming `Ready`.
 
-```shell
-watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-```
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
 
-Make sure that all etcd instances are now cluster members:
+1. Make sure that all etcd instances are now cluster members:
 
-```shell
-ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-```
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
