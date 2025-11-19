@@ -6281,7 +6281,7 @@ alerts:
            ```
       summary: |
         Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
-      severity: undefined
+      severity: "6"
       markupFormat: markdown
     - name: PrometheusDirectAccessDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
