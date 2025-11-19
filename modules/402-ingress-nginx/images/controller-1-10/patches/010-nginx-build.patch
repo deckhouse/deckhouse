@@ -1,8 +1,8 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index f60a260f9..138ebbb84 100755
+index f60a260f9..c035b7e49 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
-@@ -14,6 +14,9 @@
+@@ -14,11 +14,14 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
  
@@ -12,6 +12,12 @@ index f60a260f9..138ebbb84 100755
  set -o errexit
  set -o nounset
  set -o pipefail
+ 
+-export NGINX_VERSION=1.25.5
++export NGINX_VERSION=1.26.1
+ 
+ # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.3...master
+ export NDK_VERSION=v0.3.3
 @@ -110,79 +113,10 @@ export OPENTELEMETRY_CPP_VERSION="v1.11.0"
  export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
  
@@ -184,7 +190,7 @@ index f60a260f9..138ebbb84 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
-+git clone -b "controller-v1.10.3" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
++git clone -b "controller-v1.10.4" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
