@@ -162,7 +162,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
 
 	return nil
