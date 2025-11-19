@@ -603,7 +603,8 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
-	modulePath := fmt.Sprintf("/%s/v%s", release.GetModuleName(), release.GetVersion().String())
+	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
+	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
 	moduleVersion := "v" + release.GetVersion().String()
 
 	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]

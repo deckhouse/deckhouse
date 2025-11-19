@@ -7,10 +7,11 @@ package tasks
 
 import (
 	"context"
+	"d8_shutdown_inhibitor/pkg/inputdev"
 	"fmt"
 	"os/exec"
 
-	"d8_shutdown_inhibitor/pkg/inputdev"
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // PowerKeyEvent is a task that listens for power key events.
@@ -19,8 +20,8 @@ import (
 // If power key is pressed, it sends a shutdown event.
 type PowerKeyEvent struct {
 	// PowerKeyPressedCh is a channel to send power key press event.
-	PowerKeyPressedCh  chan<- struct{}
-	UnlockInhibitorsCh <-chan struct{}
+	PowerKeyPressedCh chan<- struct{}
+	UnlockCtx         context.Context
 
 	powerKeyDevices []inputdev.Device
 }
@@ -43,19 +44,19 @@ func (p *PowerKeyEvent) Run(ctx context.Context, errCh chan error) {
 
 	select {
 	case <-ctx.Done():
-		fmt.Printf("powerKeyReader(s1): stop on global exit\n")
+		dlog.Info("power key reader: stop on context cancel")
 		return
 	case <-powerKeyWatcher.Pressed():
 		// Trigger poweroff to ShutdownInhibitor catch the PrepareShutdownSignal from logind.
-		fmt.Printf("powerKeyReader(s1): power key press detected, initiate graceful shutdown\n")
+		dlog.Info("power key reader: power key pressed, initiating graceful shutdown")
 		// Run systemctl poweroff -i so systemd will send shutdown signal to all inhibit locks holders
 		// (ShutdownInhibitor task will catch it as well as a kubelet).
 		err := exec.Command("systemctl", "poweroff", "-i").Run()
 		if err != nil {
-			fmt.Printf("powerKeyReader(s1): poweroff error: %v\n", err)
+			dlog.Error("power key reader: systemctl poweroff failed", dlog.Err(err))
 		}
-	case <-p.UnlockInhibitorsCh:
-		fmt.Printf("powerKeyReader(s1): shutdown initiated, stop power key reader loop\n")
+	case <-p.UnlockCtx.Done():
+		dlog.Info("power key reader: shutdown initiated, stopping watcher")
 		return
 	}
 }
