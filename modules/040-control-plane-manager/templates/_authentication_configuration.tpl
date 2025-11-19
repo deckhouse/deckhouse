@@ -1,9 +1,5 @@
 {{- define "authenticationConfiguration" }}
-{{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion }}
-apiVersion: apiserver.config.k8s.io/v1alpha1
-{{- else }}
 apiVersion: apiserver.config.k8s.io/v1beta1
-{{- end }}
 kind: AuthenticationConfiguration
 jwt:
 - issuer:

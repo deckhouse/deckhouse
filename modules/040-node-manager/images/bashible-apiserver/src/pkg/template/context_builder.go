@@ -151,10 +151,11 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
-		Registry:      cb.registryData,
-		Images:        cb.imagesDigests,
-		Proxy:         cb.clusterInputData.Proxy,
-		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		Registry:                   cb.registryData,
+		Images:                     cb.imagesDigests,
+		Proxy:                      cb.clusterInputData.Proxy,
+		PackagesProxy:              cb.clusterInputData.PackagesProxy,
+		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -200,11 +201,12 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		NodeGroup: ng,
 		RunType:   "Normal",
 
-		Images:            cb.imagesDigests,
-		Registry:          cb.registryData,
-		Proxy:             cb.clusterInputData.Proxy,
-		CloudProviderType: cb.getCloudProvider(),
-		PackagesProxy:     cb.clusterInputData.PackagesProxy,
+		Images:                     cb.imagesDigests,
+		Registry:                   cb.registryData,
+		Proxy:                      cb.clusterInputData.Proxy,
+		CloudProviderType:          cb.getCloudProvider(),
+		PackagesProxy:              cb.clusterInputData.PackagesProxy,
+		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -370,11 +372,12 @@ type bashibleContext struct {
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
-	Images            map[string]map[string]string `json:"images" yaml:"images"`
-	Registry          map[string]interface{}       `json:"registry" yaml:"registry"`
-	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
-	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
-	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	Images                     map[string]map[string]string `json:"images" yaml:"images"`
+	Registry                   map[string]interface{}       `json:"registry" yaml:"registry"`
+	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
+	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -418,8 +421,9 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry map[string]interface{}       `json:"registry" yaml:"registry"`
 
-	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -453,15 +457,16 @@ type normal struct {
 }
 
 type inputData struct {
-	ClusterDomain      string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider      interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
