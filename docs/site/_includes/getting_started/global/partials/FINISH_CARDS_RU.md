@@ -5,6 +5,17 @@
 </h2>
 <div class="cards-blocks__cards">
 
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 52 52" style="display: inline-block; vertical-align: middle; margin-right: 8px;"><g id="sign"><path id="Vector" fill="#0064FF" d="M27.43 33.1h-7.06V18.9h7.06a7.1 7.1 0 0 1 0 14.2Z"/><g id="Group"><g id="Group_2" fill="#00003C"><path id="Vector_2" d="m14.32 19.73-3.79-3.8L.5 26l10.04 10.07 3.78-3.9-1.94-1.85v-8.64l1.94-1.95Z"/><path id="Vector_3" d="m42.28 15.93-3.8 3.8 1.85 1.95v8.64l-1.84 1.85 3.79 3.9L52.3 26 42.28 15.93Z"/><path id="Vector_4" d="m16.37 10.07 3.79 3.8 1.95-1.95h8.6l1.84 1.95 3.9-3.8L26.4 0 16.37 10.07Z"/><path id="Vector_5" d="m34.5 39.98-1.95-1.85-1.84 1.85h-8.6l-1.95-1.85-1.84 1.85-1.95 1.95L26.41 52l10.03-10.07-1.94-1.95Z"/></g></g></g></svg>
+<span class="cards-item__title-text">Веб-интерфейс Deckhouse</span>
+</h3>
+<div class="cards-item__text">
+<p>Попробуйте <a href="/products/kubernetes-platform/documentation/v1/user/web/ui.html" target="_blank">веб-интерфейс</a> управления кластером и его основными компонентами.</p>
+<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
+</div>
+</div>
+
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
@@ -30,16 +41,6 @@
 </div>
 </div>
 {% endif %}
-
-<div class="cards-item cards-item_inverse">
-<h3 class="cards-item__title text_h3">
-🧭 <span class="cards-item__title-text">Веб-интерфейс Deckhouse</span>
-</h3>
-<div class="cards-item__text">
-<p>Попробуйте <a href="/products/kubernetes-platform/documentation/v1/user/web/ui.html" target="_blank">веб-интерфейс</a> управления кластером и его основными компонентами.</p>
-<p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="console" %}</p>
-</div>
-</div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
