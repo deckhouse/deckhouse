@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,12 +121,16 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	case "Migrate":
 		return r.reconcileMigrate(ctx, cniMigration, cniNodeMigration)
 	case "Cleanup":
+		logger.Info("Cleanup phase not yet implemented, skipping reconciliation.")
 		// TODO: Implement Cleanup phase
 	case "Abort":
+		logger.Info("Abort phase not yet implemented, skipping reconciliation.")
 		// TODO: Implement Abort phase
+	default:
+		logger.Info("Unknown CNIMigration phase, no action taken", "Phase", cniMigration.Spec.Phase)
 	}
 
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil // Requeue after a short period to check status
+	return ctrl.Result{}, nil
 }
 
 func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigration *cniswitcherv1alpha1.CNIMigration, cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration) (ctrl.Result, error) {
