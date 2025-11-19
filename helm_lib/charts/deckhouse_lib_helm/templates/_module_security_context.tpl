@@ -96,7 +96,7 @@ securityContext:
 securityContext:
   readOnlyRootFilesystem: {{ $ro }}
   allowPrivilegeEscalation: {{ not $runAsNonRoot }}
-{{- if not $runAsNonRoot }}
+{{- if $runAsNonRoot }}
   privileged: false
 {{- end }}
   capabilities:
