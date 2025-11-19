@@ -187,7 +187,7 @@ spec:
     app: dns
 ```
 
-Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.io/address-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
+Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 
 ```yaml
 apiVersion: v1

@@ -59,10 +59,6 @@ spec:
           secret:
             secretName: l2lb-memberlist
             defaultMode: 420
-        - name: metallb-excludel2
-          configMap:
-            defaultMode: 256
-            name: metallb-excludel2
       containers:
         - args:
             - --host=127.0.0.1
@@ -123,8 +119,6 @@ spec:
           volumeMounts:
           - name: l2lb-memberlist
             mountPath: "/etc/ml_secret_key"
-          - name: metallb-excludel2
-            mountPath: /etc/metallb
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}

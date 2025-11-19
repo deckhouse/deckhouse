@@ -187,7 +187,7 @@ spec:
     app: dns
 ```
 
-Создание Service и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.io/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
+Создание Service и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 
 ```yaml
 apiVersion: v1

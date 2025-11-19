@@ -112,6 +112,10 @@ func checkServicesForDeprecatedAnnotations(_ context.Context, input *go_hook.Hoo
 	input.MetricsCollector.Expire("D8MetallbNotSupportedServiceAnnotationsDetected")
 
 	var deprecatedAnnotations = [...]string{
+		"metallb.universe.tf/ip-allocated-from-pool",
+		"metallb.universe.tf/address-pool",
+		"metallb.universe.tf/loadBalancerIPs",
+		"metallb.universe.tf/allow-shared-ip",
 		"metallb.io/ip-allocated-from-pool",
 		"metallb.io/address-pool",
 		"metallb.io/loadBalancerIPs",

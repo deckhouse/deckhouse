@@ -81,7 +81,7 @@ kind: Service
 metadata:
   name: nginx
   annotations:
-    metallb.io/address-pool: production-public-ips
+    metallb.universe.tf/address-pool: production-public-ips
 spec:
   ports:
   - port: 80

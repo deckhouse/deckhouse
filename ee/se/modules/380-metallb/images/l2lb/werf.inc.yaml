@@ -9,6 +9,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/configs
+  to: /configs
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -64,6 +69,10 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /speaker
   to: /speaker
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /configs/excludel2.yaml
+  to: /etc/metallb/excludel2.yaml
   before: setup
 git:
 {{- include "image mount points" . }}
