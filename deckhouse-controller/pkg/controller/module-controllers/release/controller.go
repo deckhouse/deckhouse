@@ -79,10 +79,6 @@ const (
 	outdatedReleasesKeepCount = 3
 )
 
-var (
-	ErrConversionsDirectoryPathEmpty = errors.New("conversions directory path is empty")
-)
-
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
@@ -1318,11 +1314,10 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 	var valuesByConfig bool
 	values := make(addonutils.Values)
-	module := r.moduleManager.GetModule(release.GetModuleName())
-	if module != nil {
+	config := new(v1alpha1.ModuleConfig)
+	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 		values = module.GetConfigValues(false)
 	} else {
-		config := new(v1alpha1.ModuleConfig)
 		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
@@ -1333,22 +1328,16 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 
-	// load conversions
-	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
-	if _, err = os.Stat(conversionsDir); err == nil {
-		logger.Debug("conversions for the module found", slog.String("name", def.Name))
-		if err = conversion.Store().Add(def.Name, conversionsDir); err != nil {
-			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-	}
-
 	if valuesByConfig {
-		config := new(v1alpha1.ModuleConfig)
-		err = r.client.Get(ctx, client.ObjectKey{Name: def.Name}, config)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the '%s' module config: %w", def.Name, err)
+		// load conversions
+		conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+		if _, err = os.Stat(conversionsDir); err == nil {
+			logger.Debug("conversions for the module found", slog.String("name", def.Name))
+			if err = conversion.Store().Add(def.Name, conversionsDir); err != nil {
+				return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+			}
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 
 		// apply conversions to values
