@@ -84,7 +84,12 @@ func (c *sshContainer) Cmd() (args []string) {
 		args = append(args, c.configPath+":/config/sshd/sshd_config")
 	}
 
-	args = append(args, "lscr.io/linuxserver/openssh-server:10.0_p1-r9-ls209")
+	image := os.Getenv("DHCTL_TESTS_OPENSSH_IMAGE")
+	if image == "" {
+		image = "lscr.io/linuxserver/openssh-server:10.0_p1-r9-ls209"
+	}
+
+	args = append(args, image)
 
 	return
 }
