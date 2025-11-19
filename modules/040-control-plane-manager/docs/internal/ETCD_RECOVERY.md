@@ -3,7 +3,7 @@
 **Caution!** Back up your etcd files on the node before any recovery attempts.
 Before doing this, make sure that etcd is not running. To stop etcd, remove the etcd static Pod manifest from the manifest directory.
 
-### High‑level notes (read first)
+## High‑level notes (read first)
 
 - From etcd v3.6, use `etcdutl` for `snapshot restore` and related operations; older clusters use `etcdctl snapshot restore`. Make sure commands match your etcd version.
 - Start with official Deckhouse docs: [Backup and restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html) and [Managing control plane: FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html).
