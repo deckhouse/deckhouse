@@ -165,7 +165,7 @@ On the first recovered node do the following steps:
 Add control-plane role for each other control-plane nodes:
 
 ```shell
-kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -625,7 +625,7 @@ For each another control-plane nodes:
 1. Add control-plane role.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
