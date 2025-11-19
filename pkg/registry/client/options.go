@@ -30,22 +30,10 @@ import (
 type Options struct {
 	// Auth provides authentication for registry access (takes precedence over Username/Password/LicenseToken)
 	Auth authn.Authenticator
-
-	// Username for basic authentication
-	Username string
-
-	// Password for basic authentication
-	Password string
-
-	// LicenseToken for Deckhouse license authentication (alternative to Username/Password)
-	LicenseToken string
-
 	// Insecure allows connecting to registries over HTTP instead of HTTPS
 	Insecure bool
-
 	// TLSSkipVerify skips TLS certificate verification
 	TLSSkipVerify bool
-
 	// Logger for client operations
 	Logger *log.Logger
 }

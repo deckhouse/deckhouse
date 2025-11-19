@@ -41,16 +41,18 @@ var ErrImageNotFound = errors.New("image not found")
 type Client struct {
 	// e.g., "registry.deckhouse.io"
 	registryHost string
+	// custom transport for TLS/insecure settings
+	transport http.RoundTripper
 	// e.g., [deckhouse,ee,modules] (built from chained WithSegment calls)
 	segments []string
 	// cached joined segments for scope path
 	constructedSegments string
 	// ensures constructedSegments is computed only once
 	constructedSegmentsOnce sync.Once
-	options                 []remote.Option
-	logger                  *log.Logger
-	// custom transport for TLS/insecure settings
-	transport http.RoundTripper
+	// remote options for go-containerregistry
+	options []remote.Option
+
+	logger *log.Logger
 }
 
 // NewClientWithOptions creates a new container registry client with advanced options
