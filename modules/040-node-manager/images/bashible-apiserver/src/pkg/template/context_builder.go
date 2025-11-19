@@ -457,16 +457,16 @@ type normal struct {
 }
 
 type inputData struct {
-	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	PodSubnetNodeCIDRPrefix string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider           interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                   map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens         map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy           map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints      []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA            string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles          []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups              []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                    interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
 }
