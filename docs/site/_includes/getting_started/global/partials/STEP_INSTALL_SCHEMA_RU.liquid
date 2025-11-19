@@ -30,7 +30,7 @@
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Схема размещения и взаимодействия ресурсов в облаке..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Схема размещения ресурсов (layout) определяет расположение ресурсов в облаке и их сетевое взаимодействие. Существует несколько предопределённых схем размещения, о которых подробнее вы можете узнать [в документации]({{ layout_doc_path }}).
 
 При установке будет использоваться схема размещения ресурсов `{{ layout.name }}`.
