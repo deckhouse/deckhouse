@@ -332,7 +332,7 @@ maxOpenFiles: 1000000
 {{- if and (hasKey .nodeGroup "kubelet") (hasKey .nodeGroup.kubelet "maxPods") }}
   {{- $max_pods = .nodeGroup.kubelet.maxPods }}
 {{- else }}
-  {{- $prefix := .clusterConfiguration.podSubnetNodeCIDRPrefix | default "24" }}
+  {{- $prefix := .normal.podSubnetNodeCIDRPrefix | default "24" }}
   {{- if eq $prefix "24" }}
     {{- $max_pods = 250 }}
   {{- else if eq $prefix "23" }}
