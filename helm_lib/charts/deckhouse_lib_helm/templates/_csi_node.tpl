@@ -138,7 +138,7 @@ spec:
       {{- end }}
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true "uid" "0" "runAsNonRoot" false) | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -182,6 +182,8 @@ spec:
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
         {{- if $setSysAdminCapability }}
           capabilities:
             add:
