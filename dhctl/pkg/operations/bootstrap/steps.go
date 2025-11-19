@@ -47,6 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -299,20 +300,13 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientConfigGetter, error) {
-	auth, err := config.Auth()
-	if err != nil {
-		return nil, fmt.Errorf("registry auth: %v", err)
-	}
-
-	repo := fmt.Sprintf("%s/%s", strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/"))
-
+func newRegistryClientConfigGetter(upstreamData registry_config.Data) (*registryClientConfigGetter, error) {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: repo,
-			Scheme:     config.Scheme,
-			CA:         config.CA,
-			Auth:       auth,
+			Repository: upstreamData.ImagesRepo,
+			Scheme:     strings.ToLower(string(upstreamData.Scheme)),
+			CA:         upstreamData.CA,
+			Auth:       upstreamData.AuthBase64(),
 		},
 	}, nil
 }
@@ -321,7 +315,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, upstreamData registry_config.Data, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -334,7 +328,7 @@ func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData,
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
-	clientConfigGetter, err := newRegistryClientConfigGetter(config)
+	clientConfigGetter, err := newRegistryClientConfigGetter(upstreamData)
 	if err != nil {
 		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 	}
@@ -504,8 +498,14 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	log.DebugLn("Starting registry packages proxy")
+	registryUpstreamData, err := cfg.Registry.
+		ConfigBuilder().
+		UpstreamData()
+	if err != nil {
+		return err
+	}
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, registryUpstreamData, config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -734,12 +734,17 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
 
+		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		if err != nil {
+			return fmt.Errorf("registry initialization: %v", err)
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
-
 	return res, nil
 }
 

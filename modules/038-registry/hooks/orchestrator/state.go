@@ -663,7 +663,7 @@ func (state *State) processRegistrySwitcher(params registryswitcher.Params, inpu
 }
 
 func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs Inputs) (bool, error) {
-	checkerVersion, err := helpers.ComputeHash(
+	checkerVersion, err := registry_pki.ComputeHash(
 		params,
 		state.TargetMode,
 		inputs.Params.CheckMode,

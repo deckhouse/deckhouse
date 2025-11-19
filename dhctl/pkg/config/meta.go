@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -51,7 +52,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  registry.Config        `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -88,17 +89,64 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 	}
 
-	if len(m.InitClusterConfig) > 0 {
-		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+	// Prepare registry configuration
+	{
+		var (
+			moduleConfig *registry.ModuleConfig
+			initConfig   *registry.InitConfig
+			defaultCRI   string
+		)
+
+		// Get defaultCRI
+		if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+			if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal 'defaultCRI' from cluster config: %w", err)
+			}
 		}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-		err := m.Registry.Process(m.DeckhouseConfig)
-		if err != nil {
-			return nil, err
+		// Settings from initConfig
+		if rawDeckhouseCfg, exists := m.InitClusterConfig["deckhouse"]; exists {
+			if err := json.Unmarshal(rawDeckhouseCfg, &m.DeckhouseConfig); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %w", err)
+			}
+			m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
+			initConfig = &registry.InitConfig{
+				ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
+				RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
+				RegistryCA:        m.DeckhouseConfig.RegistryCA,
+				RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
+			}
 		}
+
+		// Settings from moduleConfig
+		for _, modCfg := range m.ModuleConfigs {
+			if modCfg.GetName() != "deckhouse" {
+				continue
+			}
+
+			registrySettings, ok := modCfg.Spec.Settings["registry"]
+			if !ok {
+				break
+			}
+
+			raw, err := json.Marshal(registrySettings)
+			if err != nil {
+				return nil, fmt.Errorf("unable to marshal registry settings from 'deckhouse' moduleConfig: %w", err)
+			}
+
+			var decoded registry.ModuleConfig
+			if err := json.Unmarshal(raw, &decoded); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal registry settings from 'deckhouse' moduleConfig: %w", err)
+			}
+			moduleConfig = &decoded
+			break
+		}
+
+		registryCfg, err := registry.NewConfig(moduleConfig, initConfig, defaultCRI)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize registry config: %w", err)
+		}
+		m.Registry = registryCfg
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -269,10 +317,9 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.KubeadmTemplatesCtx()
-	if err != nil {
-		return nil, err
-	}
+	registryData := m.Registry.
+		ConfigBuilder().
+		KubeadmTplCtx()
 
 	result["registry"] = registryData
 
@@ -322,7 +369,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.BashibleBundleTemplateCtx()
+	registryData, err := m.Registry.
+		ConfigBuilder().
+		WithPKI(registry.NewPKIGenerator()).
+		BashibleTplCtx()
 	if err != nil {
 		return nil, err
 	}
