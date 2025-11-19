@@ -1372,7 +1372,9 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			Message: "validation failed: " + err.Error(),
 		}
 
-		if valuesByConfig || strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
+		if valuesByConfig ||
+			strings.Contains(err.Error(), "is required") ||
+			strings.Contains(err.Error(), "is a forbidden property") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
 			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
