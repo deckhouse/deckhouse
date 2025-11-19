@@ -12,6 +12,10 @@ Fix CVE
 
 Fix use expfmt library in pilot-agent. This library used for format metrics.
 
+## 004-istio-pilot-secrets_restrict.patch
+
+Restricting the secrets request from a local and remote cluster in multicluster mode
+
 > [!WARNING]
 > **After update istio to version 1.22.X and above need delete this patch!**
 
