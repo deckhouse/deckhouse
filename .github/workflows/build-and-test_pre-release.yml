@@ -3056,8 +3056,57 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
+
+      # </template: check-tag-for-release-branch>
+      - name: Check tag for release branch
+        id: check-tag-for-release-branch
+        uses: actions/github-script@v6.4.1
+        with:
+          result-encoding: string
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const match = branch.match(/^release-(\d+\.\d+)$/);
+            const version = match[1];
+
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const prefix = `v${version}.`;
+            const versionTags = tags.filter(tag => tag.name.startsWith(prefix));
+            console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
+
+            if (versionTags.length === 0) {
+              console.log('No tags found for this version, skipping');
+              return false;
+            }
+
+            const compareTags = (a, b) => {
+              const aVersion = a.name.split('.').map(Number);
+              const bVersion = b.name.split('.').map(Number);
+              for (let i = 0; i < 3; i++) {
+                if (aVersion[i] !== bVersion[i]) {
+                  return bVersion[i] - aVersion[i];
+                }
+              }
+              return 0;
+            };
+
+            versionTags.sort(compareTags);
+            const latestTag = versionTags[0];
+            console.log(`Latest tag for ${version}: ${latestTag.name}`);
+
+            const patchVersion = latestTag.name.split('.')[2];
+            const patchNumber = parseInt(patchVersion);
+            console.log(`Patch version: ${patchNumber}`);
+            return patchNumber >= 1;
+      # example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+      # </template: check-tag-for-release-branch>
       - name: List changed modules from latest released version
         id: list_changed_modules
+        if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
