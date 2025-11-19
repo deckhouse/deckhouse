@@ -14,7 +14,7 @@
 
 // Package metrics provides centralized metric names for deckhouse-controller.
 // All metric names use constants to ensure consistency and prevent typos.
-// The {PREFIX} placeholder is replaced by the metrics storage with the appropriate prefix.
+// The deckhouse_ placeholder is replaced by the metrics storage with the appropriate prefix.
 package metrics
 
 import (
@@ -68,11 +68,10 @@ const (
 	// ============================================================================
 	// Module Release Controller Metrics
 	// ============================================================================
-	// Release operation metrics (with PREFIX placeholder)
-	ModulePullSecondsTotal     = "{PREFIX}module_pull_seconds_total"
-	ModuleSizeBytesTotal       = "{PREFIX}module_size_bytes_total"
-	ModuleUpdatePolicyNotFound = "{PREFIX}module_update_policy_not_found"
-	ModuleConfigurationError   = "{PREFIX}module_configuration_error"
+	ModulePullSecondsTotal     = "deckhouse_module_pull_seconds_total"
+	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
+	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
+	ModuleConfigurationError   = "deckhouse_module_configuration_error"
 )
 
 // ============================================================================
@@ -235,7 +234,7 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	configLabels := []string{"module"}
 
 	// Register counter for module operations
-	// Note: These metrics use {PREFIX} placeholder which is replaced by metrics storage
+	// Note: These metrics use deckhouse_ placeholder which is replaced by metrics storage
 	_, err := metricStorage.RegisterCounter(
 		ModuleUpdatePolicyNotFound,
 		moduleLabels,
