@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
@@ -75,11 +76,22 @@ func (c *Command) OnCommandStart(fn func()) {
 }
 
 func (c *Command) Sudo(ctx context.Context) {
+	sudoSession := node.GetSudoSession(c.Session.Host())
+
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
-	sudoCmdLine := fmt.Sprintf(
-		`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
-		cmdLine,
-	)
+
+	var sudoCmdLine string
+	if sudoSession.IsValid() {
+		sudoCmdLine = fmt.Sprintf(
+			`sudo -n bash -c 'echo SUDO-SUCCESS && %s'`,
+			cmdLine,
+		)
+	} else {
+		sudoCmdLine = fmt.Sprintf(
+			`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
+			cmdLine,
+		)
+	}
 
 	var args []string
 	args = append(args, c.SSHArgs...)
@@ -94,11 +106,17 @@ func (c *Command) Sudo(ctx context.Context) {
 
 	c.Executor = process.NewDefaultExecutor(c.cmd)
 
-	c.WithMatchers(
-		process.NewByteSequenceMatcher("SudoPassword"),
-		process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
-	)
-	c.OpenStdinPipe()
+	if sudoSession.IsValid() {
+		c.WithMatchers(
+			process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
+		)
+	} else {
+		c.WithMatchers(
+			process.NewByteSequenceMatcher("SudoPassword"),
+			process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
+		)
+		c.OpenStdinPipe()
+	}
 
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
@@ -115,9 +133,11 @@ func (c *Command) Sudo(ctx context.Context) {
 				log.DebugLn("Send become pass to cmd")
 				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
 				passSent = true
+				sudoSession.MarkValid()
 			} else {
 				// Second prompt is error!
 				log.ErrorLn("Bad sudo password")
+				sudoSession.Invalidate()
 				// sending wrong password again will raise an error in process.Run()
 				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
 				// os.Exit(1)
@@ -126,6 +146,9 @@ func (c *Command) Sudo(ctx context.Context) {
 		}
 		if pattern == "SUDO-SUCCESS" {
 			log.DebugLn("Got SUCCESS")
+			if !sudoSession.IsValid() {
+				sudoSession.MarkValid()
+			}
 			if c.onCommandStart != nil {
 				c.onCommandStart()
 			}
