@@ -26,8 +26,6 @@ on:
 
 env:
   SCRIPT_DIR: ".github/scripts/python/e2e-commander-clean"
-  E2E_COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
-  E2E_COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
   PYTHON_VERSION: '3.13'
 
 jobs:
@@ -51,6 +49,26 @@ jobs:
       uses: actions/checkout@v3.5.2
 
     # </template: checkout_step>
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+
+    # </template: import_secrets>
     - uses: actions/setup-python@v5.6.0
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -58,6 +76,9 @@ jobs:
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         python ${SCRIPT_DIR}/main.py --auto
 
@@ -87,6 +108,26 @@ jobs:
       uses: actions/checkout@v3.5.2
 
     # </template: checkout_step>
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+
+    # </template: import_secrets>
     - uses: actions/setup-python@v5.6.0
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -94,6 +135,9 @@ jobs:
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
+      env:
+        E2E_COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
         if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then
