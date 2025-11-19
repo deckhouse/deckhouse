@@ -9,7 +9,7 @@ Welcome to the home page of the Deckhouse Kubernetes Platform documentation! We 
 
 Here are some tips on how to find what you need:
 
-- Note that the Deckhouse Kubernetes Platform documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up-to-date versions of the documentation.
+- Note that the Deckhouse Kubernetes Platform documentation for [different versions](reference/release-channels.html) may vary. By default, the documentation for the Stable channel is displayed. The list of available versions is located in the top-left corner — select the one you want to work with.
 - If you know what you're looking for exactly, use the search.
 - Check [this list](reference/revision-comparison.html) if you are looking for information on a particular module.
 - The menu on the left is for searching by scope.
