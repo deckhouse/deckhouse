@@ -103,4 +103,33 @@ When OIDC authentication is configured, additional user information is included 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
 
 ## Feature Gates
-Feature gates are configured via `ModuleConfig` in the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) section. 
+
+Feature gates can be specified by using ModuleConfig `control-plane-manager` [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter.
+
+Changing the list of feature gates causes a restart of the component it relates to (e.g., `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+
+An example of enabling feature gates `ComponentFlagz` and `ComponentStatusz`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    enabledFeatureGates:
+      - ComponentFlagz
+      - ComponentStatusz
+```
+
+If a feature gate is not supported or deprecated, an alert [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse) will be generated in the monitoring system, informing that the feature gate will not be applied.
+
+{% alert level="warning" %}
+The Kubernetes version update (controlled by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) will not occur if the list of enabled feature gates for the new version of Kubernetes includes deprecated feature gates.
+{% endalert %}
+
+More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
+
+{% include feature_gates.liquid %}

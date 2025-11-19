@@ -104,9 +104,12 @@ description: Deckhouse управляет компонентами control plane
 
 ## Feature Gates
 
-Настройки feature gates задаются через `ModuleConfig` в разделе [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates). Указание feature gate в `ModuleConfig` вызовет рестарт компонента, к которому он относится (`kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`). 
+Управление feature gates осуществляется с помощью параметра [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) ModuleConfig `control-plane-manager`.
 
-Пример включения feature gate через `ModuleConfig`:
+Изменение списка feature gates вызывает перезапуск компонента, к которому он относится (например, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+
+Пример включения feature gates `ComponentFlagz` и `ComponentStatusz`:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -121,78 +124,12 @@ spec:
       - ComponentStatusz
 ```
 
-
-Если feature gate не поддерживается или имеет статус `deprecated`, будет отображено предупреждение о том, что feature gate не будет применен и сработает алерт `D8ProblematicFeatureGateInUse`.
+Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
 
 {% alert level="warning" %}
-Повышение версии Kubernetes не произойдет, если в `ModuleConfig` указаны feature gates, имеющие статус `deprecated` для версии, заданной с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion).
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдет, если в списке включенных feature gates для новой версии Kubernets, есть feature gates в статусе `deprecated`.
 {% endalert %}
 
-Поддерживаются следующие feature gates:
+Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
-*тут хотим подтянуть список из [файла](https://github.com/deckhouse/deckhouse/blob/feature/feature-gate-generator/candi/feature_gates_map.yml), но **не** хотим указывать разделение по компонентам на kubelet, apiserver, kubeControllerManager, kubeScheduler. feature gates могут повторяться для компонентов. пример списка ниже*
-
-1.30:
-  - CrossNamespaceVolumeDataSource
-  - HPAScaleToZero
-  - InformerResourceVersion
-  - InPlacePodVerticalScaling
-  - JobManagedBy
-  - KubeletPodResourcesGet
-  - KubeletSeparateDiskGC
-  - MaxUnavailableStatefulSet
-  - MemoryQoS
-  - MutatingAdmissionPolicy
-  - PortForwardWebsockets
-  - ProcMountType
-  - SELinuxMount
-  - ConsistentListFromCache
-  - CustomResourceFieldSelectors
-  - HonorPVReclaimPolicy
-  - JobSuccessPolicy
-  - LoadBalancerIPMode
-  - MatchLabelKeysInPodAffinity
-  - OrderedNamespaceDeletion
-  - RecoverVolumeExpansionFailure
-  - RecursiveReadOnlyMounts
-  - RelaxedEnvironmentVariableValidation
-  - RetryGenerateName
-  - SchedulerQueueingHints
-  - ServiceAccountTokenNodeBinding
-  - StrictCostEnforcementForVAP
-
-1.31:
-  - ConcurrentWatchObjectDecode
-  - CrossNamespaceVolumeDataSource
-  - HPAScaleToZero
-  - ImageVolume
-  - InformerResourceVersion
-  - InPlacePodVerticalScaling
-  - JobManagedBy
-  - KubeletPodResourcesGet
-  - MaxUnavailableStatefulSet
-  - MemoryQoS
-  - MutatingAdmissionPolicy
-  - ProcMountType
-  - ResourceHealthStatus
-  - SELinuxMount
-  - AuthorizeNodeWithSelectors
-  - AuthorizeWithSelectors
-  - DisableAllocatorDualWrite
-  - OrderedNamespaceDeletion
-  - RecoverVolumeExpansionFailure
-  - RelaxedEnvironmentVariableValidation
-  - SchedulerQueueingHints
-  - StrictCostEnforcementForVAP
-  - StrictCostEnforcementForWebhooks
-
-1.32:
-...
-
-1.33:
-...
-
-1.34
-...
-
-*Описание feature gates в [документации](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) Kubernetes.*
+{% include feature_gates.liquid %}
