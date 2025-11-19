@@ -21,11 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -247,9 +244,9 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 	var stat unix.Statfs_t
 
 	err = unix.Statfs(path, &stat)
-    if err != nil {
-        return 0, 0, fmt.Errorf("statfs on %s: %w", path, err)
-    }
+	if err != nil {
+		return 0, 0, fmt.Errorf("statfs on %s: %w", path, err)
+	}
 
 	bytesTotal = stat.Blocks * uint64(stat.Bsize)
 	inodeTotal = stat.Files
@@ -294,64 +291,21 @@ func getRuntimeRootDir(runtime string) (string, error) {
 	switch runtime {
 	case "containerd":
 		return getContainerdRootDir()
-	case "docker":
-		return getDockerRootDir()
 	}
 
-	return "", fmt.Errorf(`unknown container runtime: "%s". Known containers runtimes: "docker"", "containerd"`, runtime)
-}
-
-func getDockerRootDir() (string, error) {
-	type MiniDockerConfig struct {
-		DockerRootDir string `json:"DockerRootDir"`
-	}
-
-	httpClient := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				unixAddr, err := net.ResolveUnixAddr("unix", "/var/run/docker.sock")
-				if err != nil {
-					return nil, err
-				}
-
-				return net.DialUnix("unix", nil, unixAddr)
-			},
-		},
-	}
-
-	resp, err := httpClient.Get("http://system/info")
-	if err != nil {
-		return "", err
-	}
-
-	decoder := json.NewDecoder(resp.Body)
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-
-	var miniDockerConfig MiniDockerConfig
-	err = decoder.Decode(&miniDockerConfig)
-	if err != nil {
-		return "", err
-	}
-
-	if len(miniDockerConfig.DockerRootDir) == 0 {
-		return "", errors.New("DockerRootDir is empty")
-	}
-
-	return miniDockerConfig.DockerRootDir, nil
+	return "", fmt.Errorf(`unknown container runtime: "%s". Known containers runtime: "containerd"`, runtime)
 }
 
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
-         log.Printf("error reading containerd config: %v, using default /var/lib/containerd", err)
+		log.Printf("error reading containerd config: %v, using default /var/lib/containerd", err)
 		return "/var/lib/containerd", nil
 	}
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
-        log.Println("containerd config does not contain root dir option, using default /var/lib/containerd")
+		log.Println("containerd config does not contain root dir option, using default /var/lib/containerd")
 		return "/var/lib/containerd", nil
 	}
 
