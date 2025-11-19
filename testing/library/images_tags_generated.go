@@ -539,6 +539,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"systemctlPowerCommandsWrapper02": "imageHash-registrypackages-systemctlPowerCommandsWrapper02",
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
+		"which223":                        "imageHash-registrypackages-which223",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
 		"yq4471":                          "imageHash-registrypackages-yq4471",
 	},
