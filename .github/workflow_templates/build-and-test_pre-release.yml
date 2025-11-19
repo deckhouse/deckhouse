@@ -270,8 +270,10 @@ jobs:
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+      {!{ tmpl.Exec "check_tag_for_release_branch" $ctx | strings.Indent 6 }!}
       - name: List changed modules from latest released version
         id: list_changed_modules
+        if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
