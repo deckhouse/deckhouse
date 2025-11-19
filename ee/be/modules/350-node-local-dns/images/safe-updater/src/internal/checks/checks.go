@@ -75,6 +75,7 @@ func (c *cniCiliumCheck) GetName() string {
 
 func (c *cniCiliumCheck) GetCheckResult(pod *corev1.Pod) checkResult {
 	if !DaemonSetIsUpToDate(c.daemonSet) {
+		klog.Warningf("updating %s: the cilium agent daemonset is being updated", pod.Name)
 		return Abort
 	}
 
