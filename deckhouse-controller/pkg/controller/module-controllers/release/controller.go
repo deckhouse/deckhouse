@@ -1331,9 +1331,11 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	if valuesByConfig {
 		// load conversions
 		conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+		// create a temporary store to avoid writing not valid conversions to the main store
+		tmpStore := conversion.ConversionsStore{}
 		if _, err = os.Stat(conversionsDir); err == nil {
 			logger.Debug("conversions for the module found", slog.String("name", def.Name))
-			if err = conversion.Store().Add(def.Name, conversionsDir); err != nil {
+			if err = tmpStore.Add(def.Name, conversionsDir); err != nil {
 				return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 			}
 		} else if !os.IsNotExist(err) {
@@ -1341,7 +1343,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		// apply conversions to values
-		_, newSettings, err := conversion.Store().Get(def.Name).ConvertToLatest(config.Spec.Version, values)
+		_, newSettings, err := tmpStore.Get(def.Name).ConvertToLatest(config.Spec.Version, values)
 		if err != nil {
 			return fmt.Errorf("convert values to latest version: %w", err)
 		}
