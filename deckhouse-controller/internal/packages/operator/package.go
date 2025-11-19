@@ -39,11 +39,11 @@ type Status struct {
 	Phase Phase `json:"phase" yaml:"phase"`
 }
 
-func (p *Package) renewContext() context.Context {
+func (p *Package) renewContext(ctx context.Context) context.Context {
 	if p.cancel != nil {
 		p.cancel()
 	}
 
-	p.ctx, p.cancel = context.WithCancel(context.Background())
+	p.ctx, p.cancel = context.WithCancel(ctx)
 	return p.ctx
 }
