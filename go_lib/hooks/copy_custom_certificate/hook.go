@@ -108,15 +108,18 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		if secretName == "" {
 			return nil
 		}
-
+		c := cert{
+			CA:      "<none>",
+			TLSKey:  "<none>",
+			TLSCert: "<none>",
+		}
 		secretData, ok := customCertificates[secretName]
 		if !ok {
 			input.Logger.Warn("custom certificate secret name is configured, but secret with this name doesn't exist")
-			input.Values.Set(path, "<none>")
+			input.Values.Set(path, c)
 			return nil
 		}
 
-		var c cert
 		err := yaml.Unmarshal(secretData, &c)
 		if err != nil {
 			return err
