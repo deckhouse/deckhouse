@@ -1315,23 +1315,27 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	var valuesByConfig bool
 	values := make(addonutils.Values)
 	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+		logger.Debug("module found in module manager, using values from the module manager")
 		values = module.GetConfigValues(false)
 	} else {
+		logger.Debug("get module config")
 		config := new(v1alpha1.ModuleConfig)
 		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 			}
 		} else {
+			logger.Debug("module config found, using values from the module config")
 			values = addonutils.Values(config.Spec.Settings)
 			valuesByConfig = true
 		}
 	}
+	logger.Debug("values by config", slog.Any("valuesByConfig", valuesByConfig))
 
 	// load conversions
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
 	if _, err = os.Stat(conversionsDir); err == nil {
-		logger.Debug("conversions for the module found", slog.String("name", def.Name))
+		logger.Debug("conversions for the module found")
 		// create a temporary store to avoid writing not valid conversions to the main store
 		tmpStore := conversion.NewConversionsStore()
 		if err = tmpStore.Add(def.Name, conversionsDir); err != nil {
@@ -1345,6 +1349,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		// apply conversions to values
+		logger.Debug("apply conversions to values", slog.Int("fromVersion", config.Spec.Version), slog.Int("toVersion", tmpStore.Get(def.Name).LatestVersion()))
 		_, newSettings, err := tmpStore.Get(def.Name).ConvertToLatest(config.Spec.Version, values)
 		if err != nil {
 			return fmt.Errorf("convert values to latest version: %w", err)
