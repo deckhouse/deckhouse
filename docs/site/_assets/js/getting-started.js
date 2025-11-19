@@ -329,38 +329,57 @@ function set_license_token_cookie() {
 
 (function () {
   const KEY = 'dhctl-variant';
-  const get = () => sessionStorage.getItem(KEY) || (window.$?.cookie ? $.cookie(KEY) : null) || 'worker';
-  const set = v => { sessionStorage.setItem(KEY, v); if (window.$?.cookie) $.cookie(KEY, v, { path: '/', expires: 1 }); };
-  const show = (id, on) => { const el = document.getElementById(id); if (el) { el.hidden = !on; el.style.display = on ? 'block' : 'none'; } };
+  
+  const get = () => {
+    return sessionStorage.getItem(KEY) || window.$?.cookie?.(KEY) || 'worker';
+  };
+  
+  const set = (v) => {
+    sessionStorage.setItem(KEY, v);
+    window.$?.cookie?.(KEY, v, { path: '/', expires: 1 });
+  };
+  
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.hidden = !visible;
+      el.style.display = visible ? 'block' : 'none';
+    }
+  };
 
   document.addEventListener('DOMContentLoaded', () => {
-    const isStep4 = document.getElementById('tab_layout_worker') || document.getElementById('tab_layout_master');
-    if (isStep4 && !sessionStorage.getItem(KEY)) {
+    const tabWorker = document.getElementById('tab_layout_worker');
+    const tabMaster = document.getElementById('tab_layout_master');
+    
+    if ((tabWorker || tabMaster) && !sessionStorage.getItem(KEY)) {
       sessionStorage.setItem(KEY, 'worker');
     }
   
-    const v = get();
-    show('block_layout_master', v === 'single');
-    show('block_layout_worker', v !== 'single');
+    const variant = get();
+    const isSingle = variant === 'single';
 
-    const single = v === 'single';
+    show('block_layout_master', isSingle);
+    show('block_layout_worker', !isSingle);
 
-    document.getElementById('tab_layout_worker')?.classList.toggle('active', !single);
-    document.getElementById('tab_layout_master')?.classList.toggle('active',  single);
+    tabWorker?.classList.toggle('active', !isSingle);
+    tabMaster?.classList.toggle('active', isSingle);
 
-    document.querySelector('[id^="tab_variant_worker_"]')?.classList.toggle('active', !single);
-    document.querySelector('[id^="tab_variant_single_"]')?.classList.toggle('active',  single);
+    const tabVarWorker = document.querySelector('[id^="tab_variant_worker_"]');
+    const tabVarSingle = document.querySelector('[id^="tab_variant_single_"]');
+    tabVarWorker?.classList.toggle('active', !isSingle);
+    tabVarSingle?.classList.toggle('active', isSingle);
+    
     const blkVarW = document.querySelector('[id^="block_variant_worker_"]');
     const blkVarS = document.querySelector('[id^="block_variant_single_"]');
     if (blkVarW && blkVarS) {
-      blkVarW.style.display = single ? 'none'  : 'block';
-      blkVarS.style.display = single ? 'block' : 'none';
+      blkVarW.style.display = isSingle ? 'none' : 'block';
+      blkVarS.style.display = isSingle ? 'block' : 'none';
     }
   
-    document.getElementById('tab_layout_worker')?.addEventListener('click', () => set('worker'));
-    document.getElementById('tab_layout_master')?.addEventListener('click', () => set('single'));
-    document.querySelector('[id^="tab_variant_worker_"]')?.addEventListener('click', () => set('worker'));
-    document.querySelector('[id^="tab_variant_single_"]')?.addEventListener('click', () => set('single'));
+    tabWorker?.addEventListener('click', () => set('worker'));
+    tabMaster?.addEventListener('click', () => set('single'));
+    tabVarWorker?.addEventListener('click', () => set('worker'));
+    tabVarSingle?.addEventListener('click', () => set('single'));
   });
 
   window.openTabAndSaveStatus ??= function () {};
