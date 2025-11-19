@@ -1333,7 +1333,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	if _, err = os.Stat(conversionsDir); err == nil {
 		logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		// create a temporary store to avoid writing not valid conversions to the main store
-		tmpStore := conversion.ConversionsStore{}
+		tmpStore := conversion.NewConversionsStore()
 		if err = tmpStore.Add(def.Name, conversionsDir); err != nil {
 			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
