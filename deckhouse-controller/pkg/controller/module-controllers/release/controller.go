@@ -1330,7 +1330,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			valuesByConfig = true
 		}
 	}
-	logger.Debug("values by config", slog.Any("valuesByConfig", valuesByConfig))
+	logger.Debug("values by config", slog.Any("values_by_config", valuesByConfig))
 
 	// load conversions
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
@@ -1349,7 +1349,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		// apply conversions to values
-		logger.Debug("apply conversions to values", slog.Int("fromVersion", config.Spec.Version), slog.Int("toVersion", tmpStore.Get(def.Name).LatestVersion()))
+		logger.Debug("apply conversions to values", slog.Int("from_version", config.Spec.Version), slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()))
 		_, newSettings, err := tmpStore.Get(def.Name).ConvertToLatest(config.Spec.Version, values)
 		if err != nil {
 			return fmt.Errorf("convert values to latest version: %w", err)
