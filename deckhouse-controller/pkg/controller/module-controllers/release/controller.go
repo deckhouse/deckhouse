@@ -1342,6 +1342,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 
+		// module config is needed to get current version of values or default version (0) if it is not set
 		config := new(v1alpha1.ModuleConfig)
 		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -1371,7 +1372,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			Message: "validation failed: " + err.Error(),
 		}
 
-		if valuesByConfig || strings.Contains(err.Error(), "is required") {
+		if valuesByConfig || strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
 			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
