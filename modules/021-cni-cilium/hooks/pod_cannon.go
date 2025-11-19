@@ -77,7 +77,6 @@ func runTestHook(_ context.Context, input *go_hook.HookInput) error {
 		fmt.Println("[TEST HOOK] patched pod", pod.GetName())
 	}
 	fmt.Println("[TEST HOOK] sleeping for 20 seconds")
-	time.Sleep(20 * time.Second)
 	fmt.Println("[TEST HOOK] done")
 	return nil
 }
