@@ -126,7 +126,7 @@ steps:
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 {!{- else }!}
       COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-      COS/IGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+      COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
       COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
