@@ -315,7 +315,9 @@ properties:
   enabledFeatureGates:
     type: array
     description: |
-      List of enabled feature gates.
+      List of feature gates enabled in the control plane.
+
+      More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)
     items:
       type: string
       pattern: '^[a-zA-Z]+$'
