@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
 // DependencyContainer provides access to shared services needed by applications.
@@ -54,7 +55,9 @@ type Application struct {
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
 
-	definition Definition // Application definition
+	definition Definition        // Application definition
+	digests    map[string]string // Package digests
+	registry   registry.Registry // Application registry
 
 	hooks  *hooks.Storage  // Hook storage with indices
 	values *values.Storage // Values storage with layering
@@ -66,7 +69,8 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
-	Digests map[string]string // Package images digests
+	Digests  map[string]string // Package images digests
+	Registry registry.Registry
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -91,7 +95,10 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 
 	a.name = name
 	a.path = path
+
 	a.definition = cfg.Definition
+	a.digests = cfg.Digests
+	a.registry = cfg.Registry
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -102,10 +109,6 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
-	}
-
-	if err = a.values.InjectDigests(cfg.Digests); err != nil {
-		return nil, fmt.Errorf("inject digests: %v", err)
 	}
 
 	return a, nil
@@ -143,6 +146,8 @@ func (a *Application) GetMetaValues() addonutils.Values {
 	return addonutils.Values{
 		"Name":      a.instance,
 		"Namespace": a.namespace,
+		"Digests":   a.digests,
+		"Registry":  a.registry,
 		"Package":   a.definition.Name,
 		"Version":   a.definition.Version,
 	}

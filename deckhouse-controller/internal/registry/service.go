@@ -318,11 +318,11 @@ func isRel(candidate, target string) bool {
 }
 
 type Registry struct {
-	Name         string
-	Repository   string
-	DockerConfig string
-	CA           string
-	Scheme       string
+	Name         string `json:"name" yaml:"name"`
+	Repository   string `json:"repository" yaml:"repository"`
+	DockerConfig string `json:"dockercfg" yaml:"dockercfg"`
+	Scheme       string `json:"scheme" yaml:"scheme"`
+	CA           string `json:"ca" yaml:"ca"`
 }
 
 func BuildRegistryBySource(source *v1alpha1.ModuleSource) Registry {
