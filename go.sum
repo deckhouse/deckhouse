@@ -137,6 +137,8 @@ github.com/deckhouse/deckhouse/pkg/log v0.1.0 h1:2aPfyiHHSIJlX4x7ysyPOaIb7CLmyY+
 github.com/deckhouse/deckhouse/pkg/log v0.1.0/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.2.1 h1:DhMHRzmaVNXASH+koIy9gK25GU/EaK+zC6sVpacqWRw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.2.1/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f h1:z0HVydB3RdiW02V301QPJDx0xmmVgJf1Bkjyu9oILXU=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f/go.mod h1:6idedofcaW43YLVGOAv7Uz9X4xOek/YyOPhiBEr36iM=
 github.com/deckhouse/module-sdk v0.5.0 h1:b2GJUzMKQLr7oJVJy5lXHvyymNyvNiFXpBie7MwEWwE=
@@ -199,12 +201,16 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.16.2 h1:jRPQNTKospmzY51dOJRo0/TIAKB52sYWQGMfP8kL6Zg=
 github.com/flant/addon-operator v1.16.2/go.mod h1:Pcd6vcfBxRo2gPnYiZi/FXn+lW/bLDNMz5FZXLrZ6hg=
+github.com/flant/addon-operator v1.17.2-0.20251120121857-dccca731a024 h1:lNNYap/N5ev4R2ma2u9R86yxHZy0AMEkTH20gllbI6Y=
+github.com/flant/addon-operator v1.17.2-0.20251120121857-dccca731a024/go.mod h1:kzEe4jKg94Gnb7YnT/NUix9uap/EAGc4PTU5T0WRtgI=
 github.com/flant/kube-client v1.5.0 h1:6QZOZy3uk58Bh9YUn4CnhEz13og/cEGXB2uBZ1gWwtM=
 github.com/flant/kube-client v1.5.0/go.mod h1:hpJZ0FnDKHW3r5q5SYQgBrTw9k94q4+dcnJ4uOGYBHc=
 github.com/flant/shell-operator v1.11.5-0.20251112121710-bf68871171f2 h1:mYqK6qv+yYpjYpwbfVR5JjCos2BH8mrMX3MAmG54kig=
 github.com/flant/shell-operator v1.11.5-0.20251112121710-bf68871171f2/go.mod h1:TFTCgXpp+yrvSUQSQKgotJbRK720fiqwaQdFVU6dAlU=
 github.com/flant/shell-operator v1.11.5-0.20251120110523-be3fc8b28423 h1:OCymTvLpsKddpZ0JSgQqCfRzSw6tohd1OM2bkpFkXMI=
 github.com/flant/shell-operator v1.11.5-0.20251120110523-be3fc8b28423/go.mod h1:TFTCgXpp+yrvSUQSQKgotJbRK720fiqwaQdFVU6dAlU=
+github.com/flant/shell-operator v1.12.2-0.20251120121826-779dea2abd23 h1:cI1cqg8k1LyKPNwiF8E87o6hUCVFmsVue6d1nQdI5lg=
+github.com/flant/shell-operator v1.12.2-0.20251120121826-779dea2abd23/go.mod h1:RFXNvfK/v18J5u4RMqfFSDFhwJvMNPv5OR3BpioyxI0=
 github.com/flopp/go-findfont v0.1.0 h1:lPn0BymDUtJo+ZkV01VS3661HL6F4qFlkhcJN55u6mU=
 github.com/flopp/go-findfont v0.1.0/go.mod h1:wKKxRDjD024Rh7VMwoU90i6ikQRCr+JTHB5n4Ejkqvw=
 github.com/fluxcd/flagger v1.36.1 h1:X2PumtNwZz9YSGaOtZLFm2zAKLgHhFkbNv8beg7ifyc=
