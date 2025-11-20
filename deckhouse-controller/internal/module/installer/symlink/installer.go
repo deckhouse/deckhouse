@@ -71,7 +71,7 @@ func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
 //  1. Create /deckhouse/downloaded/<module>/ directory
 //  2. Copy module files from tempModulePath to permanent location
 //  3. Remove old symlink if exists (atomic update)
-//  4. Create new symlink: modules/<module> -> /deckhouse/downloaded/<module>
+//  4. Create new symlink: /deckhouse/downloaded/<module> -> /deckhouse/downloaded/modules/<version>
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
 	defer span.End()
