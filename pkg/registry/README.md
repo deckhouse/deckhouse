@@ -561,6 +561,107 @@ for i, layer := range layers {
 }
 ```
 
+### Platform-Specific Image Retrieval
+
+When working with multi-architecture images, you can specify the platform (OS/architecture) to retrieve the correct image variant using the `WithPlatform` option:
+
+```go
+import (
+    v1 "github.com/google/go-containerregistry/pkg/v1"
+    "github.com/deckhouse/deckhouse/pkg/registry/client"
+)
+
+// Specify platform for image retrieval
+platform := &v1.Platform{
+    OS:           "linux",
+    Architecture: "amd64",
+}
+
+img, err := registryClient.GetImage(ctx, "v1.0.0", client.WithPlatform{Platform: platform})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+**Common Platform Examples:**
+
+```go
+// Linux AMD64
+platform := &v1.Platform{
+    OS:           "linux",
+    Architecture: "amd64",
+}
+
+// Linux ARM64
+platform := &v1.Platform{
+    OS:           "linux",
+    Architecture: "arm64",
+}
+
+// Linux ARM v7
+platform := &v1.Platform{
+    OS:           "linux",
+    Architecture: "arm",
+    Variant:      "v7",
+}
+
+// Windows AMD64
+platform := &v1.Platform{
+    OS:           "windows",
+    Architecture: "amd64",
+}
+```
+
+**Use Cases:**
+
+1. **Building Multi-Arch Images**: When creating images for different architectures
+   ```go
+   // Pull ARM64 base image
+   arm64Platform := &v1.Platform{
+       OS:           "linux",
+       Architecture: "arm64",
+   }
+   baseImg, err := registryClient.GetImage(ctx, "base:latest", 
+       client.WithPlatform{Platform: arm64Platform})
+   ```
+
+2. **Cross-Platform Development**: When working on one platform but targeting another
+   ```go
+   // On AMD64, pull ARM64 image for inspection
+   targetPlatform := &v1.Platform{
+       OS:           "linux",
+       Architecture: "arm64",
+   }
+   img, err := registryClient.GetImage(ctx, "myapp:v1.0.0",
+       client.WithPlatform{Platform: targetPlatform})
+   ```
+
+3. **Testing Platform-Specific Variants**: Verify different architecture builds
+   ```go
+   platforms := []*v1.Platform{
+       {OS: "linux", Architecture: "amd64"},
+       {OS: "linux", Architecture: "arm64"},
+       {OS: "linux", Architecture: "arm", Variant: "v7"},
+   }
+   
+   for _, platform := range platforms {
+       img, err := registryClient.GetImage(ctx, "myapp:latest",
+           client.WithPlatform{Platform: platform})
+       if err != nil {
+           log.Printf("Failed to get %s/%s: %v", 
+               platform.OS, platform.Architecture, err)
+           continue
+       }
+       
+       // Verify image config
+       config, _ := img.ConfigFile()
+       fmt.Printf("Platform: %s/%s, Size: %d layers\n",
+           config.OS, config.Architecture, len(config.RootFS.DiffIDs))
+   }
+   ```
+
+**Note**: If no platform is specified, the registry will typically return the manifest for the host's native platform. When working with multi-platform manifest lists (OCI Image Index), specifying a platform ensures you get the correct platform-specific variant.
+
 ## Configuration Options
 
 The `Options` struct provides comprehensive configuration:
