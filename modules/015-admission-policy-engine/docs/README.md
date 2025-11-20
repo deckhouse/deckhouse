@@ -11,6 +11,10 @@ The Pod Security Standards define three different policies to broadly cover the 
 The module does not apply policies to system namespaces.
 {% endalert %}
 
+{% alert level="info" %}
+Please note that when the multitenancy-manager module is enabled, it creates its own OperationPolicy objects (e.g., in the "default" namespace). These are not affected by the [podSecurityStandards](../configuration.html#parameters-podsecuritystandards) settings. 
+{% endalert %}
+
 List of policies available for use:
 - `Privileged` — Unrestricted policy. Provides the widest possible permission level;
 - `Baseline` — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
