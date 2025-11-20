@@ -37,15 +37,17 @@ var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
+	conversionsStore  *conversion.ConversionsStore
 	deckhouseConfigCh chan<- utils.Values
 
 	l             sync.Mutex
 	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, deckhouseConfigCh chan<- utils.Values) *Handler {
+func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
 		client:            client,
+		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}
 }
@@ -154,7 +156,7 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values(moduleConfig.Spec.Settings), nil
 	}
 
-	converter := conversion.Store().Get(moduleConfig.Name)
+	converter := h.conversionsStore.Get(moduleConfig.Name)
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
 	if err != nil {
 		return utils.Values{}, err

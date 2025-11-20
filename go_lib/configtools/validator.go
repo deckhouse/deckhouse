@@ -31,7 +31,8 @@ import (
 
 // Validator is a validator for values in ModuleConfig.
 type Validator struct {
-	valuesValidator ValuesValidator
+	valuesValidator  ValuesValidator
+	conversionsStore *conversion.ConversionsStore
 }
 
 // ValuesValidator is a part of ValuesValidator from addon-operator with needed
@@ -41,9 +42,10 @@ type ValuesValidator interface {
 	GetModule(name string) *modules.BasicModule
 }
 
-func NewValidator(valuesValidator ValuesValidator) *Validator {
+func NewValidator(valuesValidator ValuesValidator, conversionsStore *conversion.ConversionsStore) *Validator {
 	return &Validator{
-		valuesValidator: valuesValidator,
+		valuesValidator:  valuesValidator,
+		conversionsStore: conversionsStore,
 	}
 }
 
@@ -80,7 +82,7 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
 
-	converter := conversion.Store().Get(config.GetName())
+	converter := v.conversionsStore.Get(config.GetName())
 	latestVersion := converter.LatestVersion()
 
 	// Check if version is unknown.
