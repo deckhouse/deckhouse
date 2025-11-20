@@ -187,13 +187,6 @@ function prepare_environment() {
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
-    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
-      echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
-      registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
-    else
-      registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
-    fi
-
   case "$PROVIDER" in
   "Yandex.Cloud")
     CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
@@ -1153,6 +1146,13 @@ function run-test() {
   local payload
   local response
   local cluster_id
+
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+  else
+    registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
+  fi
 
   if [[ ${PROVIDER} == "Static" ]]; then
       bootstrap_static || return $?
