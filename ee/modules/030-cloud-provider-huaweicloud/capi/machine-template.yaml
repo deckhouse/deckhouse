@@ -57,5 +57,8 @@ spec:
       {{- end }}
       availabilityZone: {{ .zoneName | quote }}
       {{- if .nodeGroup.instanceClass.vipAddress}}
-      vipAddress: {{ .nodeGroup.instanceClass.vipAddress | quote }}
+      vipAddress:
+      {{- range $vip := (uniq .nodeGroup.instanceClass.vipAddress)}}
+      - {{$vip | quote}}
+      {{- end}}
       {{- end}}
