@@ -186,6 +186,14 @@ func (c *Client) GetManifest(ctx context.Context, tag string) ([]byte, error) {
 	return desc.Manifest, nil
 }
 
+type WithPlatform struct {
+	Platform *v1.Platform
+}
+
+func (w WithPlatform) ApplyToImageGet(opts *registry.ImageGetOptions) {
+	opts.Platform = w.Platform
+}
+
 // GetImage retrieves an remote image for a specific reference
 // Do not return remote image to avoid drop connection with context cancelation.
 // It will be in use while passed context will be alive.
@@ -220,6 +228,10 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 
 	imageOptions := []remote.Option{remote.WithContext(ctx)}
 	imageOptions = append(imageOptions, c.options...)
+
+	if getImageOptions.Platform != nil {
+		imageOptions = append(imageOptions, remote.WithPlatform(*getImageOptions.Platform))
+	}
 
 	img, err := remote.Image(ref, imageOptions...)
 	if err != nil {
