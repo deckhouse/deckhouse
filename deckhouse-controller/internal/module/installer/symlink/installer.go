@@ -62,7 +62,7 @@ func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
 		downloaded: downloaded,
 		symlinkDir: filepath.Join(downloaded, "modules"),
 		registry:   registry,
-		logger:     logger,
+		logger:     logger.Named("symlink-installer"),
 	}
 }
 

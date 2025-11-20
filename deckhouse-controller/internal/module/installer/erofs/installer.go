@@ -59,7 +59,7 @@ func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
 		downloaded: downloaded,
 		mount:      filepath.Join(downloaded, "modules"),
 		registry:   registry,
-		logger:     logger.Named("module-installer"),
+		logger:     logger.Named("erofs-installer"),
 	}
 }
 
