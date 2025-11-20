@@ -73,7 +73,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 	name := apps.BuildName(inst.Namespace, inst.Name)
 
-	if _, ok := o.packages[name]; !ok || o.manager.VersionChanged(name, inst.Definition.Version) {
+	if _, ok := o.packages[name]; !ok {
 		o.packages[name] = &Package{
 			name: name,
 			status: Status{
