@@ -537,6 +537,22 @@ module JSONSchemaRenderer
             # result.push("no properties for #{name}")
         end
 
+        # Render additionalProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
+            additionalProps = attributes['additionalProperties']
+            # Only render if additionalProperties is a schema object
+            if additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                additionalPropsData = additionalProps
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                result.push('<ul>')
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            end
+            
+        end
+
         if parameterTitle != ''
             result.push('</li>')
         end
