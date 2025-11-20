@@ -217,13 +217,13 @@ spec:
             - name: ADDON_OPERATOR_BATCHING_ENABLED
               value: "true"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
-              value: "30"
+              value: "50"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
-              value: "60"
+              value: "100"
             - name: KUBE_CLIENT_QPS
-              value: "30"
+              value: "50"
             - name: KUBE_CLIENT_BURST
-              value: "60"
+              value: "100"
             - name: GOGC
               value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
