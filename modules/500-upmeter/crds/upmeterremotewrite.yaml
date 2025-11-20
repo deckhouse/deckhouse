@@ -90,7 +90,8 @@ spec:
                         - required: ["X-Scope-OrgID", "X-Auth-Token"]
                 additionalLabels:
                   type: object
-                  description: Additional labels to add to all metrics.
+                  description: |
+                    Additional labels to add to all metrics.
                   additionalProperties:
                     type: string
                 intervalSeconds:
