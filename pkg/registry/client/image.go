@@ -48,6 +48,12 @@ func (i *Image) GetPullReference() string {
 	return i.pullReference
 }
 
+func NewManifestResultFromBytes(manifestBytes []byte) *ManifestResult {
+	return &ManifestResult{
+		rawManifest: manifestBytes,
+	}
+}
+
 type ManifestResult struct {
 	rawManifest []byte
 
