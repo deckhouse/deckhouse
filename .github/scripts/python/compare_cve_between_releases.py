@@ -24,6 +24,7 @@ import json
 import os
 import sys
 import time
+import yaml
 import requests
 from packaging.version import Version
 from requests.exceptions import RequestException
@@ -511,7 +512,7 @@ def generate_reports(curr_tag: str, prev_tag: str, module_results: dict,
                      total_vulnerabilities: list[tuple[str, str, str, str]], 
                      total_unchanged: list[tuple[str, str]]) -> None:
     """
-    Generates reports in JSON and Markdown formats.
+    Generates reports in JSON, Markdown, and YAML formats.
     
     Args:
         curr_tag: Current version tag
@@ -572,13 +573,13 @@ def generate_reports(curr_tag: str, prev_tag: str, module_results: dict,
         f"",
         f"## Results by Module",
         f"",
-        f"| Module | New | Fixed | Still Present |",
-        f"|--------|-----|-------|---------------|"
+        f"| Module | New | Fixed |",
+        f"|--------|-----|-------|"
     ]
     
     for module_name, results in sorted(module_results.items()):
         md_lines.append(
-            f"| {module_name} | {results['new']} | {results['fixed']} | {results['still']} |"
+            f"| {module_name} | {results['new']} | {results['fixed']} |"
         )
     
     # Split vulnerabilities by status
@@ -627,6 +628,21 @@ def generate_reports(curr_tag: str, prev_tag: str, module_results: dict,
         f.write("\n".join(md_lines))
     
     print("✅ Generated report.md")
+    
+    # Generate report.yaml
+    yaml_data = {}
+    for title, severity, module_name in fixed_vulns:
+        if module_name not in yaml_data:
+            yaml_data[module_name] = {"fixed_vulnerabilities": []}
+        yaml_data[module_name]["fixed_vulnerabilities"].append({"summary": title.split()[0]})
+    
+    # Sort modules alphabetically
+    yaml_data = dict(sorted(yaml_data.items()))
+    
+    with open("report.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(yaml_data, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
+    
+    print("✅ Generated report.yaml")
 
 
 def main():
@@ -806,8 +822,8 @@ def main():
     
     # Check 2: If there are new vulnerabilities - fail the job (security regression)
     if total_new_count > 0:
-        print(f"\n❌ Script failed: Found {total_new_count} new vulnerability/vulnerabilities in the new version.")
-        print(f"   This indicates security regression.")
+        print(f"New vulnerabilities found in newer release: {total_new_count}")
+        print(f"Fail: security regression detected.")
         sys.exit(1)
     
     # Successful completion
