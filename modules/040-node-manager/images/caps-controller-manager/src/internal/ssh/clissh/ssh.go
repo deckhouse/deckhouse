@@ -18,7 +18,9 @@ package clissh
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 
 	"caps-controller-manager/internal/scope"
 	genssh "caps-controller-manager/internal/ssh"
@@ -46,6 +49,15 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 
 	privateSSHKey = append(bytes.TrimSpace(privateSSHKey), '\n')
 
+	var passphrase []byte
+	if len(instanceScope.Credentials.Spec.PrivateSSHKeyPassphrase) > 0 {
+		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKeyPassphrase)
+		if err != nil {
+			return err
+		}
+		passphrase = passBytes
+	}
+
 	sshKey, err := os.CreateTemp("", "ssh-key-")
 	if err != nil {
 		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
@@ -64,9 +76,27 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		}
 	}()
 
-	_, err = io.Copy(sshKey, bytes.NewReader(privateSSHKey))
-	if err != nil {
-		return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
+	if len(passphrase) > 0 {
+		privateKey, err := ssh.ParseRawPrivateKeyWithPassphrase(privateSSHKey, passphrase)
+		if err != nil {
+			return err
+		}
+
+		key, err := ssh.MarshalPrivateKey(crypto.PrivateKey(privateKey), "")
+		if err != nil {
+			return err
+		}
+		pemBytes := pem.EncodeToMemory(key)
+		_, err = io.Copy(sshKey, bytes.NewReader(pemBytes))
+		if err != nil {
+			return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
+		}
+
+	} else {
+		_, err = io.Copy(sshKey, bytes.NewReader(privateSSHKey))
+		if err != nil {
+			return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
+		}
 	}
 
 	args := []string{
