@@ -143,7 +143,7 @@ type Client interface {
     GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (ClientImage, error)
     PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePutOption) error
     GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
-    GetManifest(ctx context.Context, tag string) ([]byte, error)
+    GetManifest(ctx context.Context, tag string) (ManifestResult, error)
     GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error)
     CheckImageExists(ctx context.Context, tag string) error
     
@@ -359,13 +359,62 @@ fmt.Printf("Digest: %s\n", digest.String())
 
 ### Get Image Manifest
 
+The `GetManifest()` method returns a `ManifestResult` that can represent either a standard manifest or an index manifest (for multi-architecture images).
+
 ```go
-manifestBytes, err := registryClient.GetManifest(ctx, "v1.0.0")
+manifestResult, err := registryClient.GetManifest(ctx, "v1.0.0")
 if err != nil {
     log.Fatal(err)
 }
 
-fmt.Printf("Manifest: %s\n", string(manifestBytes))
+// Get the descriptor (contains media type, size, digest)
+descriptor := manifestResult.GetDescriptor()
+fmt.Printf("Media Type: %s\n", descriptor.GetMediaType())
+fmt.Printf("Size: %d bytes\n", descriptor.GetSize())
+fmt.Printf("Digest: %s\n", descriptor.GetDigest())
+
+// Check if it's an index manifest (multi-arch image)
+if descriptor.GetMediaType().IsIndex() {
+    // Handle index manifest (multi-platform)
+    indexManifest, err := manifestResult.GetIndexManifest()
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("Schema Version: %d\n", indexManifest.GetSchemaVersion())
+    
+    // List all platform-specific manifests
+    for _, manifest := range indexManifest.GetManifests() {
+        platform := manifest.GetPlatform()
+        if platform != nil {
+            fmt.Printf("Platform: %s/%s\n", platform.OS, platform.Architecture)
+            fmt.Printf("  Digest: %s\n", manifest.GetDigest())
+            fmt.Printf("  Size: %d bytes\n", manifest.GetSize())
+        }
+    }
+} else {
+    // Handle regular manifest (single platform)
+    manifest, err := manifestResult.GetManifest()
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("Schema Version: %d\n", manifest.GetSchemaVersion())
+    
+    // Access config
+    config := manifest.GetConfig()
+    fmt.Printf("Config Digest: %s\n", config.GetDigest())
+    
+    // Access layers
+    for i, layer := range manifest.GetLayers() {
+        fmt.Printf("Layer %d: %s (%d bytes)\n", i, layer.GetDigest(), layer.GetSize())
+    }
+    
+    // Access annotations
+    for key, value := range manifest.GetAnnotations() {
+        fmt.Printf("Annotation %s: %s\n", key, value)
+    }
+}
 ```
 
 ### Get Image Configuration
