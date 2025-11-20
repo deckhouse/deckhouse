@@ -73,7 +73,7 @@ func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
 //  3. Remove old symlink if exists (atomic update)
 //  4. Create new symlink: /deckhouse/downloaded/<module> -> /deckhouse/downloaded/modules/<version>
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
+	_, span := otel.Tracer(tracerName).Start(ctx, "Install")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", module))
@@ -128,7 +128,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 //
 // Two-phase cleanup ensures symlink is removed before directory cleanup
 func (i *Installer) Uninstall(ctx context.Context, module string) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
+	_, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", module))
