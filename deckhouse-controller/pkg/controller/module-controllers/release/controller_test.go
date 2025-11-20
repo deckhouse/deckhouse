@@ -886,9 +886,31 @@ type: Opaque
 `
 
 	initObjects := make([]client.Object, 0, len(manifests))
+
+	// Collect module names from ModuleRelease objects to create ModuleConfig objects
+	moduleNames := make(map[string]bool)
 	for _, manifest := range manifests {
 		obj := suite.assembleInitObject(manifest)
 		initObjects = append(initObjects, obj)
+
+		// Check if this is a ModuleRelease and collect the module name
+		if mr, ok := obj.(*v1alpha1.ModuleRelease); ok {
+			moduleNames[mr.GetModuleName()] = true
+		}
+	}
+
+	// Create ModuleConfig objects for each module
+	for moduleName := range moduleNames {
+		moduleConfig := &v1alpha1.ModuleConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: moduleName,
+			},
+			Spec: v1alpha1.ModuleConfigSpec{
+				Version:  1,
+				Settings: map[string]interface{}{},
+			},
+		}
+		initObjects = append(initObjects, moduleConfig)
 	}
 
 	err := suite.Suite.SetupNoLock(initObjects)
