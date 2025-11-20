@@ -17,9 +17,7 @@ limitations under the License.
 package client
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -160,7 +158,7 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 
 // GetManifest retrieves the manifest for a specific image tag
 // The repository is determined by the chained WithSegment() calls
-func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Manifest, error) {
+func (c *Client) GetManifest(ctx context.Context, tag string) (registry.ManifestResult, error) {
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
@@ -185,14 +183,10 @@ func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Manifest
 
 	logentry.Debug("Manifest retrieved successfully")
 
-	manifest := new(v1.Manifest)
-
-	err = json.NewDecoder(bytes.NewReader(desc.Manifest)).Decode(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode manifest: %w", err)
-	}
-
-	return &Manifest{Manifest: manifest}, nil
+	return &ManifestResult{
+		rawManifest: desc.Manifest,
+		descriptor:  &desc.Descriptor,
+	}, nil
 }
 
 type WithPlatform struct {

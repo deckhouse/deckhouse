@@ -17,11 +17,15 @@ limitations under the License.
 package client
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type Image struct {
@@ -44,41 +48,107 @@ func (i *Image) GetPullReference() string {
 	return i.pullReference
 }
 
+type ManifestResult struct {
+	rawManifest []byte
+
+	descriptor *v1.Descriptor
+
+	manifest      *v1.Manifest
+	indexManifest *v1.IndexManifest
+}
+
+func (m *ManifestResult) IsIndex() bool {
+	return m.descriptor.MediaType.IsIndex()
+}
+
+var ErrIsIndexManifest = fmt.Errorf("manifest is an index")
+var ErrIsNotIndexManifest = fmt.Errorf("manifest is not an index")
+
+func (m *ManifestResult) GetDescriptor() registry.Descriptor {
+	if m.descriptor == nil {
+		return nil
+	}
+
+	return &Descriptor{Descriptor: m.descriptor}
+}
+
+// GetMediaType returns the media type of the manifest
+func (m *ManifestResult) GetMediaType() types.MediaType {
+	if m.descriptor == nil {
+		return ""
+	}
+	return m.descriptor.MediaType
+}
+
+func (m *ManifestResult) GetManifest() (registry.Manifest, error) {
+	if m.IsIndex() {
+		return nil, ErrIsIndexManifest
+	}
+
+	if m.manifest != nil {
+		return &Manifest{manifest: m.manifest}, nil
+	}
+
+	err := json.NewDecoder(bytes.NewReader(m.rawManifest)).Decode(&m.manifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode manifest: %w", err)
+	}
+
+	return &Manifest{manifest: m.manifest}, nil
+}
+
+func (m *ManifestResult) GetIndexManifest() (registry.IndexManifest, error) {
+	if !m.IsIndex() {
+		return nil, ErrIsNotIndexManifest
+	}
+
+	if m.indexManifest != nil {
+		return &IndexManifest{indexManifest: m.indexManifest}, nil
+	}
+
+	err := json.NewDecoder(bytes.NewReader(m.rawManifest)).Decode(&m.indexManifest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode index manifest: %w", err)
+	}
+
+	return &IndexManifest{indexManifest: m.indexManifest}, nil
+}
+
 type Manifest struct {
-	*v1.Manifest
+	manifest *v1.Manifest
 }
 
 // GetSchemaVersion returns the schema version of the manifest
 func (m *Manifest) GetSchemaVersion() int64 {
-	if m.Manifest == nil {
+	if m.manifest == nil {
 		return 0
 	}
-	return m.Manifest.SchemaVersion
+	return m.manifest.SchemaVersion
 }
 
 // GetMediaType returns the media type of the manifest
-func (m *Manifest) GetMediaType() string {
-	if m.Manifest == nil {
+func (m *Manifest) GetMediaType() types.MediaType {
+	if m.manifest == nil {
 		return ""
 	}
-	return string(m.Manifest.MediaType)
+	return m.manifest.MediaType
 }
 
 // GetConfig returns the configuration descriptor
 func (m *Manifest) GetConfig() registry.Descriptor {
-	if m.Manifest == nil {
+	if m.manifest == nil {
 		return nil
 	}
-	return &Descriptor{Descriptor: &m.Manifest.Config}
+	return &Descriptor{Descriptor: &m.manifest.Config}
 }
 
 // GetLayers returns the layer descriptors
 func (m *Manifest) GetLayers() []registry.Descriptor {
-	if m.Manifest == nil {
+	if m.manifest == nil {
 		return nil
 	}
-	descriptors := make([]registry.Descriptor, len(m.Manifest.Layers))
-	for i, layer := range m.Manifest.Layers {
+	descriptors := make([]registry.Descriptor, len(m.manifest.Layers))
+	for i, layer := range m.manifest.Layers {
 		descriptors[i] = &Descriptor{Descriptor: &layer}
 	}
 	return descriptors
@@ -86,18 +156,66 @@ func (m *Manifest) GetLayers() []registry.Descriptor {
 
 // GetAnnotations returns the annotations associated with the manifest
 func (m *Manifest) GetAnnotations() map[string]string {
-	if m.Manifest == nil {
+	if m.manifest == nil {
 		return nil
 	}
-	return m.Manifest.Annotations
+	return m.manifest.Annotations
 }
 
 // GetSubject returns the subject descriptor if present
 func (m *Manifest) GetSubject() registry.Descriptor {
-	if m.Manifest == nil || m.Manifest.Subject == nil {
+	if m.manifest == nil || m.manifest.Subject == nil {
 		return nil
 	}
-	return &Descriptor{Descriptor: m.Manifest.Subject}
+	return &Descriptor{Descriptor: m.manifest.Subject}
+}
+
+type IndexManifest struct {
+	indexManifest *v1.IndexManifest
+}
+
+// GetSchemaVersion returns the schema version of the index manifest
+func (im *IndexManifest) GetSchemaVersion() int64 {
+	if im.indexManifest == nil {
+		return 0
+	}
+	return im.indexManifest.SchemaVersion
+}
+
+// GetMediaType returns the media type of the index manifest
+func (im *IndexManifest) GetMediaType() types.MediaType {
+	if im.indexManifest == nil {
+		return ""
+	}
+	return im.indexManifest.MediaType
+}
+
+// GetManifests returns the manifest descriptors
+func (im *IndexManifest) GetManifests() []registry.Descriptor {
+	if im.indexManifest == nil {
+		return nil
+	}
+	descriptors := make([]registry.Descriptor, len(im.indexManifest.Manifests))
+	for i, manifest := range im.indexManifest.Manifests {
+		descriptors[i] = &Descriptor{Descriptor: &manifest}
+	}
+	return descriptors
+}
+
+// GetAnnotations returns the annotations associated with the index manifest
+func (im *IndexManifest) GetAnnotations() map[string]string {
+	if im.indexManifest == nil {
+		return nil
+	}
+	return im.indexManifest.Annotations
+}
+
+// GetSubject returns the subject descriptor if present
+func (im *IndexManifest) GetSubject() registry.Descriptor {
+	if im.indexManifest == nil || im.indexManifest.Subject == nil {
+		return nil
+	}
+	return &Descriptor{Descriptor: im.indexManifest.Subject}
 }
 
 type Descriptor struct {
@@ -105,11 +223,11 @@ type Descriptor struct {
 }
 
 // GetMediaType returns the media type of the descriptor
-func (d *Descriptor) GetMediaType() string {
+func (d *Descriptor) GetMediaType() types.MediaType {
 	if d.Descriptor == nil {
 		return ""
 	}
-	return string(d.Descriptor.MediaType)
+	return d.Descriptor.MediaType
 }
 
 // GetSize returns the size of the described content

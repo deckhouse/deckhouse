@@ -40,7 +40,7 @@ type Client interface {
 
 	// GetManifest retrieves the manifest for a specific image tag
 	// The repository is determined by the chained WithSegment() calls
-	GetManifest(ctx context.Context, tag string) (Manifest, error)
+	GetManifest(ctx context.Context, tag string) (ManifestResult, error)
 
 	// GetImageConfig retrieves the image config file containing labels and metadata
 	// The repository is determined by the chained WithSegment() calls
