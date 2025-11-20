@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/debug"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
@@ -32,6 +31,7 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
