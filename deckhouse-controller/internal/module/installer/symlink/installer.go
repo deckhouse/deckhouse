@@ -211,9 +211,13 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>/<version>
 	// This allows multiple versions to coexist before symlink switch
 	versionPath := filepath.Join(modulePath, version)
-	if err := i.registry.Download(ctx, registry.BuildRegistryBySource(ms), versionPath, module, version); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download module '%s': %w", module, err) // Propagate download error
+
+	// Check if module version already exists
+	if _, err := os.Stat(versionPath); err != nil {
+		if err = i.registry.Download(ctx, registry.BuildRegistryBySource(ms), versionPath, module, version); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("download module '%s': %w", module, err) // Propagate download error
+		}
 	}
 
 	// Create symlink pointing to permanent location
