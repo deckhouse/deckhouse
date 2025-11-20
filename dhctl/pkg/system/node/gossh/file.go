@@ -40,7 +40,7 @@ func NewSSHFile(client *ssh.Client) *SSHFile {
 func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error {
 	fType, err := CheckLocalPath(srcPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open local file: %w", err)
 	}
 
 	if fType != "DIR" {
@@ -80,14 +80,9 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 		if err != nil {
 			return err
 		}
-		scpClient, err := scp.NewClientBySSH(f.sshClient)
-		if err != nil {
-			return err
-		}
-		defer scpClient.Close()
 		files, err := os.ReadDir(srcPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read directory: %w", err)
 		}
 		for _, file := range files {
 			err = f.Upload(ctx, srcPath+"/"+file.Name(), remotePath+"/"+file.Name())
@@ -135,13 +130,23 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 			return err
 		}
 		defer scpClient.Close()
+		lType, err := CheckLocalPath(dstPath)
+		if err != nil {
+			if !strings.ContainsAny(err.Error(), "No such file or directory") {
+				return err
+			}
+		}
+		if lType == "DIR" {
+			dstPath = dstPath + "/" + filepath.Base(remotePath)
+		}
+
 		localFile, err := os.Create(dstPath)
 		if err != nil {
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
 		if err := scpClient.CopyFromRemote(ctx, localFile, remotePath); err != nil {
-			return fmt.Errorf("failed to copy file to remote host: %w", err)
+			return fmt.Errorf("failed to copy file from remote host: %w", err)
 		}
 	} else {
 		// recursive copy logic

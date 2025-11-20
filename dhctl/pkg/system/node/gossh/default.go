@@ -25,13 +25,14 @@ import (
 
 func NewClientFromFlags() (*Client, error) {
 	settings := session.NewSession(session.Input{
-		AvailableHosts: app.SSHHosts,
-		User:           app.SSHUser,
-		Port:           app.SSHPort,
-		BastionHost:    app.SSHBastionHost,
-		BastionPort:    app.SSHBastionPort,
-		BastionUser:    app.SSHBastionUser,
-		ExtraArgs:      app.SSHExtraArgs,
+		AvailableHosts:  app.SSHHosts,
+		User:            app.SSHUser,
+		Port:            app.SSHPort,
+		BastionHost:     app.SSHBastionHost,
+		BastionPort:     app.SSHBastionPort,
+		BastionUser:     app.SSHBastionUser,
+		BastionPassword: app.SSHBastionPass,
+		ExtraArgs:       app.SSHExtraArgs,
 	})
 
 	return NewClient(settings, genssh.CollectDHCTLPrivateKeysFromFlags()), nil
