@@ -164,14 +164,14 @@ func (o *Operator) registerDebugServer(sockerPath string) error {
 		return fmt.Errorf("start debug server: %w", err)
 	}
 
-	o.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, r *http.Request) {
+	o.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
 		w.Write(o.Dump())
 	})
 
-	o.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, r *http.Request) {
+	o.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
