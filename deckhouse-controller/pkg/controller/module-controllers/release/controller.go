@@ -1425,7 +1425,10 @@ func (r *reconciler) applyValuesConversions(def *moduletypes.Definition, pathToC
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 	// apply conversions to values
-	r.log.Debug("apply conversions to values", slog.Int("from_version", fromVersion), slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()))
+	r.log.Debug("apply conversions to values",
+		slog.Int("from_version", fromVersion),
+		slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()),
+		slog.String("module", def.Name))
 	_, newValues, err := tmpStore.Get(def.Name).ConvertToLatest(fromVersion, values)
 	if err != nil {
 		return nil, fmt.Errorf("convert values to latest version: %w", err)
