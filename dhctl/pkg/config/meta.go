@@ -92,9 +92,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	// Prepare registry configuration
 	{
 		var (
-			moduleConfig *registry.ModuleConfig
-			initConfig   *registry.InitConfig
-			defaultCRI   string
+			deckhouseSettings *registry.DeckhouseSettings
+			initConfig        *registry.InitConfig
+			defaultCRI        string
 		)
 
 		// Get defaultCRI
@@ -134,15 +134,15 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 				return nil, fmt.Errorf("unable to marshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
 
-			var decoded registry.ModuleConfig
+			var decoded registry.DeckhouseSettings
 			if err := json.Unmarshal(raw, &decoded); err != nil {
 				return nil, fmt.Errorf("unable to unmarshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
-			moduleConfig = &decoded
+			deckhouseSettings = &decoded
 			break
 		}
 
-		registryCfg, err := registry.NewConfig(moduleConfig, initConfig, defaultCRI)
+		registryCfg, err := registry.NewConfig(deckhouseSettings, initConfig, defaultCRI)
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 		}
@@ -371,8 +371,8 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	registryData, err := m.Registry.
 		ConfigBuilder().
-		WithPKI(registry.NewPKIGenerator()).
-		BashibleTplCtx()
+		WithPKI(registry.NewLazyPKIGenerator()).
+		BashibleTplCtx(context.TODO())
 	if err != nil {
 		return nil, err
 	}

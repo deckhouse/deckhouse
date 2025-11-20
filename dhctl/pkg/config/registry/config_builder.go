@@ -15,6 +15,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -29,7 +30,7 @@ import (
 )
 
 type PKIProvider interface {
-	Get() (PKI, error)
+	Get(ctx context.Context) (PKI, error)
 }
 
 type ConfigBuilder struct {
@@ -42,21 +43,33 @@ type ConfigBuilderWithPKI struct {
 }
 
 func (cb *ConfigBuilder) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	isExist := cb.cfg.isModuleEnabled()
-	if !isExist {
+	if !cb.cfg.isModuleEnabled() {
 		return false, nil, nil
 	}
 
-	data, err := json.Marshal(cb.cfg.ModuleConfig)
+	deckhouseSettings, err := cb.cfg.toDeckhouseSettings()
 	if err != nil {
-		return isExist, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
+		return true, nil, err
+	}
+
+	data, err := json.Marshal(deckhouseSettings)
+	if err != nil {
+		return true, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
 	}
 
 	var ret map[string]interface{}
 	if err := json.Unmarshal(data, &ret); err != nil {
-		return isExist, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
+		return true, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
 	}
-	return isExist, ret, nil
+
+	return true, ret, nil
+}
+
+func (cb *ConfigBuilder) InclusterImagesRepo() string {
+	if cb.cfg.Mode == registry_const.ModeUnmanaged {
+		return cb.cfg.ImagesRepo
+	}
+	return registry_const.HostWithPath
 }
 
 func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
@@ -67,128 +80,115 @@ func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
 	}
 }
 
-func (cb *ConfigBuilder) InclusterImagesRepo() string {
-	if cb.cfg.ModuleConfig.Unmanaged != nil {
-		return cb.cfg.ModuleConfig.Unmanaged.ImagesRepo
-	}
-	return registry_const.HostWithPath
-}
-
-func (cb *ConfigBuilder) WithPKI(pkiProvider PKIProvider) *ConfigBuilderWithPKI {
-	return &ConfigBuilderWithPKI{ConfigBuilder: cb, pkiProvider: pkiProvider}
-}
-
 func (cb *ConfigBuilder) UpstreamData() (Data, error) {
-	switch cfg := cb.cfg.ModuleConfig; {
-	case cfg.Unmanaged != nil:
-		username, password := cfg.Unmanaged.UsernamePassword()
+	switch cb.cfg.Mode {
+	case registry_const.ModeDirect, registry_const.ModeUnmanaged:
 		return Data{
-			ImagesRepo: cfg.Unmanaged.ImagesRepo,
-			Scheme:     cfg.Unmanaged.Scheme,
-			Username:   username,
-			Password:   password,
-			CA:         cfg.Unmanaged.CA,
+			ImagesRepo: cb.cfg.ImagesRepo,
+			Scheme:     cb.cfg.Scheme,
+			Username:   cb.cfg.Username,
+			Password:   cb.cfg.Password,
+			CA:         cb.cfg.CA,
 		}, nil
-	case cfg.Direct != nil:
-		username, password := cfg.Direct.UsernamePassword()
-		return Data{
-			ImagesRepo: cfg.Direct.ImagesRepo,
-			Scheme:     cfg.Direct.Scheme,
-			Username:   username,
-			Password:   password,
-			CA:         cfg.Direct.CA,
-		}, nil
+
 	default:
 		return Data{}, ErrUnknownMode
 	}
 }
 
-func (cb *ConfigBuilderWithPKI) InclusterData() (Data, error) {
-	switch cfg := cb.cfg.ModuleConfig; {
-	case cfg.Unmanaged != nil:
-		username, password := cfg.Unmanaged.UsernamePassword()
+func (cb *ConfigBuilder) WithPKI(pkiProvider PKIProvider) *ConfigBuilderWithPKI {
+	return &ConfigBuilderWithPKI{
+		ConfigBuilder: cb,
+		pkiProvider:   pkiProvider,
+	}
+}
+
+// =======================
+// ConfigBuilderWithPKI
+// =======================
+
+func (cb *ConfigBuilderWithPKI) InclusterData(ctx context.Context) (Data, error) {
+	switch cb.cfg.Mode {
+	case registry_const.ModeUnmanaged:
 		return Data{
-			ImagesRepo: cfg.Unmanaged.ImagesRepo,
-			Scheme:     cfg.Unmanaged.Scheme,
-			Username:   username,
-			Password:   password,
-			CA:         cfg.Unmanaged.CA,
+			ImagesRepo: cb.cfg.ImagesRepo,
+			Scheme:     cb.cfg.Scheme,
+			Username:   cb.cfg.Username,
+			Password:   cb.cfg.Password,
+			CA:         cb.cfg.CA,
 		}, nil
-	case cfg.Direct != nil:
-		username, password := cfg.Direct.UsernamePassword()
-		pki, err := cb.pkiProvider.Get()
+
+	case registry_const.ModeDirect:
+		pki, err := cb.pkiProvider.Get(ctx)
 		if err != nil {
-			return Data{}, err
+			return Data{}, fmt.Errorf("failed to get PKI: %w", err)
 		}
 		return Data{
 			ImagesRepo: registry_const.HostWithPath,
 			Scheme:     SchemeHTTPS,
+			Username:   cb.cfg.Username,
+			Password:   cb.cfg.Password,
 			CA:         pki.CA.Cert,
-			Username:   username,
-			Password:   password,
 		}, nil
+
 	default:
 		return Data{}, ErrUnknownMode
 	}
 }
 
-func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData() (map[string][]byte, error) {
-	data, err := cb.InclusterData()
+func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData(ctx context.Context) (map[string][]byte, error) {
+	data, err := cb.InclusterData(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	address, path := addressAndPathFromImagesRepo(data.ImagesRepo)
-
-	dockerCfgDecoded, err := data.DockerCfg()
+	dockerCfg, err := data.DockerCfg()
 	if err != nil {
 		return nil, err
 	}
 
-	ret := deckhouse_registry.Config{
+	regCfg := deckhouse_registry.Config{
 		Address:      address,
 		Path:         path,
 		Scheme:       strings.ToLower(string(data.Scheme)),
 		CA:           data.CA,
-		DockerConfig: dockerCfgDecoded,
+		DockerConfig: dockerCfg,
 	}
-	return ret.ToMap(), nil
+
+	return regCfg.ToMap(), nil
 }
 
-func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
-	isExist := cb.cfg.isModuleEnabled()
-	if !isExist {
+func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData(ctx context.Context) (bool, map[string][]byte, error) {
+	if !cb.cfg.isModuleEnabled() {
 		return false, nil, nil
 	}
 
-	var cfg bashible.Config
-	_, cfg, err := cb.bashibleContextAndConfig()
+	_, cfg, err := cb.bashibleContextAndConfig(ctx)
 	if err != nil {
-		return isExist, nil, err
+		return true, nil, err
 	}
 
 	cfgYaml, err := yaml.Marshal(cfg)
 	if err != nil {
-		return isExist, nil, err
+		return true, nil, fmt.Errorf("failed to marshal bashible config: %w", err)
 	}
 
-	data := map[string][]byte{"config": cfgYaml}
-	return isExist, data, nil
+	return true, map[string][]byte{"config": cfgYaml}, nil
 }
 
-func (cb *ConfigBuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error) {
-	var ctx bashible.Context
-	ctx, _, err := cb.bashibleContextAndConfig()
+func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]interface{}, error) {
+	bashibleCtx, _, err := cb.bashibleContextAndConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	mapCtx, err := ctx.ToMap()
+	mapCtx, err := bashibleCtx.ToMap()
 	if err != nil {
 		return nil, err
 	}
 
-	initCfg, err := cb.initConfig()
+	initCfg, err := cb.initConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -202,74 +202,79 @@ func (cb *ConfigBuilderWithPKI) BashibleTplCtx() (map[string]interface{}, error)
 	return mapCtx, nil
 }
 
-func (cb *ConfigBuilderWithPKI) initConfig() (registry_init.Config, error) {
-	pki, err := cb.pkiProvider.Get()
+func (cb *ConfigBuilderWithPKI) initConfig(ctx context.Context) (registry_init.Config, error) {
+	pki, err := cb.pkiProvider.Get(ctx)
 	if err != nil {
-		return registry_init.Config{}, err
+		return registry_init.Config{}, fmt.Errorf("failed to get PKI: %w", err)
 	}
 	return registry_init.Config(pki), nil
 }
 
-func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
-	var (
-		imagesBase string
-		ctxHosts   []bashible.ContextMirrorHost
-		cfgHosts   []bashible.ConfigMirrorHost
-		mirrorHost string
-	)
+func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig(_ context.Context) (bashible.Context, bashible.Config, error) {
+	imagesBase := cb.InclusterImagesRepo()
 
-	switch {
-	case cb.cfg.ModuleConfig.Unmanaged != nil:
-		unmanaged := cb.cfg.ModuleConfig.Unmanaged
-		imagesBase = unmanaged.ImagesRepo
-		mirrorHost, ctxHosts, cfgHosts = extractUnmanagedMirrors(unmanaged)
-
-	case cb.cfg.ModuleConfig.Direct != nil:
-		direct := cb.cfg.ModuleConfig.Direct
-		imagesBase = registry_const.HostWithPath
-		mirrorHost, ctxHosts, cfgHosts = extractDirectMirrors(direct)
-
-	default:
-		return bashible.Context{}, bashible.Config{}, ErrUnknownMode
+	mirrorHost, ctxMirrors, cfgMirrors, err := cb.mirrors()
+	if err != nil {
+		return bashible.Context{}, bashible.Config{}, err
 	}
 
-	ctx := bashible.Context{
-		Mode:                 cb.cfg.ModuleConfig.Mode,
+	bashibleCtx := bashible.Context{
+		Mode:                 cb.cfg.Mode,
 		ImagesBase:           imagesBase,
 		RegistryModuleEnable: cb.cfg.isModuleEnabled(),
-		Hosts:                map[string]bashible.ContextHosts{mirrorHost: {Mirrors: ctxHosts}},
+		Hosts: map[string]bashible.ContextHosts{
+			mirrorHost: {Mirrors: ctxMirrors},
+		},
 	}
 
-	cfg := bashible.Config{
-		Mode:       cb.cfg.ModuleConfig.Mode,
+	bashibleCfg := bashible.Config{
+		Mode:       cb.cfg.Mode,
 		ImagesBase: imagesBase,
-		Hosts:      map[string]bashible.ConfigHosts{mirrorHost: {Mirrors: cfgHosts}},
+		Hosts: map[string]bashible.ConfigHosts{
+			mirrorHost: {Mirrors: cfgMirrors},
+		},
 	}
 
-	// Only from config!
-	version, err := pki.ComputeHash(&cfg)
+	version, err := pki.ComputeHash(&bashibleCfg)
 	if err != nil {
 		return bashible.Context{}, bashible.Config{}, fmt.Errorf("failed to compute version: %w", err)
 	}
-	cfg.Version, ctx.Version = version, version
 
-	if err := cfg.Validate(); err != nil {
+	bashibleCfg.Version = version
+	bashibleCtx.Version = version
+
+	if err := bashibleCfg.Validate(); err != nil {
 		return bashible.Context{}, bashible.Config{}, err
 	}
-	if err := ctx.Validate(); err != nil {
+	if err := bashibleCtx.Validate(); err != nil {
 		return bashible.Context{}, bashible.Config{}, err
 	}
-
-	return ctx, cfg, nil
+	return bashibleCtx, bashibleCfg, nil
 }
 
-func extractUnmanagedMirrors(cfg *UnmanagedModeConfig) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
+func (cb *ConfigBuilderWithPKI) mirrors() (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
+	switch cb.cfg.Mode {
+	case registry_const.ModeUnmanaged:
+		host, ctxHosts, cfgHosts := unmanagedMirrors(cb.cfg)
+		return host, ctxHosts, cfgHosts, nil
+
+	case registry_const.ModeDirect:
+		host, ctxHosts, cfgHosts := directMirrors(cb.cfg)
+		return host, ctxHosts, cfgHosts, nil
+
+	default:
+		return "", nil, nil, ErrUnknownMode
+	}
+}
+
+func unmanagedMirrors(cfg *Config) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, _ := addressAndPathFromImagesRepo(cfg.ImagesRepo)
-	username, password := cfg.UsernamePassword()
+
+	username, password := cfg.Username, cfg.Password
 	scheme := strings.ToLower(string(cfg.Scheme))
 	ca := cfg.CA
 
-	ctx := []bashible.ContextMirrorHost{{
+	ctxMirrors := []bashible.ContextMirrorHost{{
 		Host:   host,
 		Scheme: scheme,
 		CA:     ca,
@@ -283,19 +288,19 @@ func extractUnmanagedMirrors(cfg *UnmanagedModeConfig) (string, []bashible.Conte
 		Auth:   bashible.ConfigAuth{Username: username, Password: password},
 	}}
 
-	return host, ctx, cfgMirrors
+	return host, ctxMirrors, cfgMirrors
 }
 
-func extractDirectMirrors(cfg *DirectModeConfig) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
+func directMirrors(cfg *Config) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, path := addressAndPathFromImagesRepo(cfg.ImagesRepo)
-	username, password := cfg.UsernamePassword()
+	username, password := cfg.Username, cfg.Password
 	scheme := strings.ToLower(string(cfg.Scheme))
 	ca := cfg.CA
 
 	from := registry_const.PathRegexp
 	to := strings.TrimLeft(path, "/")
 
-	ctx := []bashible.ContextMirrorHost{{
+	ctxMirrors := []bashible.ContextMirrorHost{{
 		Host:     host,
 		Scheme:   scheme,
 		CA:       ca,
@@ -311,5 +316,5 @@ func extractDirectMirrors(cfg *DirectModeConfig) (string, []bashible.ContextMirr
 		Rewrites: []bashible.ConfigRewrite{{From: from, To: to}},
 	}}
 
-	return registry_const.Host, ctx, cfgMirrors
+	return registry_const.Host, ctxMirrors, cfgMirrors
 }

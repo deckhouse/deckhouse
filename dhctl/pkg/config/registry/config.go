@@ -29,212 +29,197 @@ import (
 )
 
 const (
-	SchemeHTTP  SchemeType = "HTTP"
-	SchemeHTTPS SchemeType = "HTTPS"
-
-	CRIContainerdV1 CRIType = "Containerd"
-	CRIContainerdV2 CRIType = "ContainerdV2"
+	SchemeHTTP      SchemeType = "HTTP"
+	SchemeHTTPS     SchemeType = "HTTPS"
+	CRIContainerdV1 CRIType    = "Containerd"
+	CRIContainerdV2 CRIType    = "ContainerdV2"
 
 	defaultImagesRepo = "registry.deckhouse.io/deckhouse/ce"
 	defaultScheme     = SchemeHTTPS
+	licenseUsername   = "license-token"
+)
 
-	licenseUsername = "license-token"
+var (
+	SupportedCRI = []CRIType{CRIContainerdV1, CRIContainerdV2}
 )
 
 type Config struct {
-	ModuleConfig ModuleConfig
-	DefaultCRI   CRIType
+	Mode       registry_const.ModeType      `json:"mode" yaml:"mode"`
+	ImagesRepo string                       `json:"imagesRepo" yaml:"imagesRepo"`
+	Scheme     SchemeType                   `json:"scheme" yaml:"scheme"`
+	CA         string                       `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username   string                       `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string                       `json:"password,omitempty" yaml:"password,omitempty"`
+	CheckMode  registry_const.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
+
+	DefaultCRI CRIType `json:"defaultCRI" yaml:"defaultCRI"`
 }
 
-type InitConfig struct {
-	ImagesRepo        string `json:"imagesRepo" yaml:"imagesRepo"`
-	RegistryDockerCfg string `json:"registryDockerCfg,omitempty" yaml:"registryDockerCfg,omitempty"`
-	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
-	RegistryScheme    string `json:"registryScheme,omitempty" yaml:"registryScheme,omitempty"`
-}
+func NewConfig(moduleConfig *DeckhouseSettings, initConfig *InitConfig, defaultCRI string) (Config, error) {
+	// if moduleConfig != nil && initConfig != nil {
+	// 	return Config{}, fmt.Errorf("conflicting registry settings: specify in only one of 'initConfig' or 'moduleConfig/deckhouse'")
+	// }
 
-type ModuleConfig struct {
-	Mode      registry_const.ModeType `json:"mode" yaml:"mode"`
-	Direct    *DirectModeConfig       `json:"direct,omitempty" yaml:"direct,omitempty"`
-	Unmanaged *UnmanagedModeConfig    `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-}
-
-type DirectModeConfig struct {
-	ImagesRepo string     `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     SchemeType `json:"scheme" yaml:"scheme"`
-	CA         string     `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string     `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string     `json:"password,omitempty" yaml:"password,omitempty"`
-	License    string     `json:"license,omitempty" yaml:"license,omitempty"`
-}
-
-type UnmanagedModeConfig struct {
-	ImagesRepo string     `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     SchemeType `json:"scheme" yaml:"scheme"`
-	CA         string     `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string     `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string     `json:"password,omitempty" yaml:"password,omitempty"`
-	License    string     `json:"license,omitempty" yaml:"license,omitempty"`
-}
-
-type SchemeType = string
-
-type CRIType = string
-
-func NewConfig(
-	moduleConfig *ModuleConfig,
-	initConfig *InitConfig,
-	defaultCRI string,
-) (Config, error) {
-	var finalModuleConfig ModuleConfig
-
+	config := Config{}
 	switch {
 	case moduleConfig != nil:
-		if err := finalModuleConfig.fromDeckhouseModuleConfig(*moduleConfig); err != nil {
+		if err := config.fromDeckhouseSettings(*moduleConfig); err != nil {
 			return Config{}, fmt.Errorf("failed to get registry settings from moduleConfig deckhouse: %w", err)
 		}
 	case initConfig != nil:
-		if err := finalModuleConfig.unmanagedFromInitConfig(*initConfig); err != nil {
+		if err := config.unmanagedFromInitConfig(*initConfig); err != nil {
 			return Config{}, fmt.Errorf("failed to get registry settings from initConfig: %w", err)
 		}
 	default:
-		finalModuleConfig = ModuleConfig{
-			Mode: registry_const.ModeUnmanaged,
-			Unmanaged: &UnmanagedModeConfig{
-				ImagesRepo: defaultImagesRepo,
-				Scheme:     defaultScheme,
-				CA:         "",
-				Username:   "",
-				Password:   "",
-				License:    "",
-			},
-		}
+		config.Mode = registry_const.ModeUnmanaged
+		config.ImagesRepo = defaultImagesRepo
+		config.Scheme = defaultScheme
 	}
 
-	config := Config{
-		ModuleConfig: finalModuleConfig,
-		DefaultCRI:   defaultCRI,
-	}
+	config.DefaultCRI = defaultCRI
 	if err := config.Validate(); err != nil {
-		return Config{}, fmt.Errorf("Invalid registry config: %w", err)
+		return Config{}, fmt.Errorf("failed to validate registry settings: %w", err)
 	}
 	return config, nil
-}
-
-func (cfg *ModuleConfig) fromDeckhouseModuleConfig(moduleConfig ModuleConfig) error {
-	switch {
-	case moduleConfig.Direct != nil:
-		moduleConfig.Direct.ImagesRepo = strings.TrimRight(moduleConfig.Direct.ImagesRepo, "/")
-	case moduleConfig.Unmanaged != nil:
-		moduleConfig.Unmanaged.ImagesRepo = strings.TrimRight(moduleConfig.Unmanaged.ImagesRepo, "/")
-	}
-	*cfg = moduleConfig
-	return nil
-}
-
-func (cfg *ModuleConfig) unmanagedFromInitConfig(initConfig InitConfig) error {
-	initConfig.ImagesRepo = strings.TrimRight(initConfig.ImagesRepo, "/")
-	address, _ := addressAndPathFromImagesRepo(initConfig.ImagesRepo)
-
-	err := validateRegistryDockerCfg(initConfig.RegistryDockerCfg, address)
-	if err != nil {
-		return err
-	}
-
-	dockerCfgDecode, err := base64.StdEncoding.DecodeString(initConfig.RegistryDockerCfg)
-	if err != nil {
-		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
-	}
-
-	username, password, err := registry_docker.CredsFromDockerCfg(dockerCfgDecode, address)
-	if err != nil {
-		return err
-	}
-
-	*cfg = ModuleConfig{
-		Mode: registry_const.ModeUnmanaged,
-		Unmanaged: &UnmanagedModeConfig{
-			ImagesRepo: initConfig.ImagesRepo,
-			Scheme:     SchemeFromString(initConfig.RegistryScheme),
-			CA:         initConfig.RegistryCA,
-			Username:   username,
-			Password:   password,
-		},
-	}
-	return nil
 }
 
 func (cfg *Config) ConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{cfg: cfg}
 }
 
+func (cfg *Config) unmanagedFromInitConfig(initConfig InitConfig) error {
+	initConfig.ImagesRepo = strings.TrimRight(initConfig.ImagesRepo, "/")
+
+	// Validate and pars dockerCfg
+	address, _ := addressAndPathFromImagesRepo(initConfig.ImagesRepo)
+	if err := validateRegistryDockerCfg(initConfig.RegistryDockerCfg, address); err != nil {
+		return fmt.Errorf("failed to validate registryDockerCfg: %w", err)
+	}
+	dockerCfgDecode, err := base64.StdEncoding.DecodeString(initConfig.RegistryDockerCfg)
+	if err != nil {
+		return fmt.Errorf("failed to decode registryDockerCfg: %w", err)
+	}
+	username, password, err := registry_docker.CredsFromDockerCfg(dockerCfgDecode, address)
+	if err != nil {
+		return err
+	}
+
+	cfg.Mode = registry_const.ModeUnmanaged
+	cfg.ImagesRepo = initConfig.ImagesRepo
+	cfg.Scheme = schemeFromString(initConfig.RegistryScheme)
+	cfg.CA = initConfig.RegistryCA
+	cfg.Username = username
+	cfg.Password = password
+	return nil
+}
+
+func (cfg *Config) fromDeckhouseSettings(moduleConfig DeckhouseSettings) error {
+	cfg.Mode = moduleConfig.Mode
+	switch moduleConfig.Mode {
+	case registry_const.ModeDirect:
+		if moduleConfig.Direct == nil {
+			return fmt.Errorf("field 'direct' is required when mode is 'Direct'")
+		}
+		direct := moduleConfig.Direct
+		cfg.ImagesRepo = strings.TrimRight(direct.ImagesRepo, "/")
+		cfg.Scheme = schemeFromString(direct.Scheme)
+		cfg.CA = direct.CA
+		cfg.Username = direct.Username
+		cfg.Password = direct.Password
+		if direct.License != "" {
+			cfg.Username = licenseUsername
+			cfg.Password = direct.License
+		}
+	case registry_const.ModeUnmanaged:
+		if moduleConfig.Unmanaged == nil {
+			return fmt.Errorf("field 'Unmanaged' is required when mode is 'Unmanaged'")
+		}
+		unmanaged := moduleConfig.Unmanaged
+		cfg.ImagesRepo = strings.TrimRight(unmanaged.ImagesRepo, "/")
+		cfg.Scheme = schemeFromString(unmanaged.Scheme)
+		cfg.CA = unmanaged.CA
+		cfg.Username = unmanaged.Username
+		cfg.Password = unmanaged.Password
+		if unmanaged.License != "" {
+			cfg.Username = licenseUsername
+			cfg.Password = unmanaged.License
+		}
+	}
+	return nil
+}
+
+func (cfg *Config) toDeckhouseSettings() (DeckhouseSettings, error) {
+	switch cfg.Mode {
+	case registry_const.ModeDirect:
+		direct := DirectModeSettings{
+			CheckMode:  cfg.CheckMode,
+			ImagesRepo: cfg.ImagesRepo,
+			Scheme:     cfg.Scheme,
+			CA:         cfg.CA,
+		}
+		if cfg.Username == licenseUsername {
+			direct.License = cfg.Password
+		} else {
+			direct.Username = cfg.Username
+			direct.Password = cfg.Password
+		}
+		return DeckhouseSettings{
+			Mode:   registry_const.ModeDirect,
+			Direct: &direct,
+		}, nil
+	case registry_const.ModeUnmanaged:
+		unmanaged := UnmanagedModeSettings{
+			CheckMode:  cfg.CheckMode,
+			ImagesRepo: cfg.ImagesRepo,
+			Scheme:     cfg.Scheme,
+			CA:         cfg.CA,
+		}
+		if cfg.Username == licenseUsername {
+			unmanaged.License = cfg.Password
+		} else {
+			unmanaged.Username = cfg.Username
+			unmanaged.Password = cfg.Password
+		}
+		return DeckhouseSettings{
+			Mode:      registry_const.ModeUnmanaged,
+			Unmanaged: &unmanaged,
+		}, nil
+	}
+	return DeckhouseSettings{}, ErrUnknownMode
+}
+
 func (cfg Config) isModuleEnabled() bool {
-	// If cri int allowed list -> use module registry
-	return slices.Contains(
-		[]CRIType{CRIContainerdV1, CRIContainerdV2},
-		CRIType(cfg.DefaultCRI))
+	return slices.Contains(SupportedCRI, cfg.DefaultCRI)
 }
 
 func (cfg Config) Validate() error {
-	return validation.ValidateStruct(&cfg,
-		validation.Field(&cfg.ModuleConfig),
-		validation.Field(&cfg.DefaultCRI,
-			validation.When(
-				slices.Contains([]registry_const.ModeType{registry_const.ModeDirect}, cfg.ModuleConfig.Mode),
-				validation.In(CRIContainerdV1, CRIContainerdV2).
-					Error(fmt.Sprintf("unable to use defaultCRI '%s'; only 'Containerd' and 'ContainerdV2' are supported for 'Direct' mode", cfg.DefaultCRI)),
-			),
-		),
-	)
-}
-
-func (cfg ModuleConfig) Validate() error {
-	return validation.ValidateStruct(&cfg,
+	// Check registry spec
+	if err := validation.ValidateStruct(&cfg,
 		validation.Field(&cfg.Mode,
+			validation.Required.Error("field 'Mode' is required"),
 			validation.In(registry_const.ModeDirect, registry_const.ModeUnmanaged).
-				Error(fmt.Sprintf("Unknown registry mode: %s", cfg.Mode)),
+				Error(fmt.Sprintf("unknown registry mode: %s", cfg.Mode)),
 		),
-		validation.Field(&cfg.Direct,
-			validation.When(cfg.Mode == registry_const.ModeDirect,
-				validation.NotNil,
-				validation.Required.Error("Field 'direct' is required when mode is 'Direct'"),
-			).Else(
-				validation.Nil.Error("Field 'direct' must be empty when mode is not 'Direct'"),
-			),
+		validation.Field(&cfg.Mode,
+			validation.When(cfg.CheckMode != "",
+				validation.In(registry_const.CheckModeDefault, registry_const.CheckModeRelax).
+					Error(fmt.Sprintf("unknown registry check mode: %s", cfg.Mode))),
 		),
-		validation.Field(&cfg.Unmanaged,
-			validation.When(cfg.Mode == registry_const.ModeUnmanaged,
-				validation.NotNil,
-				validation.Required.Error("Field 'unmanaged' is required when mode is 'Unmanaged'"),
-			).Else(
-				validation.Nil.Error("Field 'unmanaged' must be empty when mode is not 'Unmanaged'"),
-			),
-		),
-	)
-}
-
-func (cfg DirectModeConfig) Validate() error {
-	return validation.ValidateStruct(&cfg,
 		validation.Field(&cfg.ImagesRepo,
-			validation.Required.Error("Field 'imagesRepo' is required"),
+			validation.Required.Error("field 'ImagesRepo' is required"),
 		),
 		validation.Field(&cfg.Scheme,
 			validation.In(SchemeHTTP, SchemeHTTPS).
-				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", cfg.Scheme)),
+				Error(fmt.Sprintf("invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", cfg.Scheme)),
 		),
 		validation.Field(&cfg.Username,
 			validation.When(cfg.Password != "",
-				validation.Required.Error("Username is required when password is provided"),
+				validation.Required.Error("username is required when password is provided"),
 			),
 		),
 		validation.Field(&cfg.Password,
 			validation.When(cfg.Username != "",
-				validation.Required.Error("Password is required when username is provided"),
-			),
-		),
-		validation.Field(&cfg.License,
-			validation.When(cfg.Username != "" || cfg.Password != "",
-				validation.Empty.Error("License field must be empty when using credentials (username/password)"),
+				validation.Required.Error("password is required when username is provided"),
 			),
 		),
 		validation.Field(&cfg.CA,
@@ -242,60 +227,33 @@ func (cfg DirectModeConfig) Validate() error {
 				validation.Empty.Error("CA is not allowed when scheme is 'HTTP'"),
 			),
 		),
-	)
-}
-
-func (cfg UnmanagedModeConfig) Validate() error {
-	return validation.ValidateStruct(&cfg,
-		validation.Field(&cfg.ImagesRepo,
-			validation.Required.Error("Field 'imagesRepo' is required"),
-		),
-		validation.Field(&cfg.Scheme,
-			validation.In(SchemeHTTP, SchemeHTTPS).
-				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", cfg.Scheme)),
-		),
-		validation.Field(&cfg.Username,
-			validation.When(cfg.Password != "",
-				validation.Required.Error("Username is required when password is provided"),
-			),
-		),
-		validation.Field(&cfg.Password,
-			validation.When(cfg.Username != "",
-				validation.Required.Error("Password is required when username is provided"),
-			),
-		),
-		validation.Field(&cfg.License,
-			validation.When(cfg.Username != "" || cfg.Password != "",
-				validation.Empty.Error("License field must be empty when using credentials (username/password)"),
-			),
-		),
-		validation.Field(&cfg.CA,
-			validation.When(cfg.Scheme == SchemeHTTP,
-				validation.Empty.Error("CA certificate is not allowed when scheme is 'HTTP'"),
-			),
-		),
-	)
-}
-
-func (cfg *DirectModeConfig) UsernamePassword() (username string, password string) {
-	if cfg.License != "" {
-		return licenseUsername, cfg.License
+	); err != nil {
+		return err
 	}
-	return cfg.Username, cfg.Password
+
+	// Check defaultCRI
+	switch cfg.Mode {
+	case registry_const.ModeDirect:
+		if err := validation.ValidateStruct(&cfg,
+			validation.Field(&cfg.DefaultCRI,
+				validation.In(toSliceOfInterface(SupportedCRI)...).
+					Error(fmt.Sprintf(
+						"unable to use defaultCRI '%s'; only '%v' are supported for '%s' mode",
+						cfg.DefaultCRI, SupportedCRI, cfg.Mode)),
+			),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (cfg *UnmanagedModeConfig) UsernamePassword() (username string, password string) {
-	if cfg.License != "" {
-		return licenseUsername, cfg.License
+func toSliceOfInterface[T any](slice []T) []interface{} {
+	result := make([]interface{}, 0, len(slice))
+	for _, v := range slice {
+		result = append(result, v)
 	}
-	return cfg.Username, cfg.Password
-}
-
-func SchemeFromString(scheme string) SchemeType {
-	if strings.EqualFold(scheme, SchemeHTTP) {
-		return SchemeHTTP
-	}
-	return SchemeHTTPS
+	return result
 }
 
 func validateRegistryDockerCfg(cfg string, repo string) error {

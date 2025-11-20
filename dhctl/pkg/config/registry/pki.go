@@ -33,87 +33,88 @@ const (
 )
 
 type PKI = registry_init.Config
+type CertKey = registry_init.CertKey
 
 type ClusterPKIManager struct {
 	kubeClient client.KubeClient
-	pki        *PKI
-	mu         sync.RWMutex
+
+	mu  sync.RWMutex
+	pki *PKI
 }
 
-type PKIGenerator struct {
+type LazyPKIGenerator struct {
+	once sync.Once
 	pki  PKI
 	err  error
-	once sync.Once
 }
 
-func (generator *PKIGenerator) Get() (PKI, error) {
-	generator.once.Do(func() {
-		generator.pki, generator.err = generatePKI()
-	})
-	if generator.err != nil {
-		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", generator.err)
-	}
-	return generator.pki.DeepCopy(), nil
-}
-
-func (manager *ClusterPKIManager) Get() (PKI, error) {
-	manager.mu.RLock()
-	if manager.pki != nil {
-		defer manager.mu.RUnlock()
-		return manager.pki.DeepCopy(), nil
-	}
-	manager.mu.RUnlock()
-
-	manager.mu.Lock()
-	defer manager.mu.Unlock()
-
-	if manager.pki == nil {
-		pki, err := fetchInitSecret(context.TODO(), manager.kubeClient)
-		if err != nil {
-			return PKI{}, fmt.Errorf("failed to fetch registry PKI from cluster: %w", err)
-		}
-		manager.pki = &pki
-	}
-	return manager.pki.DeepCopy(), nil
-}
-
-func NewPKIGenerator() *PKIGenerator {
-	return &PKIGenerator{}
+func NewLazyPKIGenerator() *LazyPKIGenerator {
+	return &LazyPKIGenerator{}
 }
 
 func NewClusterPKIManager(kubeClient client.KubeClient) *ClusterPKIManager {
 	return &ClusterPKIManager{kubeClient: kubeClient}
 }
 
+func (g *LazyPKIGenerator) Get(_ context.Context) (PKI, error) {
+	g.once.Do(func() {
+		g.pki, g.err = generatePKI()
+	})
+	if g.err != nil {
+		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", g.err)
+	}
+	return g.pki.DeepCopy(), nil
+}
+
+func (m *ClusterPKIManager) Get(ctx context.Context) (PKI, error) {
+	m.mu.RLock()
+	if m.pki != nil {
+		pkiCopy := m.pki.DeepCopy()
+		m.mu.RUnlock()
+		return pkiCopy, nil
+	}
+	m.mu.RUnlock()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.pki == nil {
+		pki, err := fetchInitSecret(ctx, m.kubeClient)
+		if err != nil {
+			return PKI{}, fmt.Errorf("failed to fetch registry PKI from cluster: %w", err)
+		}
+		m.pki = &pki
+	}
+	return m.pki.DeepCopy(), nil
+}
+
 func generatePKI() (PKI, error) {
-	ret := PKI{}
+	var ret PKI
 
 	certKey, err := registry_pki.GenerateCACertificate(certificateCommonName)
 	if err != nil {
-		return ret, err
+		return PKI{}, fmt.Errorf("failed to generate CA certificate: %w", err)
 	}
 
 	cert, key, err := registry_pki.EncodeCertKey(certKey)
 	if err != nil {
-		return ret, err
+		return PKI{}, fmt.Errorf("failed to encode CA cert/key: %w", err)
 	}
 
-	rw, err := registry_users.New(readWriteUser)
+	rwUser, err := registry_users.New(readWriteUser)
 	if err != nil {
-		return ret, err
+		return PKI{}, fmt.Errorf("failed to create %q user: %w", readWriteUser, err)
 	}
 
-	ro, err := registry_users.New(readOnlyUser)
+	roUser, err := registry_users.New(readOnlyUser)
 	if err != nil {
-		return ret, err
+		return PKI{}, fmt.Errorf("failed to create %q user: %w", readOnlyUser, err)
 	}
 
-	ret.CA = &registry_init.CertKey{
+	ret.CA = &CertKey{
 		Cert: string(cert),
 		Key:  string(key),
 	}
-	ret.UserRW = &rw
-	ret.UserRO = &ro
-
+	ret.UserRW = &rwUser
+	ret.UserRO = &roUser
 	return ret, nil
 }

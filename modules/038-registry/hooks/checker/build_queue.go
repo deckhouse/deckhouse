@@ -36,7 +36,7 @@ func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, mode regis
 	images := make(map[string]string)
 
 	switch mode {
-	case registry_const.Relax:
+	case registry_const.CheckModeRelax:
 		// Only deckhouse container image
 		deckhouseContainerImage, err := collectDeckhouseContainerImage(info.DeckhouseImages, currentRepo)
 		if err != nil {
