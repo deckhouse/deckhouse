@@ -106,7 +106,7 @@ description: Deckhouse управляет компонентами control plane
 
 Управление feature gates осуществляется с помощью параметра [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) ModuleConfig `control-plane-manager`.
 
-Изменение списка feature gates вызывает перезапуск компонента, к которому он относится (например, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+Изменение списка feature gates вызывает перезапуск соответствующего компонента (например, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
 
 Пример включения feature gates `ComponentFlagz` и `ComponentStatusz`:
 
@@ -127,7 +127,7 @@ spec:
 Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
 
 {% alert level="warning" %}
-Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдет, если в списке включенных feature gates для новой версии Kubernets, есть feature gates в статусе `deprecated`.
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
 {% endalert %}
 
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.

@@ -104,11 +104,11 @@ You can find how to set up policies in [a special FAQ section](faq.html#how-do-i
 
 ## Feature Gates
 
-Feature gates can be specified by using ModuleConfig `control-plane-manager` [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter.
+You can configure feature gates using the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter of the `control-plane-manager` ModuleConfig.
 
-Changing the list of feature gates causes a restart of the component it relates to (e.g., `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+Changing the list of feature gates causes a restart of the corresponding component (for example, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
 
-An example of enabling feature gates `ComponentFlagz` and `ComponentStatusz`:
+The following example enables the `ComponentFlagz` and `ComponentStatusz` feature gates:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -124,7 +124,7 @@ spec:
       - ComponentStatusz
 ```
 
-If a feature gate is not supported or deprecated, an alert [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse) will be generated in the monitoring system, informing that the feature gate will not be applied.
+If a feature gate is not supported or is deprecated, the monitoring system generates the [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse) alert indicating that the feature gate will not be applied.
 
 {% alert level="warning" %}
 The Kubernetes version update (controlled by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) will not occur if the list of enabled feature gates for the new version of Kubernetes includes deprecated feature gates.
