@@ -63,7 +63,7 @@ spec:
                       x-doc-examples: [["eth1", "eth2"]]
                       description: |-
                         A list of network interfaces from which the assigned IP addresses will be announced.
-                        If this field is not filled in or an empty array is specified, the announcement will occur from all interfaces on the node. It is strongly recommended to configure this parameter and prevent addresses from all node interfaces from being announced.
+                        If this field is not filled in or an empty array is specified, the announcement will occur from all interfaces on the node. It is highly recommended to configure this parameter to prevent the announcement of addresses from all node interfaces.
                 addressPool:
                   items:
                     type: string
