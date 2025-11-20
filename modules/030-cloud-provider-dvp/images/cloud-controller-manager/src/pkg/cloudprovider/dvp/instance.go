@@ -100,20 +100,13 @@ func (c *Cloud) getVMByNodeName(ctx context.Context, nodeName types.NodeName) (*
 
 	vm, err := c.dvpService.ComputeService.GetVMByHostname(ctx, vmHostname)
 	if err != nil {
-
-		if errors.Is(err, api.ErrNotFound) {
-			vm, err = c.dvpService.ComputeService.GetVMByName(ctx, vmHostname)
-			if err != nil && errors.Is(err, api.ErrNotFound) {
-				return nil, cloudprovider.InstanceNotFound
-			} else if err != nil {
-				return nil, err
-			}
-
-		} else {
+		vm, err = c.dvpService.ComputeService.GetVMByName(ctx, vmHostname)
+		if err != nil && errors.Is(err, api.ErrNotFound) {
+			return nil, cloudprovider.InstanceNotFound
+		} else if err != nil {
 			return nil, err
 		}
 	}
-
 	return vm, nil
 }
 
