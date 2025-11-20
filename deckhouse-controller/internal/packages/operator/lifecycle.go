@@ -96,7 +96,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(inst.Namespace, name, inst.Settings, o.manager, o.logger),
+		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.manager, o.logger),
 			queue.WithOnDone(func() {
 				o.mu.Lock()
 				o.packages[name].status.Phase = Loaded

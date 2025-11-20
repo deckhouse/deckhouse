@@ -22,6 +22,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -30,13 +31,14 @@ const (
 )
 
 type manager interface {
-	LoadPackage(ctx context.Context, namespace, name string) error
+	LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) error
 	ApplySettings(name string, settings addonutils.Values) error
 }
 
 type task struct {
 	packageName string
 	namespace   string
+	registry    registry.Registry
 
 	manager  manager
 	settings addonutils.Values
@@ -44,10 +46,11 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(namespace, name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
+func NewTask(reg registry.Registry, namespace, name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		namespace:   namespace,
+		registry:    reg,
 		manager:     manager,
 		settings:    settings,
 		logger:      logger.Named(taskTracer),
@@ -61,7 +64,7 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
 	t.logger.Debug("load package", slog.String("name", t.packageName))
-	if err := t.manager.LoadPackage(ctx, t.namespace, t.packageName); err != nil {
+	if err := t.manager.LoadPackage(ctx, t.registry, t.namespace, t.packageName); err != nil {
 		return fmt.Errorf("load package: %w", err)
 	}
 
