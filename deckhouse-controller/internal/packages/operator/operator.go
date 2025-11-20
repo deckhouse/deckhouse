@@ -168,14 +168,14 @@ func (o *Operator) registerDebugServer(sockerPath string) error {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(o.Dump())
+		w.Write(o.Dump()) //nolint:errcheck
 	})
 
 	o.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(o.queueService.Dump())
+		w.Write(o.queueService.Dump()) //nolint:errcheck
 	})
 
 	return nil
