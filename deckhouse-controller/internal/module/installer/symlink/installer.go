@@ -140,11 +140,11 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 	// Defer cleanup: remove module directory and all its contents
 	defer func() {
 		// Remove permanent module directory: /deckhouse/downloaded/<module>
-		versionsPath := filepath.Join(i.downloaded, module)
+		modulePath := filepath.Join(i.downloaded, module)
 
-		logger.Info("delete module dir", slog.String("path", versionsPath))
-		if err := os.RemoveAll(versionsPath); err != nil {
-			logger.Warn("failed to remove downloaded", slog.String("path", versionsPath))
+		logger.Info("delete module dir", slog.String("path", modulePath))
+		if err := os.RemoveAll(modulePath); err != nil {
+			logger.Warn("failed to remove downloaded", slog.String("path", modulePath))
 		}
 
 		logger.Debug("module uninstalled")
