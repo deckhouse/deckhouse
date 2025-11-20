@@ -63,7 +63,8 @@ on:
         required: false
 
 env:
-{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "werf_envs" (slice "web-multi") | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same tag/branch.
 concurrency:
