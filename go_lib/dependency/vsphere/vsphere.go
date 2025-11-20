@@ -150,14 +150,14 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 		return nil, err
 	}
 
-	rtype := pbmTypes.PbmProfileResourceType{
-		ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
-	}
-
-	category := pbmTypes.PbmProfileCategoryEnumREQUIREMENT
-
-	ids, err := pc.QueryProfile(context.TODO(), rtype, string(category))
-	if err != nil {
+	ids, err := pc.QueryProfile(
+		context.TODO(),
+		pbmTypes.PbmProfileResourceType{
+			ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
+		},
+		string(pbmTypes.PbmProfileCategoryEnumREQUIREMENT),
+	)
+	if err != nil || len(ids) == 0 {
 		return nil, err
 	}
 
