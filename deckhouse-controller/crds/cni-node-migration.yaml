@@ -4,7 +4,7 @@ metadata:
   name: cninodemigrations.network.deckhouse.io
 spec:
   group: network.deckhouse.io
-  scope: Namespaced
+  scope: Cluster
   names:
     plural: cninodemigrations
     singular: cninodemigration

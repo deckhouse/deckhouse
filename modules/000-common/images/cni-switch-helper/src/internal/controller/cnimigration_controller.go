@@ -53,14 +53,6 @@ type CNIMigrationReconciler struct {
 func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// Get the current pod's namespace from the environment variable
-	podNamespace := os.Getenv("POD_NAMESPACE")
-	if podNamespace == "" {
-		err := fmt.Errorf("POD_NAMESPACE environment variable not set")
-		logger.Error(err, "Controller namespace is unknown. This must be set in the Pod spec via the Downward API.")
-		return ctrl.Result{}, err
-	}
-
 	// 1. Fetch the CNIMigration object
 	cniMigration := &cniswitcherv1alpha1.CNIMigration{}
 	if err := r.Get(ctx, req.NamespacedName, cniMigration); err != nil {
@@ -83,15 +75,14 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// 3. Fetch or create CNINodeMigration for the current node
 	cniNodeMigration := &cniswitcherv1alpha1.CNINodeMigration{}
-	err := r.Get(ctx, types.NamespacedName{Name: nodeName, Namespace: podNamespace}, cniNodeMigration)
+	err := r.Get(ctx, types.NamespacedName{Name: nodeName}, cniNodeMigration)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// CNINodeMigration for this node not found, create it.
-			logger.Info("CNINodeMigration for this node not found, creating a new one", "Node", nodeName, "Namespace", podNamespace)
+			logger.Info("CNINodeMigration for this node not found, creating a new one", "Node", nodeName)
 			cniNodeMigration = &cniswitcherv1alpha1.CNINodeMigration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: podNamespace,
+					Name: nodeName,
 					OwnerReferences: []metav1.OwnerReference{
 						*metav1.NewControllerRef(cniMigration, cniswitcherv1alpha1.GroupVersion.WithKind("CNIMigration")),
 					},
@@ -111,7 +102,7 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				},
 			}
 			if createErr := r.Create(ctx, cniNodeMigration); createErr != nil {
-				logger.Error(createErr, "Failed to create CNINodeMigration for node", "Node", nodeName)
+				logger.Error(createErr, "Failed to create CNINodeMigration resource", "Node", nodeName)
 				return ctrl.Result{}, createErr
 			}
 			logger.Info("Created CNINodeMigration for node", "Node", nodeName)
