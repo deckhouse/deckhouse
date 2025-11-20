@@ -361,16 +361,9 @@ module JSONSchemaRenderer
           end
         end
 
-        # Render description or x-doc-additionalproperties-description if exists
         if attributes['description']
           result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
-        elsif attributes.has_key?('x-doc-additionalproperties-description')
-            additionalPropsDesc = get_i18n_parameter('x-doc-additionalproperties-description', primaryLanguage, fallbackLanguage, attributes)
-            if additionalPropsDesc and additionalPropsDesc != ''
-                result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(additionalPropsDesc))))
-            elsif editionsString and editionsString.size > 0
-                result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
-            end
+
         elsif editionsString and editionsString.size > 0
           result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
         end
@@ -610,19 +603,17 @@ module JSONSchemaRenderer
         # Render additionalProperties if they exist
         if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
             additionalProps = attributes['additionalProperties']
-            # Skip if additionalProperties is just true (allow any)
-            if additionalProps != true
-                # Only render if additionalProperties is a schema object
-                if additionalProps.is_a?(Hash)
-                    additionalPropsData = additionalProps
-                    additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
-                    additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
-                    additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
-                    result.push('<ul>')
-                    result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
-                    result.push('</ul>')
-                end
+            # Only render if additionalProperties is a schema object
+            if additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                additionalPropsData = additionalProps
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                result.push('<ul>')
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
             end
+            
         end
 
         if parameterTitle != ''

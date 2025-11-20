@@ -13,13 +13,7 @@
   {{- $description =  $attributes.description }}
 {{- end }}
 
-{{/* Render description or x-doc-additionalproperties-description if exists*/}}
-{{- $additionalPropsDesc := index $attributes "x-doc-additionalproperties-description" }}
-{{- if $description }}
-  <div class="resources__prop_description">{{ $description | markdownify }}</div>
-{{- else if $additionalPropsDesc }}
-  <div class="resources__prop_description">{{ $additionalPropsDesc | markdownify }}</div>
-{{- end }}
+<div class="resources__prop_description">{{ $description | markdownify }}</div>
 
 {{- if isset $attributes "x-doc-default" }}
   {{- template "format-default" (index $attributes "x-doc-default") }}
