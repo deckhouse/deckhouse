@@ -40,7 +40,7 @@ type Client interface {
 
 	// GetManifest retrieves the manifest for a specific image tag
 	// The repository is determined by the chained WithSegment() calls
-	GetManifest(ctx context.Context, tag string) ([]byte, error)
+	GetManifest(ctx context.Context, tag string) (Descriptor, error)
 
 	// GetImageConfig retrieves the image config file containing labels and metadata
 	// The repository is determined by the chained WithSegment() calls
@@ -55,7 +55,7 @@ type Client interface {
 	// Do not return remote image to avoid drop connection with context cancelation.
 	// It will be in use while passed context will be alive.
 	// The repository is determined by the chained WithSegment() calls
-	GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (ClientImage, error)
+	GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (Image, error)
 
 	// PushImage pushes an image to the registry at the specified tag
 	// The repository is determined by the chained WithSegment() calls

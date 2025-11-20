@@ -158,7 +158,7 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 
 // GetManifest retrieves the manifest for a specific image tag
 // The repository is determined by the chained WithSegment() calls
-func (c *Client) GetManifest(ctx context.Context, tag string) ([]byte, error) {
+func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Descriptor, error) {
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
@@ -183,7 +183,7 @@ func (c *Client) GetManifest(ctx context.Context, tag string) ([]byte, error) {
 
 	logentry.Debug("Manifest retrieved successfully")
 
-	return desc.Manifest, nil
+	return &Descriptor{Descriptor: &desc.Descriptor}, nil
 }
 
 type WithPlatform struct {
@@ -198,7 +198,7 @@ func (w WithPlatform) ApplyToImageGet(opts *registry.ImageGetOptions) {
 // Do not return remote image to avoid drop connection with context cancelation.
 // It will be in use while passed context will be alive.
 // The repository is determined by the chained WithSegment() calls
-func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.ClientImage, error) {
+func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
 	getImageOptions := &registry.ImageGetOptions{}
 
 	for _, opt := range opts {

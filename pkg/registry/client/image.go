@@ -42,3 +42,71 @@ func (i *Image) Extract() io.ReadCloser {
 func (i *Image) GetPullReference() string {
 	return i.pullReference
 }
+
+type Descriptor struct {
+	*v1.Descriptor
+}
+
+// GetMediaType returns the media type of the descriptor
+func (d *Descriptor) GetMediaType() string {
+	if d.Descriptor == nil {
+		return ""
+	}
+	return string(d.Descriptor.MediaType)
+}
+
+// GetSize returns the size of the described content
+func (d *Descriptor) GetSize() int64 {
+	if d.Descriptor == nil {
+		return 0
+	}
+	return d.Descriptor.Size
+}
+
+// GetDigest returns the digest of the described content
+func (d *Descriptor) GetDigest() v1.Hash {
+	if d.Descriptor == nil {
+		return v1.Hash{}
+	}
+	return d.Descriptor.Digest
+}
+
+// GetData returns the raw data of the descriptor
+func (d *Descriptor) GetData() []byte {
+	if d.Descriptor == nil {
+		return nil
+	}
+	return d.Descriptor.Data
+}
+
+// GetURLs returns the URLs where the content can be accessed
+func (d *Descriptor) GetURLs() []string {
+	if d.Descriptor == nil {
+		return nil
+	}
+	return d.Descriptor.URLs
+}
+
+// GetAnnotations returns the annotations associated with the descriptor
+func (d *Descriptor) GetAnnotations() map[string]string {
+	if d.Descriptor == nil {
+		return nil
+	}
+	return d.Descriptor.Annotations
+}
+
+// GetPlatform returns the platform information for the descriptor
+func (d *Descriptor) GetPlatform() *v1.Platform {
+	if d.Descriptor == nil {
+		return nil
+	}
+	return d.Descriptor.Platform
+}
+
+// GetArtifactType returns the artifact type of the descriptor
+func (d *Descriptor) GetArtifactType() string {
+	if d.Descriptor == nil {
+		return ""
+	}
+	return d.Descriptor.ArtifactType
+}
