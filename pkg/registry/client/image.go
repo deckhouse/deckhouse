@@ -21,6 +21,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type Image struct {
@@ -48,11 +49,11 @@ type Descriptor struct {
 }
 
 // GetMediaType returns the media type of the descriptor
-func (d *Descriptor) GetMediaType() string {
+func (d *Descriptor) GetMediaType() types.MediaType {
 	if d.Descriptor == nil {
 		return ""
 	}
-	return string(d.Descriptor.MediaType)
+	return d.Descriptor.MediaType
 }
 
 // GetSize returns the size of the described content

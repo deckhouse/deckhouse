@@ -4,6 +4,7 @@ import (
 	"io"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type Image interface {
@@ -13,7 +14,7 @@ type Image interface {
 
 // DescriptorInterface defines methods for accessing descriptor information
 type Descriptor interface {
-	GetMediaType() string
+	GetMediaType() types.MediaType
 	GetSize() int64
 	GetDigest() v1.Hash
 	GetData() []byte
