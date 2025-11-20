@@ -1342,21 +1342,23 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 
-		// module config is needed to get current version of values or default version (0) if it is not set
+		// module config is needed to get current version of values
 		config := new(v1alpha1.ModuleConfig)
 		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 		}
-
-		// apply conversions to values
-		logger.Debug("apply conversions to values", slog.Int("from_version", config.Spec.Version), slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()))
-		_, newSettings, err := tmpStore.Get(def.Name).ConvertToLatest(config.Spec.Version, values)
-		if err != nil {
-			return fmt.Errorf("convert values to latest version: %w", err)
+		if err == nil {
+			// apply conversions to values
+			logger.Debug("apply conversions to values", slog.Int("from_version", config.Spec.Version), slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()))
+			_, newSettings, err := tmpStore.Get(def.Name).ConvertToLatest(config.Spec.Version, values)
+			if err != nil {
+				return fmt.Errorf("convert values to latest version: %w", err)
+			}
+			values = newSettings
 		}
-		values = newSettings
-	} else if !os.IsNotExist(err) {
+	}
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
