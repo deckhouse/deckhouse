@@ -91,12 +91,6 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
 
-	// Copy module files to permanent location
-	if err := cp.Copy(tempModulePath, modulePath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("copy module '%s': %w", modulePath, err)
-	}
-
 	// Prepare symlink location: /deckhouse/downloaded/modules/<module>
 	symlinkPoint := filepath.Join(i.symlinkDir, module)
 
@@ -108,8 +102,17 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		}
 	}
 
+	// /deckhouse/downloaded/<module><version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Copy module files to permanent location
+	if err := cp.Copy(tempModulePath, versionPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("copy module '%s': %w", modulePath, err)
+	}
+
 	// Create new symlink pointing to permanent location
-	if err := os.Symlink(modulePath, symlinkPoint); err != nil {
+	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create symlink '%s': %w", symlinkPoint, err)
 	}
@@ -174,7 +177,7 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 //  1. Create /deckhouse/downloaded/<module>/ directory
 //  2. Remove old symlink if exists
 //  3. Download module from registry
-//  4. Create symlink: modules/<module> -> /deckhouse/downloaded/<module>
+//  4. Create symlink: /deckhouse/downloaded/<module> -> /deckhouse/downloaded/modules/<version>
 func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Restore")
 	defer span.End()
@@ -214,7 +217,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	}
 
 	// Create symlink pointing to permanent location
-	if err := os.Symlink(modulePath, filepath.Join(i.symlinkDir, module)); err != nil {
+	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create symlink '%s': %w", modulePath, err)
 	}
