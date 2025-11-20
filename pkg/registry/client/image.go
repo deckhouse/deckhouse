@@ -19,9 +19,9 @@ package client
 import (
 	"io"
 
+	"github.com/deckhouse/deckhouse/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type Image struct {
@@ -44,16 +44,72 @@ func (i *Image) GetPullReference() string {
 	return i.pullReference
 }
 
+type Manifest struct {
+	*v1.Manifest
+}
+
+// GetSchemaVersion returns the schema version of the manifest
+func (m *Manifest) GetSchemaVersion() int64 {
+	if m.Manifest == nil {
+		return 0
+	}
+	return m.Manifest.SchemaVersion
+}
+
+// GetMediaType returns the media type of the manifest
+func (m *Manifest) GetMediaType() string {
+	if m.Manifest == nil {
+		return ""
+	}
+	return string(m.Manifest.MediaType)
+}
+
+// GetConfig returns the configuration descriptor
+func (m *Manifest) GetConfig() registry.Descriptor {
+	if m.Manifest == nil {
+		return nil
+	}
+	return &Descriptor{Descriptor: &m.Manifest.Config}
+}
+
+// GetLayers returns the layer descriptors
+func (m *Manifest) GetLayers() []registry.Descriptor {
+	if m.Manifest == nil {
+		return nil
+	}
+	descriptors := make([]registry.Descriptor, len(m.Manifest.Layers))
+	for i, layer := range m.Manifest.Layers {
+		descriptors[i] = &Descriptor{Descriptor: &layer}
+	}
+	return descriptors
+}
+
+// GetAnnotations returns the annotations associated with the manifest
+func (m *Manifest) GetAnnotations() map[string]string {
+	if m.Manifest == nil {
+		return nil
+	}
+	return m.Manifest.Annotations
+}
+
+// GetSubject returns the subject descriptor if present
+func (m *Manifest) GetSubject() registry.Descriptor {
+	if m.Manifest == nil || m.Manifest.Subject == nil {
+		return nil
+	}
+	return &Descriptor{Descriptor: m.Manifest.Subject}
+}
+
 type Descriptor struct {
 	*v1.Descriptor
 }
 
 // GetMediaType returns the media type of the descriptor
-func (d *Descriptor) GetMediaType() types.MediaType {
+func (d *Descriptor) GetMediaType() string {
 	if d.Descriptor == nil {
 		return ""
 	}
-	return d.Descriptor.MediaType
+	return string(d.Descriptor.MediaType)
 }
 
 // GetSize returns the size of the described content
