@@ -98,9 +98,10 @@ func syncExtraFiles() error {
 }
 
 func convergeComponents() error {
-	log.Infof("phase: converge kubernetes components")
+	log.Info("phase: converge kubernetes components")
 	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
 		if err := convergeComponent(v); err != nil {
+			log.Error("converge component", slog.String("component", v), log.Err(err))
 			return err
 		}
 	}
@@ -108,7 +109,7 @@ func convergeComponents() error {
 }
 
 func convergeComponent(componentName string) error {
-	log.Infof("converge component %s", componentName)
+	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
