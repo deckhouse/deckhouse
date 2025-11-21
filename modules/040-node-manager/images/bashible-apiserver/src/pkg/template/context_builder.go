@@ -79,6 +79,9 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	result["registry"] = bd.Registry
 	result["versionMap"] = bd.VersionMap
 	result["proxy"] = bd.Proxy
+	if bashibleData, ok := bd.VersionMap["bashible"]; ok {
+		result["bashible"] = bashibleData
+	}
 
 	return result
 }
@@ -329,8 +332,12 @@ func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserCon
 func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	var res versionMapWrapper
 
-	if v, ok := m["k8s"]; ok {
-		res.K8s = v.(map[string]interface{})
+	if v, ok := m["k8s"].(map[string]interface{}); ok {
+		res.K8s = v
+	}
+
+	if v, ok := m["bashible"].(map[string]interface{}); ok {
+		res.Bashible = v
 	}
 
 	return res
@@ -409,7 +416,8 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 
 // for appropriate marshalling
 type versionMapWrapper struct {
-	K8s map[string]interface{} `json:"k8s" yaml:"k8s"`
+	K8s      map[string]interface{} `json:"k8s" yaml:"k8s"`
+	Bashible map[string]interface{} `json:"bashible,omitempty" yaml:"bashible,omitempty"`
 }
 
 type tplContextCommon struct {

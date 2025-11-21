@@ -2,6 +2,13 @@ osDistributions:
   altlinux:
     name: ALT Linux
     url: https://www.altlinux.org/
+    versions:
+      - '8 СП (релиз 10)'
+      - 'p10'
+      - '10.0'
+      - '10.1'
+      - '10.2'
+      - '11'
     ru_support: 'true'
     en_support: 'false'
     cse_support:
@@ -17,6 +24,9 @@ osDistributions:
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
+    versions:
+      - '1.7'
+      - '1.8'
     ru_support: 'true'
     en_support: 'false'
     cse_support:
@@ -41,6 +51,10 @@ osDistributions:
   centos:
     name: CentOS
     url: https://www.centos.org/download/
+    versions:
+      - '7'
+      - '8'
+      - '9'
     note_content:
       ru: |
         <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
@@ -49,27 +63,47 @@ osDistributions:
   debian:
     name: Debian
     url: https://www.debian.org/download
+    versions:
+      - '10'
+      - '11'
+      - '12'
+      - '13'
     note_content:
       ru: <b>Debian 10</b> более не поддерживается разработчиками дистрибутива Debian
       en: <b>Debian 10</b> is no longer supported by Debian developers
   opensuse:
     name: openSUSE
     url: https://get.opensuse.org/
+    versions:
+      - '15.4'
+      - '15.5'
+      - '15.6'
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
+    versions:
+      - '8'
+      - '9'
     note_content:
       ru: Для <b>Rocky Linux 8</b> прекращена активная поддержка разработчиками дистрибутива Rocky Linux (продолжается только поддержка безопасности)
       en: Active support for <b>Rocky Linux 8</b> has been discontinued by Rocky Linux developers (there is only security support)
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
+    versions:
+      - '18.04'
+      - '20.04'
+      - '22.04'
+      - '24.04'
     note_content:
       ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
       en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
   'redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
+    versions:
+      - '7.3'
+      - '8.0'
     ru_support: 'true'
     en_support: 'false'
     cse_support:
@@ -82,6 +116,11 @@ osDistributions:
   'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
+    versions:
+      - '7.9'
+      - '12.4'
+      - '12.5'
+      - '12.6'
     ru_support: 'true'
     en_support: 'false'
     ce_support:
@@ -96,6 +135,9 @@ osDistributions:
   '_mosos-arbat':
     name: 'МОС ОС'
     url: https://os.mos.ru/
+    versions:
+      - '15.4'
+      - '15.5'
     ru_support: 'true'
     en_support: 'false'
 

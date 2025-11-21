@@ -1,7 +1,7 @@
 {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <link href='../assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
-{%- assign osVersions = site.data.supported_versions.bashible | sort %}
+{%- assign osVersions = site.data.supported_versions.osDistributions | sort %}
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}
 {%- assign langSupportKey = page.lang | append: "_support" %}
 
@@ -43,9 +43,11 @@
     <tbody>
     {%- for osItem in osVersions %}
     {%- assign osKey = osItem[0] %}
-    {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
+    {%- assign osData = osItem[1] %}
+    {%- assign osName = osData.name | default: osKey  %}
+    {%- assign osVersionsList = osData.versions | default: osItem[1] %}
     {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
-    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey %}
+    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey osVersions=osVersionsList %}
     {% endfor %}
     </tbody>
   </table>

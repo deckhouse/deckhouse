@@ -1,8 +1,9 @@
+{%- assign osVersions = include.osVersions | default: osItem[1] %}
 {%- if page.lang == 'ru' %}
 <!-- Prepare CE list -->
 {% assign ceVersions = "" | split: "," %}
-{%- for osData in osItem[1] %}
-  {%- assign osVersion = osData[0] %}
+{%- for osData in osVersions %}
+  {%- assign osVersion = osData %}
   {%- for ceVersion in site.data.supported_versions.osDistributions[osKey]['ce_support']['versions'] %}
   {%- if ceVersion == osVersion %}
     {% assign ceVersions = ceVersions | push: ceVersion %}
@@ -12,8 +13,8 @@
 
 <!-- Prepare CSE list -->
 {% assign cseVersions = "" | split: "," %}
-{%- for osData in osItem[1] %}
-  {%- assign osVersion = osData[0] %}
+{%- for osData in osVersions %}
+  {%- assign osVersion = osData %}
   {%- for cseVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
     {%- if cseVersion == osVersion %}
       {% assign cseVersions = cseVersions | push: cseVersion %}
@@ -31,8 +32,8 @@
 
 <!-- Update CE list -->
 {% assign ceVersions = "" | split: "," %}
-{%- for osData in osItem[1] %}
-  {%- assign osVersion = osData[0] %}
+{%- for osData in osVersions %}
+  {%- assign osVersion = osData %}
   {%- for ceVersion in site.data.supported_versions.osDistributions[osKey]['ce_support']['versions'] %}
     {%- if ceVersion == osVersion %}
       {% assign exclude = false %}
@@ -46,8 +47,8 @@
 
 <!-- Update CSE list -->
 {% assign cseVersions = "" | split: "," %}
-{%- for osData in osItem[1] %}
-  {%- assign osVersion = osData[0] %}
+{%- for osData in osVersions %}
+  {%- assign osVersion = osData %}
   {%- for cseVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
     {%- if cseVersion == osVersion %}
       {% assign exclude = false %}
@@ -61,8 +62,8 @@
 
 <!-- Prepare other list -->
 {% assign otherVersions = "" | split: "," %}
-{%- for osData in osItem[1] %}
-  {%- assign osVersion = osData[0] %}
+{%- for osData in osVersions %}
+  {%- assign osVersion = osData %}
   {% assign exclude = false %}
   {% for commonVersion in commonVersions %}
     {%- if commonVersion == osVersion %}{% assign exclude = true %}{% endif %}
@@ -198,9 +199,9 @@
     </span>
   </td>
   <td class="versions">
-    {%- for osData in osItem[1] %}
-    {%- assign osVersion = osData[0] %}
-    {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
+    {%- for osData in osVersions %}
+    {%- assign osVersion = osData %}
+    {{ osVersion }}
     {%- unless forloop.last %},{% endunless %}
     {%- endfor %}
   </td>
