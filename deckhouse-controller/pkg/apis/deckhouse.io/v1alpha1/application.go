@@ -100,11 +100,11 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	PackageName       string          `json:"packageName"`
-	PackageRepository string          `json:"packageRepository,omitempty"`
-	Version           string          `json:"version"`
-	ReleaseChannel    string          `json:"releaseChannel,omitempty"`
-	Settings          *SettingsValues `json:"settings,omitempty"`
+	PackageName       string         `json:"packageName"`
+	PackageRepository string         `json:"packageRepository,omitempty"`
+	Version           string         `json:"version"`
+	ReleaseChannel    string         `json:"releaseChannel,omitempty"`
+	Settings          SettingsValues `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
