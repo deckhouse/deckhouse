@@ -77,9 +77,9 @@ type ApplicationPackageVersion struct {
 }
 
 type ApplicationPackageVersionSpec struct {
-	PackageName string `json:"packageName,omitempty"`
-	Version     string `json:"version,omitempty"`
-	Repository  string `json:"repository,omitempty"`
+	PackageName       string `json:"packageName,omitempty"`
+	PackageRepository string `json:"packageRepository,omitempty"`
+	Version           string `json:"version,omitempty"`
 }
 
 type ApplicationPackageVersionStatus struct {

@@ -54,7 +54,7 @@ metadata:
   resourceVersion: "1"
 spec:
   packageName: v1.0.0
-  repository: deckhouse
+  packageRepository: deckhouse
   version: v1.0.0
 status: {}
 ---

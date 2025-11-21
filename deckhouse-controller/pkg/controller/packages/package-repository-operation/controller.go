@@ -678,9 +678,9 @@ func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resour
 				},
 			},
 			Spec: v1alpha1.ApplicationPackageVersionSpec{
-				PackageName: packageName,
-				Version:     version,
-				Repository:  repositoryName,
+				PackageName:       packageName,
+				Version:           version,
+				PackageRepository: repositoryName,
 			},
 		}
 

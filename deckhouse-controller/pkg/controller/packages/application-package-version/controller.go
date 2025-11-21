@@ -123,13 +123,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.Repository}, &packageRepo)
+	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.PackageRepository}, &packageRepo)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.Repository, err.Error()),
+			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepository, err.Error()),
 		)
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
@@ -137,7 +137,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.Repository, err)
+		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.PackageRepository, err)
 	}
 
 	logger.Debug("got package repository", slog.String("repo", packageRepo.Spec.Registry.Repo))

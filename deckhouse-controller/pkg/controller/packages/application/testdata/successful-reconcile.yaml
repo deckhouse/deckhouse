@@ -4,8 +4,8 @@ metadata:
   name: test-app
   namespace: foobar
 spec:
-  applicationPackageName: test
-  repository: deckhouse
+  packageName: test
+  packageRepository: deckhouse
   version: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -17,15 +17,15 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
 spec:
   packageName: test
+  packageRepository: deckhouse
   version: v1.0.1
-  repository: deckhouse
 status:
   conditions:
   - lastProbeTime: null
     lastTransitionTime: null
     status: "True"
     type: IsEnriched
-  metadata:
+  packageMetadata:
     category: Misc
     description:
       en: example — test
