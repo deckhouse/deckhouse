@@ -69,8 +69,7 @@ type ApplicationPackageStatus struct {
 }
 
 type ApplicationPackageStatusInstance struct {
-	Namespace string `json:"namespace,omitempty"`
-	Name      string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // +kubebuilder:object:root=true
