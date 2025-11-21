@@ -101,7 +101,7 @@ func convergeComponents() error {
 	log.Info("phase: converge kubernetes components")
 	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
 		if err := convergeComponent(v); err != nil {
-			log.Error("converge component", slog.String("component", v), log.Err(err))
+			log.Error("error converging component", slog.String("component", v), log.Err(err))
 			return err
 		}
 	}
