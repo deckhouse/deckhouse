@@ -192,8 +192,8 @@ func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigrat
 		Message:            fmt.Sprintf("%d pods on the node have been annotated.", podsAnnotated),
 	})
 
-	if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
-		logger.Error(err, "Failed to update CNINodeMigration status")
+	if err := r.Update(ctx, cniNodeMigration); err != nil {
+		logger.Error(err, "Failed to update CNINodeMigration")
 		return ctrl.Result{}, err
 	}
 
@@ -229,7 +229,7 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 			Message:            fmt.Sprintf("Artifacts for CNI '%s' were successfully removed.", cniMigration.Status.CurrentCNI),
 		})
 
-		if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
+		if err := r.Update(ctx, cniNodeMigration); err != nil {
 			logger.Error(err, "Failed to update CNINodeMigration status after cleanup")
 			return ctrl.Result{}, err
 		}
@@ -246,7 +246,7 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 			logger.Info("Pods have already been restarted on this node")
 			// Final step, migration on this node is complete
 			cniNodeMigration.Status.Phase = "Succeeded"
-			if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
+			if err := r.Update(ctx, cniNodeMigration); err != nil {
 				logger.Error(err, "Failed to update CNINodeMigration status to Succeeded")
 				return ctrl.Result{}, err
 			}
@@ -282,7 +282,7 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 		Message:            fmt.Sprintf("%d pods with old CNI annotation were deleted.", podsDeleted),
 	})
 
-	if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
+	if err := r.Update(ctx, cniNodeMigration); err != nil {
 		logger.Error(err, "Failed to update CNINodeMigration status after pod deletion")
 		return ctrl.Result{}, err
 	}
@@ -301,7 +301,7 @@ func (r *CNIMigrationReconciler) updateNodeStatusWithError(ctx context.Context, 
 		Message:            err.Error(),
 	})
 
-	if updateErr := r.Status().Update(ctx, cniNodeMigration); updateErr != nil {
+	if updateErr := r.Update(ctx, cniNodeMigration); updateErr != nil {
 		logger := log.FromContext(ctx)
 		logger.Error(updateErr, "Failed to update CNINodeMigration status with error")
 		// Return the original error and the update error
