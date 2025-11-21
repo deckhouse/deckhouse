@@ -32,12 +32,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
+func NewClient(ctx context.Context, session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
 		privateKeys: privKeys,
 		live:        false,
 		sessionList: make([]*ssh.Session, 5),
+		ctx:         ctx,
 	}
 }
 
@@ -59,6 +60,8 @@ type Client struct {
 	sessionList []*ssh.Session
 
 	signers []ssh.Signer
+
+	ctx context.Context
 }
 
 func (s *Client) initSigners() error {
@@ -89,6 +92,13 @@ func (s *Client) OnlyPreparePrivateKeys() error {
 }
 
 func (s *Client) Start() error {
+	if s.ctx != nil {
+		select {
+		case <-s.ctx.Done():
+			return s.ctx.Err()
+		default:
+		}
+	}
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
@@ -148,7 +158,7 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
 			log.InfoF("Connect to %s\n", fullHost)
 			bastionClient, err = DialTimeout("tcp", bastionAddr, bastionConfig)
 			return err
@@ -203,7 +213,7 @@ func (s *Client) Start() error {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
@@ -239,7 +249,7 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).RunContext(s.ctx, func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
@@ -297,7 +307,7 @@ func (s *Client) keepAlive() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
+			if _, err := session.SendRequest("keepalive@openssh.com", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v\n", err)
 				if errorsCount > 3 {
 					s.restart()

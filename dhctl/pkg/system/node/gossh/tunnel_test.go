@@ -15,6 +15,7 @@
 package gossh
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"testing"
@@ -56,7 +57,7 @@ func TestTunnel(t *testing.T) {
 		User:           "user",
 		Port:           "20030"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)
@@ -108,7 +109,7 @@ func TestTunnel(t *testing.T) {
 						AvailableHosts: []session.Host{{Host: "127.0.0.1", Name: "localhost"}},
 						User:           "user",
 						Port:           "22050"})
-					newSSHClient := NewClient(newSettings, keys)
+					newSSHClient := NewClient(context.Background(), newSettings, keys)
 					err = newSSHClient.Start()
 					require.NoError(t, err)
 					tun.Stop()
@@ -154,7 +155,7 @@ func TestHealthMonitor(t *testing.T) {
 		User:           "user",
 		Port:           "20031"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)

@@ -20,11 +20,12 @@ import (
 	"errors"
 	"fmt"
 
+	"log/slog"
+
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"log/slog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -200,7 +201,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		}
 
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
