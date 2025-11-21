@@ -447,7 +447,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
 			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
-			SaveMasterHostsToCache(masterAddressesForSSH)
+			state.SaveMasterHostsToCache(stateCache, masterAddressesForSSH)
 			return nil
 		})
 		if err != nil {
@@ -470,7 +470,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				SaveBastionHostToCache(sshClient.Session().BastionHost)
 			}
 
-			SaveMasterHostsToCache(map[string]string{
+			state.SaveMasterHostsToCache(stateCache, map[string]string{
 				"first-master": sshClient.Session().Host(),
 			})
 		}
@@ -618,7 +618,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if !b.DisableBootstrapClearCache {
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
-				MasterHostsCacheKey,
+				state.MasterHostsCacheKey,
 				ManifestCreatedInClusterCacheKey,
 				BastionHostCacheKey,
 				PostBootstrapResultCacheKey,
@@ -693,7 +693,7 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 }
 
 func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, infrastructureContext *infrastructure.Context) error {
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
 		return err
 	}
 
