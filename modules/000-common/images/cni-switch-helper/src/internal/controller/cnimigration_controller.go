@@ -189,7 +189,7 @@ func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigrat
 		Status:             metav1.ConditionTrue,
 		LastTransitionTime: metav1.Now(),
 		Reason:             "PodsAnnotated",
-		Message:            fmt.Sprintf("%d pods on the node have been annotated.", podsAnnotated),
+		Message:            fmt.Sprintf("%d pods on the node are subject to migration.", totalPodsToProcess),
 	})
 
 	if err := r.Update(ctx, cniNodeMigration); err != nil {
