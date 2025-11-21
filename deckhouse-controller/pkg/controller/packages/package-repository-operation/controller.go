@@ -821,11 +821,12 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 				versionTags = append(versionTags, item.Status.Version)
 			}
 		}
-	case *v1alpha1.ClusterApplicationPackageVersionList:
-		for _, item := range list.Items {
-			if item.Status.Version != "" {
-				versionTags = append(versionTags, item.Status.Version)
-			}
+	default:
+		{
+			r.logger.Warn("unsupported package version list type",
+				slog.String("package", packageName),
+				slog.String("type", packageType))
+			return ""
 		}
 	}
 

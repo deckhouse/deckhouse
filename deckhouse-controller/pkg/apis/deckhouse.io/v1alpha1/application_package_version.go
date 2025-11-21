@@ -137,6 +137,44 @@ type ApplicationPackageVersionList struct {
 	Items []ApplicationPackageVersion `json:"items"`
 }
 
+type PackageRequirements struct {
+	Deckhouse  string            `json:"deckhouse,omitempty"`
+	Kubernetes string            `json:"kubernetes,omitempty"`
+	Modules    map[string]string `json:"modules,omitempty"`
+}
+
+type PackageDescription struct {
+	Ru string `json:"ru,omitempty"`
+	En string `json:"en,omitempty"`
+}
+
+type PackageLicensing struct {
+	Editions map[string]PackageEdition `json:"editions,omitempty"`
+}
+
+type PackageEdition struct {
+	Available bool `json:"available,omitempty"`
+}
+
+type PackageChangelog struct {
+	Features []string `json:"features,omitempty"`
+	Fixes    []string `json:"fixes,omitempty"`
+}
+
+type PackageVersionCompatibilityRules struct {
+	Upgrade   *PackageVersionCompatibilityRule `json:"upgrade,omitempty"`
+	Downgrade *PackageVersionCompatibilityRule `json:"downgrade,omitempty"`
+}
+
+type PackageVersionCompatibilityRule struct {
+	From             string `json:"from,omitempty"`
+	To               string `json:"to,omitempty"`
+	AllowSkipPatches int    `json:"allowSkipPatches,omitempty"`
+	AllowSkipMinor   int    `json:"allowSkipMinor,omitempty"`
+	AllowSkipMajor   int    `json:"allowSkipMajor,omitempty"`
+	MaxRollback      int    `json:"maxRollback,omitempty"`
+}
+
 // Returns a name following the format <repository>-<packageName>-<version>
 func MakeApplicationPackageVersionName(repository, packageName, version string) string {
 	return repository + "-" + packageName + "-" + version

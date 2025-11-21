@@ -16,103 +16,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeModuleSettingsDefinitions implements ModuleSettingsDefinitionInterface
-type FakeModuleSettingsDefinitions struct {
+// fakeModuleSettingsDefinitions implements ModuleSettingsDefinitionInterface
+type fakeModuleSettingsDefinitions struct {
+	*gentype.FakeClientWithList[*v1alpha1.ModuleSettingsDefinition, *v1alpha1.ModuleSettingsDefinitionList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var modulesettingsdefinitionsResource = v1alpha1.SchemeGroupVersion.WithResource("modulesettingsdefinitions")
-
-var modulesettingsdefinitionsKind = v1alpha1.SchemeGroupVersion.WithKind("ModuleSettingsDefinition")
-
-// Get takes name of the moduleSettingsDefinition, and returns the corresponding moduleSettingsDefinition object, and an error if there is any.
-func (c *FakeModuleSettingsDefinitions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(modulesettingsdefinitionsResource, name), &v1alpha1.ModuleSettingsDefinition{})
-	if obj == nil {
-		return nil, err
+func newFakeModuleSettingsDefinitions(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ModuleSettingsDefinitionInterface {
+	return &fakeModuleSettingsDefinitions{
+		gentype.NewFakeClientWithList[*v1alpha1.ModuleSettingsDefinition, *v1alpha1.ModuleSettingsDefinitionList](
+			fake.Fake,
+			"",
+			v1alpha1.SchemeGroupVersion.WithResource("modulesettingsdefinitions"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSettingsDefinition"),
+			func() *v1alpha1.ModuleSettingsDefinition { return &v1alpha1.ModuleSettingsDefinition{} },
+			func() *v1alpha1.ModuleSettingsDefinitionList { return &v1alpha1.ModuleSettingsDefinitionList{} },
+			func(dst, src *v1alpha1.ModuleSettingsDefinitionList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ModuleSettingsDefinitionList) []*v1alpha1.ModuleSettingsDefinition {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ModuleSettingsDefinitionList, items []*v1alpha1.ModuleSettingsDefinition) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ModuleSettingsDefinition), err
-}
-
-// List takes label and field selectors, and returns the list of ModuleSettingsDefinitions that match those selectors.
-func (c *FakeModuleSettingsDefinitions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleSettingsDefinitionList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(modulesettingsdefinitionsResource, modulesettingsdefinitionsKind, opts), &v1alpha1.ModuleSettingsDefinitionList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ModuleSettingsDefinitionList{ListMeta: obj.(*v1alpha1.ModuleSettingsDefinitionList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ModuleSettingsDefinitionList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested moduleSettingsDefinitions.
-func (c *FakeModuleSettingsDefinitions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(modulesettingsdefinitionsResource, opts))
-}
-
-// Create takes the representation of a moduleSettingsDefinition and creates it.  Returns the server's representation of the moduleSettingsDefinition, and an error, if there is any.
-func (c *FakeModuleSettingsDefinitions) Create(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.CreateOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(modulesettingsdefinitionsResource, moduleSettingsDefinition), &v1alpha1.ModuleSettingsDefinition{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSettingsDefinition), err
-}
-
-// Update takes the representation of a moduleSettingsDefinition and updates it. Returns the server's representation of the moduleSettingsDefinition, and an error, if there is any.
-func (c *FakeModuleSettingsDefinitions) Update(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.UpdateOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(modulesettingsdefinitionsResource, moduleSettingsDefinition), &v1alpha1.ModuleSettingsDefinition{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSettingsDefinition), err
-}
-
-// Delete takes name of the moduleSettingsDefinition and deletes it. Returns an error if one occurs.
-func (c *FakeModuleSettingsDefinitions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(modulesettingsdefinitionsResource, name, opts), &v1alpha1.ModuleSettingsDefinition{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeModuleSettingsDefinitions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(modulesettingsdefinitionsResource, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ModuleSettingsDefinitionList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched moduleSettingsDefinition.
-func (c *FakeModuleSettingsDefinitions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(modulesettingsdefinitionsResource, name, pt, data, subresources...), &v1alpha1.ModuleSettingsDefinition{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSettingsDefinition), err
 }

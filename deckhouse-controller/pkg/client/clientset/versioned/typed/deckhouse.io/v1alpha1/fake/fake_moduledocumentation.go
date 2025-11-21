@@ -16,114 +16,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeModuleDocumentations implements ModuleDocumentationInterface
-type FakeModuleDocumentations struct {
+// fakeModuleDocumentations implements ModuleDocumentationInterface
+type fakeModuleDocumentations struct {
+	*gentype.FakeClientWithList[*v1alpha1.ModuleDocumentation, *v1alpha1.ModuleDocumentationList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var moduledocumentationsResource = v1alpha1.SchemeGroupVersion.WithResource("moduledocumentations")
-
-var moduledocumentationsKind = v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation")
-
-// Get takes name of the moduleDocumentation, and returns the corresponding moduleDocumentation object, and an error if there is any.
-func (c *FakeModuleDocumentations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(moduledocumentationsResource, name), &v1alpha1.ModuleDocumentation{})
-	if obj == nil {
-		return nil, err
+func newFakeModuleDocumentations(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ModuleDocumentationInterface {
+	return &fakeModuleDocumentations{
+		gentype.NewFakeClientWithList[*v1alpha1.ModuleDocumentation, *v1alpha1.ModuleDocumentationList](
+			fake.Fake,
+			"",
+			v1alpha1.SchemeGroupVersion.WithResource("moduledocumentations"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
+			func() *v1alpha1.ModuleDocumentation { return &v1alpha1.ModuleDocumentation{} },
+			func() *v1alpha1.ModuleDocumentationList { return &v1alpha1.ModuleDocumentationList{} },
+			func(dst, src *v1alpha1.ModuleDocumentationList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ModuleDocumentationList) []*v1alpha1.ModuleDocumentation {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ModuleDocumentationList, items []*v1alpha1.ModuleDocumentation) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ModuleDocumentation), err
-}
-
-// List takes label and field selectors, and returns the list of ModuleDocumentations that match those selectors.
-func (c *FakeModuleDocumentations) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleDocumentationList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(moduledocumentationsResource, moduledocumentationsKind, opts), &v1alpha1.ModuleDocumentationList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ModuleDocumentationList{ListMeta: obj.(*v1alpha1.ModuleDocumentationList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ModuleDocumentationList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested moduleDocumentations.
-func (c *FakeModuleDocumentations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(moduledocumentationsResource, opts))
-}
-
-// Create takes the representation of a moduleDocumentation and creates it.  Returns the server's representation of the moduleDocumentation, and an error, if there is any.
-func (c *FakeModuleDocumentations) Create(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.CreateOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(moduledocumentationsResource, moduleDocumentation), &v1alpha1.ModuleDocumentation{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleDocumentation), err
-}
-
-// Update takes the representation of a moduleDocumentation and updates it. Returns the server's representation of the moduleDocumentation, and an error, if there is any.
-func (c *FakeModuleDocumentations) Update(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(moduledocumentationsResource, moduleDocumentation), &v1alpha1.ModuleDocumentation{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleDocumentation), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeModuleDocumentations) UpdateStatus(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (*v1alpha1.ModuleDocumentation, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(moduledocumentationsResource, "status", moduleDocumentation), &v1alpha1.ModuleDocumentation{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleDocumentation), err
-}
-
-// Delete takes name of the moduleDocumentation and deletes it. Returns an error if one occurs.
-func (c *FakeModuleDocumentations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(moduledocumentationsResource, name, opts), &v1alpha1.ModuleDocumentation{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeModuleDocumentations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(moduledocumentationsResource, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ModuleDocumentationList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched moduleDocumentation.
-func (c *FakeModuleDocumentations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleDocumentation, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(moduledocumentationsResource, name, pt, data, subresources...), &v1alpha1.ModuleDocumentation{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleDocumentation), err
 }
