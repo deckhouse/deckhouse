@@ -187,7 +187,7 @@ metadata:
 
 spec:
   {{- if $csiControllerHaMode }}
-  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" $context | nindent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $context | nindent 2 }}
   {{- else }}
   replicas: 1
   strategy:
@@ -241,7 +241,7 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: provisioner
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $provisionerImage | quote }}
         args:
         - "--timeout={{ $provisionerTimeout }}"
@@ -294,7 +294,7 @@ spec:
             {{- include "provisioner_resources" $context | nindent 12 }}
   {{- end }}
       - name: attacher
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $attacherImage | quote }}
         args:
         - "--timeout={{ $attacherTimeout }}"
@@ -325,7 +325,7 @@ spec:
   {{- end }}
             {{- if $resizerEnabled }}
       - name: resizer
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $resizerImage | quote }}
         args:
         - "--timeout={{ $resizerTimeout }}"
@@ -357,7 +357,7 @@ spec:
             {{- end }}
             {{- if $syncerEnabled }}
       - name: syncer
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $syncerImage | quote }}
         args:
         - "--leader-election"
@@ -384,7 +384,7 @@ spec:
             {{- end }}
     {{- if $snapshotterEnabled }}
       - name: snapshotter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $snapshotterImage | quote }}
         args:
         - "--timeout={{ $snapshotterTimeout }}"
@@ -418,7 +418,7 @@ spec:
   {{- end }}
             {{- end }}
       - name: livenessprobe
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
@@ -454,7 +454,7 @@ spec:
 {{- if $forceCsiControllerPrivilegedContainer }}
         {{- include "helm_lib_module_container_security_context_escalated_sys_admin_privileged" . | nindent 8 }}
 {{- else }}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
 {{- end }}
         image: {{ $controllerImage | quote }}
         args:

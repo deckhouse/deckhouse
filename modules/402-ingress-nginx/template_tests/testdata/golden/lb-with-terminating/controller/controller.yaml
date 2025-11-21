@@ -159,6 +159,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          privileged: false
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
