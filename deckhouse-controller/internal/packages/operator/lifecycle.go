@@ -73,13 +73,17 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 	name := apps.BuildName(inst.Namespace, inst.Name)
 
-	if _, ok := o.packages[name]; !ok || o.manager.VersionChanged(name, inst.Definition.Version) {
+	if _, ok := o.packages[name]; !ok {
 		o.packages[name] = &Package{
 			name: name,
 			status: Status{
 				Phase: Pending,
 			},
 		}
+	}
+
+	if o.manager.VersionChanged(name, inst.Definition.Version) {
+		o.packages[name].status.Phase = Pending
 	}
 
 	if o.packages[name].status.Phase == Pending {
@@ -92,7 +96,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(inst.Namespace, name, inst.Settings, o.manager, o.logger),
+		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.manager, o.logger),
 			queue.WithOnDone(func() {
 				o.mu.Lock()
 				o.packages[name].status.Phase = Loaded

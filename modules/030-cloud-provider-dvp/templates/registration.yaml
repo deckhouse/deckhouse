@@ -18,7 +18,6 @@ data:
   capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}
   capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
   capiClusterName: {{ b64enc "dvp" | quote }}
-  capiClusterNamespace: {{ b64enc "d8-cloud-instance-manager" | quote }}
   capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
   sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}

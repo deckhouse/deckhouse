@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/ssh"
+	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -145,7 +145,7 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
-	if c.WaitHandler != nil {
+	if c.WaitHandler != nil || c.timeout > 0 {
 		c.ProcessWait()
 	} else {
 		err = c.wait()
@@ -177,9 +177,6 @@ func (c *SSHCommand) start() error {
 
 	command := c.cmd + " " + strings.Join(c.Args, " ")
 
-	if c.session == nil {
-		return fmt.Errorf("ssh session not started")
-	}
 	return c.session.Start(command)
 }
 
@@ -308,11 +305,18 @@ func (c *SSHCommand) WaitError() error {
 }
 
 func (c *SSHCommand) StderrBytes() []byte {
-	return c.ErrBytes.Bytes()
+	if len(c.ErrBytes.Bytes()) > 0 {
+		return c.ErrBytes.Bytes()
+	}
+	return c.err.Bytes()
 }
 
 func (c *SSHCommand) StdoutBytes() []byte {
-	return c.OutBytes.Bytes()
+	if len(c.OutBytes.Bytes()) > 0 {
+		return c.OutBytes.Bytes()
+	}
+	return c.out.Bytes()
+
 }
 
 func (c *SSHCommand) WithMatchers(matchers ...*process.ByteSequenceMatcher) *SSHCommand {

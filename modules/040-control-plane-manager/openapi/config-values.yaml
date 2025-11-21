@@ -312,3 +312,13 @@ properties:
     description: |
       The number of seconds after which pods will be deleted from the node with the `Unreachable` status.
       > **Note!** If you change the parameter, the pods  must be restarted.
+  enabledFeatureGates:
+    type: array
+    description: |
+      List of feature gates enabled in the control plane.
+
+      More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+    items:
+      type: string
+      pattern: '^[a-zA-Z]+$'
+    default: []

@@ -511,6 +511,11 @@ groups:
     description:
       en: NTP for synchronization with external time servers
       ru: NTP для синхронизации с внешними серверами точного времени
+  - ports: "179"
+    protocol: TCP
+    description:
+      en: BGP peering with the infrastructure router for network traffic balancing (metallb module)
+      ru: BGP-стык с роутером инфраструктуры для балансировки сетевого трафика (модуль metallb)
   - ports: "443"
     protocol: TCP
     description:

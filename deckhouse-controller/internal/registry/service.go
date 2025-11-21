@@ -183,7 +183,7 @@ func (s *Service) GetImageRootHash(ctx context.Context, cred Registry, packageNa
 
 // Download downloads package on temp fs and returns path to it
 // <registry>/<package>:<tag>
-func (s *Service) Download(ctx context.Context, cred Registry, packageName, tag string) (string, error) {
+func (s *Service) Download(ctx context.Context, cred Registry, out, packageName, tag string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
@@ -197,51 +197,44 @@ func (s *Service) Download(ctx context.Context, cred Registry, packageName, tag 
 	// <registry>/<packageName>
 	cli, err := s.buildRegistryClient(cred, packageName)
 	if err != nil {
-		return "", fmt.Errorf("build registry client: %w", err)
+		return fmt.Errorf("build registry client: %w", err)
 	}
 
 	// get <registry>/<packageName>:<tag>
 	img, err := cli.Image(ctx, tag)
 	if err != nil {
-		return "", fmt.Errorf("get image: %w", err)
+		return fmt.Errorf("get image: %w", err)
 	}
 
 	size, err := img.Size()
 	if err != nil {
-		return "", fmt.Errorf("get image size: %w", err)
+		return fmt.Errorf("get image size: %w", err)
 	}
 
 	span.SetAttributes(attribute.Int64("size", size))
 
 	digest, err := img.Digest()
 	if err != nil {
-		return "", fmt.Errorf("get image digest: %w", err)
+		return fmt.Errorf("get image digest: %w", err)
 	}
 
 	span.SetAttributes(attribute.String("digest", digest.String()))
-
-	tmp, err := os.MkdirTemp("", "package*")
-	if err != nil {
-		return "", fmt.Errorf("create tmp directory: %w", err)
-	}
-
-	span.SetAttributes(attribute.String("path", tmp))
+	span.SetAttributes(attribute.String("path", out))
 
 	logger.Debug("copy package to temp",
 		slog.String("digest", digest.String()),
-		slog.Int64("size", size),
-		slog.String("path", tmp))
+		slog.Int64("size", size))
 
-	return s.download(ctx, img, tmp)
+	return s.download(ctx, img, out)
 }
 
 // download copies tar to path
-func (s *Service) download(_ context.Context, img crv1.Image, output string) (string, error) {
+func (s *Service) download(_ context.Context, img crv1.Image, output string) error {
 	rc := mutate.Extract(img)
 	defer rc.Close()
 
 	if err := os.MkdirAll(output, 0o700); err != nil {
-		return "", fmt.Errorf("create output path: %w", err)
+		return fmt.Errorf("create output path: %w", err)
 	}
 
 	tr := tar.NewReader(rc)
@@ -252,53 +245,53 @@ func (s *Service) download(_ context.Context, img crv1.Image, output string) (st
 			break
 		}
 		if err != nil {
-			return "", fmt.Errorf("read tar: %w", err)
+			return fmt.Errorf("read tar: %w", err)
 		}
 
 		if strings.Contains(hdr.Name, "..") {
 			// CWE-22 check, prevents path traversal
-			return "", fmt.Errorf("path traversal detected in the package archive: malicious path %v", hdr.Name)
+			return fmt.Errorf("path traversal detected in the package archive: malicious path %v", hdr.Name)
 		}
 
 		target := filepath.Join(output, hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err = os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
-				return "", fmt.Errorf("mkdir: %w", err)
+				return fmt.Errorf("mkdir: %w", err)
 			}
 
 		case tar.TypeReg:
 			out, err := os.Create(target)
 			if err != nil {
-				return "", fmt.Errorf("create file: %w", err)
+				return fmt.Errorf("create file: %w", err)
 			}
 
 			if _, err = io.Copy(out, tr); err != nil {
 				out.Close()
-				return "", fmt.Errorf("copy file: %w", err)
+				return fmt.Errorf("copy file: %w", err)
 			}
 			out.Close()
 
 			// remove only 'user' permission bit, E.x.: 644 => 600, 755 => 700
 			if err = os.Chmod(out.Name(), os.FileMode(hdr.Mode)&0o700); err != nil {
-				return "", fmt.Errorf("chmod: %w", err)
+				return fmt.Errorf("chmod: %w", err)
 			}
 
 		case tar.TypeSymlink:
 			if isRel(hdr.Linkname, target) && isRel(hdr.Name, target) {
 				if err = os.Symlink(hdr.Linkname, target); err != nil {
-					return "", fmt.Errorf("create symlink: %w", err)
+					return fmt.Errorf("create symlink: %w", err)
 				}
 			}
 
 		case tar.TypeLink:
 			if err = os.Link(path.Join(output, hdr.Linkname), target); err != nil {
-				return "", fmt.Errorf("create hardlink: %w", err)
+				return fmt.Errorf("create hardlink: %w", err)
 			}
 		}
 	}
 
-	return output, nil
+	return nil
 }
 
 func isRel(candidate, target string) bool {
@@ -318,11 +311,11 @@ func isRel(candidate, target string) bool {
 }
 
 type Registry struct {
-	Name         string
-	Repository   string
-	DockerConfig string
-	CA           string
-	Scheme       string
+	Name         string `json:"name" yaml:"name"`
+	Repository   string `json:"repository" yaml:"repository"`
+	DockerConfig string `json:"dockercfg" yaml:"dockercfg"`
+	Scheme       string `json:"scheme" yaml:"scheme"`
+	CA           string `json:"ca" yaml:"ca"`
 }
 
 func BuildRegistryBySource(source *v1alpha1.ModuleSource) Registry {

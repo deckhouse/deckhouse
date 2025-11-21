@@ -11,3 +11,7 @@ Add optional use of “network.deckhouse.io/load-balancer-ips” and “network.
 ## 002-disable-l2.patch
 
 Prohibit initializing the L2 controller.
+
+## 003-disable-new-pool-annotation.patch
+
+Disabling the new annotation `metallb.io/ip-allocated-from-pool`, as well as warnings about using deprecated service annotations.

@@ -21,7 +21,6 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
-	"github.com/go-openapi/spec"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -78,52 +77,6 @@ func NewStorage(name string, staticValues addonutils.Values, configBytes, values
 	}
 
 	return s, nil
-}
-
-func (s *Storage) InjectDigests(digests map[string]string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if len(digests) == 0 {
-		return nil
-	}
-
-	scheme := s.schemaStorage.Schemas[validation.ValuesSchema]
-	if scheme == nil {
-		return nil
-	}
-
-	if len(scheme.Properties) == 0 {
-		scheme.Properties = make(map[string]spec.Schema)
-	}
-
-	// Inject digests property to allow map[string]string from images_digests.json
-	scheme.Properties["digests"] = spec.Schema{
-		SchemaProps: spec.SchemaProps{
-			Type:        []string{"object"},
-			Description: "Image digests injected from images_digests.json",
-			AdditionalProperties: &spec.SchemaOrBool{
-				Allows: true,
-				Schema: &spec.Schema{
-					SchemaProps: spec.SchemaProps{
-						Type: []string{"string"},
-					},
-				},
-			},
-		},
-	}
-
-	if len(s.staticValues) == 0 {
-		s.staticValues = addonutils.Values{}
-	}
-
-	s.staticValues["digests"] = digests
-
-	if err := s.calculateResultValues(); err != nil {
-		return fmt.Errorf("calculate values: %w", err)
-	}
-
-	return nil
 }
 
 func (s *Storage) GetValuesChecksum() string {

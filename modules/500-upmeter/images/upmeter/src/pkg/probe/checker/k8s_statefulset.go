@@ -123,6 +123,11 @@ func (s statefulSetDeleter) Do(ctx context.Context) error {
 	return err
 }
 
+// boolPtr returns a pointer to the given bool value.
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 	replicas := int32(1)
 
