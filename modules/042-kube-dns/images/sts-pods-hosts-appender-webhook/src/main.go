@@ -29,12 +29,16 @@ import (
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmutating "github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 type config struct {
-	certFile string
-	keyFile  string
+	certFile   string
+	keyFile    string
+	cpuRequest string
+	memRequest string
 }
 
 //goland:noinspection SpellCheckingInspection
@@ -48,12 +52,13 @@ func initFlags() config {
 	fl := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
 	fl.StringVar(&cfg.keyFile, "tls-key-file", "", "TLS key file")
-
 	fl.Parse(os.Args[1:])
+
+	cfg.getResourcesFromEnv()
 	return cfg
 }
 
-func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
+func (c *config) addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		// If not a pod just continue the mutation chain(if there is one) and don't do nothing.
@@ -118,6 +123,12 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 			RunAsGroup:             &runAsGroup,
 			ReadOnlyRootFilesystem: &readOnlyRootFileSystem,
 		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(c.cpuRequest),
+				corev1.ResourceMemory: resource.MustParse(c.memRequest),
+			},
+		},
 	}
 
 	pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
@@ -146,7 +157,7 @@ func main() {
 
 	cfg := initFlags()
 
-	mt := kwhmutating.MutatorFunc(addInitContainerToPod)
+	mt := kwhmutating.MutatorFunc(cfg.addInitContainerToPod)
 
 	mcfg := kwhmutating.WebhookConfig{
 		ID:      "addHostAliasesToPod",
@@ -177,4 +188,28 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)
 	}
+}
+
+func (c *config) getResourcesFromEnv() {
+
+	// Defaults
+	c.cpuRequest = "10m"
+	c.memRequest = "16Mi"
+
+	if cpuEnv := os.Getenv("INIT_CONTAINER_CPU_REQUEST"); cpuEnv != "" {
+		if _, err := resource.ParseQuantity(cpuEnv); err != nil {
+			klog.Errorf("Invalid INIT_CONTAINER_CPU_REQUEST=%q: %v; falling back to %s", cpuEnv, err, c.cpuRequest)
+		} else {
+			c.cpuRequest = cpuEnv
+		}
+	}
+
+	if memEnv := os.Getenv("INIT_CONTAINER_MEM_REQUEST"); memEnv != "" {
+		if _, err := resource.ParseQuantity(memEnv); err != nil {
+			klog.Errorf("Invalid INIT_CONTAINER_MEM_REQUEST=%q: %v; falling back to %s", memEnv, err, c.memRequest)
+		} else {
+			c.memRequest = memEnv
+		}
+	}
+
 }
