@@ -347,6 +347,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 1. Состояние ресурсов `IstioMultiCluster`. Для этого выполните команду `kubectl describe istiomulticluster cluster-name`. Важно, чтобы в статусе ресурса был указан `Root CA` и в поле `Public Last Fetch Timestamp` была свежая метка времени.
 2. В поле `Ingress Gateways` ресурса `IstioMultiCluster` должен быть указан IP адрес IngressGateway второго кластера
 3. С помощью утилиты `istioctl`:
+
 ```bash
 istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
