@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 const (
@@ -34,7 +35,7 @@ const (
 
 var ErrAuthSSHFailed = errors.New("authentication failed")
 
-func (pc *Checker) CheckSSHTunnel(_ context.Context) error {
+func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 	if app.PreflightSkipSSHForward {
 		log.InfoLn("SSH forward preflight check was skipped (via skip flag)")
 		return nil
@@ -64,6 +65,23 @@ func (pc *Checker) CheckSSHTunnel(_ context.Context) error {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no'  on the control-plane node.`, err)
 	}
+
+	log.DebugLn("Performing tunnel health check")
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
+		fmt.Sprintf("https://localhost:%d/healthz", DefaultTunnelLocalPort))
+	if err != nil {
+		tun.Stop()
+		return fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
+	}
+
+	checker := ssh.NewRunScriptReverseTunnelChecker(wrapper.Client(), checkingScript)
+	_, err = checker.CheckTunnel(ctx)
+	if err != nil {
+		tun.Stop()
+		return fmt.Errorf(`Cannot establish working tunnel to control-plane host: %w
+Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node`, err)
+	}
+	log.DebugLn("Tunnel health check passed")
 
 	tun.Stop()
 	return nil
