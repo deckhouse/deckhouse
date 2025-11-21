@@ -157,8 +157,13 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 		},
 		string(pbmTypes.PbmProfileCategoryEnumREQUIREMENT),
 	)
-	if err != nil || len(ids) == 0 {
+	if err != nil {
 		return nil, err
+	}
+
+	// RetrieveContent returns error if ids are empty.
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
 	profiles, err := pc.RetrieveContent(context.TODO(), ids)
