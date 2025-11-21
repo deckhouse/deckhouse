@@ -12,8 +12,12 @@ description: "Синхронизация времени в кластере Deck
 Для просмотра используемых NTP серверов можно воспользоваться командой:
 
 ```bash
-d8 k exec -it -n d8-chrony chrony-master-r7v6c -- chronyc -N sources
-Defaulted container "chrony" out of: chrony, chrony-exporter, kube-rbac-proxy
+d8 k exec -it -n d8-chrony ds/chrony-master -- chronyc -N sources
+```
+
+Пример вывода:
+
+```
 MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ===============================================================================
 ^* pool.ntp.org.                 2  10   377   171   -502us[ -909us] +/- 5388us
@@ -22,9 +26,12 @@ MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ^+ pool.ntp.org.                 2  10   377   843   -159us[ -530us] +/-   12ms
 ```
 
+{% alert level="info" %}  
 `^+` - комбинируемый NTP сервер(`chrony` комбинирует информацию из `combined` серверов для уменьшения неточностей);  
 `^*` - текущий NTP сервер;  
-`^-` - некомбинируемый NTP сервер.
+`^-` - некомбинируемый NTP сервер.  
+Подробную информацию о значениях столбцов можно получить с помощью флага `-v`: `chronyc sources -v`.    
+{% endalert %}
 
 `chrony` агенты на мастер узлах и на остальных узлах имеют одно главное отличие - на всех узлах, которые не являются мастерами, в списке NTP серверов находятся не только NTP сервера из `module config`, но и адреса всех мастер узлов кластера.  
 
