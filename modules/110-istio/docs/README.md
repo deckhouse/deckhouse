@@ -21,27 +21,37 @@ webIfaces:
 
 Istio solves the tasks for applications:
 
-- [Using Mutual TLS:](#mutual-tls)
-  - Mutual trusted service authentication.
-  - Traffic encryption.
-- [Access authorization between services.](#authorization)
-- [Request routing:](#request-routing)
-  - Canary deployments and A/B testing: send part of the requests to the new application version.
-- [Managing request balancing between service Endpoints:](#managing-request-balancing-between-service-endpoints)
-  - Circuit Breaker:
-    - Temporarily excluding endpoints from balancing if the error limit is exceeded.
-    - Setting limits on the number of TCP connections and the number of requests per endpoint.
-    - Detecting abnormal requests and terminating them with an error code (HTTP request timeout).
-  - Sticky Sessions:
-    - Binding requests from end users to the service endpoint.
-  - Locality Failover — prioritizing endpoints in the local availability zone.
-  - gRPC services load-balancing.
-- [Improving Observability](#observability):
-  - Collecting and visualizing data for tracing service requests using Jaeger.
-  - Exporting metrics about traffic between services to Prometheus and visualizing them using Grafana.
-  - Visualizing traffic topology and the state of inter-service communications as well as service components using Kiali.
-- [Organizing a multi-datacenter cluster by joining clusters into a single Service Mesh (multicluster).](#multicluster)
-- [Grouping isolated clusters into a federation with the ability to provide native (in the Service Mesh sense) access to selected services.](#federation)
+- [Compatibility table for supported versions](#compatibility-table-for-supported-versions)
+- [What issues does Istio help to resolve?](#what-issues-does-istio-help-to-resolve)
+- [Mutual TLS](#mutual-tls)
+- [Authorization](#authorization)
+- [Request routing](#request-routing)
+- [Managing request balancing between service Endpoints](#managing-request-balancing-between-service-endpoints)
+- [Observability](#observability)
+  - [Tracing](#tracing)
+  - [Grafana](#grafana)
+  - [Kiali](#kiali)
+- [Architecture of the cluster with Istio enabled](#architecture-of-the-cluster-with-istio-enabled)
+- [Application service architecture with Istio enabled](#application-service-architecture-with-istio-enabled)
+  - [Details](#details)
+  - [User request lifecycle](#user-request-lifecycle)
+    - [Application with Istio turned off](#application-with-istio-turned-off)
+    - [Application with Istio turned on](#application-with-istio-turned-on)
+- [Activating Istio to work with the application](#activating-istio-to-work-with-the-application)
+- [Federation and multicluster](#federation-and-multicluster)
+  - [Federation](#federation)
+    - [Requirements for clusters](#requirements-for-clusters)
+    - [General principles of federation](#general-principles-of-federation)
+    - [Enabling the federation](#enabling-the-federation)
+    - [Managing the federation](#managing-the-federation)
+  - [Multicluster](#multicluster)
+    - [Requirements for clusters](#requirements-for-clusters-1)
+    - [General principles](#general-principles)
+    - [Enabling the multicluster](#enabling-the-multicluster)
+    - [Managing the multicluster](#managing-the-multicluster)
+- [Estimating overhead](#estimating-overhead)
+  - [control-plane](#control-plane)
+  - [data-plane](#data-plane)
 
 ## Mutual TLS
 
@@ -332,6 +342,18 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 <!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.
+
+In case of issues when working with a multi-cluster, it is necessary to check in each cluster:
+
+1. The status of the `IstioMultiCluster` resources. To do this, run the command `kubectl describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
+2. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
+3. Using the istioctl utility:
+
+```bash
+istioctl remote-clusters -i d8-istio
+NAME          SECRET                                     STATUS     ISTIOD
+cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
+```
 
 ## Estimating overhead
 
