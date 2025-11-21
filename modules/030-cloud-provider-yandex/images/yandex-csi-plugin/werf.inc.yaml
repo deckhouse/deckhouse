@@ -25,7 +25,8 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-csi-driver.git /go/src/app
+    - git clone --depth 1 --branch cve_fix $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-csi-driver.git /go/src/app
+#     - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/   yandex-csi-driver.git /go/src/app
     - cd /go/src/app
     - rm -rf .git
 ---
