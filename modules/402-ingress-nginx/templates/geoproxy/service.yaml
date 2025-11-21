@@ -31,5 +31,5 @@ spec:
   ports:
     - name: https
       port: 7475
-      targetPort: 7475
+      targetPort: https
 {{- end }}

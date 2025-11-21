@@ -18,6 +18,7 @@ package geodownloader
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -81,18 +82,16 @@ func (s *Server) Start(ctx context.Context, server, metrics string) error {
 	}
 
 	go func() {
-		if err := srvProm.ListenAndServe(); err != nil {
+		if err := srvProm.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error(fmt.Sprintf("metrics server (%s): %v", metrics, err))
 			errCh <- err
-			return
 		}
 	}()
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error(fmt.Sprintf("http server (%s): %v", server, err))
 			errCh <- err
-			return
 		}
 	}()
 

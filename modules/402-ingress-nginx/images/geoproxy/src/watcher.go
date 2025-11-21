@@ -51,15 +51,11 @@ type LicenseEditions map[string]Account
 type GeoUpdaterSecret struct {
 	Ready           bool
 	licenseEditions LicenseEditions
-	handler         *Handler
 	Updated         chan struct{}
 }
 
-func NewGeoUpdaterSecret(handler *Handler) *GeoUpdaterSecret {
-	g := &GeoUpdaterSecret{
-		handler: handler,
-		Updated: make(chan struct{}, 1),
-	}
+func NewGeoUpdaterSecret() *GeoUpdaterSecret {
+	g := &GeoUpdaterSecret{Updated: make(chan struct{}, 1)}
 	return g
 }
 
@@ -88,9 +84,14 @@ func (g *GeoUpdaterSecret) RunWatcher(ctx context.Context, secretName, secretNam
 	_, err = secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			secret := obj.(*v1.Secret)
-			err := g.getLicenseEditionsFromSecret(secret)
-			if err != nil {
+			if err := g.getLicenseEditionsFromSecret(secret); err != nil {
 				log.Error(fmt.Sprintf("Failed to get license editions for secret %s: %v", secretName, err))
+				return
+			}
+			// Trigger initial download when the secret is first observed.
+			select {
+			case g.Updated <- struct{}{}:
+			default:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -138,11 +139,8 @@ func (g *GeoUpdaterSecret) getLicenseEditionsFromSecret(secret *v1.Secret) error
 		}
 	}
 
-	g.handler.Mu.Lock()
 	g.licenseEditions = licenseEditions
 	g.Ready = true
-	g.handler.Cond.Broadcast()
-	g.handler.Mu.Unlock()
 	return nil
 }
 

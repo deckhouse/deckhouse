@@ -25,6 +25,8 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	rl "k8s.io/client-go/tools/leaderelection/resourcelock"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type LeaderElection struct {
@@ -32,17 +34,13 @@ type LeaderElection struct {
 	leaseLockNamespace string
 	podName            string
 	le                 *leaderelection.LeaderElector
-	Ready              bool
-	handler            *Handler
 }
 
-func NewLeaderElection(handler *Handler, leaseLockName, leaseLockNamespace string) *LeaderElection {
+func NewLeaderElection(leaseLockName, leaseLockNamespace string) *LeaderElection {
 	le := &LeaderElection{
 		leaseLockName:      leaseLockName,
 		leaseLockNamespace: leaseLockNamespace,
 		podName:            os.Getenv("POD_NAME"),
-		Ready:              false,
-		handler:            handler,
 	}
 
 	return le
@@ -52,7 +50,7 @@ func (l *LeaderElection) AcquireLeaderElection(ctx context.Context) error {
 	// Get the active kubernetes context
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(fmt.Sprintf("Failed get config for leader election: %v", err))
 	}
 
 	// Create a new lock. This will be used to create a Lease resource in the cluster.
@@ -68,7 +66,7 @@ func (l *LeaderElection) AcquireLeaderElection(ctx context.Context) error {
 	)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(fmt.Sprintf("Failed get kubeConfig for leader election: %v", err))
 	}
 
 	// Create a new leader election configuration with a 15 second lease duration.
@@ -89,33 +87,16 @@ func (l *LeaderElection) AcquireLeaderElection(ctx context.Context) error {
 
 	le, err := leaderelection.NewLeaderElector(lec)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(fmt.Sprintf("Failed get NewLeaderElector for leader election: %v", err))
 	}
-
-	// waiting when leader is elected
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if le.GetLeader() != "" {
-					l.handler.Mu.Lock()
-					l.Ready = true
-					l.handler.Cond.Broadcast()
-					l.handler.Mu.Unlock()
-					return
-				}
-			}
-		}
-	}()
 
 	l.le = le
 	le.Run(ctx)
 
 	<-ctx.Done()
 	return nil
+}
+
+func (l *LeaderElection) LeaderIsElected() bool {
+	return len(l.le.GetLeader()) > 0
 }
