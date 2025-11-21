@@ -91,3 +91,25 @@ properties:
     items:
       type: string
       pattern: '^[0-9a-zA-Z\.-]+$'
+  stsPodsHostsAppender:
+    type: object
+    description: |
+      Settings for the StatefulSet pods hosts appender webhook used to render additional FQDNs in `/etc/hosts` for Pods with `spec.subdomain` when `clusterDomainAliases` are set.
+    properties:
+      initContainerRequests:
+        type: object
+        description: |
+          Resource requests for the init container injected into Pods by the webhook.
+        properties:
+          cpu:
+            oneOf:
+              - type: number
+                format: int
+              - type: string
+            pattern: "^[0-9]+m?$"
+          memory:
+            oneOf:
+              - type: number
+                format: int
+              - type: string
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
