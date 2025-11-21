@@ -69,7 +69,7 @@ spec:
             value: {{ .Values.kubeDns.clusterDomainAliases | join " " | quote }}
           - name: INIT_CONTAINER_IMAGE
             value: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderInitContainer") }}
-          - name: INIT_CONTAINER_MEM_REQUEST
+          - name: INIT_CONTAINER_CPU_REQUEST
             value: "10m"
           - name: INIT_CONTAINER_MEM_REQUEST
             value: "16Mi"
