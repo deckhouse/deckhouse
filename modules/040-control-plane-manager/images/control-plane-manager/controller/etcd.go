@@ -67,7 +67,7 @@ func EtcdJoinConverge() error {
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info("etcd join converge", slog.String("output", s))
 	}
 	return err
 }
