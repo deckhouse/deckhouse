@@ -158,16 +158,9 @@ func (r *reconciler) EnsureLabelOperationTrigger(ctx context.Context, operation 
 		operation.Labels = make(map[string]string)
 	}
 
-	var trigger string
-	if operation.Spec.Update != nil {
-		trigger = "update"
-	} else {
-		trigger = "sync"
-	}
-
-	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok || existing != trigger {
+	if _, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
 		original := operation.DeepCopy()
-		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = trigger
+		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
 
 		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return res, fmt.Errorf("patch operation trigger label: %w", err)
@@ -187,10 +180,10 @@ func (r *reconciler) EnsureLabelOperationType(ctx context.Context, operation *v1
 	}
 
 	var opType string
-	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		opType = "full"
+	if operation.Spec.Type != "" {
+		opType = operation.Spec.Type
 	} else {
-		opType = "incremental"
+		opType = ""
 	}
 
 	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || existing != opType {
