@@ -107,3 +107,6 @@ The metric `geoip_errors_total` has been added, which indicates the number of er
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
 
 https://github.com/kubernetes/ingress-nginx/pull/14005
+
+### 019-skip-tls-verification-maxmind.patch
+Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
