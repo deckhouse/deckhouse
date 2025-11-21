@@ -16,6 +16,14 @@
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
+      description: |-
+        The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
+
+        To check the Pod's status, run the following command:
+        
+        ```shell
+        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        ```
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase="Running",pod=~"cluster-autoscaler-.*"})
