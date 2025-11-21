@@ -655,7 +655,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-09-22"
 final: false
 mount:
 - from: build_dir
@@ -881,7 +880,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
-fromCacheVersion: "2025-09-18"
 mount:
 - from: build_dir
   to: /apps
