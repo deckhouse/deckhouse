@@ -1012,7 +1012,8 @@ spec:
                     maxmindMirror:
                       type: string
                       description: |
-                        Custom URL address for download GeoIP DB, by default https://download.maxmind.com.
+                        The URL for downloading GeoIP databases.
+                        If no parameter is specified or the parameter has an empty value, the default value will be used, which is `https://download.maxmind.com`.
 
                         **Be aware if using Self-Signed TLS certificate set optinons skip-tls-verification to "true" value.**
                         If this mirror is used to host preloaded archives, the `licenseKey` parameter may be omitted.

@@ -6,7 +6,7 @@ The geoproxy server acts as a caching server for the IngressNginxController. It 
 
 ## Airgap load GeoIP DB
 
-Goal: preload the MaxMind databases into geoproxy storage when the cluster has no egress to the Internet or access to MaxMind service.
+Goal: preload the MaxMind databases into geoproxy storage when the cluster has no access to the Internet or to MaxMind service.
 
 - Expected files format and names
   - Place tarballs exactly as downloaded from MaxMind: `<edition>.tar.gz` (not raw `.mmdb`).
@@ -24,7 +24,7 @@ Goal: preload the MaxMind databases into geoproxy storage when the cluster has n
 > [!IMPORTANT]
 >  You can configure `spec.geoIP2.maxmindMirror` without `maxmindLicenseKey`. In this case geoproxy will only download archives from your mirror (or use the preloaded tarballs) and won't attempt to reach MaxMind directly.
 
-- Preload into PVC (recommended)
+### Preload into PVC (recommended)
   -  Ensure geoproxy is deployed and the PVC for the first replica exists (usually `geo-data-geoproxy-0`).
   -  Create a temporary pod that mounts the PVC and sleeps:
 
@@ -77,14 +77,14 @@ kubectl -n d8-ingress-nginx delete pod geoproxy-preload --wait=true
 kubectl -n d8-ingress-nginx scale sts/geoproxy --replicas=<previous_number>
 ```
 
-- Preload into emptyDir (non‑persistent if not exists PV)
+### Preload into emptyDir (non‑persistent if not exists PV)
   - Copy tarballs directly into the running pod (repeat per edition):
 
 ```bash
 kubectl -n d8-ingress-nginx cp GeoLite2-ASN.tar.gz geoproxy-0:/data/GeoLite2-ASN.tar.gz -c geoproxy
 ```
 
-  - Note: data will vanish on pod restart or reschedule.
+  - Note: data will vanish on pod reschedule.
 
 > [!TIP]
 > You can also download a tarball directly from MaxMind and put it into the container:
