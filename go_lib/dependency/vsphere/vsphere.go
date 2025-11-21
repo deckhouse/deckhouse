@@ -150,15 +150,20 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 		return nil, err
 	}
 
-	rtype := pbmTypes.PbmProfileResourceType{
-		ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
-	}
-
-	category := pbmTypes.PbmProfileCategoryEnumREQUIREMENT
-
-	ids, err := pc.QueryProfile(context.TODO(), rtype, string(category))
+	ids, err := pc.QueryProfile(
+		context.TODO(),
+		pbmTypes.PbmProfileResourceType{
+			ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
+		},
+		string(pbmTypes.PbmProfileCategoryEnumREQUIREMENT),
+	)
 	if err != nil {
 		return nil, err
+	}
+
+	// RetrieveContent returns error if ids are empty.
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
 	profiles, err := pc.RetrieveContent(context.TODO(), ids)
