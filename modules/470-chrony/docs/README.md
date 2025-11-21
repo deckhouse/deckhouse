@@ -18,7 +18,7 @@ d8 k exec -it -n d8-chrony ds/chrony-master -- chronyc -N sources
 
 Ouput example:
 
-```
+```text
 MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ===============================================================================
 ^* pool.ntp.org.                 2  10   377   171   -502us[ -909us] +/- 5388us
@@ -31,7 +31,7 @@ MS Name/IP address         Stratum Poll Reach LastRx Last sample
 `^+` - combined NTP server (`chrony` combines information from `combined` servers to reduce inaccuracies);  
 `^*` - current NTP server;  
 `^-` - non-combinable NTP server.    
-Extra flag `-v` adds information about meanings of the columns: `chronyc sources -v`.    
+Extra flag `-v` adds information about meanings of the columns: `chronyc sources -v`.  
 {% endalert %}
 
 `chrony` agents on master nodes and on other nodes have one main difference - on all nodes that are not masters, the list of NTP servers contains not only NTP servers from `module config`, but also the addresses of all master nodes of the cluster.  
