@@ -287,7 +287,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
    d8 k delete node <node>
    ```
 

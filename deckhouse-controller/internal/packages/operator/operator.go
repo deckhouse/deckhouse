@@ -17,6 +17,7 @@ package operator
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,6 +31,7 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
@@ -58,8 +60,9 @@ type Operator struct {
 	nelmService  *nelm.Service         // Helm release management and monitoring
 	installer    *installer.Installer  // Erofs installer
 
-	manager   *manager.Manager
-	scheduler *schedule.Scheduler
+	manager     *manager.Manager
+	scheduler   *schedule.Scheduler
+	debugServer *debug.Server
 
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
@@ -148,12 +151,34 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 		QueueService:      o.queueService,
 	}, o.logger).Start()
 
+	if err := o.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
+		return nil, fmt.Errorf("register debug server: %w", err)
+	}
+
 	return o, nil
 }
 
-// QueueService returns the queue service for external access.
-func (o *Operator) QueueService() *queue.Service {
-	return o.queueService
+func (o *Operator) registerDebugServer(sockerPath string) error {
+	o.debugServer = debug.NewServer(o.logger)
+	if err := o.debugServer.Start(sockerPath); err != nil {
+		return fmt.Errorf("start debug server: %w", err)
+	}
+
+	o.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(o.Dump()) //nolint:errcheck
+	})
+
+	o.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(o.queueService.Dump()) //nolint:errcheck
+	})
+
+	return nil
 }
 
 // Scheduler return the scheduler for external access

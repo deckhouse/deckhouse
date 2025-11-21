@@ -108,6 +108,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 	}
 
 	for _, mpo := range mpos.Items {
+		moduleName := mpo.GetModuleName()
+
 		// ignore deleted mpo or unready mpo
 		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
 			continue
@@ -156,11 +158,11 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, module.Name, mpo.Spec.ImageTag); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", module.Name, err)
+		if err = l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
 
 	return nil
@@ -241,11 +243,11 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, module.Name, release.GetModuleVersion()); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", module.Name, err)
+		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		l.registries[release.GetModuleName()] = utils.BuildRegistryValue(source)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
 
 	return nil

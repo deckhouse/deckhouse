@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -116,4 +118,14 @@ func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) e
 	}
 
 	return nil
+}
+
+// IsSupported scans /proc/filesystems for erofs type, it returns whether erofs is supported
+func IsSupported() bool {
+	content, err := os.ReadFile("/proc/filesystems")
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(string(content), erofsType)
 }

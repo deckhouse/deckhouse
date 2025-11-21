@@ -356,10 +356,11 @@ sudo -i d8 k create -f $PWD/user.yml
           <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
+code.example.com
+commander.example.com
+console.example.com
 dex.example.com
+documentation.example.com
 grafana.example.com
 hubble.example.com
 istio.example.com
@@ -368,6 +369,7 @@ kubeconfig.example.com
 openvpn-admin.example.com
 prometheus.example.com
 status.example.com
+tools.example.com
 upmeter.example.com</code>
 </pre>
         </div>
@@ -382,10 +384,11 @@ upmeter.example.com</code>
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
+$PUBLIC_IP code.example.com
+$PUBLIC_IP commander.example.com
+$PUBLIC_IP console.example.com
 $PUBLIC_IP dex.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com
 $PUBLIC_IP istio.example.com
@@ -394,6 +397,7 @@ $PUBLIC_IP kubeconfig.example.com
 $PUBLIC_IP openvpn-admin.example.com
 $PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
+$PUBLIC_IP tools.example.com
 $PUBLIC_IP upmeter.example.com
 EOF
 "
