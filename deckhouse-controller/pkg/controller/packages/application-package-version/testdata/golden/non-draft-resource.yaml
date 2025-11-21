@@ -4,14 +4,14 @@ kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
-    draft: "false"
-    package: test
-    repository: deckhouse
+    packages.deckhouse.io/draft: "false"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
   resourceVersion: "1"
 spec:
   packageName: test
-  repository: deckhouse
+  packageRepository: deckhouse
   version: v1.0.0
 status: {}
 ---

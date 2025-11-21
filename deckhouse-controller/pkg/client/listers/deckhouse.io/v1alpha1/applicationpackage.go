@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ApplicationPackageLister helps list ApplicationPackages.
@@ -27,39 +27,19 @@ import (
 type ApplicationPackageLister interface {
 	// List lists all ApplicationPackages in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ApplicationPackage, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.ApplicationPackage, err error)
 	// Get retrieves the ApplicationPackage from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ApplicationPackage, error)
+	Get(name string) (*deckhouseiov1alpha1.ApplicationPackage, error)
 	ApplicationPackageListerExpansion
 }
 
 // applicationPackageLister implements the ApplicationPackageLister interface.
 type applicationPackageLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha1.ApplicationPackage]
 }
 
 // NewApplicationPackageLister returns a new ApplicationPackageLister.
 func NewApplicationPackageLister(indexer cache.Indexer) ApplicationPackageLister {
-	return &applicationPackageLister{indexer: indexer}
-}
-
-// List lists all ApplicationPackages in the indexer.
-func (s *applicationPackageLister) List(selector labels.Selector) (ret []*v1alpha1.ApplicationPackage, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ApplicationPackage))
-	})
-	return ret, err
-}
-
-// Get retrieves the ApplicationPackage from the index for a given name.
-func (s *applicationPackageLister) Get(name string) (*v1alpha1.ApplicationPackage, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("applicationpackage"), name)
-	}
-	return obj.(*v1alpha1.ApplicationPackage), nil
+	return &applicationPackageLister{listers.New[*deckhouseiov1alpha1.ApplicationPackage](indexer, deckhouseiov1alpha1.Resource("applicationpackage"))}
 }

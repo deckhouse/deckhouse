@@ -75,20 +75,12 @@ func (m *PackageOperatorStub) AddApplication(_ context.Context, app *v1alpha1.Ap
 	}
 }
 
-func (m *PackageOperatorStub) AddClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
-	m.logger.Debug("adding cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
-}
-
 func (m *PackageOperatorStub) AddModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {
 	m.logger.Debug("adding module", slog.String("name", metadata.ModuleName), slog.String("version", metadata.Version))
 }
 
 func (m *PackageOperatorStub) RemoveApplication(_ context.Context, app *v1alpha1.Application) {
 	m.logger.Debug("removing application", slog.String("name", app.Name))
-}
-
-func (m *PackageOperatorStub) RemoveClusterApplication(_ context.Context, capvStatus *v1alpha1.ClusterApplicationPackageVersionStatus) {
-	m.logger.Debug("removing cluster application", slog.String("name", capvStatus.PackageName), slog.String("version", capvStatus.Version))
 }
 
 func (m *PackageOperatorStub) RemoveModule(_ context.Context, metadata *v1alpha1.ModuleReleaseSpec) {

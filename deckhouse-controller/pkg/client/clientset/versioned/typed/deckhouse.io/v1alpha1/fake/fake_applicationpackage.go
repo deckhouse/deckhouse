@@ -16,114 +16,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeApplicationPackages implements ApplicationPackageInterface
-type FakeApplicationPackages struct {
+// fakeApplicationPackages implements ApplicationPackageInterface
+type fakeApplicationPackages struct {
+	*gentype.FakeClientWithList[*v1alpha1.ApplicationPackage, *v1alpha1.ApplicationPackageList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var applicationpackagesResource = v1alpha1.SchemeGroupVersion.WithResource("applicationpackages")
-
-var applicationpackagesKind = v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackage")
-
-// Get takes name of the applicationPackage, and returns the corresponding applicationPackage object, and an error if there is any.
-func (c *FakeApplicationPackages) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ApplicationPackage, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(applicationpackagesResource, name), &v1alpha1.ApplicationPackage{})
-	if obj == nil {
-		return nil, err
+func newFakeApplicationPackages(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ApplicationPackageInterface {
+	return &fakeApplicationPackages{
+		gentype.NewFakeClientWithList[*v1alpha1.ApplicationPackage, *v1alpha1.ApplicationPackageList](
+			fake.Fake,
+			"",
+			v1alpha1.SchemeGroupVersion.WithResource("applicationpackages"),
+			v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackage"),
+			func() *v1alpha1.ApplicationPackage { return &v1alpha1.ApplicationPackage{} },
+			func() *v1alpha1.ApplicationPackageList { return &v1alpha1.ApplicationPackageList{} },
+			func(dst, src *v1alpha1.ApplicationPackageList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ApplicationPackageList) []*v1alpha1.ApplicationPackage {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ApplicationPackageList, items []*v1alpha1.ApplicationPackage) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ApplicationPackage), err
-}
-
-// List takes label and field selectors, and returns the list of ApplicationPackages that match those selectors.
-func (c *FakeApplicationPackages) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ApplicationPackageList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(applicationpackagesResource, applicationpackagesKind, opts), &v1alpha1.ApplicationPackageList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ApplicationPackageList{ListMeta: obj.(*v1alpha1.ApplicationPackageList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ApplicationPackageList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested applicationPackages.
-func (c *FakeApplicationPackages) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(applicationpackagesResource, opts))
-}
-
-// Create takes the representation of a applicationPackage and creates it.  Returns the server's representation of the applicationPackage, and an error, if there is any.
-func (c *FakeApplicationPackages) Create(ctx context.Context, applicationPackage *v1alpha1.ApplicationPackage, opts v1.CreateOptions) (result *v1alpha1.ApplicationPackage, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(applicationpackagesResource, applicationPackage), &v1alpha1.ApplicationPackage{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ApplicationPackage), err
-}
-
-// Update takes the representation of a applicationPackage and updates it. Returns the server's representation of the applicationPackage, and an error, if there is any.
-func (c *FakeApplicationPackages) Update(ctx context.Context, applicationPackage *v1alpha1.ApplicationPackage, opts v1.UpdateOptions) (result *v1alpha1.ApplicationPackage, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(applicationpackagesResource, applicationPackage), &v1alpha1.ApplicationPackage{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ApplicationPackage), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeApplicationPackages) UpdateStatus(ctx context.Context, applicationPackage *v1alpha1.ApplicationPackage, opts v1.UpdateOptions) (*v1alpha1.ApplicationPackage, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(applicationpackagesResource, "status", applicationPackage), &v1alpha1.ApplicationPackage{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ApplicationPackage), err
-}
-
-// Delete takes name of the applicationPackage and deletes it. Returns an error if one occurs.
-func (c *FakeApplicationPackages) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(applicationpackagesResource, name, opts), &v1alpha1.ApplicationPackage{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeApplicationPackages) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(applicationpackagesResource, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ApplicationPackageList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched applicationPackage.
-func (c *FakeApplicationPackages) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ApplicationPackage, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(applicationpackagesResource, name, pt, data, subresources...), &v1alpha1.ApplicationPackage{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ApplicationPackage), err
 }

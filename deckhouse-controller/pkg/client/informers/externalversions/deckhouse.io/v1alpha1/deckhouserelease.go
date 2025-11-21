@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // DeckhouseReleases.
 type DeckhouseReleaseInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.DeckhouseReleaseLister
+	Lister() deckhouseiov1alpha1.DeckhouseReleaseLister
 }
 
 type deckhouseReleaseInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredDeckhouseReleaseInformer(client versioned.Interface, resyncPerio
 				return client.DeckhouseV1alpha1().DeckhouseReleases().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.DeckhouseRelease{},
+		&apisdeckhouseiov1alpha1.DeckhouseRelease{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *deckhouseReleaseInformer) defaultInformer(client versioned.Interface, r
 }
 
 func (f *deckhouseReleaseInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.DeckhouseRelease{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.DeckhouseRelease{}, f.defaultInformer)
 }
 
-func (f *deckhouseReleaseInformer) Lister() v1alpha1.DeckhouseReleaseLister {
-	return v1alpha1.NewDeckhouseReleaseLister(f.Informer().GetIndexer())
+func (f *deckhouseReleaseInformer) Lister() deckhouseiov1alpha1.DeckhouseReleaseLister {
+	return deckhouseiov1alpha1.NewDeckhouseReleaseLister(f.Informer().GetIndexer())
 }

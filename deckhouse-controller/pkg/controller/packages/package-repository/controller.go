@@ -41,10 +41,6 @@ const (
 	// requeueInterval is the interval at which the controller will requeue the PackageRepository
 	// after successful reconciliation to trigger periodic scanning
 	requeueInterval = 6 * time.Hour
-
-	// operationLabelRepository is the label used to identify PackageRepositoryOperations
-	// that belong to a specific PackageRepository
-	operationLabelRepository = "packages.deckhouse.io/repository"
 )
 
 type reconciler struct {
@@ -131,7 +127,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
 	err := r.client.List(ctx, operationList, client.MatchingLabels{
-		operationLabelRepository: packageRepository.Name,
+		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
@@ -178,7 +174,9 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		ObjectMeta: metav1.ObjectMeta{
 			Name: operationName,
 			Labels: map[string]string{
-				operationLabelRepository: packageRepository.Name,
+				v1alpha1.PackagesRepositoryOperationLabelRepository:       packageRepository.Name,
+				v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
+				v1alpha1.PackagesRepositoryOperationLabelOperationType:    v1alpha1.PackageRepositoryOperationTypeUpdate,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -192,7 +190,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		},
 		Spec: v1alpha1.PackageRepositoryOperationSpec{
 			PackageRepository: packageRepository.Name,
-			Type:              v1alpha1.PackageRepositoryOperationTypeScan,
+			Type:              v1alpha1.PackageRepositoryOperationTypeUpdate,
 			Update: &v1alpha1.PackageRepositoryOperationUpdate{
 				FullScan: fullScan,
 				Timeout:  "5m",
@@ -226,7 +224,7 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	// Delete all PackageRepositoryOperations associated with this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
 	err := r.client.List(ctx, operationList, client.MatchingLabels{
-		operationLabelRepository: packageRepository.Name,
+		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
 	})
 	if err != nil {
 		return fmt.Errorf("list operations: %w", err)

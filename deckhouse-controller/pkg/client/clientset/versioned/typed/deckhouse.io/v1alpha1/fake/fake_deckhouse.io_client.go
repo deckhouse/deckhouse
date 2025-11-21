@@ -26,71 +26,59 @@ type FakeDeckhouseV1alpha1 struct {
 }
 
 func (c *FakeDeckhouseV1alpha1) Applications(namespace string) v1alpha1.ApplicationInterface {
-	return &FakeApplications{c, namespace}
+	return newFakeApplications(c, namespace)
 }
 
 func (c *FakeDeckhouseV1alpha1) ApplicationPackages() v1alpha1.ApplicationPackageInterface {
-	return &FakeApplicationPackages{c}
+	return newFakeApplicationPackages(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ApplicationPackageVersions() v1alpha1.ApplicationPackageVersionInterface {
-	return &FakeApplicationPackageVersions{c}
-}
-
-func (c *FakeDeckhouseV1alpha1) ClusterApplications() v1alpha1.ClusterApplicationInterface {
-	return &FakeClusterApplications{c}
-}
-
-func (c *FakeDeckhouseV1alpha1) ClusterApplicationPackages() v1alpha1.ClusterApplicationPackageInterface {
-	return &FakeClusterApplicationPackages{c}
-}
-
-func (c *FakeDeckhouseV1alpha1) ClusterApplicationPackageVersions() v1alpha1.ClusterApplicationPackageVersionInterface {
-	return &FakeClusterApplicationPackageVersions{c}
+	return newFakeApplicationPackageVersions(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) DeckhouseReleases() v1alpha1.DeckhouseReleaseInterface {
-	return &FakeDeckhouseReleases{c}
+	return newFakeDeckhouseReleases(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) Modules() v1alpha1.ModuleInterface {
-	return &FakeModules{c}
+	return newFakeModules(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleConfigs() v1alpha1.ModuleConfigInterface {
-	return &FakeModuleConfigs{c}
+	return newFakeModuleConfigs(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleDocumentations() v1alpha1.ModuleDocumentationInterface {
-	return &FakeModuleDocumentations{c}
+	return newFakeModuleDocumentations(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModulePullOverrides() v1alpha1.ModulePullOverrideInterface {
-	return &FakeModulePullOverrides{c}
+	return newFakeModulePullOverrides(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleReleases() v1alpha1.ModuleReleaseInterface {
-	return &FakeModuleReleases{c}
+	return newFakeModuleReleases(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleSettingsDefinitions() v1alpha1.ModuleSettingsDefinitionInterface {
-	return &FakeModuleSettingsDefinitions{c}
+	return newFakeModuleSettingsDefinitions(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleSources() v1alpha1.ModuleSourceInterface {
-	return &FakeModuleSources{c}
+	return newFakeModuleSources(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePolicyInterface {
-	return &FakeModuleUpdatePolicies{c}
+	return newFakeModuleUpdatePolicies(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) PackageRepositories() v1alpha1.PackageRepositoryInterface {
-	return &FakePackageRepositories{c}
+	return newFakePackageRepositories(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) PackageRepositoryOperations() v1alpha1.PackageRepositoryOperationInterface {
-	return &FakePackageRepositoryOperations{c}
+	return newFakePackageRepositoryOperations(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

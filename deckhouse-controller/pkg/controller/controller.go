@@ -62,8 +62,6 @@ import (
 	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
-	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -200,9 +198,6 @@ func NewDeckhouseController(
 	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
 		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ClusterApplication{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
@@ -341,16 +336,6 @@ func NewDeckhouseController(
 		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
-		}
-
-		err = packageclusterapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("cluster-application-package-version-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register cluster application package version controller: %w", err)
-		}
-
-		err = packageclusterapplication.RegisterController(runtimeManager, logger.Named("cluster-application-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register cluster application controller: %w", err)
 		}
 
 		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))

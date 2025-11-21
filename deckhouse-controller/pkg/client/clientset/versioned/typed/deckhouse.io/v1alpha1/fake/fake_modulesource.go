@@ -16,114 +16,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeModuleSources implements ModuleSourceInterface
-type FakeModuleSources struct {
+// fakeModuleSources implements ModuleSourceInterface
+type fakeModuleSources struct {
+	*gentype.FakeClientWithList[*v1alpha1.ModuleSource, *v1alpha1.ModuleSourceList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var modulesourcesResource = v1alpha1.SchemeGroupVersion.WithResource("modulesources")
-
-var modulesourcesKind = v1alpha1.SchemeGroupVersion.WithKind("ModuleSource")
-
-// Get takes name of the moduleSource, and returns the corresponding moduleSource object, and an error if there is any.
-func (c *FakeModuleSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleSource, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(modulesourcesResource, name), &v1alpha1.ModuleSource{})
-	if obj == nil {
-		return nil, err
+func newFakeModuleSources(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ModuleSourceInterface {
+	return &fakeModuleSources{
+		gentype.NewFakeClientWithList[*v1alpha1.ModuleSource, *v1alpha1.ModuleSourceList](
+			fake.Fake,
+			"",
+			v1alpha1.SchemeGroupVersion.WithResource("modulesources"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
+			func() *v1alpha1.ModuleSource { return &v1alpha1.ModuleSource{} },
+			func() *v1alpha1.ModuleSourceList { return &v1alpha1.ModuleSourceList{} },
+			func(dst, src *v1alpha1.ModuleSourceList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ModuleSourceList) []*v1alpha1.ModuleSource {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ModuleSourceList, items []*v1alpha1.ModuleSource) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ModuleSource), err
-}
-
-// List takes label and field selectors, and returns the list of ModuleSources that match those selectors.
-func (c *FakeModuleSources) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleSourceList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(modulesourcesResource, modulesourcesKind, opts), &v1alpha1.ModuleSourceList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ModuleSourceList{ListMeta: obj.(*v1alpha1.ModuleSourceList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ModuleSourceList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested moduleSources.
-func (c *FakeModuleSources) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(modulesourcesResource, opts))
-}
-
-// Create takes the representation of a moduleSource and creates it.  Returns the server's representation of the moduleSource, and an error, if there is any.
-func (c *FakeModuleSources) Create(ctx context.Context, moduleSource *v1alpha1.ModuleSource, opts v1.CreateOptions) (result *v1alpha1.ModuleSource, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(modulesourcesResource, moduleSource), &v1alpha1.ModuleSource{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSource), err
-}
-
-// Update takes the representation of a moduleSource and updates it. Returns the server's representation of the moduleSource, and an error, if there is any.
-func (c *FakeModuleSources) Update(ctx context.Context, moduleSource *v1alpha1.ModuleSource, opts v1.UpdateOptions) (result *v1alpha1.ModuleSource, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(modulesourcesResource, moduleSource), &v1alpha1.ModuleSource{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSource), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeModuleSources) UpdateStatus(ctx context.Context, moduleSource *v1alpha1.ModuleSource, opts v1.UpdateOptions) (*v1alpha1.ModuleSource, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(modulesourcesResource, "status", moduleSource), &v1alpha1.ModuleSource{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSource), err
-}
-
-// Delete takes name of the moduleSource and deletes it. Returns an error if one occurs.
-func (c *FakeModuleSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(modulesourcesResource, name, opts), &v1alpha1.ModuleSource{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeModuleSources) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(modulesourcesResource, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ModuleSourceList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched moduleSource.
-func (c *FakeModuleSources) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleSource, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(modulesourcesResource, name, pt, data, subresources...), &v1alpha1.ModuleSource{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModuleSource), err
 }

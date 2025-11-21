@@ -7,8 +7,8 @@ metadata:
   namespace: foobar
   resourceVersion: "2"
 spec:
-  applicationPackageName: test
-  repository: deckhouse
+  packageName: test
+  packageRepository: deckhouse
   version: v1.0.0
 status:
   conditions:

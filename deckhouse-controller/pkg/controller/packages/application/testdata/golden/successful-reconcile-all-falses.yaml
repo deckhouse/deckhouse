@@ -3,14 +3,12 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
   creationTimestamp: null
-  finalizers:
-  - application.deckhouse.io/processed
   name: test-app
   namespace: foobar
   resourceVersion: "4"
 spec:
-  applicationPackageName: test
-  repository: deckhouse
+  packageName: test
+  packageRepository: deckhouse
   version: v1.0.3
 status:
   conditions:
@@ -35,13 +33,13 @@ kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
-    package: test
-    repository: deckhouse
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.3
   resourceVersion: "1"
 spec:
   packageName: test
-  repository: deckhouse
+  packageRepository: deckhouse
   version: v1.0.3
 status:
   conditions:
@@ -49,7 +47,7 @@ status:
     lastTransitionTime: null
     status: "True"
     type: IsEnriched
-  metadata:
+  packageMetadata:
     category: Misc
     description:
       en: example — test

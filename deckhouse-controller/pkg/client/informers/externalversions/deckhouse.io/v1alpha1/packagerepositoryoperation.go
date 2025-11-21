@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // PackageRepositoryOperations.
 type PackageRepositoryOperationInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.PackageRepositoryOperationLister
+	Lister() deckhouseiov1alpha1.PackageRepositoryOperationLister
 }
 
 type packageRepositoryOperationInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredPackageRepositoryOperationInformer(client versioned.Interface, r
 				return client.DeckhouseV1alpha1().PackageRepositoryOperations().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.PackageRepositoryOperation{},
+		&apisdeckhouseiov1alpha1.PackageRepositoryOperation{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *packageRepositoryOperationInformer) defaultInformer(client versioned.In
 }
 
 func (f *packageRepositoryOperationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.PackageRepositoryOperation{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.PackageRepositoryOperation{}, f.defaultInformer)
 }
 
-func (f *packageRepositoryOperationInformer) Lister() v1alpha1.PackageRepositoryOperationLister {
-	return v1alpha1.NewPackageRepositoryOperationLister(f.Informer().GetIndexer())
+func (f *packageRepositoryOperationInformer) Lister() deckhouseiov1alpha1.PackageRepositoryOperationLister {
+	return deckhouseiov1alpha1.NewPackageRepositoryOperationLister(f.Informer().GetIndexer())
 }

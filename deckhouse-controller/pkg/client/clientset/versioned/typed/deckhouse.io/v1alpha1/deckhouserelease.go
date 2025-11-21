@@ -16,15 +16,14 @@
 package v1alpha1
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // DeckhouseReleasesGetter has a method to return a DeckhouseReleaseInterface.
@@ -35,147 +34,34 @@ type DeckhouseReleasesGetter interface {
 
 // DeckhouseReleaseInterface has methods to work with DeckhouseRelease resources.
 type DeckhouseReleaseInterface interface {
-	Create(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.CreateOptions) (*v1alpha1.DeckhouseRelease, error)
-	Update(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (*v1alpha1.DeckhouseRelease, error)
-	UpdateStatus(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (*v1alpha1.DeckhouseRelease, error)
+	Create(ctx context.Context, deckhouseRelease *deckhouseiov1alpha1.DeckhouseRelease, opts v1.CreateOptions) (*deckhouseiov1alpha1.DeckhouseRelease, error)
+	Update(ctx context.Context, deckhouseRelease *deckhouseiov1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (*deckhouseiov1alpha1.DeckhouseRelease, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+	UpdateStatus(ctx context.Context, deckhouseRelease *deckhouseiov1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (*deckhouseiov1alpha1.DeckhouseRelease, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.DeckhouseRelease, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.DeckhouseReleaseList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*deckhouseiov1alpha1.DeckhouseRelease, error)
+	List(ctx context.Context, opts v1.ListOptions) (*deckhouseiov1alpha1.DeckhouseReleaseList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.DeckhouseRelease, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *deckhouseiov1alpha1.DeckhouseRelease, err error)
 	DeckhouseReleaseExpansion
 }
 
 // deckhouseReleases implements DeckhouseReleaseInterface
 type deckhouseReleases struct {
-	client rest.Interface
+	*gentype.ClientWithList[*deckhouseiov1alpha1.DeckhouseRelease, *deckhouseiov1alpha1.DeckhouseReleaseList]
 }
 
 // newDeckhouseReleases returns a DeckhouseReleases
 func newDeckhouseReleases(c *DeckhouseV1alpha1Client) *deckhouseReleases {
 	return &deckhouseReleases{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*deckhouseiov1alpha1.DeckhouseRelease, *deckhouseiov1alpha1.DeckhouseReleaseList](
+			"deckhousereleases",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *deckhouseiov1alpha1.DeckhouseRelease { return &deckhouseiov1alpha1.DeckhouseRelease{} },
+			func() *deckhouseiov1alpha1.DeckhouseReleaseList { return &deckhouseiov1alpha1.DeckhouseReleaseList{} },
+		),
 	}
-}
-
-// Get takes name of the deckhouseRelease, and returns the corresponding deckhouseRelease object, and an error if there is any.
-func (c *deckhouseReleases) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.DeckhouseRelease, err error) {
-	result = &v1alpha1.DeckhouseRelease{}
-	err = c.client.Get().
-		Resource("deckhousereleases").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of DeckhouseReleases that match those selectors.
-func (c *deckhouseReleases) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.DeckhouseReleaseList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1alpha1.DeckhouseReleaseList{}
-	err = c.client.Get().
-		Resource("deckhousereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested deckhouseReleases.
-func (c *deckhouseReleases) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("deckhousereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a deckhouseRelease and creates it.  Returns the server's representation of the deckhouseRelease, and an error, if there is any.
-func (c *deckhouseReleases) Create(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.CreateOptions) (result *v1alpha1.DeckhouseRelease, err error) {
-	result = &v1alpha1.DeckhouseRelease{}
-	err = c.client.Post().
-		Resource("deckhousereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(deckhouseRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a deckhouseRelease and updates it. Returns the server's representation of the deckhouseRelease, and an error, if there is any.
-func (c *deckhouseReleases) Update(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (result *v1alpha1.DeckhouseRelease, err error) {
-	result = &v1alpha1.DeckhouseRelease{}
-	err = c.client.Put().
-		Resource("deckhousereleases").
-		Name(deckhouseRelease.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(deckhouseRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *deckhouseReleases) UpdateStatus(ctx context.Context, deckhouseRelease *v1alpha1.DeckhouseRelease, opts v1.UpdateOptions) (result *v1alpha1.DeckhouseRelease, err error) {
-	result = &v1alpha1.DeckhouseRelease{}
-	err = c.client.Put().
-		Resource("deckhousereleases").
-		Name(deckhouseRelease.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(deckhouseRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the deckhouseRelease and deletes it. Returns an error if one occurs.
-func (c *deckhouseReleases) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("deckhousereleases").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *deckhouseReleases) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("deckhousereleases").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched deckhouseRelease.
-func (c *deckhouseReleases) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.DeckhouseRelease, err error) {
-	result = &v1alpha1.DeckhouseRelease{}
-	err = c.client.Patch(pt).
-		Resource("deckhousereleases").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

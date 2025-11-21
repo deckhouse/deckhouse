@@ -28,7 +28,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -104,7 +103,7 @@ func (svc *StatusService) HandleEvent(ctx context.Context, event packagestatusse
 		return
 	}
 
-	if app.Spec.ApplicationPackageName != event.PackageName || app.Spec.Version != event.Version {
+	if app.Spec.PackageName != event.PackageName || app.Spec.Version != event.Version {
 		logger.Debug("application spec mismatch, skipping")
 		return
 	}
@@ -245,12 +244,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !app.DeletionTimestamp.IsZero() {
-		err := r.handleDelete(ctx, app)
-		if err != nil {
-			r.logger.Warn("delete application", slog.String("name", app.Name), log.Err(err))
-
-			return res, err
-		}
+		r.handleDelete(ctx, app)
 
 		return res, nil
 	}
@@ -273,7 +267,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	original := app.DeepCopy()
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.Repository, app.Spec.ApplicationPackageName, app.Spec.Version)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
 	if err != nil {
@@ -315,12 +309,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
-	// add finalizer
-	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
-		logger.Debug("add finalizer")
-		controllerutil.AddFinalizer(app, v1alpha1.ApplicationProcessedFinalizer)
-	}
-
 	err = r.client.Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
@@ -334,28 +322,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	return nil
 }
 
-func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) error {
+func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) {
 	logger := r.logger.With(slog.String("name", app.Name))
 
 	logger.Debug("deleting Application")
 
 	r.pm.RemoveApplication(ctx, app)
 
-	// remove finalizer
-	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationProcessedFinalizer) {
-		logger.Debug("remove finalizer")
-
-		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationProcessedFinalizer)
-
-		err := r.client.Update(ctx, app)
-		if err != nil {
-			return fmt.Errorf("remove finalizer for %s: %w", app.Name, err)
-		}
-	}
-
 	logger.Debug("delete Application complete")
-
-	return nil
 }
 
 func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
