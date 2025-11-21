@@ -99,9 +99,12 @@ func (c *config) addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionR
 		podHostname = pod.Name
 	}
 
-	runAsUser := int64(65534)
-	runAsGroup := int64(65534)
-	readOnlyRootFileSystem := true
+    runAsUser := int64(65534)
+    runAsGroup := int64(65534)
+    runAsNonRoot := true
+    readOnlyRootFileSystem := true
+    allowPrivilegeEscalation := false
+    seccompType := corev1.SeccompProfileTypeRuntimeDefault
 	initContainer := corev1.Container{
 		Name:         "render-etc-hosts-with-cluster-domain-aliases",
 		Image:        os.Getenv("INIT_CONTAINER_IMAGE"),
@@ -115,14 +118,17 @@ func (c *config) addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionR
 			{Name: "CLUSTER_DOMAIN_ALIASES", Value: os.Getenv("CLUSTER_DOMAIN_ALIASES")},
 			{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
 		},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"all"},
-			},
-			RunAsUser:              &runAsUser,
-			RunAsGroup:             &runAsGroup,
-			ReadOnlyRootFilesystem: &readOnlyRootFileSystem,
-		},
+        SecurityContext: &corev1.SecurityContext{
+            Capabilities: &corev1.Capabilities{
+                Drop: []corev1.Capability{"all"},
+            },
+            RunAsUser:                &runAsUser,
+            RunAsGroup:               &runAsGroup,
+            RunAsNonRoot:             &runAsNonRoot,
+            ReadOnlyRootFilesystem:   &readOnlyRootFileSystem,
+            AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+            SeccompProfile:           &corev1.SeccompProfile{Type: seccompType},
+        },
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse(c.cpuRequest),
