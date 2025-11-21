@@ -2,3 +2,8 @@ properties:
   enableLogs:
     description: |
       Включает логирование запросов для экземпляров node-local-dns.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
