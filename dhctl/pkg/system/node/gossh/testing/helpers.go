@@ -25,7 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
-	gossh "golang.org/x/crypto/ssh"
+	gossh "github.com/deckhouse/lib-gossh"
 )
 
 // helper func to generate SSH keys
