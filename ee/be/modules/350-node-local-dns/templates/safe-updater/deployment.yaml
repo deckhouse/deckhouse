@@ -1,0 +1,123 @@
+{{- define "safe_updater_resources" }}
+cpu: 50m
+memory: 64Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: d8-node-local-dns-safe-updater
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: node-local-dns-safe-updater
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: safe-updater
+        minAllowed:
+          {{- include "safe_updater_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 100m
+          memory: 128Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: d8-node-local-dns-safe-updater
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: node-local-dns-safe-updater
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-local-dns-safe-updater
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater" )) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  selector:
+    matchLabels:
+      app: node-local-dns-safe-updater
+  minReadySeconds: 5
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: node-local-dns-safe-updater
+    spec:
+      automountServiceAccountToken: true
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+      - name: {{ .Chart.Name }}-registry
+      containers:
+        - name: safe-updater
+          image: {{ include "helm_lib_module_image" (list . "safeUpdater") }}
+          imagePullPolicy: IfNotPresent
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          command:
+            - /safe-updater
+            - --v=0
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 4264
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 4264
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 4264
+            name: health
+            protocol: TCP
+          - containerPort: 4265
+            name: pprof
+            protocol: TCP
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "safe_updater_resources" . | nindent 14 }}
+          {{- end }}
+      hostNetwork: false
+      terminationGracePeriodSeconds: 10
+      serviceAccountName: node-local-dns-safe-updater
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: control-plane
+                      operator: In
+                      values:
+                        - controller-manager
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+{{- end }}
