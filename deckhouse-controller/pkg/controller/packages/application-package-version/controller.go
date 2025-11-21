@@ -308,24 +308,24 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 	apv.Status.PackageName = pd.Name
 	apv.Status.Version = pd.Version
 
-	apv.Status.Metadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Category: pd.Category,
 		Stage:    pd.Stage,
 	}
 	if pd.Description != nil {
-		apv.Status.Metadata.Description = &v1alpha1.PackageDescription{
+		apv.Status.PackageMetadata.Description = &v1alpha1.PackageDescription{
 			Ru: pd.Description.Ru,
 			En: pd.Description.En,
 		}
 	}
 	if pd.Licensing != nil {
-		apv.Status.Metadata.Licensing = &v1alpha1.PackageLicensing{
+		apv.Status.PackageMetadata.Licensing = &v1alpha1.PackageLicensing{
 			Editions: convertLicensingEditions(pd.Licensing.Editions),
 		}
 	}
 
 	if pd.Requirements != nil {
-		apv.Status.Metadata.Requirements = &v1alpha1.PackageRequirements{
+		apv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
 			Deckhouse:  pd.Requirements.Deckhouse,
 			Kubernetes: pd.Requirements.Kubernetes,
 			Modules:    pd.Requirements.Modules,
@@ -334,7 +334,7 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 
 	if pd.VersionCompatibilityRules != nil {
 		if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
-			apv.Status.Metadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
+			apv.Status.PackageMetadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
 				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
 					From:             pd.VersionCompatibilityRules.Upgrade.From,
 					AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),

@@ -60,14 +60,17 @@ type ApplicationPackage struct {
 	Status ApplicationPackageStatus `json:"status,omitempty"`
 }
 
+type NamespaceName string
+
 type ApplicationPackageStatus struct {
-	Instances             *ApplicationPackageStatusInstances `json:"instances,omitempty"`
-	AvailableRepositories []string                           `json:"availableRepositories,omitempty"`
+	Instances             map[NamespaceName][]ApplicationPackageStatusInstance `json:"instances,omitempty"`
+	InstancesOverall      int                                                  `json:"instancesOverall,omitempty"`
+	AvailableRepositories []string                                             `json:"availableRepositories,omitempty"`
 }
 
-type ApplicationPackageStatusInstances struct {
-	Count      int      `json:"count,omitempty"`
-	Namespaces []string `json:"namespaces,omitempty"`
+type ApplicationPackageStatusInstance struct {
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -30,7 +30,6 @@ const (
 	PackageRepositoryOperationPhasePending    = "Pending"
 	PackageRepositoryOperationPhaseProcessing = "Processing"
 	PackageRepositoryOperationPhaseCompleted  = "Completed"
-	PackageRepositoryOperationPhaseFailed     = "Failed"
 
 	// PackageRepositoryOperation condition types
 	PackageRepositoryOperationConditionProcessed = "Processed"

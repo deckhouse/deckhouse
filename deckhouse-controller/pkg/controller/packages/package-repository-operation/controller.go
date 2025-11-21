@@ -221,8 +221,6 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
 		r.logger.Debug("operation already completed", slog.String("name", operation.Name))
-	case v1alpha1.PackageRepositoryOperationPhaseFailed:
-		r.logger.Debug("operation already failed", slog.String("name", operation.Name))
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
 

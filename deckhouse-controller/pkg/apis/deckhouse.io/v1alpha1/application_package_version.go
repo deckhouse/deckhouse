@@ -27,15 +27,18 @@ const (
 	ApplicationPackageVersionResource = "applicationpackageversions"
 	ApplicationPackageVersionKind     = "ApplicationPackageVersion"
 
-	ApplicationPackageVersionLabelDraft      = "draft"
-	ApplicationPackageVersionLabelPackage    = "package"
-	ApplicationPackageVersionLabelRepository = "repository"
+	ApplicationPackageVersionLabelDraft           = "packages.deckhouse.io/draft"
+	ApplicationPackageVersionLabelPackage         = "packages.deckhouse.io/package"
+	ApplicationPackageVersionLabelRepository      = "packages.deckhouse.io/repository"
+	ApplicationPackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 
-	ApplicationPackageVersionConditionTypeEnriched               = "IsEnriched"
+	ApplicationPackageVersionConditionTypeEnriched               = "MetadataLoaded"
 	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
 	ApplicationPackageVersionConditionReasonGetPackageRepoErr    = "GetPackageRepositoryError"
 	ApplicationPackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
 	ApplicationPackageVersionConditionReasonGetImageErr          = "GetImageError"
+
+	ApplicationPackageVersionFinalizer = "applicationpackageversion.deckhouse.io/used-by-application"
 )
 
 var (
@@ -80,10 +83,17 @@ type ApplicationPackageVersionSpec struct {
 }
 
 type ApplicationPackageVersionStatus struct {
-	PackageName string                                   `json:"packageName,omitempty"`
-	Version     string                                   `json:"version,omitempty"`
-	Metadata    *ApplicationPackageVersionStatusMetadata `json:"metadata,omitempty"`
-	Conditions  []ApplicationPackageVersionCondition     `json:"conditions,omitempty"`
+	PackageName     string                                    `json:"packageName,omitempty"`
+	PackageMetadata *ApplicationPackageVersionStatusMetadata  `json:"packageMetadata,omitempty"`
+	Version         string                                    `json:"version,omitempty"`
+	Conditions      []ApplicationPackageVersionCondition      `json:"conditions,omitempty"`
+	UsedBy          []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
+	UsedByCount     int                                       `json:"usedByCount,omitempty"`
+}
+
+type ApplicationPackageVersionStatusInstance struct {
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 type ApplicationPackageVersionCondition struct {
