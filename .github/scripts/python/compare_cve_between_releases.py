@@ -634,7 +634,7 @@ def generate_reports(curr_tag: str, prev_tag: str, module_results: dict,
     for title, severity, module_name in fixed_vulns:
         if module_name not in yaml_data:
             yaml_data[module_name] = {"fixed_vulnerabilities": []}
-        yaml_data[module_name]["fixed_vulnerabilities"].append({"summary": title.split()[0]})
+        yaml_data[module_name]["fixed_vulnerabilities"].append({"summary": title})
     
     # Sort modules alphabetically
     yaml_data = dict(sorted(yaml_data.items()))
