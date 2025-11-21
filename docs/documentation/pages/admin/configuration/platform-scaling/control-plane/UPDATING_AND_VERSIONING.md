@@ -38,3 +38,4 @@ The control plane update process in DKP is fully automated.
    ```
 
 1. Save the changes.
+1. Wait for the update to complete. You can track the update progress with the `d8 k get no` command. The update can be considered complete when the updated version appears in the `VERSION` column of each cluster node in the command output.

@@ -24,7 +24,7 @@ Switching DKP to CE/BE/SE/SE+/EE can be done in one of the following ways:
 1. Make sure the cluster has been migrated to be managed by the [`registry` module](/modules/registry/faq.html#how-to-migrate-to-the-registry-module).  
 If the cluster is not managed by the `registry` module, proceed to the [instruction](#switching-without-using-the-registry-module).
 
-1. Prepare variables for the license token and new edition name:
+1. Prepare variables for the license key and new edition name:
 
     > It is not necessary to fill the `NEW_EDITION` variable when switching to Deckhouse CE edition.
     > The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
@@ -253,7 +253,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 
 1. If the `registry` module is enabled, disable it by following [instruction](/modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
 
-1. Prepare variables for the license token and new edition name:
+1. Prepare variables for the license key and new edition name:
 
     > It is not necessary to fill the `NEW_EDITION` and `AUTH_STRING` variables when switching to Deckhouse CE edition.
     The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:

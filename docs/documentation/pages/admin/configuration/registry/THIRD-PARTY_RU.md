@@ -6,6 +6,10 @@ lang: ru
 ---
 
 {% alert level="warning" %}
+При использовании модуля [`registry`](/modules/registry/) смена адреса и параметров registry выполняется в секции [registry](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [`registry`](/modules/registry/examples.html).
+{% endalert %}
+
+{% alert level="warning" %}
 Использование registries, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 {% endalert %}
 
