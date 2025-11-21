@@ -102,19 +102,18 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	ApplicationPackageName string          `json:"applicationPackageName"`
-	Repository             string          `json:"repository,omitempty"`
-	Version                string          `json:"version"`
-	ReleaseChannel         string          `json:"releaseChannel,omitempty"`
-	Settings               *SettingsValues `json:"settings,omitempty"`
+	ApplicationPackageName string         `json:"applicationPackageName"`
+	Repository             string         `json:"repository,omitempty"`
+	Version                string         `json:"version"`
+	ReleaseChannel         string         `json:"releaseChannel,omitempty"`
+	Settings               SettingsValues `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
-	Version            *ApplicationStatusVersion            `json:"version,omitempty"`
-	Repository         string                               `json:"repository,omitempty"`
-	Status             string                               `json:"status,omitempty"`
-	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Version    *ApplicationStatusVersion    `json:"version,omitempty"`
+	Repository string                       `json:"repository,omitempty"`
+	Status     string                       `json:"status,omitempty"`
+	Conditions []ApplicationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
@@ -127,13 +126,6 @@ type ApplicationStatusCondition struct {
 	Status             corev1.ConditionStatus `json:"status"`
 	Reason             string                 `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
-}
-
-type ApplicationInternalStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
 	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
