@@ -324,5 +324,6 @@ func (r *CNIMigrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cniswitcherv1alpha1.CNIMigration{}). // Watch CNIMigration resources
+		Owns(&cniswitcherv1alpha1.CNINodeMigration{}). // Watch owned CNINodeMigration resources
 		Complete(r)
 }
