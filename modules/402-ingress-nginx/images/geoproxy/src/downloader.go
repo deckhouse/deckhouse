@@ -33,21 +33,25 @@ import (
 	"time"
 
 	maxmindClient "github.com/maxmind/geoipupdate/v7/client"
+	"k8s.io/klog/v2"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	dbExtension = ".tar.gz"
-	maxmindURL  = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
+	dbExtension    = ".tar.gz"
+	maxmindURL     = "https://download.maxmind.com/app/geoip_download?license_key=%v&edition_id=%v&suffix=tar.gz"
+	lockTimeLayout = time.RFC3339Nano
+
+	headlessServiceName = "geoproxy-headless"
+	kubeRBACProxyPort   = "7475" // kube-rbac-proxy serves HTTPS on 7475
 )
 
 type Downloader struct {
-	watcher     *GeoUpdaterSecret
-	lastUpdated time.Time
-	md5         map[string]string
-	mu          sync.Mutex
-	leader      *LeaderElection
+	watcher *GeoUpdaterSecret
+	md5     map[string]string
+	mu      sync.Mutex
+	leader  *LeaderElection
 }
 
 func NewDownloader(watcher *GeoUpdaterSecret, leader *LeaderElection) *Downloader {
@@ -58,101 +62,150 @@ func NewDownloader(watcher *GeoUpdaterSecret, leader *LeaderElection) *Downloade
 	}
 }
 
-func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
-	// If leader elector is not ready or this instance is not leader, skip work.
-	if d.leader == nil || d.leader.le == nil || !d.leader.le.IsLeader() {
-		log.Info("I'm not a leader, ignoring downloading GeoIP DB ...")
+func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Config, force bool) error {
+	mapLicenseAndEditions := d.watcher.GetLicenseEditions()
+	if len(mapLicenseAndEditions) == 0 {
+		klog.Infof("License editions is emty, skip downloading...")
 		return nil
 	}
 
-	mapLicenseAndEditions := d.watcher.GetLicenseEditions()
-	for licenseKey, account := range mapLicenseAndEditions {
-		accountID := account.AccountID
-		clientInitialized := false
-
-		var (
-			client maxmindClient.Client
-			err    error
-		)
-
-		if accountID > 0 {
-			client, err = maxmindClient.New(accountID, licenseKey)
-			if err != nil {
-				// Fallback to legacy later.
-				log.Error(fmt.Sprintf("Failed init MaxMind client: %v", err))
-			} else {
-				clientInitialized = true
-				log.Info("Client MaxMind successfully initialized!")
-			}
+	if !force {
+		expired, err := d.LockFileIsExpired(cfg)
+		if err != nil {
+			return fmt.Errorf("check lock file: %w", err)
 		}
-
-		for _, edition := range account.Editions {
-			// Try download via official MaxMind client if available
-			d.mu.Lock()
-			md5 := d.md5[edition]
-			d.mu.Unlock()
-
-			if clientInitialized && account.Mirror == "" {
-				downloadResp, err := client.Download(ctx, edition, md5)
-				if err != nil {
-					// Record the error and fallback to legacy method below.
-					incrementError(err)
-					log.Error(fmt.Sprintf("Failed download GeoIP DB by MaxMind client: %v", err))
-				} else {
-					if downloadResp.UpdateAvailable {
-						dbPath, err := d.saveDBFromMMDB(downloadResp.Reader, dstPathRoot, edition)
-						if err != nil {
-							log.Error(fmt.Sprintf("Error save downloading data from %v: %v", edition, err))
-						} else {
-							d.mu.Lock()
-							d.md5[edition] = downloadResp.MD5
-							d.lastUpdated = time.Now()
-							d.mu.Unlock()
-							log.Info(fmt.Sprintf("Successfully downloaded data from %v: %v", edition, dbPath))
-						}
-						// No need to try legacy if client already handled this edition
-						continue
-					}
-					// No update available via client – skip legacy download to avoid redundant work.
-					continue
-				}
-			}
-
-			// Try download as legacy option
-			url := createURL(account.Mirror, licenseKey, edition)
-			if account.Mirror != "" {
-				log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror))
-			} else {
-				log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
-			}
-			dataDB, err := downloadDB(url, account.SkipTLS)
-			if err != nil {
-				incrementError(err)
-				log.Error(fmt.Sprintf("Error downloading data from %v: %v", edition, err))
-				continue
-			}
-
-			dbPath, err := d.saveDB(dataDB, dstPathRoot, edition)
-			if err != nil {
-				log.Error(fmt.Sprintf("Error save downloading data from %v: %v", edition, err))
-				continue
-			}
-
-			log.Info(fmt.Sprintf("Successfully downloaded data from %v: %v", edition, dbPath))
+		if !expired {
+			return nil
 		}
 	}
 
+	var errs []error
+	for licenseKey, account := range mapLicenseAndEditions {
+		client, clientInitialized := d.initMaxMindClient(account.AccountID, licenseKey)
+
+		for _, edition := range account.Editions {
+			if err := d.downloadEdition(ctx, dstPathRoot, licenseKey, edition, account, client, clientInitialized, cfg); err != nil {
+				errs = append(errs, fmt.Errorf("license %s edition %s: %w", licenseKey, edition, err))
+				log.Error(err.Error())
+			}
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (d *Downloader) initMaxMindClient(accountID int, licenseKey string) (maxmindClient.Client, bool) {
+	if accountID <= 0 {
+		return maxmindClient.Client{}, false
+	}
+
+	client, err := maxmindClient.New(accountID, licenseKey)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed init MaxMind client: %v", err))
+		return maxmindClient.Client{}, false
+	}
+
+	log.Info("Client MaxMind successfully initialized!")
+	return client, true
+}
+
+func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account, client maxmindClient.Client, clientInitialized bool, cfg *Config) error {
+	currentMD5 := d.editionMD5(edition)
+
+	var maxmindErr error
+	// if not leader download db from leader
+	if !d.isLeader() {
+		account.Mirror = d.getLeaderLinkForDownload(headlessServiceName, cfg.Namespace, kubeRBACProxyPort)
+		account.SkipTLS = true // skip TLS kubeRbacProxy
+		return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
+	}
+
+	// try download db bu official library
+	if clientInitialized && account.Mirror == "" {
+		handled, err := d.tryMaxMindClient(ctx, client, edition, currentMD5, dstPathRoot)
+		if handled {
+			return err
+		}
+		if err != nil {
+			maxmindErr = err
+			log.Error(fmt.Sprintf("Failed download GeoIP DB by MaxMind client: %v", err))
+		}
+	}
+
+	// try download by manual build URL
+	legacyErr := d.downloadLegacyEdition(ctx, dstPathRoot, licenseKey, edition, account)
+	if legacyErr != nil && maxmindErr != nil {
+		return errors.Join(maxmindErr, legacyErr)
+	}
+
+	return legacyErr
+}
+
+func (d *Downloader) tryMaxMindClient(ctx context.Context, client maxmindClient.Client, edition, currentMD5, dstPathRoot string) (bool, error) {
+	downloadResp, err := client.Download(ctx, edition, currentMD5)
+	if err != nil {
+		incrementError(err)
+		return false, fmt.Errorf("maxmind client download: %w", err)
+	}
+
+	if !downloadResp.UpdateAvailable {
+		return true, nil
+	}
+
+	dbPath, err := d.saveDBFromMMDB(downloadResp.Reader, dstPathRoot, edition)
+	if err != nil {
+		return true, fmt.Errorf("save downloaded data: %w", err)
+	}
+
+	d.updateEditionState(edition, downloadResp.MD5)
+	log.Info(fmt.Sprintf("Successfully downloaded data from %v: %v", edition, dbPath))
+
+	return true, nil
+}
+
+func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account) error {
+	url := createURL(account.Mirror, licenseKey, edition)
+	if account.Mirror != "" {
+		log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror))
+	} else {
+		log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
+	}
+
+	dataDB, err := downloadDB(ctx, url, account.SkipTLS)
+	if err != nil {
+		incrementError(err)
+		return fmt.Errorf("download data: %w", err)
+	}
+
+	dbPath, err := d.saveDB(dataDB, dstPathRoot, edition)
+	if err != nil {
+		return fmt.Errorf("save downloading data: %w", err)
+	}
+
+	log.Info(fmt.Sprintf("Successfully downloaded data from %v: %v", edition, dbPath))
 	return nil
 }
 
-func downloadDB(url string, skipTLSverify bool) (io.ReadCloser, error) {
+func (d *Downloader) editionMD5(edition string) string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.md5[edition]
+}
+
+func (d *Downloader) updateEditionState(edition, newMD5 string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.md5[edition] = newMD5
+}
+
+func downloadDB(ctx context.Context, url string, skipTLSverify bool) (io.ReadCloser, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
-transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
+	transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 
-	client := &http.Client{Transport: transport}
+	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
 
-	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -186,11 +239,11 @@ transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 func (d *Downloader) saveDB(data io.ReadCloser, dstPathRoot, edition string) (string, error) {
 	absFilePath := fmt.Sprintf("%v/%v%v", dstPathRoot, edition, dbExtension)
 
+	defer data.Close()
+
 	if err := os.MkdirAll(dstPathRoot, 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
-
-	defer data.Close()
 
 	tmp, err := os.CreateTemp(dstPathRoot, "*.mmdb")
 	if err != nil {
@@ -215,6 +268,9 @@ func (d *Downloader) saveDB(data io.ReadCloser, dstPathRoot, edition string) (st
 	}
 
 	if equalMD5(newHashSting, oldHashString) {
+		if err := updateLockFile(); err != nil {
+			return "", err
+		}
 		return absFilePath, nil
 	}
 
@@ -222,11 +278,37 @@ func (d *Downloader) saveDB(data io.ReadCloser, dstPathRoot, edition string) (st
 		return "", fmt.Errorf("rename temp: %w", err)
 	}
 
-	d.mu.Lock()
-	d.lastUpdated = time.Now()
-	d.mu.Unlock()
+	if err := updateLockFile(); err != nil {
+		return "", err
+	}
 
 	return absFilePath, nil
+}
+
+func (d *Downloader) downloadFromLeader(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account) error {
+	const maxAttempts = 3
+	backoff := time.Second * 2
+	var legacyErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		legacyErr = d.downloadLegacyEdition(ctx, dstPathRoot, licenseKey, edition, account)
+		if legacyErr == nil {
+			return nil
+		}
+
+		if attempt == maxAttempts {
+			break
+		}
+
+		log.Warn(fmt.Sprintf("Failed to download %s from leader (%d/%d): %v; retry in %s", edition, attempt, maxAttempts, legacyErr, backoff))
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		backoff *= 2 // Increase backoff timeout on x2 :2, 4 ,8
+	}
+
+	return legacyErr
 }
 
 func equalMD5(a, b string) bool { return strings.EqualFold(a, b) }
@@ -279,11 +361,11 @@ func incrementError(dlErr error) {
 func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition string) (string, error) {
 	absFilePath := fmt.Sprintf("%v/%v%v", dstPathRoot, edition, dbExtension)
 
+	defer data.Close()
+
 	if err := os.MkdirAll(dstPathRoot, 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
-
-	defer data.Close()
 
 	// Read MMDB fully to know its size for tar header
 	buf, err := io.ReadAll(data)
@@ -343,10 +425,9 @@ func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition str
 		return "", fmt.Errorf("rename temp: %w", err)
 	}
 
-	d.mu.Lock()
-	d.lastUpdated = time.Now()
-	d.mu.Unlock()
-
+	if err := updateLockFile(); err != nil {
+		return "", err
+	}
 	return absFilePath, nil
 }
 
@@ -355,4 +436,63 @@ func createURL(mirror, licenseKey, dbName string) string {
 		return fmt.Sprintf("%s/%s%s", mirror, dbName, dbExtension)
 	}
 	return fmt.Sprintf(maxmindURL, licenseKey, dbName)
+}
+
+func updateLockFile() error {
+	ts := time.Now().UTC().Format(lockTimeLayout)
+	return os.WriteFile(LastUpdateStateFile, []byte(ts), 0o644)
+}
+
+func getTimeFromLockFile() (time.Time, error) {
+	rawTime, err := os.ReadFile(LastUpdateStateFile)
+	if errors.Is(err, os.ErrNotExist) {
+		klog.Warningf("Lock file not exists, %s", LastUpdateStateFile)
+		return time.Time{}, nil
+	}
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Parse(lockTimeLayout, strings.TrimSpace(string(rawTime)))
+}
+
+func (d *Downloader) LockFileIsExpired(cfg *Config) (bool, error) {
+	lastTimeUpdate, err := getTimeFromLockFile()
+	if err != nil {
+		return false, err
+	}
+
+	if lastTimeUpdate.IsZero() {
+		return true, nil
+	}
+
+	return time.Since(lastTimeUpdate) >= cfg.MaxmindIntervalUpdate, nil
+}
+
+// getLeaderLinkForDownload returns base URL to the leader's download endpoint.
+// Returns "" if leader is unknown or we are the leader.
+func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port string) string {
+	if d.isLeader() {
+		return ""
+	}
+
+	if d.leader == nil || d.leader.le == nil {
+		return ""
+	}
+
+	leaderPod := d.leader.le.GetLeader()
+	if leaderPod == "" {
+		return ""
+	}
+
+	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
+	return fmt.Sprintf("https://%s.%s.%s.svc:%s", leaderPod, serviceName, namespace, port)
+}
+
+func (d *Downloader) isLeader() bool {
+	if d.leader == nil || d.leader.le == nil || !d.leader.le.IsLeader() {
+		return false
+	}
+
+	return true
 }

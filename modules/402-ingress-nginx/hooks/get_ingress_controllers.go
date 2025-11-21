@@ -212,7 +212,7 @@ func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
 		// fire alert if maxmindAccountID not set.
 		_, licFound, err := unstructured.NestedString(controller.Spec, "geoIP2", "maxmindLicenseKey")
 		if err != nil {
-			input.Logger.Error(fmt.Sprintf("cannot get maxmindAccountID from ingress controller spec.geoIP2: %v", err))
+			input.Logger.Error(fmt.Sprintf("cannot get maxmindLicenseKey from ingress controller spec.geoIP2: %v", err))
 			continue
 		}
 
@@ -222,15 +222,13 @@ func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		if !acFound && licFound {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_maxmind_account_id_not_set", 1, map[string]string{
-				"controller_name": controller.Name,
-			})
-		} else {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_maxmind_account_id_not_set", 0, map[string]string{
-				"controller_name": controller.Name,
-			})
+		val := 0.0
+		if licFound && !acFound {
+			val = 1.0
 		}
+		input.MetricsCollector.Set("d8_ingress_nginx_controller_maxmind_account_id_not_set", val, map[string]string{
+			"controller_name": controller.Name,
+		})
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

@@ -48,9 +48,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	handler := geodownloader.NewHandler()
-	leader := geodownloader.NewLeaderElection(handler, LeaseLockName, LeaseLockNamespace)
-	watcher := geodownloader.NewGeoUpdaterSecret(handler)
+	leader := geodownloader.NewLeaderElection(LeaseLockName, LeaseLockNamespace)
+	watcher := geodownloader.NewGeoUpdaterSecret()
 	cfg := geodownloader.NewConfig()
 	downloader := geodownloader.NewDownloader(watcher, leader)
 
@@ -79,39 +78,26 @@ func main() {
 		}
 	}()
 
-	// first download wait ready watcher and leader
-	go func() {
-		log.Info("Waiting leader election and Watcher is ready ...")
-		handler.Mu.Lock()
-		for !watcher.Ready || !leader.Ready {
-			handler.Cond.Wait()
-		}
-		handler.Mu.Unlock()
-
-		if err := downloader.Download(ctx, geodownloader.PathDb); err != nil {
-			log.Error(fmt.Sprintf("failed to download db: %v", err))
-		}
-	}()
-
 	// interval update
 	go func() {
 		log.Info(fmt.Sprintf("Start cron in %s interval", cfg.MaxmindIntervalUpdate))
+
+		if err := downloader.Download(ctx, geodownloader.PathDb, cfg, false); err != nil {
+			log.Error(fmt.Sprintf("Failed to download db: %v", err))
+		}
+
 		ticker := time.NewTicker(cfg.MaxmindIntervalUpdate)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				err := downloader.Download(ctx, geodownloader.PathDb)
-				if err != nil {
+				if err := downloader.Download(ctx, geodownloader.PathDb, cfg, false); err != nil {
 					log.Error(fmt.Sprintf("Failed to download db: %v", err))
 				}
-
 			case <-watcher.Updated:
-				err := downloader.Download(ctx, geodownloader.PathDb)
-				if err != nil {
+				if err := downloader.Download(ctx, geodownloader.PathDb, cfg, true); err != nil {
 					log.Error(fmt.Sprintf("Failed to download db: %v", err))
 				}
-
 			case <-ctx.Done():
 				return
 			}
