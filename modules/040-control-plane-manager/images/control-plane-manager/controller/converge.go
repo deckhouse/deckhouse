@@ -158,7 +158,7 @@ func convergeComponent(componentName string) error {
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
 	} else {
-		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
+		log.Info("skip manifest generation for component because checksum in manifest is up to date", slog.String("component", componentName))
 	}
 
 	err = waitPodIsReady(componentName, checksum)
