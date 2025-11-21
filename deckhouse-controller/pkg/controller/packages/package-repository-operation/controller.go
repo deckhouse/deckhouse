@@ -116,12 +116,92 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
+	// ensure operation trigger label
+	res, err := r.EnsureLabelOperationTrigger(ctx, operation)
+	if err != nil {
+		logger.Warn("failed to ensure operation trigger label", log.Err(err))
+
+		return res, err
+	}
+
+	if res.Requeue {
+		return res, nil
+	}
+
+	// ensure operation type label
+	res, err = r.EnsureLabelOperationType(ctx, operation)
+	if err != nil {
+		logger.Warn("failed to ensure operation type label", log.Err(err))
+
+		return res, err
+	}
+
+	if res.Requeue {
+		return res, nil
+	}
+
 	// handle create/update events - state machine
-	res, err := r.handle(ctx, operation)
+	res, err = r.handle(ctx, operation)
 	if err != nil {
 		logger.Warn("failed to handle package repository operation", log.Err(err))
 
 		return res, err
+	}
+
+	return res, nil
+}
+
+func (r *reconciler) EnsureLabelOperationTrigger(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if operation.Labels == nil {
+		operation.Labels = make(map[string]string)
+	}
+
+	var trigger string
+	if operation.Spec.Update != nil {
+		trigger = "update"
+	} else {
+		trigger = "sync"
+	}
+
+	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok || existing != trigger {
+		original := operation.DeepCopy()
+		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = trigger
+
+		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch operation trigger label: %w", err)
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	return res, nil
+}
+
+func (r *reconciler) EnsureLabelOperationType(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if operation.Labels == nil {
+		operation.Labels = make(map[string]string)
+	}
+
+	var opType string
+	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
+		opType = "full"
+	} else {
+		opType = "incremental"
+	}
+
+	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || existing != opType {
+		original := operation.DeepCopy()
+		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = opType
+
+		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch operation type label: %w", err)
+		}
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return res, nil
