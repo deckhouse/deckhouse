@@ -127,7 +127,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
 			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepository, err.Error()),
 		)
@@ -159,7 +159,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
 			fmt.Sprintf("failed to get registry client: %s", err.Error()),
 		)
@@ -177,7 +177,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("failed to get image: %s", err.Error()),
 		)
@@ -194,7 +194,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
 		)
@@ -214,7 +214,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
 	// Patch the status
-	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeEnriched)
+	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
 	logger.Debug("patch package version status")
 	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))

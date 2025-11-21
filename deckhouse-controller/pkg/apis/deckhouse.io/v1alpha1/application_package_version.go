@@ -32,7 +32,7 @@ const (
 	ApplicationPackageVersionLabelRepository      = "packages.deckhouse.io/repository"
 	ApplicationPackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 
-	ApplicationPackageVersionConditionTypeEnriched               = "MetadataLoaded"
+	ApplicationPackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
 	ApplicationPackageVersionConditionReasonGetPackageRepoErr    = "GetPackageRepositoryError"
 	ApplicationPackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
