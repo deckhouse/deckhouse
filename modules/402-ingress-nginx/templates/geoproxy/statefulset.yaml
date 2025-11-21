@@ -35,19 +35,6 @@ spec:
 {{- end }}
 
 ---
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: geoproxy
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "geoproxy")) | nindent 2 }}
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      app: geoproxy
-
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -55,8 +42,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "geoproxy")) | nindent 2 }}
 spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   serviceName: geoproxy
-  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: geoproxy
@@ -69,12 +56,13 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "geoproxy")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" . | nindent 6 }}
       automountServiceAccountToken: true
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
         - image: {{ include "helm_lib_module_image" (list . "geoproxy") }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           name: geoproxy
           imagePullPolicy: IfNotPresent
           volumeMounts:
@@ -173,7 +161,7 @@ spec:
               {{- include "geoproxy_resources" . | nindent 14 }}
 {{- end }}
       serviceAccountName: geoproxy
-      terminationGracePeriodSeconds: 0
+      terminationGracePeriodSeconds: 60
 
 {{- $effectiveStorageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
 {{- $storageClass := $effectiveStorageClass }}

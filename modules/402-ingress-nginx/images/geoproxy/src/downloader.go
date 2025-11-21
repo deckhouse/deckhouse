@@ -186,11 +186,11 @@ transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 func (d *Downloader) saveDB(data io.ReadCloser, dstPathRoot, edition string) (string, error) {
 	absFilePath := fmt.Sprintf("%v/%v%v", dstPathRoot, edition, dbExtension)
 
+	defer data.Close()
+
 	if err := os.MkdirAll(dstPathRoot, 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
-
-	defer data.Close()
 
 	tmp, err := os.CreateTemp(dstPathRoot, "*.mmdb")
 	if err != nil {
@@ -277,13 +277,14 @@ func incrementError(dlErr error) {
 // saveDBFromMMDB packs a raw MMDB stream into a tar.gz archive named <edition>.mmdb
 // and saves it as <edition>.tar.gz in dstPathRoot.
 func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition string) (string, error) {
+
 	absFilePath := fmt.Sprintf("%v/%v%v", dstPathRoot, edition, dbExtension)
+
+	defer data.Close()
 
 	if err := os.MkdirAll(dstPathRoot, 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
-
-	defer data.Close()
 
 	// Read MMDB fully to know its size for tar header
 	buf, err := io.ReadAll(data)

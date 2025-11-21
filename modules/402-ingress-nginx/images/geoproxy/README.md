@@ -19,7 +19,7 @@ Goal: preload the MaxMind databases into geoproxy storage when the cluster has n
   - With a StorageClass configured (`.Values.ingressNginx.internal.effectiveStorageClass`), `/data` is a PVC (recommended).
 
 > [!WARNING]
->  - Without a StorageClass, `/data` is `emptyDir` (non‑persistent; data is lost on pod restart/reschedule).
+>  - Without a StorageClass, `/data` is `emptyDir` (non‑persistent; data **lost when the Pod is recreated or rescheduled**.).
 
 > [!IMPORTANT]
 >  You can configure `spec.geoIP2.maxmindMirror` without `maxmindLicenseKey`. In this case geoproxy will only download archives from your mirror (or use the preloaded tarballs) and won't attempt to reach MaxMind directly.

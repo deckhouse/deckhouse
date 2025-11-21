@@ -24,11 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-//	 type AccountMaxmind struct {
-//		MaxmindAccount    int
-//		MaxmindLicenseKey string
-//		MaxmindEditionsDB string
-//	 }
 type Config struct {
 	MaxmindIntervalUpdate time.Duration
 }
@@ -41,8 +36,8 @@ func NewConfig() *Config {
 	intervalUpdate := os.Getenv("INTERVAL_UPDATE")
 	interval, err := time.ParseDuration(intervalUpdate)
 	if err != nil {
-		interval = time.Minute * 60
-		log.Error(fmt.Sprintf("error parsing INTERVAL_UPDATE: %v", err))
+		interval = time.Minute * 1440 // one day by default
+		log.Error(fmt.Sprintf("error when parsing INTERVAL_UPDATE, the default value will be used %v: %s", err, interval))
 	}
 
 	return &Config{

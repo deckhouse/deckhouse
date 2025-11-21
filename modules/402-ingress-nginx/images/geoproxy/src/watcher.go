@@ -51,15 +51,11 @@ type LicenseEditions map[string]Account
 type GeoUpdaterSecret struct {
 	Ready           bool
 	licenseEditions LicenseEditions
-	handler         *Handler
 	Updated         chan struct{}
 }
 
-func NewGeoUpdaterSecret(handler *Handler) *GeoUpdaterSecret {
-	g := &GeoUpdaterSecret{
-		handler: handler,
-		Updated: make(chan struct{}, 1),
-	}
+func NewGeoUpdaterSecret() *GeoUpdaterSecret {
+	g := &GeoUpdaterSecret{Updated: make(chan struct{}, 1)}
 	return g
 }
 
@@ -138,11 +134,8 @@ func (g *GeoUpdaterSecret) getLicenseEditionsFromSecret(secret *v1.Secret) error
 		}
 	}
 
-	g.handler.Mu.Lock()
 	g.licenseEditions = licenseEditions
 	g.Ready = true
-	g.handler.Cond.Broadcast()
-	g.handler.Mu.Unlock()
 	return nil
 }
 
