@@ -13,9 +13,9 @@ kind: ApplicationPackageVersion
 metadata:
   name: deckhouse-test-v1.0.0
   labels:
-    package: test
-    repository: deckhouse
-    draft: "true"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+    packages.deckhouse.io/draft: "true"
 spec:
   packageName: test
   version: v1.0.0
