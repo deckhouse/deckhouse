@@ -70,9 +70,9 @@ spec:
           - name: INIT_CONTAINER_IMAGE
             value: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderInitContainer") }}
           - name: INIT_CONTAINER_CPU_REQUEST
-            value: "10m"
+            value: {{ .Values.kubeDns.stsPodsHostsAppender.initContainerRequests.cpu | default "10m" | quote }}
           - name: INIT_CONTAINER_MEM_REQUEST
-            value: "16Mi"
+            value: {{ .Values.kubeDns.stsPodsHostsAppender.initContainerRequests.memory | default "16Mi" | quote }}
           ports:
           - containerPort: 4443
           readinessProbe:
