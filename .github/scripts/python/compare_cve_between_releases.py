@@ -631,15 +631,10 @@ def generate_reports(curr_tag: str, prev_tag: str, module_results: dict,
     
     # Generate report.yaml
     yaml_data = {}
-    seen_cves_by_module = {}
     for title, severity, module_name in fixed_vulns:
         if module_name not in yaml_data:
             yaml_data[module_name] = {"fixed_vulnerabilities": []}
-            seen_cves_by_module[module_name] = set()
-        cve_id = title.split()[0]
-        if cve_id not in seen_cves_by_module[module_name]:
-            yaml_data[module_name]["fixed_vulnerabilities"].append({"summary": cve_id})
-            seen_cves_by_module[module_name].add(cve_id)
+        yaml_data[module_name]["fixed_vulnerabilities"].append({"summary": title.split()[0]})
     
     # Sort modules alphabetically
     yaml_data = dict(sorted(yaml_data.items()))
