@@ -36,7 +36,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshCl, err := sshclient.NewClientFromFlagsWithHosts()
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		err = sshCl.Check().AwaitAvailability(context.Background())
+		err = sshCl.Check().AwaitAvailability(ctx)
 
 		if err != nil {
 			return fmt.Errorf("check connection: %v", err)
@@ -81,7 +81,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshCl, err := sshclient.NewClientFromFlagsWithHosts()
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return err
 		}
@@ -104,10 +104,10 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if Direction == "up" {
 			if Data != "" {
 				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
-				err = sshCl.File().UploadBytes(context.Background(), []byte(Data), DstPath)
+				err = sshCl.File().UploadBytes(ctx, []byte(Data), DstPath)
 			} else {
 				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
-				err = sshCl.File().Upload(context.Background(), SrcPath, DstPath)
+				err = sshCl.File().Upload(ctx, SrcPath, DstPath)
 			}
 			if err != nil {
 				return err
@@ -116,7 +116,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		} else {
 			if DstPath == "stdout" {
 				log.InfoF("download bytes from remote '%s'\n", SrcPath)
-				data, err := sshCl.File().DownloadBytes(context.Background(), SrcPath)
+				data, err := sshCl.File().DownloadBytes(ctx, SrcPath)
 				if err != nil {
 					return err
 				}
@@ -124,7 +124,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				success = true
 			} else {
 				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
-				err = sshCl.File().Download(context.Background(), SrcPath, DstPath)
+				err = sshCl.File().Download(ctx, SrcPath, DstPath)
 				if err != nil {
 					return err
 				}
@@ -154,7 +154,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -162,7 +162,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			cmd.Sudo()
 		}
 		var stdout []byte
-		stdout, err = cmd.Execute(context.Background())
+		stdout, err = cmd.Execute(ctx)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -201,6 +201,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -208,7 +209,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
 		if err != nil {
 			return err
 		}

@@ -38,6 +38,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -45,7 +46,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -61,7 +62,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.DeleteDeckhouseDeployment(context.Background(), kubeCl)
+			err = deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 			if err != nil {
 				return err
 			}
@@ -89,6 +90,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
+		ctx := context.Background()
 
 		// Load deckhouse config
 		metaConfig, err := config.ParseConfig(
@@ -108,7 +110,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -138,12 +140,12 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.CreateDeckhouseDeployment(context.Background(), kubeCl, installConfig)
+			err = deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(context.Background(), kubeCl)
+			err = deckhouse.WaitForReadiness(ctx, kubeCl)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}

@@ -247,7 +247,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)

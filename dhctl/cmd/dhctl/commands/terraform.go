@@ -66,7 +66,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
-
+		ctx := context.Background()
 		logger.LogInfoLn("Check started ...\n")
 
 		if err := terminal.AskBecomePassword(); err != nil {
@@ -76,7 +76,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -84,8 +84,6 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		if sshClient == nil && !app.KubeConfigInCluster {
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
-
-		ctx := context.Background()
 
 		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {

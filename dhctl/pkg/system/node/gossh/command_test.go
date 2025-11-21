@@ -53,13 +53,8 @@ func TestCommandOutput(t *testing.T) {
 		User:           "user",
 		Port:           "20027"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
-	err = sshClient.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		sshClient.Stop()
 		container.Stop()
 		os.Remove(path)
 	})
@@ -149,7 +144,6 @@ func TestCommandOutput(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				cmd := NewSSHCommand(sshClient, c.command, c.args...)
 				ctx := context.Background()
 				var emptyDuration time.Duration
 				var cancel context.CancelFunc
@@ -159,6 +153,12 @@ func TestCommandOutput(t *testing.T) {
 				if cancel != nil {
 					defer cancel()
 				}
+				sshClient := NewClient(ctx, settings, keys)
+				err = sshClient.Start()
+				// expecting no error on client start
+				require.NoError(t, err)
+				cmd := NewSSHCommand(sshClient, c.command, c.args...)
+
 				if c.prepareFunc != nil {
 					err = c.prepareFunc(cmd)
 					require.NoError(t, err)
@@ -172,6 +172,7 @@ func TestCommandOutput(t *testing.T) {
 					require.Equal(t, c.expectedErrOutput, string(errBytes))
 					require.Contains(t, err.Error(), c.err)
 				}
+				sshClient.Stop()
 			})
 		}
 	})
@@ -183,6 +184,7 @@ func TestCommandCombinedOutput(t *testing.T) {
 	if os.Getenv("SKIP_GOSSH_TEST") == "true" {
 		t.Skipf("Skipping %s test", testName)
 	}
+	os.Setenv("DHCTL_DEBUG", "yes")
 	// genetaring ssh keys
 	path, publicKey, err := ssh_testing.GenerateKeys("")
 	if err != nil {
@@ -203,13 +205,8 @@ func TestCommandCombinedOutput(t *testing.T) {
 		User:           "user",
 		Port:           "20028"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
-	err = sshClient.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		sshClient.Stop()
 		container.Stop()
 		os.Remove(path)
 	})
@@ -299,7 +296,6 @@ func TestCommandCombinedOutput(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				cmd := NewSSHCommand(sshClient, c.command, c.args...)
 				ctx := context.Background()
 				var emptyDuration time.Duration
 				var cancel context.CancelFunc
@@ -309,6 +305,11 @@ func TestCommandCombinedOutput(t *testing.T) {
 				if cancel != nil {
 					defer cancel()
 				}
+				sshClient := NewClient(ctx, settings, keys)
+				err = sshClient.Start()
+				// expecting no error on client start
+				require.NoError(t, err)
+				cmd := NewSSHCommand(sshClient, c.command, c.args...)
 				if c.prepareFunc != nil {
 					err = c.prepareFunc(cmd)
 					require.NoError(t, err)
@@ -322,6 +323,7 @@ func TestCommandCombinedOutput(t *testing.T) {
 					require.Equal(t, c.expectedErrOutput, string(combined))
 					require.Contains(t, err.Error(), c.err)
 				}
+				sshClient.Stop()
 			})
 		}
 	})
@@ -353,13 +355,8 @@ func TestCommandRun(t *testing.T) {
 		User:           "user",
 		Port:           "20028"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
-	err = sshClient.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		sshClient.Stop()
 		container.Stop()
 		os.Remove(path)
 	})
@@ -438,7 +435,6 @@ func TestCommandRun(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				cmd := NewSSHCommand(sshClient, c.command, c.args...)
 				ctx := context.Background()
 				var emptyDuration time.Duration
 				var cancel context.CancelFunc
@@ -448,6 +444,11 @@ func TestCommandRun(t *testing.T) {
 				if cancel != nil {
 					defer cancel()
 				}
+				sshClient := NewClient(ctx, settings, keys)
+				err = sshClient.Start()
+				// expecting no error on client start
+				require.NoError(t, err)
+				cmd := NewSSHCommand(sshClient, c.command, c.args...)
 				if c.prepareFunc != nil {
 					err = c.prepareFunc(cmd)
 					require.NoError(t, err)
@@ -480,6 +481,7 @@ func TestCommandRun(t *testing.T) {
 					require.Contains(t, err.Error(), "context deadline exceeded")
 
 				}
+				sshClient.Stop()
 			})
 		}
 	})
@@ -511,7 +513,8 @@ func TestCommandStart(t *testing.T) {
 		User:           "user",
 		Port:           "20029"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	ctx := context.Background()
+	sshClient := NewClient(ctx, settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)
@@ -601,7 +604,6 @@ func TestCommandStart(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				cmd := NewSSHCommand(sshClient, c.command, c.args...)
-				ctx := context.Background()
 				var emptyDuration time.Duration
 				if c.timeout != emptyDuration {
 					cmd.WithTimeout(c.timeout)
@@ -658,37 +660,22 @@ func TestCommandSudoRun(t *testing.T) {
 		User:           "user",
 		Port:           "20030"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
-	err = sshClient.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
-	settings = session.NewSession(session.Input{
+	settings2 := session.NewSession(session.Input{
 		AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 		User:           "user",
 		Port:           "20031",
 		BecomePass:     "VeryStrongPasswordWhatCannotBeGuessed",
 	})
-	sshClient2 := NewClient(settings, make([]session.AgentPrivateKey, 0, 1))
-	err = sshClient2.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
 
 	// client with wrong sudo password
-	settings = session.NewSession(session.Input{
+	settings3 := session.NewSession(session.Input{
 		AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 		User:           "user",
 		Port:           "20031",
 		BecomePass:     "WrongPassword",
 	})
-	sshClient3 := NewClient(settings, keys)
-	err = sshClient3.Start()
-	// expecting no error on client start
-	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		sshClient.Stop()
-		sshClient2.Stop()
-		sshClient3.Stop()
 		container.Stop()
 		containerWithPass.Stop()
 		os.Remove(path)
@@ -697,7 +684,8 @@ func TestCommandSudoRun(t *testing.T) {
 	t.Run("Run a command with sudo", func(t *testing.T) {
 		cases := []struct {
 			title       string
-			sshClient   *Client
+			settings    *session.Session
+			keys        []session.AgentPrivateKey
 			command     string
 			args        []string
 			timeout     time.Duration
@@ -707,22 +695,25 @@ func TestCommandSudoRun(t *testing.T) {
 			errorOutput string
 		}{
 			{
-				title:     "Just echo, success",
-				sshClient: sshClient,
-				command:   "echo",
-				args:      []string{"\"test output\""},
-				wantErr:   false,
+				title:    "Just echo, success",
+				settings: settings,
+				keys:     keys,
+				command:  "echo",
+				args:     []string{"\"test output\""},
+				wantErr:  false,
 			},
 			{
-				title:     "Just echo, success, with password",
-				sshClient: sshClient2,
-				command:   "echo",
-				args:      []string{"\"test output\""},
-				wantErr:   false,
+				title:    "Just echo, success, with password",
+				settings: settings2,
+				keys:     make([]session.AgentPrivateKey, 0, 1),
+				command:  "echo",
+				args:     []string{"\"test output\""},
+				wantErr:  false,
 			},
 			{
 				title:       "Just echo, failure, with wrong password",
-				sshClient:   sshClient3,
+				settings:    settings3,
+				keys:        keys,
 				command:     "echo",
 				args:        []string{"\"test output\""},
 				wantErr:     true,
@@ -730,18 +721,18 @@ func TestCommandSudoRun(t *testing.T) {
 				errorOutput: "SudoPasswordSorry, try again.\nSudoPasswordSorry, try again.\nSudoPasswordsudo: 3 incorrect password attempts\n",
 			},
 			{
-				title:     "With context",
-				sshClient: sshClient,
-				command:   "while true; do echo \"test\"; sleep 5; done",
-				args:      []string{},
-				timeout:   7 * time.Second,
-				wantErr:   false,
+				title:    "With context",
+				settings: settings,
+				keys:     keys,
+				command:  "while true; do echo \"test\"; sleep 5; done",
+				args:     []string{},
+				timeout:  7 * time.Second,
+				wantErr:  false,
 			},
 		}
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				cmd := NewSSHCommand(c.sshClient, c.command, c.args...).CaptureStderr(nil)
 				ctx := context.Background()
 				var emptyDuration time.Duration
 				var cancel context.CancelFunc
@@ -751,6 +742,11 @@ func TestCommandSudoRun(t *testing.T) {
 				if cancel != nil {
 					defer cancel()
 				}
+				sshClient := NewClient(ctx, c.settings, c.keys)
+				err = sshClient.Start()
+				// expecting no error on client start
+				require.NoError(t, err)
+				cmd := NewSSHCommand(sshClient, c.command, c.args...).CaptureStderr(nil)
 				if c.prepareFunc != nil {
 					err = c.prepareFunc(cmd)
 					require.NoError(t, err)
@@ -766,6 +762,7 @@ func TestCommandSudoRun(t *testing.T) {
 
 					require.Contains(t, string(errBytes), c.errorOutput)
 				}
+				sshClient.Stop()
 			})
 		}
 	})

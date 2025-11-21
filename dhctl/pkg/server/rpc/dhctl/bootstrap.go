@@ -261,7 +261,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)

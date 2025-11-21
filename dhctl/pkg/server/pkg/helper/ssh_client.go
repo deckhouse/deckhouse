@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -30,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
+func CreateSSHClient(ctx context.Context, config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -91,7 +92,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHLegacyMode = config.SSHConfig.LegacyMode
 	app.SSHModernMode = config.SSHConfig.ModernMode
 
-	sshClient := sshclient.NewClient(sess, keys)
+	sshClient := sshclient.NewClient(ctx, sess, keys)
 
 	cleanuper.Add(func() error {
 		if !govalue.IsNil(sshClient) {

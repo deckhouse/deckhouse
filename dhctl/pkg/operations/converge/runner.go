@@ -433,7 +433,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 
-		err = r.switcher.SwitchToNodeUser(nodesStates[global.MasterNodeGroupName].State)
+		err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
 		if err != nil {
 			return err
 		}

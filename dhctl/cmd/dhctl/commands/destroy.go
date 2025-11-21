@@ -54,6 +54,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
+		ctx := context.Background()
 
 		if !app.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
@@ -69,7 +70,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlags()
+		sshClient, err := sshclient.NewClientFromFlags(ctx)
 		if err != nil {
 			return err
 		}
@@ -90,7 +91,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		err = destroyer.DestroyCluster(context.Background(), app.SanityCheck)
+		err = destroyer.DestroyCluster(ctx, app.SanityCheck)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
 			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)

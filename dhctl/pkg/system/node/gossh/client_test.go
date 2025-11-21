@@ -15,6 +15,7 @@
 package gossh
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -123,7 +124,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 				if c.settings.BecomePass != "" {
 					app.BecomePass = c.settings.BecomePass
 				}
-				sshClient = NewClient(&c.settings, c.keys)
+				sshClient = NewClient(context.Background(), &c.settings, c.keys)
 				err := sshClient.OnlyPreparePrivateKeys()
 				if !c.wantErr {
 					require.NoError(t, err)
@@ -391,8 +392,7 @@ func TestClientStart(t *testing.T) {
 					}
 				}
 
-				fmt.Println("starting ssh client")
-				sshClient = NewClient(c.settings, c.keys)
+				sshClient = NewClient(context.Background(), c.settings, c.keys)
 				err = sshClient.Start()
 				if !c.wantErr {
 					require.NoError(t, err)
@@ -401,10 +401,7 @@ func TestClientStart(t *testing.T) {
 					require.Error(t, err)
 					require.Contains(t, err.Error(), c.err)
 				}
-				fmt.Println("stopping ssh client")
 				sshClient.Stop()
-				fmt.Println("ssh client has been stoped")
-
 			})
 		}
 
@@ -443,7 +440,7 @@ func TestClientKeepalive(t *testing.T) {
 			User:           "user",
 			Port:           "20022"})
 		keys := []session.AgentPrivateKey{{Key: path}}
-		sshClient := NewClient(settings, keys)
+		sshClient := NewClient(context.Background(), settings, keys)
 		err := sshClient.Start()
 		// expecting no error on client start
 		require.NoError(t, err)
@@ -458,6 +455,46 @@ func TestClientKeepalive(t *testing.T) {
 		sshClient.RegisterSession(sess)
 		sshClient.Stop()
 	})
+
+	t.Run("keepalive with context test", func(t *testing.T) {
+		settings := session.NewSession(session.Input{
+			AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
+			User:           "user",
+			Port:           "20022"})
+		keys := []session.AgentPrivateKey{{Key: path}}
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(5*time.Second))
+		defer cancel()
+		sshClient := NewClient(ctx, settings, keys)
+		err := sshClient.Start()
+		// expecting no error on client start
+		require.NoError(t, err)
+		time.Sleep(30 * time.Second)
+		// expecting client is not live
+		sshClient.Stop()
+		err = sshClient.Start()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "deadline exceeded")
+	})
+
+	t.Run("client start with context test", func(t *testing.T) {
+		settings := session.NewSession(session.Input{
+			AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
+			User:           "user",
+			Port:           "20062"})
+		keys := []session.AgentPrivateKey{{Key: path}}
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(20*time.Second))
+		defer cancel()
+		sshClient := NewClient(ctx, settings, keys)
+		err := sshClient.Start()
+		// expecting error on client start: host is unreachable, but loop should exit on context deadline exceeded
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Loop was canceled: context deadline exceeded")
+		// expecting client is not live
+		sshClient.Stop()
+		err = sshClient.Start()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "deadline exceeded")
+	})
 }
 
 func TestClientLoop(t *testing.T) {
@@ -468,7 +505,7 @@ func TestClientLoop(t *testing.T) {
 			Port:           "20022",
 			BecomePass:     "VeryStrongPasswordWhatCannotBeGuessed"})
 		keys := make([]session.AgentPrivateKey, 0, 1)
-		sshClient := NewClient(settings, keys)
+		sshClient := NewClient(context.Background(), settings, keys)
 
 		err := sshClient.Loop(func(s node.SSHClient) error {
 			keys := s.PrivateKeys()
@@ -497,7 +534,7 @@ func TestClientSettings(t *testing.T) {
 			Port:           "20022",
 			BecomePass:     "VeryStrongPasswordWhatCannotBeGuessed"})
 		keys := make([]session.AgentPrivateKey, 0, 1)
-		sshClient := NewClient(settings, keys)
+		sshClient := NewClient(context.Background(), settings, keys)
 		s := sshClient.Session()
 		require.Equal(t, settings, s)
 	})
@@ -511,7 +548,7 @@ func TestClientLive(t *testing.T) {
 			Port:           "20022",
 			BecomePass:     "VeryStrongPasswordWhatCannotBeGuessed"})
 		keys := make([]session.AgentPrivateKey, 0, 1)
-		sshClient := NewClient(settings, keys)
+		sshClient := NewClient(context.Background(), settings, keys)
 		live := sshClient.Live()
 		require.Equal(t, false, live)
 	})

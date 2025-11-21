@@ -145,6 +145,7 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
+	// if c.WaitHandler != nil {
 	if c.WaitHandler != nil || c.timeout > 0 {
 		c.ProcessWait()
 	} else {
