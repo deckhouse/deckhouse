@@ -185,9 +185,10 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
 
 1. Check the Deckhouse queue and make sure that there are no errors with the command:
-```shell
-d8 system queue list
-```
+
+   ```shell
+   d8 system queue list
+   ```
 
 ## How do I dismiss the master role while keeping the node?
 
