@@ -148,9 +148,7 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string) error {
 func downloadDB(url string, skipTLSverify bool) (io.ReadCloser, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if skipTLSverify {
-		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
-	}
+transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 
 	client := &http.Client{Transport: transport}
 
