@@ -23,13 +23,16 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromImage: builder/alpine
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/gnu/which.git  /src/which
