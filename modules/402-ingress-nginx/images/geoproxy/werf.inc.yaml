@@ -13,8 +13,7 @@ git:
     - '**/*.mod'
 ---
 image: {{ .ModuleName }}/geoproxy-artifact
-fromImage: builder/golang-alpine-1.24
-fromCacheVersion: "2025-09-01.01"
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,7 +35,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025-09-01.01"
 import:
 - image: {{ .ModuleName }}/geoproxy-artifact
   add: /geoproxy
