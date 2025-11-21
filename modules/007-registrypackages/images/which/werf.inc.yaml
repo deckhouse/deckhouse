@@ -32,9 +32,8 @@ git:
     - '**/*'
 shell:
   install:
-  - wget https://ftp.gnu.org/gnu/which/which-{{ $version }}.tar.gz -O /src/which.tar.gz
-  - tar -xzf /src/which.tar.gz -C /src
-  - mv /src/which-{{ $version }} /src/which
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/gnu/which.git  /src/which
+  - rm -rf /src/which/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromImage: builder/alpine
