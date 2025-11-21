@@ -7,6 +7,11 @@ lang: ru
 
 ## Переключение DKP с EE на CSE
 
+Переключение DKP на EE на CSE может быть выполнено одним из следующих способов:
+
+- [с использованием модуля `registry`](#переключение-с-использованием-модуля-registry),
+- [без модуля `registry`](#переключение-без-модуля-registry).
+
 {% alert level="warning" %}
 Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`.
 
@@ -23,23 +28,236 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 При переключении на DKP CSE возможна временная недоступность компонентов кластера.
 {% endalert %}
 
-Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
+Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition нужным способом выполните описанные ниже действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя).
 
-1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого выполните команду:
+### Переключение с использованием модуля registry
+
+1. Убедитесь, что кластер был переключен на использование модуля [`registry`](/modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите к инструкции по переключению [без модуля `registry`](#переключение-без-модуля-registry).
+1. Настройте кластер на использование необходимой версии Kubernetes (информация о версионности приведена в разделе [Переключение DKP с EE на CSE](#переключение-dkp-с-ee-на-cse)). Для этого:
+   1. Выполните команду:
+
+      ```shell
+      d8 platform edit cluster-configuration
+      ```
+
+   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
+1. Подготовьте переменные с лицензионным ключом:
 
    ```shell
-   d8 system edit cluster-configuration
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    ```
 
-1. Измените [параметр `kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
 
-1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   ```shell
+   d8 k create secret docker-registry cse-image-pull-secret \
+    --docker-server=registry-cse.deckhouse.ru \
+    --docker-username=license-token \
+    --docker-password=${LICENSE_TOKEN}
 
-1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+   DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   d8 k run cse-image \
+    --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION \
+    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"cse-image-pull-secret\"}]}}" \
+    --command sleep -- infinity
+   ```
 
-1. Подготовьте переменные с токеном лицензии и создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry-cse.deckhouse.ru`:
+   Как только под перейдёт в статус `Running`, выполните следующие команды:
 
-   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](../platform-scaling/node/node-customization.html#как-добавить-конфигурацию-для-дополнительного-registry).
+   ```shell
+   CSE_MODULES=$(d8 k exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   ```
+
+1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
+
+   Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована в кластере, и вы готовы к их отключению.
+
+   Отключите неподдерживаемые в Deckhouse CSE модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
+
+   ```shell
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Проверьте, что отключенные модули перешли в состояние `Disabled`.
+
+   ```shell
+   d8 k get modules
+   ```
+
+1. Удалите созданный секрет и под:
+
+   ```shell
+   d8 k delete pod/cse-image
+   d8 k delete secret/cse-image-pull-secret
+   ```
+
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/)):
+
+   ```yaml
+   ---
+   # Пример для Direct режима.
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+           # Для переключения между редакциями необходимо использовать данный режим проверки registry.
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>.
+           license: <LICENSE_TOKEN>
+   ---
+   # Пример для Unmanaged режима.
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+         unmanaged:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+           # Для переключения между редакциями необходимо использовать данный режим проверки.
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>.
+           license: <LICENSE_TOKEN>
+   ```
+
+1. Дождитесь переключения registry. Для проверки выполнения переключения воспользуйтесь [инструкцией](/modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Relax
+         registry-cse.deckhouse.ru: all 1 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. После переключения, удалите из ModuleConfig `deckhouse` параметр `checkMode: Relax`, чтобы активировать выполнение проверки по умолчанию. Удаление запустит проверку наличия критически важных компонентов в registry.
+
+1. Дождитесь выполнения проверки. Статус переключения режима registry можно получить, воспользовавшись [инструкцией](/modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Default
+         registry-cse.deckhouse.ru: all 155 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
+
+   Для Unmanaged режима:
+
+   ```shell
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   Для других режимов, использующих фиксированный адрес (данная проверка не учитывает внешние модули):
+
+   ```shell
+   # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse.
+   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+
+   # Проверяем, есть ли Pod'ы, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+   # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS.
+   d8 k get pods -A -o json |
+   jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
+     .items[]
+     | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
+     | select(.containers != null)
+     | select(
+         .containers[]
+         | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
+         | .image as $img
+         | ($img | split("@") | last) as $digest
+         | ($digest | IN($digests[]) | not)
+       )
+     | .namespace + "\t" + .name
+   ' | sort -u
+   ```
+
+   Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
+
+   ```shell
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+### Переключение без модуля registry
+
+1. Если модуль `registry` включен, отключите его с [помощью инструкции](/modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
+
+1. Настройте кластер на использование необходимой версии Kubernetes (информация о версионности приведена в разделе [Переключение DKP с EE на CSE](#переключение-dkp-с-ee-на-cse)). Для этого:
+   1. Выполните команду:
+
+      ```shell
+      d8 platform edit cluster-configuration
+      ```
+
+   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
+1. Подготовьте переменные с лицензионным ключом и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+
+   > Перед созданием ресурса ознакомьтесь с разделом [Как добавить конфигурацию для дополнительного registry](/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -108,7 +326,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Выполните следующие команды для запуска временного пода DKP CSE для получения актуальных дайджестов и списка модулей:
+1. Выполните следующие команды для запуска временного пода Deckhouse CSE для получения актуальных дайджестов и списка модулей:
 
    ```shell
    DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
@@ -127,36 +345,36 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    ```
 
-   Дополнительная команда, которая необходима только при переключении на DKP CSE версии 1.64:
+   > Дополнительная команда, которая необходима только при переключении на Deckhouse CSE версии 1.64:
+   >
+   > ```shell
+   > CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   > ```
 
-   ```shell
-   CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   ```
+1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
 
-1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует [модуль `cert-manager`](/modules/cert-manager/). Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) или [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../../reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
-
-   Отобразить список модулей, которые не поддерживаются в DKP CSE и будут отключены, можно следующей командой:
+   Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
 
-   Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
+   > Проверьте список и убедитесь, что функциональность указанных модулей не задействован в кластере, и вы готовы к их отключению.
 
-   Отключите неподдерживаемые в DKP CSE модули:
+   Отключите неподдерживаемые в Deckhouse CSE модули:
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   В DKP CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
+   В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
 
-   Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди.
+   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   d8 system queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -165,9 +383,10 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k get modules
    ```
 
-1. Создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
+1. Создайте NodeGroupConfiguration:
 
-   ```yaml
+   ```shell
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -195,7 +414,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    EOF
    ```
 
-   Дождитесь завершения синхронизации `bashible` на всех узлах.
+   Дождитесь завершения синхронизации bashible на всех узлах.
 
    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
@@ -203,7 +422,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
-   В журнале systemd-сервиса `bashible` на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
+   В журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
 
    ```shell
    journalctl -u bashible -n 5
@@ -218,7 +437,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Актуализируйте секрет доступа к registry DKP CSE, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry Deckhouse CSE, выполнив следующую команду:
 
    ```shell
    d8 k -n d8-system create secret generic deckhouse-registry \
@@ -228,59 +447,75 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
    ```
 
-1. Измените образ DKP на образ DKP CSE:
+1. Измените образ Deckhouse на образ Deckhouse CSE:
 
-   Команда для DKP CSE версии 1.58:
+   Команда для Deckhouse CSE версии 1.58:
 
    ```shell
    d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
-   Команда для DKP CSE версии 1.64 и 1.67:
+   Команда для Deckhouse CSE версии 1.64 и 1.67:
 
    ```shell
    d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
-   Посмотреть статус пода DKP:
+   Посмотреть статус пода Deckhouse:
 
    ```shell
    d8 k -n d8-system get po -l app=deckhouse
    ```
 
-   Проверить состояние очереди DKP:
+   Проверить состояние очереди Deckhouse:
 
    ```shell
-   d8 system queue list
+   d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
-1. Проверьте, не осталось ли в кластере подов с адресом registry для DKP EE:
+   Пример вывода (очереди пусты):
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 88 other queues (0 active, 88 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Если в выводе присутствуют поды [модуля `chrony`](/modules/chrony/), заново включите данный модуль (в DKP CSE этот модуль по умолчанию выключен):
+   Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
    ```shell
-   d8 system module enable chrony
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
-1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:
+1. Очистите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
    ```shell
    rm /tmp/cse-deckhouse-registry.yaml
+   ```
+
+   ```shell
    d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+   ```
+
+   ```shell
    d8 k delete pod cse-image
    ```
 
-   ```yaml
+   ```shell
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -329,7 +564,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Убедитесь, что кластер был переключен на использование модуля [`registry`](/modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не используется, перейдите [к инструкции](#переключение-без-использования-модуля-registry).
 
-1. Подготовьте переменные с токеном лицензии и названием новой редакции:
+1. Подготовьте переменные с лицензионным ключом и названием новой редакции:
 
    > Заполнять переменную `LICENSE_TOKEN` при переключении на редакцию CE не требуется.
    > Значение переменной `NEW_EDITION` должно быть равно желаемой редакции DKP, например для переключения на редакцию:
@@ -558,7 +793,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Если модуль `registry` включен, отключите его с [помощью инструкции](/modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
 
-1. Подготовьте переменные с токеном лицензии и названием новой редакции:
+1. Подготовьте переменные с лицензионным ключом и названием новой редакции:
 
    > Заполнять переменные `NEW_EDITION` и `AUTH_STRING` при переключении на редакцию CE не требуется.
    > Значение переменной `NEW_EDITION` должно быть равно желаемой редакции DKP, например для переключения на редакцию:
