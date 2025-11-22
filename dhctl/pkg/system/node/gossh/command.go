@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -341,20 +342,37 @@ func (c *SSHCommand) WithMatchHandler(fn func(pattern string) string) *SSHComman
 }
 
 func (c *SSHCommand) Sudo(ctx context.Context) {
+	sudoSession := node.GetSudoSession(c.sshClient.Settings.Host())
+
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
-	sudoCmdLine := fmt.Sprintf(
-		`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
-		cmdLine,
-	)
+
+	var sudoCmdLine string
+	if sudoSession.IsValid() {
+		sudoCmdLine = fmt.Sprintf(
+			`sudo -n bash -c 'echo SUDO-SUCCESS && %s'`,
+			cmdLine,
+		)
+	} else {
+		sudoCmdLine = fmt.Sprintf(
+			`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
+			cmdLine,
+		)
+	}
 
 	c.cmd = sudoCmdLine
 	c.Cmd(ctx)
 
-	c.WithMatchers(
-		process.NewByteSequenceMatcher("SudoPassword"),
-		process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
-	)
-	c.OpenStdinPipe()
+	if sudoSession.IsValid() {
+		c.WithMatchers(
+			process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
+		)
+	} else {
+		c.WithMatchers(
+			process.NewByteSequenceMatcher("SudoPassword"),
+			process.NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
+		)
+		c.OpenStdinPipe()
+	}
 
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
@@ -374,14 +392,19 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 			}
 			if !passSent {
 				passSent = true
+				sudoSession.MarkValid()
 			} else {
 				// Second prompt is error!
 				log.ErrorLn("Bad sudo password.")
+				sudoSession.Invalidate()
 			}
 			return "reset"
 		}
 		if pattern == "SUDO-SUCCESS" {
 			log.DebugLn("Got SUCCESS")
+			if !sudoSession.IsValid() {
+				sudoSession.MarkValid()
+			}
 			if c.onCommandStart != nil {
 				c.onCommandStart()
 			}
