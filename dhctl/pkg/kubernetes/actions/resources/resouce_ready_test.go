@@ -282,7 +282,7 @@ status:
       lastTimestamp: "2024-12-09T20:00:46Z"
       synced: "True"
   error: ""
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.32"
   nodes: 1
   ready: 1
   upToDate: 1
@@ -975,7 +975,7 @@ status:
       lastTimestamp: "2024-12-09T20:00:46Z"
       synced: "True"
   error: ""
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.32"
   nodes: 1
   ready: 1
   upToDate: 1
