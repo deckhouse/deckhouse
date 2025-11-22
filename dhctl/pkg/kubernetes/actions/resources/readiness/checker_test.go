@@ -2024,9 +2024,11 @@ func assertChecker(t *testing.T, tst testChecker) {
 	gvk := obj.GroupVersionKind()
 	require.False(t, gvk.Empty(), tst.testName)
 
+	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+
 	params := GetCheckerParams{
 		LoggerProvider: func() log.Logger {
-			return log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+			return logger
 		},
 	}
 

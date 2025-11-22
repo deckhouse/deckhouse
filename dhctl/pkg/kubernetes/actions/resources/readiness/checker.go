@@ -177,7 +177,7 @@ var kindsByConditions = map[string]byConditionsParams{
 		checkAll:                false,
 	},
 	"APIService": {
-		waitAttemptsBeforeCheck: pointer.Int(3),
+		waitAttemptsBeforeCheck: pointer.Int(2),
 		conditionsForCheck:      availableConditions,
 		checkAll:                false,
 	},
