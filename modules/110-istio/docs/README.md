@@ -347,7 +347,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 
 1. The status of the `IstioMultiCluster` resources. To do this, run the command `kubectl describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
 2. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-3. Using the istioctl utility:
+3. Using the `istioctl` utility ([installation](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
 
 ```bash
 istioctl remote-clusters -i d8-istio
