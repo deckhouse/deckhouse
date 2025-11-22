@@ -325,6 +325,8 @@ oom_score = 0
     disable_hugetlb_controller = true
     ignore_image_defined_volumes = false
     device_ownership_from_security_context = true
+    enable_cdi = true
+    cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
     [plugins."io.containerd.grpc.v1.cri".containerd]
       snapshotter = "overlayfs"
       default_runtime_name = {{ $default_runtime | quote }}
