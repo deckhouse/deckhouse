@@ -96,6 +96,6 @@ func GetCacheDir() string {
 	return CacheDir
 }
 
-func GetDefaultStateDir() string {
+func GetDefaultCacheDir() string {
 	return defaultTmpAndStateDir
 }

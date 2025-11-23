@@ -153,13 +153,13 @@ func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin
 		return fmt.Errorf("State cache dir '%s' cannot be a root directory", stateCacheDir)
 	}
 
-	if app.GetDefaultStateDir() == absPath {
+	if app.GetDefaultCacheDir() == absPath {
 		absPath = tmpDir
 	}
 
 	if skipCheckAcquire, _ := i.skipCheckAcquireTmpLock(c); !skipCheckAcquire {
 		if err := cache.TmpDirLockAlreadyAcquired(absPath); err != nil {
-			return fmt.Errorf("Cannot use state cache dir '%s' because it can be cleaned by another instance: %v", err)
+			return fmt.Errorf("Cannot use state cache dir '%s' because it can be cleaned by another instance: %v", stateCacheDir, err)
 		}
 	}
 

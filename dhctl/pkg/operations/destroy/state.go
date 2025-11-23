@@ -47,6 +47,10 @@ func (s *State) SetConvergeLocked() error {
 	return s.cache.Save(convergeLocked, []byte("yes"))
 }
 
+func (s *State) StateDir() string {
+	return s.cache.Dir()
+}
+
 func (s *State) Clean() {
 	s.cache.Clean()
 }
