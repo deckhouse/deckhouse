@@ -21,15 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSafProvideeLogger(t *testing.T) {
+func TestSafeProvideLogger(t *testing.T) {
 	providers := []func(LoggerProvider) Logger{
 		SafeProvideLogger,
 		SafeProvideLoggerOrSilent,
 	}
 
-	nilProvider := func() Logger {
-		return nil
-	}
+	nilProvider := SimpleLoggerProvider(nil)
 
 	for _, provider := range providers {
 		logger := provider(nil)

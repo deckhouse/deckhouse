@@ -67,7 +67,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 	// wait some attempts for set statuses in the resources
 	if c.attempt < c.resourceChecker.WaitAttemptsBeforeCheck() {
 		c.logNotReadyYet(logger)
-		logger.LogDebugF("Skip resource % readiness checking for waiting set status\n", c.resourceName)
+		logger.LogDebugF("Skip resource %s readiness checking for waiting set status\n", c.resourceName)
 		return false, nil
 	}
 
