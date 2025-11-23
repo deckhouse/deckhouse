@@ -20,13 +20,15 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 // type -> type value
 type Conditions map[string]string
 
 type ByConditionsChecker struct {
-	loggerProvider     LoggerProvider
+	loggerProvider     log.LoggerProvider
 	conditionsForCheck Conditions
 
 	waitAttempts int
@@ -35,7 +37,7 @@ type ByConditionsChecker struct {
 	readyIfNoStatusOrConditions bool
 }
 
-func NewByConditionsChecker(conditions Conditions, loggerProvider LoggerProvider) *ByConditionsChecker {
+func NewByConditionsChecker(conditions Conditions, loggerProvider log.LoggerProvider) *ByConditionsChecker {
 	return &ByConditionsChecker{
 		loggerProvider:     loggerProvider,
 		conditionsForCheck: conditions,
@@ -70,7 +72,7 @@ func (c *ByConditionsChecker) IsReady(_ context.Context, resource *unstructured.
 		return false, fmt.Errorf("Internal error: no conditionsForCheck found for resource %s", resourceName)
 	}
 
-	logger := safeLoggerProvider(c.loggerProvider)
+	logger := log.SafeProvideLogger(c.loggerProvider)
 
 	var logReadyOrNot castErrorFunc
 	castError := castErrorFuncForResource(resourceName, "")

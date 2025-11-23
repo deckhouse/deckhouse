@@ -1064,12 +1064,9 @@ func testResourceReadinessCheckerWithOptionalCreatingResource(t *testing.T, reso
 
 	kubeProvider := kubernetes.NewSimpleKubeClientGetter(kubeCl)
 	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
-	logProvider := func() log.Logger {
-		return logger
-	}
 
 	checker, err := newResourceIsReadyChecker(resource, constructorParams{
-		loggerProvider: logProvider,
+		loggerProvider: log.SimpleLoggerProvider(logger),
 		// do not need
 		metaConfig:   nil,
 		kubeProvider: kubeProvider,

@@ -18,13 +18,15 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type StaticInstanceChecker struct {
-	loggerProvider LoggerProvider
+	loggerProvider log.LoggerProvider
 }
 
-func NewStaticInstanceChecker(loggerProvider LoggerProvider) *StaticInstanceChecker {
+func NewStaticInstanceChecker(loggerProvider log.LoggerProvider) *StaticInstanceChecker {
 	return &StaticInstanceChecker{
 		loggerProvider: loggerProvider,
 	}
@@ -36,7 +38,7 @@ func (s *StaticInstanceChecker) WaitAttemptsBeforeCheck() int {
 }
 
 func (s *StaticInstanceChecker) IsReady(_ context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
-	logger := safeLoggerProvider(s.loggerProvider)
+	logger := log.SafeProvideLogger(s.loggerProvider)
 
 	logNotReady := notFoundFuncDebugLogNotReady(logger, resourceName)
 	castError := castErrorFuncForResource(resourceName, "")

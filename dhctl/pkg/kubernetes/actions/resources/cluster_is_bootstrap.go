@@ -104,7 +104,7 @@ func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Even
 
 type clusterIsBootstrapCheck struct {
 	ngGetter       nodeGroupGetter
-	loggerProvider loggerProvider
+	loggerProvider log.LoggerProvider
 	kubeProvider   kubernetes.KubeClientProviderWithCtx
 
 	startCheckTime time.Time
@@ -185,7 +185,7 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
 
 	ngs, err := n.ngGetter.NodeGroups(ctx)
 	if err != nil {
-		logger.LogDebugF("Error while getting node groups: %v", err)
+		logger.LogWarnF("Error while getting node groups: %v", err)
 		return
 	}
 
@@ -311,16 +311,14 @@ func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params construct
 func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
 	content, err := o.MarshalJSON()
 	if err != nil {
-		log.ErrorF("Can not marshal nodegroup %s: %v", o.GetName(), err)
-		return nil, err
+		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
 	}
 
 	var ng v1.NodeGroup
 
 	err = json.Unmarshal(content, &ng)
 	if err != nil {
-		log.ErrorF("Can not unmarshal nodegroup %s: %v", o.GetName(), err)
-		return nil, err
+		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
 	}
 
 	return &ng, nil

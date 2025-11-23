@@ -19,16 +19,18 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type PhasesForCheck map[string]struct{}
 
 type ByPhaseChecker struct {
-	loggerProvider LoggerProvider
+	loggerProvider log.LoggerProvider
 	phaseValues    PhasesForCheck
 }
 
-func NewByPhaseChecker(phaseValues PhasesForCheck, loggerProvider LoggerProvider) *ByPhaseChecker {
+func NewByPhaseChecker(phaseValues PhasesForCheck, loggerProvider log.LoggerProvider) *ByPhaseChecker {
 	return &ByPhaseChecker{
 		loggerProvider: loggerProvider,
 		phaseValues:    phaseValues,
@@ -45,7 +47,7 @@ func (s *ByPhaseChecker) IsReady(_ context.Context, resource *unstructured.Unstr
 		return false, fmt.Errorf("Internal error. No phase for check defined for resource %s", resourceName)
 	}
 
-	logger := safeLoggerProvider(s.loggerProvider)
+	logger := log.SafeProvideLogger(s.loggerProvider)
 
 	logNotReady := notFoundFuncDebugLogNotReady(logger, resourceName)
 	castError := castErrorFuncForResource(resourceName, "")

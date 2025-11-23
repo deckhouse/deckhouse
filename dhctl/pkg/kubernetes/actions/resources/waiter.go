@@ -33,12 +33,10 @@ type Checker interface {
 	Single() bool
 }
 
-type loggerProvider func() log.Logger
-
 type constructorParams struct {
 	kubeProvider   kubernetes.KubeClientProviderWithCtx
 	metaConfig     *config.MetaConfig
-	loggerProvider loggerProvider
+	loggerProvider log.LoggerProvider
 }
 
 // todo refact to pass parameters with kube and logger provider
@@ -65,16 +63,13 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		}
 	}
 
+	// todo pass logger as parameter
 	logger := log.GetDefaultLogger()
-	logProvider := func() log.Logger {
-		// todo pass logger as parameter
-		return logger
-	}
 
 	params := constructorParams{
 		kubeProvider:   kubernetes.NewSimpleKubeClientGetter(kubeCl),
 		metaConfig:     metaConfig,
-		loggerProvider: logProvider,
+		loggerProvider: log.SimpleLoggerProvider(logger),
 	}
 
 	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)

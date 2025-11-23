@@ -129,12 +129,8 @@ func (c *resourceReadinessChecker) logNotReadyYet(logger log.Logger) {
 }
 
 func newResourceIsReadyChecker(r *template.Resource, params constructorParams) (*resourceReadinessChecker, error) {
-	logger := params.loggerProvider()
-
 	resourceChecker, err := readiness.GetCheckerByGvk(&r.GVK, readiness.GetCheckerParams{
-		LoggerProvider: func() log.Logger {
-			return logger
-		},
+		LoggerProvider: params.loggerProvider,
 	})
 
 	if err != nil {

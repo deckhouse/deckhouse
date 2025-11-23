@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
@@ -34,10 +33,8 @@ type ResourceChecker interface {
 	WaitAttemptsBeforeCheck() int
 }
 
-type LoggerProvider func() log.Logger
-
 type GetCheckerParams struct {
-	LoggerProvider LoggerProvider
+	LoggerProvider log.LoggerProvider
 }
 
 func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (ResourceChecker, error) {
@@ -86,17 +83,6 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 		WithCheckAll(conditionsParams.checkAll)
 
 	return conditionsChecker, nil
-}
-
-func safeLoggerProvider(provider LoggerProvider) log.Logger {
-	if provider != nil {
-		logger := provider()
-		if !govalue.IsNil(logger) {
-			return logger
-		}
-	}
-
-	return log.GetDefaultLogger()
 }
 
 func debugLogAndReturnNotReady(logger log.Logger, resourceName, msg string) (bool, error) {
