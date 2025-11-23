@@ -23,18 +23,42 @@ import (
 type RunScriptReverseTunnelChecker struct {
 	client     node.SSHClient
 	scriptPath string
+
+	uploadDir string
+	cleanup   bool
 }
 
 func NewRunScriptReverseTunnelChecker(c node.SSHClient, scriptPath string) *RunScriptReverseTunnelChecker {
 	return &RunScriptReverseTunnelChecker{
 		client:     c,
 		scriptPath: scriptPath,
+		cleanup:    false,
 	}
+}
+
+func (s *RunScriptReverseTunnelChecker) WithUploadDir(dir string) *RunScriptReverseTunnelChecker {
+	s.uploadDir = dir
+	return s
+}
+
+func (s *RunScriptReverseTunnelChecker) WithCleanup() *RunScriptReverseTunnelChecker {
+	s.cleanup = true
+	return s
 }
 
 func (s *RunScriptReverseTunnelChecker) CheckTunnel(ctx context.Context) (string, error) {
 	script := s.client.UploadScript(s.scriptPath)
+
 	script.Sudo()
+
+	if s.uploadDir != "" {
+		script.WithExecuteUploadDir(s.uploadDir)
+	}
+
+	if s.cleanup {
+		script.WithCleanupAfterExec(s.cleanup)
+	}
+
 	out, err := script.Execute(ctx)
 	return string(out), err
 }

@@ -74,7 +74,10 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		return fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
 
-	checker := ssh.NewRunScriptReverseTunnelChecker(wrapper.Client(), checkingScript)
+	checker := ssh.NewRunScriptReverseTunnelChecker(wrapper.Client(), checkingScript).
+		WithUploadDir("/tmp").
+		WithCleanup()
+
 	_, err = checker.CheckTunnel(ctx)
 	if err != nil {
 		tun.Stop()
