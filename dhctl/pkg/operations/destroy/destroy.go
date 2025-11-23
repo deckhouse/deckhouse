@@ -528,7 +528,7 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 func (d *StaticMastersDestroyer) switchToNodeUser(oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
 	log.DebugLn("Starting replacing SSH client")
 
-	tmpDir := filepath.Join(app.CacheDir, "destroy")
+	tmpDir := filepath.Join(app.GetTmpDir(), "destroy")
 
 	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {

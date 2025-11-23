@@ -319,8 +319,10 @@ func runApplication(kpApp *kingpin.Application) {
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		initer.setParams(actionIniterParams{
-			tmpDirName: app.TmpDirName,
-			isDebug:    app.IsDebug,
+			tmpDirName:        app.TmpDirName,
+			stateCacheDirName: app.CacheDir,
+
+			isDebug: app.IsDebug,
 
 			loggerType:          app.LoggerType,
 			doNotWriteDebugFile: app.DoNotWriteDebugLogFile,

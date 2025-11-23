@@ -16,8 +16,6 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -29,7 +27,7 @@ const (
 )
 
 var (
-	CacheDir   = filepath.Join(os.TempDir(), "dhctl")
+	CacheDir   = defaultTmpAndStateDir
 	UseTfCache = "ask"
 
 	DropCache = false
@@ -88,4 +86,16 @@ func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
 	cmd.Flag("tf-resource-management-timeout", "Redefine infrastructure resource management timeouts").
 		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
 		StringVar(&ResourceManagementTimeout)
+}
+
+func SetCacheDir(dir string) {
+	CacheDir = dir
+}
+
+func GetCacheDir() string {
+	return CacheDir
+}
+
+func GetDefaultStateDir() string {
+	return defaultTmpAndStateDir
 }

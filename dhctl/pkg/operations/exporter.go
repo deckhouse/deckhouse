@@ -253,9 +253,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 		RemoveTombStone: true,
 		TmpDir:          c.tmpDir,
 		DefaultTmpDir:   c.tmpDir, // do not remove root tmp dir
-		LoggerProvider: func() log.Logger {
-			return c.logger
-		},
+		LoggerProvider:  log.SimpleLoggerProvider(c.logger),
 	})
 
 	c.recordStatistic(c.getStatistic(ctx, clearTmp))
