@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -192,7 +193,7 @@ spec:
   nodeType: CloudEphemeral
 `
 
-	t.Run("Standard Static", func(t *testing.T) {
+	t.Run("Standard Static + init configuration", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
 
@@ -207,10 +208,18 @@ spec:
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
+		registry := metaConfig.Registry.Mode.RemoteData()
+		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, registry.ImagesRepo, "test")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Username, "")
+		require.Equal(t, registry.Password, "")
+		require.Equal(t, registry.CA, "")
+
 		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
-	t.Run("Without init configuration", func(t *testing.T) {
+	t.Run("Standard Static without init configuration", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
 
@@ -225,11 +234,13 @@ spec:
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
-		// require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
-		// require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
-		// require.Equal(t, metaConfig.Registry.Path, "/deckhouse/ce")
-		// require.Equal(t, metaConfig.Registry.DockerCfg, "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=")
-		// require.Equal(t, metaConfig.Registry.Scheme, "https")
+		registry := metaConfig.Registry.Mode.RemoteData()
+		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Username, "")
+		require.Equal(t, registry.Password, "")
+		require.Equal(t, registry.CA, "")
 
 		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
@@ -357,14 +368,22 @@ spec:
 	})
 }
 
-// func TestParseConfigFromFiles(t *testing.T) {
-// 	imagesDigestsJSON = "./mocks/images_digests.json"
-// 	app.VersionFile = "./mocks/version"
-// 	t.Run("parse wildcard", func(t *testing.T) {
-// 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
-// 		require.NoError(t, err)
-// 		require.Equal(t, "Static", metaConfig.ClusterType)
-// 		require.Equal(t, "registry.deckhouse.io", metaConfig.Registry.Address)
-// 		require.Len(t, metaConfig.ModuleConfigs, 3)
-// 	})
-// }
+func TestParseConfigFromFiles(t *testing.T) {
+	imagesDigestsJSON = "./mocks/images_digests.json"
+	app.VersionFile = "./mocks/version"
+	t.Run("parse wildcard", func(t *testing.T) {
+		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
+		require.NoError(t, err)
+		require.Equal(t, "Static", metaConfig.ClusterType)
+
+		registry := metaConfig.Registry.Mode.RemoteData()
+		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Username, "")
+		require.Equal(t, registry.Password, "")
+		require.Equal(t, registry.CA, "")
+
+		require.Len(t, metaConfig.ModuleConfigs, 3)
+	})
+}
