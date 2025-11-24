@@ -30,8 +30,6 @@ import (
 
 const (
 	defaultTimeout = 120 * time.Second
-
-	tracerName = "container-registry-client"
 )
 
 // Options contains configuration options for the registry client
@@ -108,6 +106,7 @@ func GetHTTPTransport(ca string) http.RoundTripper {
 	if ca == "" {
 		return http.DefaultTransport
 	}
+
 	caPool, err := x509.SystemCertPool()
 	if err != nil {
 		panic(fmt.Errorf("cannot get system cert pool: %v", err))

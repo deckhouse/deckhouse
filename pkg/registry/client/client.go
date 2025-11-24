@@ -29,9 +29,14 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"go.opentelemetry.io/otel"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
+)
+
+const (
+	tracerName = "registry-client"
 )
 
 var ErrImageNotFound = errors.New("image not found")
@@ -140,6 +145,9 @@ func (c *Client) GetRegistry() string {
 
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetDigest")
+	defer span.End()
+
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
@@ -176,6 +184,9 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 // GetManifest retrieves the manifest for a specific image tag
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetManifest(ctx context.Context, tag string) (registry.ManifestResult, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetManifest")
+	defer span.End()
+
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
@@ -219,6 +230,9 @@ func (w WithPlatform) ApplyToImageGet(opts *registry.ImageGetOptions) {
 // It will be in use while passed context will be alive.
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetImage")
+	defer span.End()
+
 	getImageOptions := &registry.ImageGetOptions{}
 
 	for _, opt := range opts {
@@ -272,6 +286,9 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 // PushImage pushes an image to the registry at the specified tag
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts ...registry.ImagePushOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "PushImage")
+	defer span.End()
+
 	putImageOptions := &registry.ImagePushOptions{}
 
 	for _, opt := range opts {
@@ -308,6 +325,9 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 // GetImageConfig retrieves the image config file containing labels and metadata
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetImageConfig")
+	defer span.End()
+
 	_ = c.GetRegistry()
 
 	logentry := c.logger.With(
@@ -362,6 +382,9 @@ func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
 // ListTags lists tags for the current scope with pagination
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListTags")
+	defer span.End()
+
 	listOptions := &registry.ListTagsOptions{}
 
 	for _, opt := range opts {
@@ -437,6 +460,9 @@ func (w *withReposLimit) ApplyToListRepositories(opts *registry.ListRepositories
 // The scope is determined by the chained WithSegment() calls
 // Returns repository names under the current scope
 func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListRepositories")
+	defer span.End()
+
 	listOptions := &registry.ListRepositoriesOptions{}
 
 	for _, opt := range opts {
@@ -497,6 +523,9 @@ func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepo
 // If image not found, return an error
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "CheckImageExists")
+	defer span.End()
+
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
