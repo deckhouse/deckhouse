@@ -27,12 +27,9 @@ const (
 	PackageRepositoryOperationResource = "packagerepositoryoperations"
 	PackageRepositoryOperationKind     = "PackageRepositoryOperation"
 
-	PackageRepositoryOperationTypeScan = "Update"
-
 	PackageRepositoryOperationPhasePending    = "Pending"
 	PackageRepositoryOperationPhaseProcessing = "Processing"
 	PackageRepositoryOperationPhaseCompleted  = "Completed"
-	PackageRepositoryOperationPhaseFailed     = "Failed"
 
 	// PackageRepositoryOperation condition types
 	PackageRepositoryOperationConditionProcessed = "Processed"
@@ -41,6 +38,17 @@ const (
 	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
 	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
 	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
+
+	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
+	// that belong to a specific PackageRepository
+	PackagesRepositoryOperationLabelRepository = "packages.deckhouse.io/repository"
+
+	PackagesRepositoryOperationLabelOperationType = "packages.deckhouse.io/operation-type"
+	PackageRepositoryOperationTypeUpdate          = "Update"
+
+	PackagesRepositoryOperationLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
+	PackagesRepositoryTriggerManual                  = "manual"
+	PackagesRepositoryTriggerAuto                    = "auto"
 )
 
 var (

@@ -116,12 +116,85 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
+	// ensure operation trigger label
+	res, err := r.EnsureLabelOperationTrigger(ctx, operation)
+	if err != nil {
+		logger.Warn("failed to ensure operation trigger label", log.Err(err))
+
+		return res, err
+	}
+
+	if res.Requeue {
+		return res, nil
+	}
+
+	// ensure operation type label
+	res, err = r.EnsureLabelOperationType(ctx, operation)
+	if err != nil {
+		logger.Warn("failed to ensure operation type label", log.Err(err))
+
+		return res, err
+	}
+
+	if res.Requeue {
+		return res, nil
+	}
+
 	// handle create/update events - state machine
-	res, err := r.handle(ctx, operation)
+	res, err = r.handle(ctx, operation)
 	if err != nil {
 		logger.Warn("failed to handle package repository operation", log.Err(err))
 
 		return res, err
+	}
+
+	return res, nil
+}
+
+func (r *reconciler) EnsureLabelOperationTrigger(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if operation.Labels == nil {
+		operation.Labels = make(map[string]string)
+	}
+
+	if _, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
+		original := operation.DeepCopy()
+		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+
+		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch operation trigger label: %w", err)
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	return res, nil
+}
+
+func (r *reconciler) EnsureLabelOperationType(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if operation.Labels == nil {
+		operation.Labels = make(map[string]string)
+	}
+
+	var opType string
+	if operation.Spec.Type != "" {
+		opType = operation.Spec.Type
+	} else {
+		opType = ""
+	}
+
+	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || existing != opType {
+		original := operation.DeepCopy()
+		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = opType
+
+		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch operation type label: %w", err)
+		}
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return res, nil
@@ -141,8 +214,6 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
 		r.logger.Debug("operation already completed", slog.String("name", operation.Name))
-	case v1alpha1.PackageRepositoryOperationPhaseFailed:
-		r.logger.Debug("operation already failed", slog.String("name", operation.Name))
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
 
@@ -607,9 +678,9 @@ func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resour
 				},
 			},
 			Spec: v1alpha1.ApplicationPackageVersionSpec{
-				PackageName: packageName,
-				Version:     version,
-				Repository:  repositoryName,
+				PackageName:       packageName,
+				Version:           version,
+				PackageRepository: repositoryName,
 			},
 		}
 
@@ -821,11 +892,12 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, p
 				versionTags = append(versionTags, item.Status.Version)
 			}
 		}
-	case *v1alpha1.ClusterApplicationPackageVersionList:
-		for _, item := range list.Items {
-			if item.Status.Version != "" {
-				versionTags = append(versionTags, item.Status.Version)
-			}
+	default:
+		{
+			r.logger.Warn("unsupported package version list type",
+				slog.String("package", packageName),
+				slog.String("type", packageType))
+			return ""
 		}
 	}
 

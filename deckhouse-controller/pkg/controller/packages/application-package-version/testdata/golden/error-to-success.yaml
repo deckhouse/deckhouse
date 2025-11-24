@@ -7,15 +7,15 @@ metadata:
   resourceVersion: "3"
 spec:
   packageName: test
-  repository: deckhouse
+  packageRepository: deckhouse
   version: v1.0.0
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
-    type: IsEnriched
-  metadata:
+    type: MetadataLoaded
+  packageMetadata:
     category: Test
     description:
       en: Test package
