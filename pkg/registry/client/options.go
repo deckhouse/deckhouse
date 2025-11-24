@@ -16,12 +16,22 @@ package client
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	defaultTimeout = 120 * time.Second
+
+	tracerName = "container-registry-client"
 )
 
 // Options contains configuration options for the registry client
@@ -34,6 +44,12 @@ type Options struct {
 	TLSSkipVerify bool
 	// Logger for client operations
 	Logger *log.Logger
+	// UserAgent sets the User-Agent header for requests
+	UserAgent string
+	// CA sets a custom CA certificate for TLS verification
+	CA string
+	// Timeout sets the timeout for registry operations
+	Timeout time.Duration
 }
 
 // ensureLogger sets a default logger if none is provided
@@ -46,9 +62,19 @@ func ensureLogger(logger *log.Logger) *log.Logger {
 }
 
 // buildRemoteOptions constructs remote options including auth and transport configuration
-func buildRemoteOptions(auth authn.Authenticator, opts *Options) []remote.Option {
-	remoteOptions := []remote.Option{
-		remote.WithAuth(auth),
+func buildRemoteOptions(opts *Options) []remote.Option {
+	remoteOptions := []remote.Option{}
+
+	if opts.Auth != nil {
+		remoteOptions = append(remoteOptions, remote.WithAuth(opts.Auth))
+	}
+
+	if opts.UserAgent != "" {
+		remoteOptions = append(remoteOptions, remote.WithUserAgent(opts.UserAgent))
+	}
+
+	if opts.CA != "" {
+		remoteOptions = append(remoteOptions, remote.WithTransport(GetHTTPTransport(opts.CA)))
 	}
 
 	if needsCustomTransport(opts) {
@@ -76,4 +102,30 @@ func configureTransport(opts *Options) *http.Transport {
 	}
 
 	return transport
+}
+
+func GetHTTPTransport(ca string) http.RoundTripper {
+	if ca == "" {
+		return http.DefaultTransport
+	}
+	caPool, err := x509.SystemCertPool()
+	if err != nil {
+		panic(fmt.Errorf("cannot get system cert pool: %v", err))
+	}
+
+	caPool.AppendCertsFromPEM([]byte(ca))
+
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   defaultTimeout,
+			KeepAlive: defaultTimeout,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{RootCAs: caPool},
+		TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	}
 }

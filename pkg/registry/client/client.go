@@ -23,6 +23,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -50,6 +51,8 @@ type Client struct {
 	// remote options for go-containerregistry
 	options []remote.Option
 
+	timeout time.Duration
+
 	logger *log.Logger
 }
 
@@ -58,7 +61,7 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	// Ensure logger first before using it
 	logger := ensureLogger(opts.Logger)
 
-	remoteOptions := buildRemoteOptions(opts.Auth, opts)
+	remoteOptions := buildRemoteOptions(opts)
 
 	if opts.TLSSkipVerify {
 		logger.Debug("TLS certificate verification disabled",
@@ -75,6 +78,7 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	client := &Client{
 		registryHost: registry,
 		options:      remoteOptions,
+		timeout:      opts.Timeout,
 		logger:       logger,
 	}
 
@@ -83,6 +87,21 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 	}
 
 	return client
+}
+
+func (c *Client) withContext(ctx context.Context) remote.Option {
+	if c.timeout == 0 {
+		c.logger.Debug("Using context without timeout")
+
+		return remote.WithContext(ctx)
+	}
+
+	ctxWTO, cancel := context.WithTimeout(ctx, c.timeout)
+	// add default timeout to prevent endless request on a huge image
+	// Warning!: don't use cancel() in the defer func here. Otherwise *v1.Image outside this function would be inaccessible due to cancelled context, while reading layers, for example.
+	_ = cancel
+
+	return remote.WithContext(ctxWTO)
 }
 
 // WithSegment creates a new client with an additional scope path segment
@@ -137,7 +156,7 @@ func (c *Client) GetDigest(ctx context.Context, tag string) (*v1.Hash, error) {
 	}
 
 	opts := append([]remote.Option{}, c.options...)
-	opts = append(opts, remote.WithContext(ctx))
+	opts = append(opts, c.withContext(ctx))
 
 	head, err := remote.Head(ref, opts...)
 	if err == nil {
@@ -173,7 +192,7 @@ func (c *Client) GetManifest(ctx context.Context, tag string) (registry.Manifest
 	}
 
 	opts := append([]remote.Option{}, c.options...)
-	opts = append(opts, remote.WithContext(ctx))
+	opts = append(opts, c.withContext(ctx))
 	desc, err := remote.Get(ref, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manifest: %w", err)
@@ -227,7 +246,7 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 		return nil, fmt.Errorf("failed to parse reference: %w", err)
 	}
 
-	imageOptions := []remote.Option{remote.WithContext(ctx)}
+	imageOptions := []remote.Option{c.withContext(ctx)}
 	imageOptions = append(imageOptions, c.options...)
 
 	if getImageOptions.Platform != nil {
@@ -275,7 +294,7 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 	}
 
 	remoteOptions := append([]remote.Option{}, c.options...)
-	remoteOptions = append(remoteOptions, remote.WithContext(ctx))
+	remoteOptions = append(remoteOptions, c.withContext(ctx))
 
 	if err := remote.Write(ref, img, remoteOptions...); err != nil {
 		return fmt.Errorf("failed to push image: %w", err)
@@ -367,7 +386,7 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 
 	repo := ref.Context()
 	remoteOpts := append([]remote.Option{}, c.options...)
-	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
+	remoteOpts = append(remoteOpts, c.withContext(ctx))
 
 	// Add pagination options
 	if listOptions.N > 0 {
@@ -445,7 +464,7 @@ func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepo
 	logentry.Debug("Listing repositories for base repository", slog.String("repository", repo.String()))
 
 	remoteOpts := append([]remote.Option{}, c.options...)
-	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
+	remoteOpts = append(remoteOpts, c.withContext(ctx))
 
 	// Use CatalogPage for server-side pagination if supported
 	if listOptions.N > 0 || listOptions.Last != "" {
@@ -494,7 +513,7 @@ func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
 	}
 
 	opts := append([]remote.Option{}, c.options...)
-	opts = append(opts, remote.WithContext(ctx))
+	opts = append(opts, c.withContext(ctx))
 
 	_, err = remote.Head(ref, opts...)
 	if err != nil {
