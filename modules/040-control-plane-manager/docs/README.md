@@ -73,7 +73,7 @@ Automatically configures the optimal `--terminated-pod-gc-threshold` based on cl
 - **Large clusters** (from 300 nodes): 6000 terminated Pods.
 
 {% alert level="info" %}
-Note. This feature only takes effect in environments where the `terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
+Note. This feature only takes effect in environments where the `--terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
 {% endalert %}
 
 ## Version control
