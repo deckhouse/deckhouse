@@ -22,7 +22,7 @@
         To check the Pod's status, run the following command:
         
         ```shell
-        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        d8 k -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
         ```
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
