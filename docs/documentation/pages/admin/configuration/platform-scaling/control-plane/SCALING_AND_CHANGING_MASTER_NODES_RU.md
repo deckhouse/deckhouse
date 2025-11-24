@@ -364,54 +364,22 @@ spec:
    > - "Auto"
    > ```
 
-1. Снимите следующие лейблы с удаляемых master-узлов:
-   * `node-role.kubernetes.io/control-plane`;
-   * `node-role.kubernetes.io/master`;
-   * `node.deckhouse.io/group`.
-
-   Команда для снятия лейблов:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
-
-   ```bash
-   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-     if [ $? -eq 0 ]; then
-       break
-     fi
-   done
-   ```
-
-1. Выполните `drain` для удаляемых узлов:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
-
-1. Удалите в кластере поды, оставшиеся на удаленных узлах:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Удалите в кластере объекты `Node` удаленных узлов:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   >
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   >
+   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе ETCD.
+
+1. Выполните проверку очереди Deckhouse и убедитесь, что отсутствуют ошибки, с помощью команды:
+
+   ```shell
+   d8 system queue list
    ```
 
 ### Доступ к контроллеру DKP в мультимастерном кластере
