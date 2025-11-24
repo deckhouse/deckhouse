@@ -473,7 +473,7 @@ spec:
 
 Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource for more information about the parameters.
 
-Changing the `InstanceClass` or `instancePrefix` parameter in the Deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones. The number of `machinedeployments` ordered at the same time is determined by the `cloud Instances.maxSurgePerZone` parameter.
+When the `InstanceClass` or `instancePrefix` parameters are modified, a process similar to updating a Deployment in Kubernetes will occur (in this case, changing `InstanceClass` results in creating a new `MachineSet`, and changing `instancePrefix` results in creating a new `MachineDeployment`). New instances will be created according to the value of the `cloudInstances.maxSurgePerZone` parameter, and as they are created, the old instances will be gradually removed with a drain operation performed beforehand.
 
 During the disruption update, an evict of the pods from the node is performed. If any pod failes to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
 
