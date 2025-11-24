@@ -116,6 +116,7 @@
  - **[cloud-provider-vcd]** Added validation to provider.server in VCDClusterConfiguration to ensure it does not end with '/'. [#15185](https://github.com/deckhouse/deckhouse/pull/15185)
  - **[cloud-provider-vcd]** Fixed fetching VM templates from organization catalogs without direct access to organizastion. [#14980](https://github.com/deckhouse/deckhouse/pull/14980)
  - **[cloud-provider-vcd]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-vsphere]** fix cloud-data-discoverer (SPBM) [#16589](https://github.com/deckhouse/deckhouse/pull/16589)
  - **[cloud-provider-vsphere]** fix vSphere storageClass template [#16275](https://github.com/deckhouse/deckhouse/pull/16275)
  - **[cloud-provider-yandex]** Terraform auto converger was failed for WithNATInstance layout. [#16427](https://github.com/deckhouse/deckhouse/pull/16427)
  - **[cloud-provider-yandex]** Change machine drain logic and keeps it in LB before drain. [#15255](https://github.com/deckhouse/deckhouse/pull/15255)
