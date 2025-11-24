@@ -17,6 +17,11 @@ on:
   schedule:
   - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      trivy_version:
+        description: Trivy Version Tag
+        required: true
+        default: v0.63.0
 
 # Always run a single job at a time.
 # Note: Concurrency is currently in beta and subject to change.
@@ -29,11 +34,11 @@ permissions:
   id-token: write
 
 jobs:
-{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
+# {!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   download-and-repush-images:
     name: Download and repush images
-    needs:
-      - skip_tests_repos
+    # needs:
+    #   - skip_tests_repos
     runs-on: [self-hosted, regular]
     permissions:
       contents: read
@@ -54,7 +59,7 @@ jobs:
 {!{ tmpl.Exec "add_ssh_keys" . | strings.Indent 6 }!}
       - name: Download custom trivy-db binary and copy image
         env:
-          TRIVY_VERSION: v0.63.0
+          TRIVY_VERSION: ${{ github.event.inputs.trivy_version }}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER: ${{secrets.DECKHOUSE_REGISTRY_USER}}
           DECKHOUSE_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_PASSWORD}}
@@ -82,14 +87,17 @@ jobs:
           git apply --verbose --whitespace=fix ../trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
           cp ../.github/scripts/trivy-db-update-vulnerability-references.sh ./update-vulnerability-references.sh
           cp ../.github/scripts/trivy-db-update.sh ./update.sh
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            export TRIVY_DB_UPDATE_WITH_DATE=true
+          fi
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
           ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
           ./update.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
           ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
+          ./update-vulnerability-references.sh ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
