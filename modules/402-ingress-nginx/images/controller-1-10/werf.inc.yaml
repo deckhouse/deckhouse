@@ -170,7 +170,6 @@ shell:
   - git config --global url."${SOURCE_REPO}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
   - rm -rf /src/etc
-  - cat /build.sh
   - /build.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
