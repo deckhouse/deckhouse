@@ -26,6 +26,7 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
 ```
+
 If you need to send logs to the loki cluster module, change the ClusterLogDestination parameter to d8-loki in the kind parameter, and see additional examples in the [documentation](https://deckhouse.io/modules/loki/examples.html)
 
 ## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
