@@ -42,15 +42,15 @@ shell:
   - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
-  - patch -p1 < /patches/004-lua-info.patch
   - patch -p1 < /patches/001-go-mod.patch
-  - patch -p1 < /patches/005-makefile.patch
   - patch -p1 < /patches/002-healthcheck.patch
+  - patch -p1 < /patches/004-lua-info.patch
+  - patch -p1 < /patches/005-makefile.patch
   - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
   - patch -p1 < /patches/008-util.patch
   - patch -p1 < /patches/009-fix-cleanup.patch
-  - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
   - patch -p1 < /patches/015-validation-mode.patch
