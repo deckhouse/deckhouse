@@ -314,6 +314,32 @@ func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile
 	return configFile, nil
 }
 
+// WithLast sets the pagination continuation token for tags
+func WithTagsLast(last string) registry.ListTagsOption {
+	return &withTagsLast{last: last}
+}
+
+type withTagsLast struct {
+	last string
+}
+
+func (w *withTagsLast) ApplyToListTags(opts *registry.ListTagsOptions) {
+	opts.Last = w.last
+}
+
+// WithTagsLimit sets the maximum number of tag results to return
+func WithTagsLimit(n int) registry.ListTagsOption {
+	return &withTagsLimit{n: n}
+}
+
+type withTagsLimit struct {
+	n int
+}
+
+func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
+	opts.N = w.n
+}
+
 // ListTags lists tags for the current scope with pagination
 // The repository is determined by the chained WithSegment() calls
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
@@ -360,6 +386,32 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	logentry.Debug("Tags retrieved", slog.Int("returned_count", len(tags)))
 
 	return tags, nil
+}
+
+// WithReposLast sets the pagination continuation token for repositories
+func WithReposLast(last string) registry.ListRepositoriesOption {
+	return &withReposLast{last: last}
+}
+
+type withReposLast struct {
+	last string
+}
+
+func (w *withReposLast) ApplyToListRepositories(opts *registry.ListRepositoriesOptions) {
+	opts.Last = w.last
+}
+
+// WithReposLimit sets the maximum number of repository results to return
+func WithReposLimit(n int) registry.ListRepositoriesOption {
+	return &withReposLimit{n: n}
+}
+
+type withReposLimit struct {
+	n int
+}
+
+func (w *withReposLimit) ApplyToListRepositories(opts *registry.ListRepositoriesOptions) {
+	opts.N = w.n
 }
 
 // ListRepositories lists sub-repositories under the current scope with pagination

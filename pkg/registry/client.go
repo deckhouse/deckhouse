@@ -65,58 +65,6 @@ type ListRepositoriesOptions struct {
 	N int
 }
 
-// WithLast sets the pagination continuation token for tags
-func WithTagsLast(last string) ListTagsOption {
-	return &withTagsLast{last: last}
-}
-
-type withTagsLast struct {
-	last string
-}
-
-func (w *withTagsLast) ApplyToListTags(opts *ListTagsOptions) {
-	opts.Last = w.last
-}
-
-// WithTagsLimit sets the maximum number of tag results to return
-func WithTagsLimit(n int) ListTagsOption {
-	return &withTagsLimit{n: n}
-}
-
-type withTagsLimit struct {
-	n int
-}
-
-func (w *withTagsLimit) ApplyToListTags(opts *ListTagsOptions) {
-	opts.N = w.n
-}
-
-// WithReposLast sets the pagination continuation token for repositories
-func WithReposLast(last string) ListRepositoriesOption {
-	return &withReposLast{last: last}
-}
-
-type withReposLast struct {
-	last string
-}
-
-func (w *withReposLast) ApplyToListRepositories(opts *ListRepositoriesOptions) {
-	opts.Last = w.last
-}
-
-// WithReposLimit sets the maximum number of repository results to return
-func WithReposLimit(n int) ListRepositoriesOption {
-	return &withReposLimit{n: n}
-}
-
-type withReposLimit struct {
-	n int
-}
-
-func (w *withReposLimit) ApplyToListRepositories(opts *ListRepositoriesOptions) {
-	opts.N = w.n
-}
-
 // Client defines the contract for interacting with container registries
 type Client interface {
 	// WithSegment creates a new client with an additional scope path segment
