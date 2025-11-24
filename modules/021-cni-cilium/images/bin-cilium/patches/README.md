@@ -72,3 +72,7 @@ Ignore error when using IPv4 address for egress gateway other than assigned
 ## 014-adding-ct-import-of-dump-in-json-format-by-stdin.patch
 
 Added ct dump import
+
+## 015-fixed-endpoint-conntrack-clearing-logic-for-vm-migra.patch
+
+Fixed endpoint clearing logic

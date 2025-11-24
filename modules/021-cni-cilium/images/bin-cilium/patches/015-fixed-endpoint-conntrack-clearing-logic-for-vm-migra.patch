@@ -1,0 +1,45 @@
+From b6bbdcc6587145c8660b476a4f465a1258cd86bf Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 24 Nov 2025 13:44:22 +0300
+Subject: [PATCH] fixed endpoint conntrack clearing logic for vm migration case
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ pkg/endpoint/bpf.go | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
+index 59e81f5bd1..b97a99f31a 100644
+--- a/pkg/endpoint/bpf.go
++++ b/pkg/endpoint/bpf.go
+@@ -9,7 +9,6 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"io"
+-	"net/netip"
+ 	"os"
+ 	"path/filepath"
+ 	"strings"
+@@ -925,12 +924,13 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
+ }
+ 
+ func (e *Endpoint) scrubIPsInConntrackTableLocked() {
+-	e.garbageCollectConntrack(ctmap.GCFilter{
+-		MatchIPs: map[netip.Addr]struct{}{
+-			e.IPv4: {},
+-			e.IPv6: {},
+-		},
+-	})
++	fmt.Printf("DEBUG scrubIPsInConntrackTableLocked DISABLED\n")
++	// e.garbageCollectConntrack(ctmap.GCFilter{
++	// 	MatchIPs: map[netip.Addr]struct{}{
++	// 		e.IPv4: {},
++	// 		e.IPv6: {},
++	// 	},
++	// })
+ }
+ 
+ func (e *Endpoint) scrubIPsInConntrackTable() {
+-- 
+2.34.1
+
