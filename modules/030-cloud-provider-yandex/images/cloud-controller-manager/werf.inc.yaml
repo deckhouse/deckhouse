@@ -14,6 +14,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+fromCacheVersion: "2025-11-24"
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
