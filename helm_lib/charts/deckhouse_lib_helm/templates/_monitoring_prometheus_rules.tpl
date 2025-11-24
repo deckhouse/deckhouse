@@ -62,7 +62,7 @@
         {{- $groupResourceName := printf "%s-%d" $resourceName $idx }}
 ---
 apiVersion: observability.deckhouse.io/v1alpha1
-kind: ClusterObservability{{ if $propagated }}Propagated{{ end }}MetricsRulesGroup
+kind: {{ $propagated | ternary "ClusterObservabilityPropagatedMetricsRulesGroup" "ClusterObservabilityMetricsRulesGroup" }}
 metadata:
   name: {{ $groupResourceName }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
