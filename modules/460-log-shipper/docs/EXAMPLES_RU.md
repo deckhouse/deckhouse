@@ -27,7 +27,7 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-Если вам нужно направить логи в кластерный модуль loki, то в параметре kind измените ClusterLogDestination на d8-loki, дополнительные примеры в [документации](/modules/loki/examples.html#чтение-логов-из-всех-подов-из-указанного-namespace-и-направление-их-в-loki)
+Если вам нужно направить логи в кластерный модуль loki, то в ресурсе `ClusterLoggingConfig` в параметре `.spec.destinationRefs` укажите d8-loki, дополнительные примеры в [документации](/modules/loki/examples.html#чтение-логов-из-всех-подов-из-указанного-namespace-и-направление-их-в-loki)
 
 ## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
