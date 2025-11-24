@@ -298,13 +298,13 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(upstreamData registry_types.Data) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(registryRemote registry_types.Data) (*registryClientConfigGetter, error) {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: upstreamData.ImagesRepo,
-			Scheme:     strings.ToLower(string(upstreamData.Scheme)),
-			CA:         upstreamData.CA,
-			Auth:       upstreamData.AuthBase64(),
+			Repository: registryRemote.ImagesRepo,
+			Scheme:     strings.ToLower(string(registryRemote.Scheme)),
+			CA:         registryRemote.CA,
+			Auth:       registryRemote.AuthBase64(),
 		},
 	}, nil
 }
@@ -313,7 +313,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, upstreamData registry_types.Data, rppSignCheck string, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_types.Data, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -326,7 +326,7 @@ func StartRegistryPackagesProxy(ctx context.Context, upstreamData registry_types
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
-	clientConfigGetter, err := newRegistryClientConfigGetter(upstreamData)
+	clientConfigGetter, err := newRegistryClientConfigGetter(registryRemote)
 	if err != nil {
 		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 	}
@@ -497,7 +497,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry.RemoteData(), config.RppSignCheck, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry.Mode.RemoteData(), config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}

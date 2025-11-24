@@ -15,7 +15,6 @@
 package registry
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 
@@ -38,9 +37,10 @@ var (
 type CRIType = string
 
 type Config struct {
-	RegistryMode
-	deckhouseSettings types.DeckhouseSettings
-	moduleEnabled     bool
+	Mode    Mode
+	Builder ConfigBuilder
+
+	moduleEnabled bool
 }
 
 func NewConfig(
@@ -52,24 +52,27 @@ func NewConfig(
 	// 	return Config{}, fmt.Errorf("conflicting registry settings: specify either 'initConfig' or 'deckhouseSettings', not both")
 	// }
 
-	var config Config
+	var settings types.DeckhouseSettings
+	var mode Mode
+	moduleEnabled := false
 
+	// Prepare deckhouse settings
 	switch {
 	case deckhouseSettings != nil:
-		config.deckhouseSettings = *deckhouseSettings
+		settings = *deckhouseSettings
 	case initConfig != nil:
 		registrySettings, err := initConfig.ToDeckhouseRegistrySettings()
 		if err != nil {
 			return Config{}, fmt.Errorf("failed to get registry settings from initConfig: %w", err)
 		}
-		config.deckhouseSettings = types.DeckhouseSettings{
+		settings = types.DeckhouseSettings{
 			Mode: registry_const.ModeUnmanaged,
 			Unmanaged: &types.UnmanagedModeSettings{
 				RegistrySettings: registrySettings,
 			},
 		}
 	default:
-		config.deckhouseSettings = types.DeckhouseSettings{
+		settings = types.DeckhouseSettings{
 			Mode: registry_const.ModeUnmanaged,
 			Unmanaged: &types.UnmanagedModeSettings{
 				RegistrySettings: types.RegistrySettings{
@@ -80,72 +83,46 @@ func NewConfig(
 		}
 	}
 
-	if err := config.deckhouseSettings.Validate(); err != nil {
+	if err := settings.Validate(); err != nil {
 		return Config{}, fmt.Errorf("failed to validate registry settings: %w", err)
 	}
 
-	registryMode, err := registryModeFromDeckhouse(&config.deckhouseSettings)
-	if err != nil {
-		return Config{}, err
+	// Prepare mode settings
+	switch {
+	case settings.Direct != nil:
+		remote := types.Data{}
+		remote.FromDeckhouseRegistrySettings(settings.Direct.RegistrySettings)
+		mode = &DirectMode{
+			Remote: remote,
+		}
+	case settings.Unmanaged != nil:
+		remote := types.Data{}
+		remote.FromDeckhouseRegistrySettings(settings.Unmanaged.RegistrySettings)
+		mode = &UnmanagedMode{
+			Remote: remote,
+		}
+	default:
+		return Config{}, ErrUnknownMode
 	}
-	config.RegistryMode = registryMode
 
-	config.moduleEnabled = slices.Contains(SupportedCRI, defaultCRI)
-	if config.IsModuleRequired() && !config.moduleEnabled {
+	// Check is module enable
+	moduleEnabled = slices.Contains(SupportedCRI, defaultCRI)
+	if mode.IsModuleRequired() && !moduleEnabled {
 		return Config{}, fmt.Errorf(
 			"registry module is required for mode '%s', but defaultCRI='%s' is not supported; supported: %v",
-			config.Mode(),
+			mode.Mode(),
 			defaultCRI,
 			SupportedCRI,
 		)
 	}
-	return config, nil
-}
 
-func (config *Config) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	if !config.moduleEnabled {
-		return false, nil, nil
-	}
-
-	data, err := json.Marshal(config.deckhouseSettings)
-	if err != nil {
-		return true, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
-	}
-
-	var ret map[string]interface{}
-	if err := json.Unmarshal(data, &ret); err != nil {
-		return true, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
-	}
-
-	return true, ret, nil
-}
-
-func (config *Config) ConfigBuilder() *ConfigBuilder {
-	return &ConfigBuilder{
-		moduleEnabled: config.moduleEnabled,
-		registryMode:  config.RegistryMode,
-	}
-}
-
-func registryModeFromDeckhouse(ds *types.DeckhouseSettings) (RegistryMode, error) {
-	switch ds.Mode {
-	case registry_const.ModeDirect:
-		if ds.Direct == nil {
-			return nil, fmt.Errorf("field 'direct' is required when mode is 'Direct'")
-		}
-		m := &DirectMode{}
-		m.Remote.FromDeckhouseRegistrySettings(ds.Direct.RegistrySettings)
-		return m, nil
-
-	case registry_const.ModeUnmanaged:
-		if ds.Unmanaged == nil {
-			return nil, fmt.Errorf("field 'unmanaged' is required when mode is 'Unmanaged'")
-		}
-		m := &UnmanagedMode{}
-		m.Remote.FromDeckhouseRegistrySettings(ds.Unmanaged.RegistrySettings)
-		return m, nil
-
-	default:
-		return nil, ErrUnknownMode
-	}
+	return Config{
+		Mode:          mode,
+		moduleEnabled: moduleEnabled,
+		Builder: ConfigBuilder{
+			mode:          mode,
+			moduleEnabled: moduleEnabled,
+			settings:      settings,
+		},
+	}, nil
 }

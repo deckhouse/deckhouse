@@ -319,7 +319,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	}
 
 	registryData := m.Registry.
-		ConfigBuilder().
+		Builder.
 		KubeadmTplCtx()
 
 	result["registry"] = registryData
@@ -371,7 +371,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	}
 
 	registryData, err := m.Registry.
-		ConfigBuilder().
+		Builder.
 		WithPKI(registry.NewLazyPKIGenerator()).
 		BashibleTplCtx(context.TODO())
 	if err != nil {

@@ -24,15 +24,16 @@ import (
 )
 
 var (
-	_ RegistryMode = &DirectMode{}
-	_ RegistryMode = &UnmanagedMode{}
+	_ Mode = &DirectMode{}
+	_ Mode = &UnmanagedMode{}
 )
 
-type RegistryMode interface {
+type Mode interface {
 	Mode() string
 	IsModuleRequired() bool
-	RemoteData() types.Data
+	RemoteImagesRepo() string
 	InClusterImagesRepo() string
+	RemoteData() types.Data
 	InClusterData(ctx context.Context, pki PKIProvider) (types.Data, error)
 	BashibleMirrors(
 		ctx context.Context,
@@ -54,6 +55,10 @@ func (m *DirectMode) Mode() registry_const.ModeType {
 
 func (m *DirectMode) IsModuleRequired() bool {
 	return true
+}
+
+func (m *DirectMode) RemoteImagesRepo() string {
+	return m.Remote.ImagesRepo
 }
 
 func (m *DirectMode) InClusterImagesRepo() string {
@@ -126,6 +131,10 @@ func (m *UnmanagedMode) Mode() registry_const.ModeType {
 
 func (m *UnmanagedMode) IsModuleRequired() bool {
 	return false
+}
+
+func (m *UnmanagedMode) RemoteImagesRepo() string {
+	return m.Remote.ImagesRepo
 }
 
 func (m *UnmanagedMode) InClusterImagesRepo() string {

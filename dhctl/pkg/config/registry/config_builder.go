@@ -16,6 +16,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,33 +27,53 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
 
 type ConfigBuilder struct {
-	registryMode  RegistryMode
+	mode          Mode
 	moduleEnabled bool
+	settings      types.DeckhouseSettings
 }
 
 type ConfigBuilderWithPKI struct {
 	ConfigBuilder
-	pkiProvider PKIProvider
+	pki PKIProvider
 }
 
 // =======================
 // ConfigBuilder
 // =======================
+func (cb *ConfigBuilder) DeckhouseSettings() (bool, map[string]interface{}, error) {
+	if !cb.moduleEnabled {
+		return false, nil, nil
+	}
+
+	data, err := json.Marshal(cb.settings)
+	if err != nil {
+		return true, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
+	}
+
+	var ret map[string]interface{}
+	if err := json.Unmarshal(data, &ret); err != nil {
+		return true, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
+	}
+
+	return true, ret, nil
+}
+
 func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
-	address, path := helpers.SplitAddressAndPath(cb.registryMode.InClusterImagesRepo())
+	address, path := helpers.SplitAddressAndPath(cb.mode.InClusterImagesRepo())
 	return map[string]interface{}{
 		"address": address,
 		"path":    path,
 	}
 }
 
-func (cb *ConfigBuilder) WithPKI(pkiProvider PKIProvider) *ConfigBuilderWithPKI {
+func (cb *ConfigBuilder) WithPKI(pki PKIProvider) *ConfigBuilderWithPKI {
 	return &ConfigBuilderWithPKI{
 		ConfigBuilder: *cb,
-		pkiProvider:   pkiProvider,
+		pki:           pki,
 	}
 }
 
@@ -60,7 +81,7 @@ func (cb *ConfigBuilder) WithPKI(pkiProvider PKIProvider) *ConfigBuilderWithPKI 
 // ConfigBuilderWithPKI
 // =======================
 func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData(ctx context.Context) (map[string][]byte, error) {
-	data, err := cb.registryMode.InClusterData(ctx, cb.pkiProvider)
+	data, err := cb.mode.InClusterData(ctx, cb.pki)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +129,7 @@ func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]
 		return nil, err
 	}
 
-	initCfg, err := cb.pkiProvider.Get(ctx)
+	initCfg, err := cb.pki.Get(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PKI: %w", err)
 	}
@@ -123,14 +144,14 @@ func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]
 }
 
 func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig(ctx context.Context) (bashible.Context, bashible.Config, error) {
-	mirrorHost, ctxMirrors, cfgMirrors, err := cb.registryMode.BashibleMirrors(ctx, cb.pkiProvider)
+	mirrorHost, ctxMirrors, cfgMirrors, err := cb.mode.BashibleMirrors(ctx, cb.pki)
 	if err != nil {
 		return bashible.Context{}, bashible.Config{}, err
 	}
 
 	bashibleCtx := bashible.Context{
-		Mode:                 cb.registryMode.Mode(),
-		ImagesBase:           cb.registryMode.InClusterImagesRepo(),
+		Mode:                 cb.mode.Mode(),
+		ImagesBase:           cb.mode.InClusterImagesRepo(),
 		RegistryModuleEnable: cb.moduleEnabled,
 		Hosts: map[string]bashible.ContextHosts{
 			mirrorHost: {Mirrors: ctxMirrors},
@@ -138,8 +159,8 @@ func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig(ctx context.Context) (b
 	}
 
 	bashibleCfg := bashible.Config{
-		Mode:       cb.registryMode.Mode(),
-		ImagesBase: cb.registryMode.InClusterImagesRepo(),
+		Mode:       cb.mode.Mode(),
+		ImagesBase: cb.mode.InClusterImagesRepo(),
 		Hosts: map[string]bashible.ConfigHosts{
 			mirrorHost: {Mirrors: cfgMirrors},
 		},
