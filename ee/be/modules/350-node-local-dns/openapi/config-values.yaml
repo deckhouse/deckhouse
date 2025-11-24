@@ -9,6 +9,8 @@ properties:
     type: boolean
     x-examples: [true]
     description: |
-      Manually enable the high availability mode.
+      Manual failover mode management. Within this module, the option affects the DNS records caching mechanism on nodes:
+      * `true`: upon the expiration of the TTL for an individual DNS record, node-local-dns will continue to return the "stale" value immediately while simultaneously requesting a fresh value from the upstream kube-dns. Thus, in the event of issues with the nodes where kube-dns is running, applications will continue to receive responses to DNS queries with expired TTL, but without delay.
+      * `false`: upon the expiration of the TTL for an individual DNS record, node-local-dns will continue to return the "stale" value, but only after querying the upstream kube-dns. Thus, in the event of issues with the nodes where kube-dns is running, applications will continue to receive DNS responses with expired TTL, but with potentially significant delay. This approach is suitable in highly dynamic environments where Services and Namespaces are frequently recreated.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
