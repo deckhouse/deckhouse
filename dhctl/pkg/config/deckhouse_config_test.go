@@ -198,6 +198,13 @@ spec:
 		assertModuleConfig(t, iCfg.ModuleConfigs[0], true, 1, map[string]interface{}{
 			"bundle":   "Minimal",
 			"logLevel": "Debug",
+			"registry": map[string]interface{}{
+				"mode": "Unmanaged",
+				"unmanaged": map[string]interface{}{
+					"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
+					"scheme":     "HTTPS",
+				},
+			},
 		})
 
 		assertModuleConfig(t, iCfg.ModuleConfigs[1], false, 0, nil)
