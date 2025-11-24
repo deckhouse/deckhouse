@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package types
 
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
 )
 
 type Data struct {
@@ -28,6 +29,20 @@ type Data struct {
 	CA         string     `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Username   string     `json:"username,omitempty" yaml:"username,omitempty"`
 	Password   string     `json:"password,omitempty" yaml:"password,omitempty"`
+}
+
+func (d *Data) FromDeckhouseRegistrySettings(settings RegistrySettings) {
+	*d = Data{
+		ImagesRepo: settings.ImagesRepo,
+		Scheme:     settings.Scheme,
+		CA:         settings.CA,
+		Username:   settings.Username,
+		Password:   settings.Password,
+	}
+	if settings.License != "" {
+		d.Username = LicenseUsername
+		d.Password = settings.License
+	}
 }
 
 func (d *Data) AuthBase64() string {
@@ -39,7 +54,7 @@ func (d *Data) AuthBase64() string {
 }
 
 func (d *Data) DockerCfg() ([]byte, error) {
-	address, _ := addressAndPathFromImagesRepo(d.ImagesRepo)
+	address, _ := d.AddressAndPath()
 	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
 	return cfg, err
 }
@@ -52,10 +67,6 @@ func (d *Data) DockerCfgBase64() (string, error) {
 	return base64.StdEncoding.EncodeToString(cfg), nil
 }
 
-func addressAndPathFromImagesRepo(imgRepo string) (string, string) {
-	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
-	}
-	return parts[0], "/" + parts[1]
+func (d *Data) AddressAndPath() (string, string) {
+	return helpers.SplitAddressAndPath(d.ImagesRepo)
 }

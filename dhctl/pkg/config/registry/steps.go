@@ -66,7 +66,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 }
 
 func checkInit(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	if !config.isModuleEnabled() {
+	if !config.moduleEnabled {
 		return nil
 	}
 
@@ -83,7 +83,7 @@ func checkInit(ctx context.Context, kubeClient client.KubeClient, config Config)
 }
 
 func checkReady(ctx context.Context, kubeClient client.KubeClient, config Config) (string, error) {
-	if !config.isModuleEnabled() {
+	if !config.moduleEnabled {
 		return "", nil
 	}
 

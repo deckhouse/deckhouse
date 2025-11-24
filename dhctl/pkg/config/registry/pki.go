@@ -35,6 +35,10 @@ const (
 type PKI = registry_init.Config
 type CertKey = registry_init.CertKey
 
+type PKIProvider interface {
+	Get(ctx context.Context) (PKI, error)
+}
+
 type ClusterPKIManager struct {
 	kubeClient client.KubeClient
 

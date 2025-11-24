@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -92,8 +93,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	// Prepare registry configuration
 	{
 		var (
-			deckhouseSettings *registry.DeckhouseSettings
-			initConfig        *registry.InitConfig
+			deckhouseSettings *registry_types.DeckhouseSettings
+			initConfig        *registry_types.InitConfig
 			defaultCRI        string
 		)
 
@@ -110,7 +111,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %w", err)
 			}
 			m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
-			initConfig = &registry.InitConfig{
+			initConfig = &registry_types.InitConfig{
 				ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
 				RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
 				RegistryCA:        m.DeckhouseConfig.RegistryCA,
@@ -134,7 +135,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 				return nil, fmt.Errorf("unable to marshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
 
-			var decoded registry.DeckhouseSettings
+			var decoded registry_types.DeckhouseSettings
 			if err := json.Unmarshal(raw, &decoded); err != nil {
 				return nil, fmt.Errorf("unable to unmarshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
