@@ -18,7 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -28,12 +31,14 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	networkv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
 	"deckhouse.io/cni-switch-helper/internal/controller"
+	"deckhouse.io/cni-switch-helper/internal/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -52,9 +57,11 @@ func init() {
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var mode string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&mode, "mode", "controller", "Mode to run the application in: 'controller' or 'webhook'")
 
 	opts := zap.Options{
 		Development: false,
@@ -62,6 +69,15 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if mode == "webhook" {
+		setupLog.Info("starting in webhook mode")
+		if err := startWebhookServer(); err != nil {
+			setupLog.Error(err, "problem running webhook server")
+			os.Exit(1)
+		}
+		return
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -96,4 +112,31 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func startWebhookServer() error {
+	client, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("creating webhook client: %w", err)
+	}
+
+	podAnnotator := &webhook.PodAnnotator{
+		Client: client,
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
+
+	const webhookServerPort = 9443
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", webhookServerPort),
+		Handler:      mux,
+		TLSConfig:    nil,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	setupLog.Info("webhook server starting", "port", webhookServerPort)
+	return server.ListenAndServeTLS("/etc/tls/tls.crt", "/etc/tls/tls.key")
 }
