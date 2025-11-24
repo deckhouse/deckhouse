@@ -38,6 +38,9 @@ type ConfigBuilderWithPKI struct {
 	pkiProvider PKIProvider
 }
 
+// =======================
+// ConfigBuilder
+// =======================
 func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
 	address, path := helpers.SplitAddressAndPath(cb.registryMode.InClusterImagesRepo())
 	return map[string]interface{}{

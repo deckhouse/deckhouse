@@ -34,7 +34,10 @@ type RegistryMode interface {
 	RemoteData() types.Data
 	InClusterImagesRepo() string
 	InClusterData(ctx context.Context, pki PKIProvider) (types.Data, error)
-	BashibleMirrors(ctx context.Context, pki PKIProvider) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error)
+	BashibleMirrors(
+		ctx context.Context,
+		pki PKIProvider,
+	) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error)
 }
 
 type DirectMode struct {
@@ -61,7 +64,10 @@ func (m *DirectMode) RemoteData() types.Data {
 	return m.Remote
 }
 
-func (m *DirectMode) InClusterData(ctx context.Context, pkiProvider PKIProvider) (types.Data, error) {
+func (m *DirectMode) InClusterData(
+	ctx context.Context,
+	pkiProvider PKIProvider,
+) (types.Data, error) {
 	pki, err := pkiProvider.Get(ctx)
 	if err != nil {
 		return types.Data{}, err
@@ -78,7 +84,10 @@ func (m *DirectMode) InClusterData(ctx context.Context, pkiProvider PKIProvider)
 	}, nil
 }
 
-func (m *DirectMode) BashibleMirrors(_ context.Context, _ PKIProvider) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
+func (m *DirectMode) BashibleMirrors(
+	_ context.Context,
+	_ PKIProvider,
+) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
 	host, path := m.Remote.AddressAndPath()
 	username, password := m.Remote.Username, m.Remote.Password
 	scheme := strings.ToLower(string(m.Remote.Scheme))
@@ -127,7 +136,10 @@ func (m *UnmanagedMode) RemoteData() types.Data {
 	return m.Remote
 }
 
-func (m *UnmanagedMode) InClusterData(_ context.Context, _ PKIProvider) (types.Data, error) {
+func (m *UnmanagedMode) InClusterData(
+	_ context.Context,
+	_ PKIProvider,
+) (types.Data, error) {
 	return m.Remote, nil
 }
 
