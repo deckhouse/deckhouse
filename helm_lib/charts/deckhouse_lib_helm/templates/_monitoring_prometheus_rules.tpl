@@ -49,7 +49,7 @@
     {{- $propagated := contains "propagated-" $resourceName }}
     {{- $hasObservabilityModule := has "observability" $context.Values.global.enabledModules }}
     {{- $useObservabilityRules := has "observability.deckhouse.io/v1alpha1/ClusterObservabilityMetricsRulesGroup" $context.Values.global.discovery.apiVersions }}
-    {{- $resourceName = $resourceName | replace "propagated-" }}
+    {{- $resourceName = $resourceName | replace "propagated-" "" }}
     {{- if and $hasObservabilityModule $useObservabilityRules }}
       {{- range $idx, $group := $definitionStruct.Rules }}
         {{- $_ := unset $group "name" }}
