@@ -363,6 +363,26 @@ function prepare_environment() {
   }"
     ;;
 
+  "VCD-WithNAT")
+    # shellcheck disable=SC2016
+    ssh_user="ubuntu"
+    values="{
+    \"vcdUsername\": \"${LAYOUT_VCD_USERNAME}\",
+    \"vcdPassword\": \"${LAYOUT_VCD_PASSWORD}\",
+    \"vcdOrg\": \"${LAYOUT_VCD_ORG}\",
+    \"vcdServer\": \"${LAYOUT_VCD_SERVER}\",
+    \"branch\": \"${DEV_BRANCH}\",
+    \"prefix\": \"${PREFIX}\",
+    \"kubeVersion\": \"${KUBERNETES_VERSION}\",
+    \"defaultCRI\": \"${CRI}\",
+    \"masterCount\": \"${MASTERS_COUNT}\",
+    \"sshPrivateKey\": \"${SSH_KEY}\",
+    \"sshUser\": \"${ssh_user}\",
+    \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+    \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+  }"
+    ;;
+
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"

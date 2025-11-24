@@ -35,6 +35,7 @@ const labels = {
   'e2e/run/openstack': { type: 'e2e-run', provider: 'openstack' },
   'e2e/run/vsphere': { type: 'e2e-run', provider: 'vsphere' },
   'e2e/run/vcd': { type: 'e2e-run', provider: 'vcd' },
+  'e2e/run/vcd-withnat': { type: 'e2e-run', provider: 'vcd-withnat' },
   'e2e/run/yandex-cloud': { type: 'e2e-run', provider: 'yandex-cloud' },
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
   'e2e/run/dvp': { type: 'e2e-run', provider: 'dvp' },
