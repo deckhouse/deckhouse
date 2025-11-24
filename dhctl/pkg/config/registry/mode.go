@@ -79,12 +79,10 @@ func (m *DirectMode) InClusterData(ctx context.Context, pkiProvider PKIProvider)
 }
 
 func (m *DirectMode) BashibleMirrors(_ context.Context, _ PKIProvider) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
-	remote := m.RemoteData()
-
-	host, path := remote.AddressAndPath()
-	username, password := remote.Username, remote.Password
-	scheme := strings.ToLower(string(remote.Scheme))
-	ca := remote.CA
+	host, path := m.Remote.AddressAndPath()
+	username, password := m.Remote.Username, m.Remote.Password
+	scheme := strings.ToLower(string(m.Remote.Scheme))
+	ca := m.Remote.CA
 
 	from := registry_const.PathRegexp
 	to := strings.TrimLeft(path, "/")
