@@ -382,6 +382,9 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  feature_gates_available_by_version:
+    en: List of available feature gates...
+    ru: Список доступных feature gates...
 
 comparison:
   except_parameters:

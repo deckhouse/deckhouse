@@ -1,3 +1,4 @@
+{{- $metallb_version := "0.15.2" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -8,15 +9,20 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/configs
+  to: /configs
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b v0.14.8 $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
-  - git apply /patches/*.patch --verbose
-  - rm -rf e2etest
+  - git clone -b v{{ $metallb_version }} $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
+  - git apply /patches/*.patch --verbose --allow-empty
+  - rm -rf e2etest website
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -63,6 +69,10 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /speaker
   to: /speaker
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /configs/excludel2.yaml
+  to: /etc/metallb/excludel2.yaml
   before: setup
 git:
 {{- include "image mount points" . }}

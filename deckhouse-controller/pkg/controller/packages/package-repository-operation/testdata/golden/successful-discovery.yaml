@@ -4,6 +4,8 @@ kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
   labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1571326380
   ownerReferences:
@@ -12,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "6"
+  resourceVersion: "8"
 spec:
   packageRepository: deckhouse
   type: Update

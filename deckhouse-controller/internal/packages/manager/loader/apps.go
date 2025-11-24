@@ -31,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -82,7 +83,7 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
 // Returns ErrVersionNotFound if version directory doesn't exist.
-func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Application, error) {
+func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, name string) (*apps.Application, error) {
 	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
 
@@ -139,7 +140,8 @@ func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Applic
 	conf := apps.ApplicationConfig{
 		Definition: appDef,
 
-		Digests: digests,
+		Digests:  digests,
+		Registry: reg,
 
 		StaticValues: static,
 		ConfigSchema: config,

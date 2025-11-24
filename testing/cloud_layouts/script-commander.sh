@@ -75,6 +75,10 @@ Provider specific environment variables:
 
 \$LAYOUT_OS_PASSWORD
 
+  Static-cse:
+
+\$LAYOUT_OS_PASSWORD
+
 EOF
 )
 
@@ -83,13 +87,14 @@ set -Eeo pipefail
 shopt -s failglob
 
 function create_registry() {
+  registry_suffix=$(echo "$INSTALL_IMAGE_NAME" | sed -E 's|^[^/]*/([^/]+/[^/]+)/[^:]+:.*|\1|') # repo.url/project/path/install:prNum ==> project/path
   decode_dockercfg=$(base64 -d <<< "${1}")
   registry_address=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
   registry_auth=$(jq -r ".auths.\"${registry_address}\".auth" <<< "$decode_dockercfg")
   sleep_second=0
   payload="{
       \"name\": \"${PREFIX}\",
-      \"images_repo\": \"${registry_address}/sys/deckhouse-oss\",
+      \"images_repo\": \"${registry_address}/${registry_suffix}\",
       \"scheme\": \"https\",
       \"dev_branch\": \"${DEV_BRANCH}\",
       \"auth\": \"${registry_auth}\"
@@ -180,13 +185,6 @@ function prepare_environment() {
       fi
     else
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
-    fi
-
-    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
-      echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
-      registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
-    else
-      registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
     fi
 
   case "$PROVIDER" in
@@ -352,6 +350,21 @@ function prepare_environment() {
     ssh_rosa_user_worker="centos"
 
     ;;
+
+  "Static-cse")
+    cwd=$(pwd)/../testing/cloud_layouts/Static
+    export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
+    export TF_VAR_PREFIX="$PREFIX"
+
+    # use different users for different OSs
+    ssh_astra_user="astra"
+    ssh_alt_user="altlinux"
+    ssh_redos_user="redos"
+    ssh_mosos_user="opensuse"
+    ssh_user="$ssh_astra_user"
+    ssh_user_system="$ssh_mosos_user"
+
+    ;;
   esac
 }
 
@@ -381,38 +394,89 @@ function bootstrap_static() {
 
   get_opentofu
 
- $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
- $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-
-  if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get master_ip from opentofu output"
-    return 1
+  if [[ ${PROVIDER} == "Static" ]]; then
+    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   fi
 
-  if ! system_ip="$($cwd/opentofu output -raw system_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get system_ip from opentofu output"
-    return 1
+  $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+
+  if [[ ${PROVIDER} == "Static" ]]; then
+
+    if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get master_ip from opentofu output"
+      return 1
+    fi
+
+    if ! system_ip="$($cwd/opentofu output -raw system_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get system_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_redos_ip="$($cwd/opentofu output -raw worker_redos_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_opensuse_ip="$($cwd/opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_rosa_ip="$($cwd/opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
+      return 1
+    fi
+
+    if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get bastion_ip from opentofu output"
+      return 1
+    fi
+
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then # todo change to opentofu from $cwd
+      >&2 echo "ERROR: can't get bastion_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master1_ssh_addr' )"; then
+      >&2 echo "ERROR: can't get master_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master2_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master2_ssh_addr')"; then
+      >&2 echo "ERROR: can't get master2_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master3_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master3_ssh_addr')"; then
+      >&2 echo "ERROR: can't get master3_ip from opentofu output"
+      return 1
+    fi
+
+    if ! system_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.system_ssh_addr')"; then
+      >&2 echo "ERROR: can't get system_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker1_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker1_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker1_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker2_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker2_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker2_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker3_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker3_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker3_ip from opentofu output"
+      return 1
+    fi
+
   fi
 
-  if ! worker_redos_ip="$($cwd/opentofu output -raw worker_redos_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
-    return 1
-  fi
-
-  if ! worker_opensuse_ip="$($cwd/opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
-    return 1
-  fi
-
-  if ! worker_rosa_ip="$($cwd/opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
-    return 1
-  fi
-
-  if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get bastion_ip from opentofu output"
-    return 1
-  fi
 
   # Add key to access to hosts thru bastion
   set_common_ssh_parameters
@@ -421,82 +485,27 @@ function bootstrap_static() {
   scp_command="scp -S /usr/bin/ssh -F /tmp/cloud-test-ssh-config"
   ssh_bastion="-J $ssh_user@$bastion_ip"
 
-  waitForInstancesAreBootstrappedAttempts=20
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: master instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: master instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+  if [[ ${PROVIDER} == "Static" ]]; then
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: system instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: redos worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: redos worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: opensuse worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: opensuse worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: rosa worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: rosa worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
-
-
-  D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
-  D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
-  testRunAttempts=20
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    # Install http/https proxy on bastion node
-    if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-       cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
+    IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
+    D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
+    testRunAttempts=20
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      # Install http/https proxy on bastion node
+      if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+         cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
 apt-get update
 apt-get install -y docker.io docker-compose wget curl chrony
@@ -603,134 +612,136 @@ EOF
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
 
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    # Convert to air-gap environment by removing default route
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "echo Master ip"
-       echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
-       echo "ip route del default" >> /etc/network/if-up.d/add-routes
-       chmod 0755 /etc/network/if-up.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      # Convert to air-gap environment by removing default route
+      if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "echo Master ip"
+         echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+         echo "ip route del default" >> /etc/network/if-up.d/add-routes
+         chmod 0755 /etc/network/if-up.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "echo System ip"
-       echo "#!/bin/sh" > /etc/rc.d/rc.local
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
-       echo "ip route del default" >> /etc/rc.d/rc.local
-       chmod 0755 /etc/rc.d/rc.local
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "echo System ip"
+         echo "#!/bin/sh" > /etc/rc.d/rc.local
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
+         echo "ip route del default" >> /etc/rc.d/rc.local
+         chmod 0755 /etc/rc.d/rc.local
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of system in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of system in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
+
   fi
 }
 
@@ -775,14 +786,21 @@ ENDSSH
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+    if [[ "$PROVIDER" == "Static" ]]; then
+      target_count="5"
+    elif [[ "$PROVIDER" == "Static-cse" ]]; then
+      target_count="7"
+    fi
+
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<EOF
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 5' >/dev/null
-kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
-ENDSSH
+kubectl get nodes -o json | jq -re ".items | length == ${target_count}" >/dev/null
+kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all'
+EOF
+    then
       registration_failed=""
       break
     else
@@ -855,6 +873,7 @@ function wait_alerts_resolve() {
   "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
   "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
   "LoadAverageHigh" # Pointless, as test servers have minimal resources
+  "SecurityEventsDetected" # This is normal for e2e tests
   )
 
   # Alerts
@@ -896,7 +915,7 @@ function wait_alerts_resolve() {
 
 function wait_upmeter_green() {
   # Upmeter
-  iterations=40
+  iterations=60
   sleep_interval=30
 
   for i in $(seq 1 $iterations); do
@@ -1128,6 +1147,13 @@ function run-test() {
   local response
   local cluster_id
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+  else
+    registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
+  fi
+
   if [[ ${PROVIDER} == "Static" ]]; then
       bootstrap_static || return $?
       values="{
@@ -1148,6 +1174,29 @@ function run-test() {
             \"branch\": \"${DEV_BRANCH}\",
             \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
           }"
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    bootstrap_static || return $?
+    values="{
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"sshMaster1Host\": \"${master_ip}\",
+      \"sshMaster1User\": \"${ssh_astra_user}\",
+      \"sshMaster2Host\": \"${master2_ip}\",
+      \"sshMaster2User\": \"${ssh_redos_user}\",
+      \"sshMaster3Host\": \"${master3_ip}\",
+      \"sshMaster3User\": \"${ssh_alt_user}\",
+      \"sshBastionHost\": \"${bastion_ip}\",
+      \"sshBastionUser\": \"${ssh_astra_user}\",
+      \"sshWorker1Host\": \"${worker1_ip}\",
+      \"sshWorker1User\": \"${ssh_alt_user}\",
+      \"sshWorker2Host\": \"${worker2_ip}\",
+      \"sshWorker2User\": \"${ssh_redos_user}\",
+      \"sshWorker3Host\": \"${worker3_ip}\",
+      \"sshWorker3User\": \"${ssh_astra_user}\",
+      \"sshSystemHost\": \"${system_ip}\",
+      \"sshSystemUser\": \"${ssh_mosos_user}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\"
+    }"
   fi
   if [[ ${PROVIDER} == "VCD" ]]; then
       bootstrap_vcd || return $?
@@ -1248,7 +1297,7 @@ function run-test() {
     fi
   done
 
-  if [[ ${PROVIDER} == "Static" ]]; then
+  if [[ "$PROVIDER" == "Static" ]] || [[ "$PROVIDER" == "Static-cse" ]]; then
     system_node_register || return $?
   fi
 
@@ -1259,8 +1308,18 @@ function run-test() {
   wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
-  wait_prom_rules_mutating_ready || return $?
-  testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  if [[ "$PROVIDER" != "Static-cse" ]]; then
+    wait_prom_rules_mutating_ready || return $?
+  else
+    echo "Use ${PROVIDER} provider, skipping prom_rules_mutating_ready check, continue..."
+  fi
+
+  if [[ "$PROVIDER" != "Static-cse" ]]; then
+    testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  else
+    testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  fi
+
   testRunAttempts=5
   $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
   for ((i=1; i<=testRunAttempts; i++)); do
@@ -1326,7 +1385,7 @@ function cleanup() {
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
 
-if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "STATIC" ] || [ "$PROVIDER" = "VCD" ]; }; then
+  if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "Static" ] || [ "$PROVIDER" = "Static-cse" ] || [ "$PROVIDER" = "VCD" ]; }; then
     echo "  Error getting cluster id, but provider is Static or VCD, continue"
   elif [ -z $cluster_id ]; then
     echo "  Error getting cluster id"
@@ -1378,11 +1437,18 @@ if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "STATIC" ] || [ "$PROVIDER" = "VCD"
   fi
 
 
-  if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
-    get_opentofu
+  if [[ ${PROVIDER} == "Static" ]] || [[ "$PROVIDER" == "Static-cse" ]] || [[ ${PROVIDER} == "VCD" ]]; then
     cd $cwd
-     $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-     $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+
+    get_opentofu
+
+    if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
+      $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    elif [[ ${PROVIDER} == "Static-cse" ]]; then
+      $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    fi
+
+    $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   fi
 
   return 0

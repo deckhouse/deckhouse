@@ -7,18 +7,18 @@ To delete a cluster, several steps need to be followed:
 
 1. Remove all additional nodes from the cluster:
 
-   1.1. Remove the node from the Kubernetes cluster:
+   1. Remove the node from the Kubernetes cluster:
 
-   ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
-   d8 k delete node <node>
-   ```
+      ```shell
+      d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
+      d8 k delete node <node>
+      ```
 
-   1.2. Run the cleanup script on the node:
+   1. Run the cleanup script on the node:
 
-   ```shell
-   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
-   ```
+      ```shell
+      bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+      ```
 
 1. Check the release channel set in the cluster. To do this, run the command:
 

@@ -97,6 +97,7 @@
  - **[chrony]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cilium-hubble]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-aws]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-azure]** fix build image for azure ccm [#16560](https://github.com/deckhouse/deckhouse/pull/16560)
  - **[cloud-provider-azure]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-dvp]** add missing field to Cluster [#16399](https://github.com/deckhouse/deckhouse/pull/16399)
  - **[cloud-provider-dvp]** Correct the calculation of the path to the device [#16212](https://github.com/deckhouse/deckhouse/pull/16212)
@@ -115,11 +116,13 @@
  - **[cloud-provider-vcd]** Added validation to provider.server in VCDClusterConfiguration to ensure it does not end with '/'. [#15185](https://github.com/deckhouse/deckhouse/pull/15185)
  - **[cloud-provider-vcd]** Fixed fetching VM templates from organization catalogs without direct access to organizastion. [#14980](https://github.com/deckhouse/deckhouse/pull/14980)
  - **[cloud-provider-vcd]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-vsphere]** fix cloud-data-discoverer (SPBM) [#16589](https://github.com/deckhouse/deckhouse/pull/16589)
  - **[cloud-provider-vsphere]** fix vSphere storageClass template [#16275](https://github.com/deckhouse/deckhouse/pull/16275)
  - **[cloud-provider-yandex]** Terraform auto converger was failed for WithNATInstance layout. [#16427](https://github.com/deckhouse/deckhouse/pull/16427)
  - **[cloud-provider-yandex]** Change machine drain logic and keeps it in LB before drain. [#15255](https://github.com/deckhouse/deckhouse/pull/15255)
  - **[cloud-provider-yandex]** Updated yandex-csi-plugin, set CSI driver metadata querying timeouts. [#15054](https://github.com/deckhouse/deckhouse/pull/15054)
  - **[cloud-provider-yandex]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cni-cilium]** Some issues have been fixed in the EgressGateway. [#16479](https://github.com/deckhouse/deckhouse/pull/16479)
  - **[cni-cilium]** Optimized EgressGateways controller, controller cpu consumption reduced. [#15509](https://github.com/deckhouse/deckhouse/pull/15509)
  - **[cni-cilium]** Fixed egress gateway reselection for case node hard reset. [#15090](https://github.com/deckhouse/deckhouse/pull/15090)
  - **[cni-cilium]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
@@ -145,6 +148,7 @@
  - **[deckhouse-tools]** Added tolerations support to DexAuthenticator configuration. [#14869](https://github.com/deckhouse/deckhouse/pull/14869)
  - **[deckhouse-tools]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[descheduler]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[dhctl]** Fix converge manifests for static cluster in commander. [#16504](https://github.com/deckhouse/deckhouse/pull/16504)
  - **[dhctl]** Validate WithNATInstance Yandex layout params only in bootstrap. [#16427](https://github.com/deckhouse/deckhouse/pull/16427)
  - **[dhctl]** Added nil check to dhctl during converge in migrator [#16289](https://github.com/deckhouse/deckhouse/pull/16289)
  - **[dhctl]** Fix getting passphrase for key from connection config for cli. [#16100](https://github.com/deckhouse/deckhouse/pull/16100)
@@ -188,6 +192,8 @@
  - **[loki]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[metallb]** Fixed CVE's. [#15777](https://github.com/deckhouse/deckhouse/pull/15777)
  - **[metallb]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[monitoring-kubernetes]** remove the Docker traces from the module code [#16542](https://github.com/deckhouse/deckhouse/pull/16542)
+    node-exporter pods will be rollout restarted during upgrade
  - **[monitoring-kubernetes]** Rollout changes for resources metrics kubelet [#16408](https://github.com/deckhouse/deckhouse/pull/16408)
  - **[monitoring-kubernetes]** fix CVE-2025-52881 for node-exporter [#16376](https://github.com/deckhouse/deckhouse/pull/16376)
  - **[monitoring-kubernetes]** Fixed gaps on graph. [#15479](https://github.com/deckhouse/deckhouse/pull/15479)
@@ -308,6 +314,7 @@
     Pods of the kube-proxy module will be restarted.
  - **[metallb]** All required mount points are defined in the mount-points.yaml file. [#15657](https://github.com/deckhouse/deckhouse/pull/15657)
     The pods of the metallb module will be restarted.
+ - **[monitoring-kubernetes]** Added missing severity_level label to the PodStatusIsIncorrect alert. [#16549](https://github.com/deckhouse/deckhouse/pull/16549)
  - **[monitoring-kubernetes]** Standardizing graphs appearance. [#15440](https://github.com/deckhouse/deckhouse/pull/15440)
  - **[network-gateway]** The readOnlyRootFilesystem security option is set to true for all containers. [#15414](https://github.com/deckhouse/deckhouse/pull/15414)
     Pods of the network-gateway module will be restarted.

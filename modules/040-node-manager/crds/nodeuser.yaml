@@ -77,7 +77,7 @@ spec:
                 isSudoer:
                   type: boolean
                   description: 'Persistence of node user in sudo group.'
-                  x-doc-examples: ['true']
+                  x-doc-examples: [true]
                   default: false
                 extraGroups:
                   type: array
@@ -181,7 +181,7 @@ spec:
                 isSudoer:
                   type: boolean
                   description: 'Persistence of node user in sudo group.'
-                  x-doc-examples: ['true']
+                  x-doc-examples: [true]
                   default: false
                 extraGroups:
                   type: array

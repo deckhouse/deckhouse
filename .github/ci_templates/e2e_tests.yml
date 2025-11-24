@@ -115,8 +115,8 @@
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
 {!{- if has $commanderProviders $provider }!}
-  COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-  COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+  COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+  COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
 {!{- end }!}
 {!{- if and (eq $provider "gcp") (not $run_from_issue_or_pr) }!}
   TEST_AUTOSCALER_ENABLED: "true"
@@ -199,7 +199,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -216,7 +216,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
@@ -244,7 +244,7 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
-  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+  -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -e USER_RUNNER_ID=${user_runner_id} \
   {!{- if $run_from_issue_or_pr }!}
   -e CIS_ENABLED=${CIS_ENABLED} \
@@ -302,19 +302,19 @@ run: |
   export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
   export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
   export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-  export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-  export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
+  export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if eq $provider "static" }!}
-  export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+  export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
   export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-  export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   export CIS_ENABLED=${CIS_ENABLED}
   {!{- end }!}
-  export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+  export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
   # for logs upload
   ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -374,7 +374,7 @@ run: |
 {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
     -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
 {!{- end }!}
-    -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+    -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -487,9 +487,14 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret" "FOX_DOCKERCFG" "LAYOUT_FOX_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -504,8 +509,12 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
-{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+{!{- else if eq $provider "openstack" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- else if eq $provider "static" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
@@ -515,6 +524,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "server" "LAYOUT_VCD_SERVER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "org" "LAYOUT_VCD_ORG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
@@ -686,9 +697,9 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
@@ -710,7 +721,7 @@ check_e2e_labels:
       uses: ./.github/actions/upload-d8-debug-logs
       with:
         sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
-        sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+        sshkey: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
 # </template: e2e_tests_create_debug_logs>
     {!{- end }!}
 
@@ -765,9 +776,9 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
@@ -878,9 +889,14 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret" "FOX_DOCKERCFG" "LAYOUT_FOX_DOCKERCFG" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -895,8 +911,12 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
-{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+{!{- else if eq $provider "openstack" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- else if eq $provider "static" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
@@ -906,6 +926,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "server" "LAYOUT_VCD_SERVER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "org" "LAYOUT_VCD_ORG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_ACCESS_KEY_ID" "S3_E2E_ACCESS_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
@@ -999,9 +1021,10 @@ check_e2e_labels:
 {!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
-        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}

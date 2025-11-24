@@ -8,35 +8,40 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"d8_shutdown_inhibitor/pkg/app/tasks"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/systemd"
 	"d8_shutdown_inhibitor/pkg/taskstarter"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type App struct {
 	config      AppConfig
 	taskStarter *taskstarter.Starter
+	klient      *kubernetes.Klient
 }
 
-func NewApp(config AppConfig) *App {
+func NewApp(config AppConfig, klient *kubernetes.Klient) *App {
 	return &App{
 		config: config,
+		klient: klient,
 	}
 }
 
-func (a *App) Start() error {
+func (a *App) Start(ctx context.Context, cancel context.CancelFunc) error {
 	err := a.overrideInhibitDelayMax()
 	if err != nil {
 		return err
 	}
 
-	tasks := a.wireAppTasks()
+	tasks := a.wireAppTasks(ctx)
 	a.taskStarter = taskstarter.NewStarter(tasks...)
 
-	go a.taskStarter.Start(context.Background())
+	go a.taskStarter.Start(ctx, cancel)
 
 	go func() {
 		<-a.taskStarter.Done()
@@ -47,7 +52,7 @@ func (a *App) Start() error {
 }
 
 func (a *App) Stop() {
-	fmt.Printf("Stop app...\n")
+	dlog.Info("stop app")
 	a.taskStarter.Stop()
 }
 
@@ -71,11 +76,19 @@ func (a *App) overrideInhibitDelayMax() error {
 	}
 
 	if currentInhibitDelay >= a.config.InhibitDelayMax {
-		fmt.Printf("overrideInhibitDelayMax: current inhibit delay is already greater or equal to requested: %s >= %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
+		dlog.Info(
+			"skip inhibit delay override: current is greater or equal to requested",
+			slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+			slog.String("requested", a.config.InhibitDelayMax.Truncate(time.Second).String()),
+		)
 		return nil
 	}
 
-	fmt.Printf("overrideInhibitDelayMax: current inhibit delay: %s, override to %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
+	dlog.Info(
+		"override inhibit delay",
+		slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+		slog.String("requested", a.config.InhibitDelayMax.Truncate(time.Second).String()),
+	)
 
 	err = dbusCon.OverrideInhibitDelay(a.config.InhibitDelayMax)
 	if err != nil {
@@ -96,28 +109,32 @@ func (a *App) overrideInhibitDelayMax() error {
 		return fmt.Errorf("overrideInhibitDelayMax: unable to override inhibit delay to %s, current value of InhibitDelayMaxSec (%v) is less than requested", a.config.InhibitDelayMax.Truncate(time.Second).String(), currentInhibitDelay.Truncate(time.Second).String())
 	}
 
-	fmt.Printf("overrideInhibitDelayMax: overridden inhibit delay: %s\n", currentInhibitDelay.Truncate(time.Second).String())
+	dlog.Info(
+		"inhibit delay overridden",
+		slog.String("current", currentInhibitDelay.Truncate(time.Second).String()),
+	)
 	return nil
 }
 
-func (a *App) wireAppTasks() []taskstarter.Task {
+func (a *App) wireAppTasks(ctx context.Context) []taskstarter.Task {
+	unlockCtx, unlockCancel := context.WithCancel(ctx)
+
 	// Create channels for events.
 	// Event on receiving ShutdownPrepareSignal.
 	shutdownSignalCh := make(chan struct{})
-	// Event to unlock all inhibitors when shutdown requirements are met.
-	unlockInhibitorsCh := make(chan struct{})
+	// Event to signal all inhibitors when shutdown requirements are met.
 	startCordonCh := make(chan struct{})
 
 	return []taskstarter.Task{
 		&tasks.ShutdownInhibitor{
-			ShutdownSignalCh:   shutdownSignalCh,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			ShutdownSignalCh: shutdownSignalCh,
+			UnlockCtx:        unlockCtx,
 		},
 		&tasks.PowerKeyInhibitor{
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			UnlockCtx: unlockCtx,
 		},
 		&tasks.PowerKeyEvent{
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			UnlockCtx: unlockCtx,
 		},
 		&tasks.PodObserver{
 			NodeName:              a.config.NodeName,
@@ -125,20 +142,25 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			WallBroadcastInterval: a.config.WallBroadcastInterval,
 			ShutdownSignalCh:      shutdownSignalCh,
 			StartCordonCh:         startCordonCh,
-			StopInhibitorsCh:      unlockInhibitorsCh,
+			UnlockCancel:          unlockCancel,
 			PodMatchers: []kubernetes.PodMatcher{
 				kubernetes.WithLabel(a.config.PodLabel),
 				kubernetes.WithRunningPhase(),
 			},
+			Klient:        a.klient,
+			CordonEnabled: a.config.CordonEnabled,
 		},
 		&tasks.NodeCordoner{
-			NodeName:           a.config.NodeName,
-			StartCordonCh:      startCordonCh,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			NodeName:      a.config.NodeName,
+			StartCordonCh: startCordonCh,
+			UnlockCtx:     unlockCtx,
+			Klient:        a.klient,
+			CordonEnabled: a.config.CordonEnabled,
 		},
 		&tasks.NodeConditionSetter{
-			NodeName:           a.config.NodeName,
-			UnlockInhibitorsCh: unlockInhibitorsCh,
+			NodeName:  a.config.NodeName,
+			UnlockCtx: unlockCtx,
+			Klient:    a.klient,
 		},
 	}
 }

@@ -324,17 +324,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -368,17 +371,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -387,10 +390,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -622,17 +625,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -666,17 +672,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -685,10 +691,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -920,17 +926,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -964,17 +973,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -983,10 +992,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1218,17 +1227,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -1262,17 +1274,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1281,10 +1293,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1516,17 +1528,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -1560,17 +1575,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1579,10 +1594,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1814,17 +1829,20 @@ jobs:
           # IMAGE_DST is an image name for docker push.
           function publish_image() {
             IMAGE_NAME=$1
-            IMAGE_DST=$2
-            IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
-            echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
-            docker pull "${IMAGE_SRC}"
-            echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
-            echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
-            docker image push "${IMAGE_DST}"
-            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
-            docker image rmi "${IMAGE_DST}" || true;
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
           }
 
           # CE/EE/FE -> ce/ee/fe
@@ -1858,17 +1876,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1877,10 +1895,10 @@ jobs:
           # Publish images for Git tag.
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -3056,8 +3074,57 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
+
+      # </template: check-tag-for-release-branch>
+      - name: Check tag for release branch
+        id: check-tag-for-release-branch
+        uses: actions/github-script@v6.4.1
+        with:
+          result-encoding: string
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const match = branch.match(/^release-(\d+\.\d+)$/);
+            const version = match[1];
+
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const prefix = `v${version}.`;
+            const versionTags = tags.filter(tag => tag.name.startsWith(prefix));
+            console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
+
+            if (versionTags.length === 0) {
+              console.log('No tags found for this version, skipping');
+              return false;
+            }
+
+            const compareTags = (a, b) => {
+              const aVersion = a.name.split('.').map(Number);
+              const bVersion = b.name.split('.').map(Number);
+              for (let i = 0; i < 3; i++) {
+                if (aVersion[i] !== bVersion[i]) {
+                  return bVersion[i] - aVersion[i];
+                }
+              }
+              return 0;
+            };
+
+            versionTags.sort(compareTags);
+            const latestTag = versionTags[0];
+            console.log(`Latest tag for ${version}: ${latestTag.name}`);
+
+            const patchVersion = latestTag.name.split('.')[2];
+            const patchNumber = parseInt(patchVersion);
+            console.log(`Patch version: ${patchNumber}`);
+            return patchNumber >= 1;
+      # example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+      # </template: check-tag-for-release-branch>
       - name: List changed modules from latest released version
         id: list_changed_modules
+        if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10

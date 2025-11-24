@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"golang.org/x/crypto/ssh"
+	ssh "github.com/deckhouse/lib-gossh"
 )
 
 type SSHUploadScript struct {

@@ -4,6 +4,6 @@ metadata:
   name: test-app
   namespace: foobar
 spec:
-  applicationPackageName: test
-  repository: deckhouse
+  packageName: test
+  packageRepository: deckhouse
   version: v1.0.0

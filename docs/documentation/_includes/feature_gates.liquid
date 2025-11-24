@@ -1,0 +1,48 @@
+<details markdown="0">
+<summary>{{ site.data.i18n.common['feature_gates_available_by_version'][page.lang] }}</summary>
+
+{%- assign versions = site.data['feature_gates_map'] | sort %}
+{%- for version_entry in versions %}
+  {%- assign version = version_entry[0] %}
+  {%- assign version_data = version_entry[1] %}
+  {%- assign all_gates = "" | split: "" %}
+
+  {%- if version_data.kubelet %}
+    {%- assign all_gates = all_gates | concat: version_data.kubelet %}
+  {%- endif %}
+  {%- if version_data.apiserver %}
+    {%- assign all_gates = all_gates | concat: version_data.apiserver %}
+  {%- endif %}
+  {%- if version_data.kubeControllerManager %}
+    {%- assign all_gates = all_gates | concat: version_data.kubeControllerManager %}
+  {%- endif %}
+  {%- if version_data.kubeScheduler %}
+    {%- assign all_gates = all_gates | concat: version_data.kubeScheduler %}
+  {%- endif %}
+
+  {%- assign unique_gates = "" | split: "" %}
+  {%- for gate in all_gates %}
+    {%- assign found = false %}
+    {%- for unique_gate in unique_gates %}
+      {%- if unique_gate == gate %}
+        {%- assign found = true %}
+        {%- break %}
+      {%- endif %}
+    {%- endfor %}
+    {%- unless found %}
+      {%- assign unique_gates = unique_gates | push: gate %}
+    {%- endunless %}
+  {%- endfor %}
+  {%- assign unique_gates = unique_gates | sort %}
+
+<h3>Kubernetes {{ version }}</h3>
+<ul>
+{%- for gate in unique_gates %}
+<li><code>{{ gate }}</code></li>
+{%- endfor %}
+</ul>
+
+{%- endfor %}
+
+</details>
+
