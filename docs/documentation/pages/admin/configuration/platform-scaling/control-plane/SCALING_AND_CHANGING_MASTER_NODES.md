@@ -370,7 +370,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
    >
-   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the `OpenStack CLI`, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
    >
    > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
 

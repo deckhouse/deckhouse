@@ -138,7 +138,7 @@ The steps described below must be performed from the first in order of the maste
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
 {% endalert %}
 
-1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
+1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
 1. Make sure the DKP queue is empty:
@@ -180,7 +180,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
    >
-   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the `OpenStack CLI`, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
    >
    > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
 

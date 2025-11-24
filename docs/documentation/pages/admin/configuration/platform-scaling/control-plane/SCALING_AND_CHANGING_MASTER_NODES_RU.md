@@ -369,13 +369,14 @@ spec:
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
-   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждении удалении ноды крайне важно проверить удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+
+   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
    >
-   > Например, при удалении ноды `cloud-demo-master-2` в веб-интерфейсе Openstack или в `OpenStack CLI` необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
    >
    > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе ETCD.
 
-1. Выполните проверку очереди Deckhouse и убедитесь, что отсутствуют ошибки командой:
+1. Выполните проверку очереди Deckhouse и убедитесь, что отсутствуют ошибки, с помощью команды:
 
    ```shell
    d8 system queue list
