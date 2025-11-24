@@ -30,7 +30,7 @@ Key capabilities:
 - **Fluent Path Building**: Chain `WithSegment()` calls to construct complex repository paths
 - **Flexible Authentication**: Support for various authentication methods via `authn.Authenticator`
 - **Rich Image Operations**: Pull, push, inspect, and extract container images
-- **Repository Management**: List tags, enumerate repositories, check image existence
+- **Repository Management**: List tags and enumerate repositories with server-side pagination
 - **Thread-Safe**: All operations are safe for concurrent use
 - **Context-Aware**: Full support for context cancellation and timeouts
 
@@ -43,8 +43,8 @@ Key capabilities:
   - Retrieve image configurations and metadata
 
 - **Registry Operations**
-  - List all tags in a repository
-  - Enumerate sub-repositories
+  - List all tags in a repository with server-side pagination
+  - Enumerate sub-repositories with server-side pagination
   - Check image existence
   - Get image digests and manifests
 
@@ -141,15 +141,15 @@ type Client interface {
     
     // Image operations
     GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (ClientImage, error)
-    PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePutOption) error
+    PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
     GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
     GetManifest(ctx context.Context, tag string) (ManifestResult, error)
     GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error)
     CheckImageExists(ctx context.Context, tag string) error
     
     // Repository operations
-    ListTags(ctx context.Context) ([]string, error)
-    ListRepositories(ctx context.Context) ([]string, error)
+    ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error)
+    ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
 }
 ```
 
@@ -472,8 +472,13 @@ defer reader.Close()
 
 ### List Tags
 
+The `ListTags` method supports server-side pagination for large repositories:
+
 ```go
-tags, err := registryClient.ListTags(ctx)
+import "github.com/deckhouse/deckhouse/pkg/registry/client"
+
+// List first 50 tags
+tags, err := registryClient.ListTags(ctx, client.WithTagsLimit(50))
 if err != nil {
     log.Fatal(err)
 }
@@ -481,13 +486,38 @@ if err != nil {
 for _, tag := range tags {
     fmt.Printf("Tag: %s\n", tag)
 }
+
+// Continue pagination from last result
+if len(tags) == 50 {
+    nextTags, err := registryClient.ListTags(ctx, 
+        client.WithTagsLimit(50),
+        client.WithTagsLast(tags[len(tags)-1]),
+    )
+    // Process next page...
+}
 ```
+
+**Available Options:**
+
+```go
+// Limit results (server-side)
+client.WithTagsLimit(100)
+
+// Continue from specific tag (server-side)
+client.WithTagsLast("v1.2.0")
+```
+
+**Note:** Pagination is now handled server-side by go-containerregistry, providing better performance for large repositories.
 
 ### List Repositories
 
+The `ListRepositories` method supports server-side pagination for large registry namespaces:
+
 ```go
-// List sub-repositories under current scope
-repos, err := registryClient.ListRepositories(ctx)
+import "github.com/deckhouse/deckhouse/pkg/registry/client"
+
+// List first 100 repositories
+repos, err := registryClient.ListRepositories(ctx, client.WithReposLimit(100))
 if err != nil {
     log.Fatal(err)
 }
@@ -495,7 +525,28 @@ if err != nil {
 for _, repo := range repos {
     fmt.Printf("Repository: %s\n", repo)
 }
+
+// Continue pagination from last result
+if len(repos) == 100 {
+    nextRepos, err := registryClient.ListRepositories(ctx, 
+        client.WithReposLimit(100),
+        client.WithReposLast(repos[len(repos)-1]),
+    )
+    // Process next page...
+}
 ```
+
+**Available Options:**
+
+```go
+// Limit results (server-side)
+client.WithReposLimit(50)
+
+// Continue from specific repository (server-side)
+client.WithReposLast("myproject")
+```
+
+**Note:** Pagination is now handled server-side by go-containerregistry, providing better performance for large registries.
 
 ### Discover Repository Structure
 
@@ -503,8 +554,8 @@ for _, repo := range repos {
 // Base client
 base := client.NewClientWithOptions("registry.example.com", opts)
 
-// List organizations
-orgs, err := base.ListRepositories(ctx)
+// List organizations with pagination
+orgs, err := base.ListRepositories(ctx, client.WithReposLimit(50))
 if err != nil {
     log.Fatal(err)
 }
@@ -512,7 +563,9 @@ if err != nil {
 // For each organization, list projects
 for _, org := range orgs {
     orgClient := base.WithSegment(org)
-    projects, err := orgClient.ListRepositories(ctx)
+    projects, err := orgClient.ListRepositories(ctx, 
+        client.WithReposLimit(20),
+    )
     if err != nil {
         log.Printf("Failed to list projects for %s: %v", org, err)
         continue

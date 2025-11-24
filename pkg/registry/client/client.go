@@ -252,11 +252,11 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 
 // PushImage pushes an image to the registry at the specified tag
 // The repository is determined by the chained WithSegment() calls
-func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts ...registry.ImagePutOption) error {
-	putImageOptions := &registry.ImagePutOptions{}
+func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts ...registry.ImagePushOption) error {
+	putImageOptions := &registry.ImagePushOptions{}
 
 	for _, opt := range opts {
-		opt.ApplyToImagePut(putImageOptions)
+		opt.ApplyToImagePush(putImageOptions)
 	}
 
 	fullRegistry := c.GetRegistry()
@@ -314,14 +314,22 @@ func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile
 	return configFile, nil
 }
 
-// ListTags lists all tags for the current scope
+// ListTags lists tags for the current scope with pagination
 // The repository is determined by the chained WithSegment() calls
-func (c *Client) ListTags(ctx context.Context) ([]string, error) {
+func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+	listOptions := &registry.ListTagsOptions{}
+
+	for _, opt := range opts {
+		opt.ApplyToListTags(listOptions)
+	}
+
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
+		slog.Int("limit", listOptions.N),
+		slog.String("last", listOptions.Last),
 	)
 
 	logentry.Debug("Listing tags")
@@ -332,56 +340,86 @@ func (c *Client) ListTags(ctx context.Context) ([]string, error) {
 	}
 
 	repo := ref.Context()
-	opts := append([]remote.Option{}, c.options...)
-	opts = append(opts, remote.WithContext(ctx))
+	remoteOpts := append([]remote.Option{}, c.options...)
+	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
 
-	tags, err := remote.List(repo, opts...)
+	// Add pagination options
+	if listOptions.N > 0 {
+		remoteOpts = append(remoteOpts, remote.WithPageSize(listOptions.N))
+	}
+	if listOptions.Last != "" {
+		remoteOpts = append(remoteOpts, remote.WithFilter("last", listOptions.Last))
+	}
+
+	// Get tags with server-side pagination
+	tags, err := remote.List(repo, remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
 
-	logentry.Debug("Tags listed successfully", slog.Int("count", len(tags)))
+	logentry.Debug("Tags retrieved", slog.Int("returned_count", len(tags)))
 
 	return tags, nil
 }
 
-// ListRepositories lists all sub-repositories under the current scope
+// ListRepositories lists sub-repositories under the current scope with pagination
 // The scope is determined by the chained WithSegment() calls
-// Returns repository names (tags) under the current scope
-func (c *Client) ListRepositories(ctx context.Context) ([]string, error) {
+// Returns repository names under the current scope
+func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error) {
+	listOptions := &registry.ListRepositoriesOptions{}
+
+	for _, opt := range opts {
+		opt.ApplyToListRepositories(listOptions)
+	}
+
 	fullRegistry := c.GetRegistry()
 
 	logentry := c.logger.With(
 		slog.String("registry_host", c.registryHost),
 		slog.String("segments", c.constructedSegments),
+		slog.Int("limit", listOptions.N),
+		slog.String("last", listOptions.Last),
 	)
 
 	logentry.Debug("Listing repositories")
 
-	// Use the current scope path to list sub-repositories
-	// For example, if scope is "deckhouse/ee/modules"
-	// this will list all tags/sub-paths under that repository
 	ref, err := name.ParseReference(fullRegistry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse registry reference: %w", err)
 	}
 
 	repo := ref.Context()
-	logentry.Debug("Listing tags for base repository", slog.String("repository", repo.String()))
 
-	opts := append([]remote.Option{}, c.options...)
-	opts = append(opts, remote.WithContext(ctx))
+	logentry.Debug("Listing repositories for base repository", slog.String("repository", repo.String()))
 
-	// List "tags" which actually represent sub-repositories in this case
-	tags, err := remote.List(repo, opts...)
+	remoteOpts := append([]remote.Option{}, c.options...)
+	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
+
+	// Use CatalogPage for server-side pagination if supported
+	if listOptions.N > 0 || listOptions.Last != "" {
+		repos, err := remote.CatalogPage(repo.Registry, listOptions.Last, listOptions.N, remoteOpts...)
+		if err != nil {
+			logentry.Debug("Failed to list repositories with pagination", slog.String("error", err.Error()))
+
+			return nil, fmt.Errorf("failed to list repositories: %w", err)
+		}
+
+		logentry.Debug("Repositories retrieved with pagination", slog.Int("returned_count", len(repos)))
+
+		return repos, nil
+	}
+
+	// Fallback to regular catalog listing
+	result, err := remote.Catalog(ctx, repo.Registry, remoteOpts...)
 	if err != nil {
-		logentry.Debug("Failed to list repository tags", slog.String("error", err.Error()))
+		logentry.Debug("Failed to list repositories", slog.String("error", err.Error()))
+
 		return nil, fmt.Errorf("failed to list repositories: %w", err)
 	}
 
-	logentry.Debug("Repositories listed successfully", slog.Int("total", len(tags)))
+	logentry.Debug("Repositories retrieved", slog.Int("total_repositories", len(result)))
 
-	return tags, nil
+	return result, nil
 }
 
 // CheckImageExists checks if a specific image exists in the registry
