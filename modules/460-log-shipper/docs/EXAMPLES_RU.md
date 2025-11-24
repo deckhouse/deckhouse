@@ -27,7 +27,7 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-Чтобы направить логи в кластерный модуль loki, укажите `d8-loki` в параметре  [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) ClusterLoggingConfig. Дополнительные примеры можно найти [в документации](/modules/loki/examples.html#чтение-логов-из-всех-подов-из-указанного-namespace-и-направление-их-в-loki).
+Чтобы направить логи в кластерный модуль loki укажите `d8-loki` в параметре  [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) ClusterLoggingConfig. Дополнительные примеры можно найти [в документации](/modules/loki/examples.html#чтение-логов-из-всех-подов-из-указанного-namespace-и-направление-их-в-loki).
 
 ## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
