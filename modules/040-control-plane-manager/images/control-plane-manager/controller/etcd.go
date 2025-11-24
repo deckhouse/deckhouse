@@ -56,11 +56,20 @@ type Etcd struct {
 }
 
 func EtcdJoinConverge() error {
-	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	var etcdSubphase string
+
+	if config.KubernetesVersion >= "1.33" {
+		etcdSubphase = "etcd-join"
+	} else {
+		etcdSubphase = "etcd"
+	}
+
+	args := []string{"-v=5", "join", "phase", "control-plane-join", etcdSubphase, "--config", deckhousePath + "/kubeadm/config.yaml"}
 
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),
 		slog.String("component", "etcd"),
+		slog.String("kubernetes_version", config.KubernetesVersion),
 		slog.Any("args", args),
 	)
 
