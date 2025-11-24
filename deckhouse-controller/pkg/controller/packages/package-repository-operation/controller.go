@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 const (
@@ -263,6 +264,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	r.logger.Info("discovering packages", slog.String("repository", repo.Name))
+
+	_ = (registry.Client)(nil)
 
 	// Generate registry options
 	registryConfig := &utils.RegistryConfig{
