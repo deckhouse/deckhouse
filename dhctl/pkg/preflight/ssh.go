@@ -176,8 +176,8 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	server := &http.Server{
 		Addr:         address,
 		Handler:      mux,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
+		ReadTimeout:  20 * time.Second,
+		WriteTimeout: 20 * time.Second,
 	}
 
 	go func() {
