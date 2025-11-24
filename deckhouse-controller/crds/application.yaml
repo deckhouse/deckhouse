@@ -12,6 +12,8 @@ spec:
     listKind: ApplicationList
     plural: applications
     singular: application
+    shortNames:
+      - app
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -39,18 +41,18 @@ spec:
           spec:
             description: Spec defines the behavior of an Application.
             properties:
-              applicationPackageName:
+              packageName:
+                type: string
+              packageRepository:
                 type: string
               releaseChannel:
-                type: string
-              repository:
                 type: string
               settings:
                 x-kubernetes-preserve-unknown-fields: true
               version:
                 type: string
             required:
-            - applicationPackageName
+            - packageName
             - version
             type: object
           status:
@@ -78,11 +80,9 @@ spec:
                   - type
                   type: object
                 type: array
-              repository:
-                type: string
-              status:
-                type: string
-              version:
+                x-kubernetes-patch-strategy: merge
+                x-kubernetes-patch-merge-key: type
+              currentVersion:
                 properties:
                   channel:
                     type: string
@@ -98,12 +98,9 @@ spec:
     subresources:
       status: {}
     additionalPrinterColumns:
-      - jsonPath: .status.conditions[?(@.type=='Processed')].lastTransitionTime
-        name: TransitionTime
-        type: date
-      - jsonPath: .status.conditions[?(@.type=='Processed')].status
-        name: Processed
+      - jsonPath: .spec.packageName
+        name: Package
         type: string
-      - jsonPath: .status.conditions[?(@.type=='Processed')].message
-        name: Message
+      - jsonPath: .spec.version
+        name: Version
         type: string

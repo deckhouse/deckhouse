@@ -45,14 +45,16 @@ spec:
                   type: string
                 type: array
               instances:
-                properties:
-                  count:
-                    type: integer
-                  namespaces:
-                    items:
-                      type: string
-                    type: array
+                additionalProperties:
+                  items:
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  type: array
                 type: object
+              instancesOverall:
+                type: integer
             type: object
         type: object
     served: true

@@ -44,9 +44,9 @@ spec:
             properties:
               packageName:
                 type: string
-              version:
+              packageRepository:
                 type: string
-              repository:
+              version:
                 type: string
           status:
             description: Status of an ApplicationPackageVersion.
@@ -72,7 +72,7 @@ spec:
                     lastProbeTime:
                       format: date-time
                       type: string
-              metadata:
+              packageMetadata:
                 properties:
                   category:
                     type: string
@@ -153,6 +153,17 @@ spec:
                 type: object
               packageName:
                 type: string
+              usedBy:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  type: object
+                type: array
+              usedByCount:
+                type: integer
               version:
                 type: string
             type: object
