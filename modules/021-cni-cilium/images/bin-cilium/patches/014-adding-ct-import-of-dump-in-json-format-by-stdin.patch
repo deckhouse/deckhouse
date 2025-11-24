@@ -1,0 +1,165 @@
+From 7fd281f62433049664aa6b52b2c3c14866c056bf Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 20 Nov 2025 14:54:44 +0300
+Subject: [PATCH] adding ct import of dump in json format by stdin
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ cilium-dbg/cmd/bpf_ct_list.go | 25 ++++++++++++
+ pkg/maps/ctmap/lookup.go      | 77 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 102 insertions(+)
+
+diff --git a/cilium-dbg/cmd/bpf_ct_list.go b/cilium-dbg/cmd/bpf_ct_list.go
+index 05c07c8639..1a8e53ab21 100644
+--- a/cilium-dbg/cmd/bpf_ct_list.go
++++ b/cilium-dbg/cmd/bpf_ct_list.go
+@@ -6,6 +6,7 @@ package cmd
+ import (
+ 	"errors"
+ 	"fmt"
++	"io"
+ 	"os"
+ 	"strconv"
+ 
+@@ -33,7 +34,14 @@ var (
+ 				cmd.PrintErrf("Invalid argument: %s", err.Error())
+ 				return
+ 			}
++
+ 			common.RequireRootPrivilege("cilium bpf ct list")
++
++			err = importCtMapsDump()
++			if err != nil {
++				cmd.PrintErrf("importCtMapsDump failed: %s", err.Error())
++				return
++			}
+ 			dumpCt(getMaps(t, id), t)
+ 		},
+ 	}
+@@ -43,6 +51,23 @@ var (
+ 	timeDiffClockSourceHz   int64
+ )
+ 
++func importCtMapsDump() error {
++	input, err := io.ReadAll(os.Stdin)
++	if err != nil {
++		return fmt.Errorf("failed to read stdin: %w", err)
++	}
++
++	if len(input) == 0 {
++		return nil
++	}
++
++	if err = ctmap.InsertAll(input); err != nil {
++		return fmt.Errorf("failed to insert ct dump: %w", err)
++	}
++
++	return nil
++}
++
+ func init() {
+ 	bpfCtListCmd.Flags().BoolVarP(&timeDiff, "time-diff", "d", false, "print time difference for entries")
+ 	bpfCtListCmd.Flags().StringVar(&timeDiffClockSourceMode, "time-diff-clocksource-mode", "", "manually set clock source mode (instead of contacting the server)")
+diff --git a/pkg/maps/ctmap/lookup.go b/pkg/maps/ctmap/lookup.go
+index 02a05c5cd6..adae2f91c6 100644
+--- a/pkg/maps/ctmap/lookup.go
++++ b/pkg/maps/ctmap/lookup.go
+@@ -4,11 +4,13 @@
+ package ctmap
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"net/netip"
+ 
+ 	"github.com/cilium/cilium/pkg/bpf"
+ 	"github.com/cilium/cilium/pkg/tuple"
++	"github.com/cilium/cilium/pkg/types"
+ 	"github.com/cilium/cilium/pkg/u8proto"
+ )
+ 
+@@ -193,6 +195,81 @@ func Update(epname string, srcAddr, dstAddr string, proto u8proto.U8proto, ingre
+ 	return m.Update(key, entry)
+ }
+ 
++type jsonTupleKey struct {
++	DestAddr   []uint8 `json:"DestAddr"`
++	SourceAddr []uint8 `json:"SourceAddr"`
++	DestPort   uint16  `json:"DestPort"`
++	SourcePort uint16  `json:"SourcePort"`
++	NextHeader uint8   `json:"NextHeader"`
++	Flags      uint8   `json:"Flags"`
++}
++
++type jsonCtEntry struct {
++	Reserved0        uint64 `json:"Reserved0"`
++	BackendID        uint64 `json:"BackendID"`
++	Packets          uint64 `json:"Packets"`
++	Bytes            uint64 `json:"Bytes"`
++	Lifetime         uint32 `json:"Lifetime"`
++	Flags            uint16 `json:"Flags"`
++	RevNAT           uint16 `json:"RevNAT"`
++	IfIndex          uint16 `json:"IfIndex"`
++	TxFlagsSeen      uint8  `json:"TxFlagsSeen"`
++	RxFlagsSeen      uint8  `json:"RxFlagsSeen"`
++	SourceSecurityID uint32 `json:"SourceSecurityID"`
++	LastTxReport     uint32 `json:"LastTxReport"`
++	LastRxReport     uint32 `json:"LastRxReport"`
++}
++
++type jsonCtRecord struct {
++	Key   jsonTupleKey `json:"Key"`
++	Value jsonCtEntry  `json:"Value"`
++}
++
++func (j jsonTupleKey) toCtKey4Global() *CtKey4Global {
++	return &CtKey4Global{
++		TupleKey4Global: tuple.TupleKey4Global{
++			TupleKey4: tuple.TupleKey4{
++				DestAddr:   types.IPv4{j.DestAddr[0], j.DestAddr[1], j.DestAddr[2], j.DestAddr[3]},
++				SourceAddr: types.IPv4{j.SourceAddr[0], j.SourceAddr[1], j.SourceAddr[2], j.SourceAddr[3]},
++				DestPort:   j.DestPort,
++				SourcePort: j.SourcePort,
++				NextHeader: u8proto.U8proto(j.NextHeader),
++				Flags:      j.Flags,
++			},
++		},
++	}
++}
++
++func (j jsonCtEntry) toCtEntry() CtEntry {
++	return CtEntry(j)
++}
++
++func InsertAll(rawData []byte) error {
++	var records []jsonCtRecord
++	if err := json.Unmarshal(rawData, &records); err != nil {
++		return fmt.Errorf("failed to unmarshal ct dump: %w", err)
++	}
++
++	for _, rec := range records {
++		key := rec.Key.toCtKey4Global()
++		val := rec.Value.toCtEntry()
++
++		if err := Insert(key, &val); err != nil {
++			return fmt.Errorf("failed to insert ct entry to map: %w", err)
++		}
++	}
++	return nil
++}
++
++func Insert(key *CtKey4Global, entry *CtEntry) error {
++	m, err := getOrOpenMap("global", true, key.NextHeader)
++	if err != nil || m == nil {
++		return err
++	}
++
++	return m.Update(key, entry)
++}
++
+ func getMapWithName(epname string, ipv4 bool, proto u8proto.U8proto) *bpf.Map {
+ 	return bpf.GetMap(getMapName(epname, ipv4, proto))
+ }
+-- 
+2.34.1
+
