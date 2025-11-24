@@ -71,12 +71,9 @@ func buildRemoteOptions(opts *Options) []remote.Option {
 		remoteOptions = append(remoteOptions, remote.WithUserAgent(opts.UserAgent))
 	}
 
-	if opts.CA != "" {
-		remoteOptions = append(remoteOptions, remote.WithTransport(GetHTTPTransport(opts.CA)))
-	}
-
-	if needsCustomTransport(opts) {
-		transport := configureTransport(opts)
+	// Build transport configuration - combine CA and TLS settings into a single transport
+	if opts.CA != "" || needsCustomTransport(opts) {
+		transport := buildTransport(opts)
 		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
 	}
 
@@ -88,14 +85,49 @@ func needsCustomTransport(opts *Options) bool {
 	return opts.Insecure || opts.TLSSkipVerify
 }
 
+// buildTransport creates a single transport that combines CA and TLS settings
+func buildTransport(opts *Options) http.RoundTripper {
+	if opts.CA != "" {
+		// Start with CA transport as base
+		transport := GetHTTPTransport(opts.CA).(*http.Transport).Clone()
+
+		// Apply TLS skip verify if needed
+		if opts.TLSSkipVerify {
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = &tls.Config{}
+			}
+
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
+
+		return transport
+	}
+
+	// No CA, use custom transport for TLS settings
+	if needsCustomTransport(opts) {
+		return configureTransport(opts)
+	}
+
+	// Default case - should not reach here due to caller check
+	return http.DefaultTransport
+}
+
 // configureTransport creates and configures an HTTP transport with TLS settings
 func configureTransport(opts *Options) *http.Transport {
-	transport := remote.DefaultTransport.(*http.Transport).Clone()
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{},
+	}
 
 	if opts.TLSSkipVerify {
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
-		}
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
