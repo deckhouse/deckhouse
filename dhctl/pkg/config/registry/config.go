@@ -26,21 +26,20 @@ import (
 const (
 	CRIContainerdV1   CRIType = "Containerd"
 	CRIContainerdV2   CRIType = "ContainerdV2"
-	defaultImagesRepo         = "registry.deckhouse.io/deckhouse/ce"
+	DefaultImagesRepo         = "registry.deckhouse.io/deckhouse/ce"
 )
 
 var (
-	defaultScheme = types.SchemeHTTPS
+	DefaultScheme = types.SchemeHTTPS
 	SupportedCRI  = []CRIType{CRIContainerdV1, CRIContainerdV2}
 )
 
 type CRIType = string
 
 type Config struct {
-	Mode    Mode
-	Builder ConfigBuilder
-
-	moduleEnabled bool
+	Mode          Mode
+	ModuleEnabled bool
+	Settings      types.DeckhouseSettings
 }
 
 func NewConfig(
@@ -76,13 +75,14 @@ func NewConfig(
 			Mode: registry_const.ModeUnmanaged,
 			Unmanaged: &types.UnmanagedModeSettings{
 				RegistrySettings: types.RegistrySettings{
-					ImagesRepo: defaultImagesRepo,
-					Scheme:     defaultScheme,
+					ImagesRepo: DefaultImagesRepo,
+					Scheme:     DefaultScheme,
 				},
 			},
 		}
 	}
 
+	settings.Correct()
 	if err := settings.Validate(); err != nil {
 		return Config{}, fmt.Errorf("failed to validate registry settings: %w", err)
 	}
@@ -118,11 +118,19 @@ func NewConfig(
 
 	return Config{
 		Mode:          mode,
-		moduleEnabled: moduleEnabled,
-		Builder: ConfigBuilder{
-			mode:          mode,
-			moduleEnabled: moduleEnabled,
-			settings:      settings,
-		},
+		ModuleEnabled: moduleEnabled,
+		Settings:      settings,
 	}, nil
+}
+
+func (cfg *Config) ConfigBuilder() *ConfigBuilder {
+	return NewConfigBuilder(cfg.Mode, cfg.ModuleEnabled)
+}
+
+func (cfg *Config) DeckhouseSettings() (bool, map[string]interface{}, error) {
+	if !cfg.ModuleEnabled {
+		return false, nil, nil
+	}
+	ret, err := cfg.Settings.ToMap()
+	return true, ret, err
 }

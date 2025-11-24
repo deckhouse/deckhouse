@@ -16,7 +16,6 @@ package registry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -27,13 +26,28 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
+
+func NewConfigBuilder(mode Mode, moduleEnable bool) *ConfigBuilder {
+	return &ConfigBuilder{
+		mode:          mode,
+		moduleEnabled: moduleEnable,
+	}
+}
+
+func NewConfigBuilderWithPKI(mode Mode, moduleEnable bool, pki PKIProvider) *ConfigBuilderWithPKI {
+	return &ConfigBuilderWithPKI{
+		ConfigBuilder: ConfigBuilder{
+			mode:          mode,
+			moduleEnabled: moduleEnable,
+		},
+		pki: pki,
+	}
+}
 
 type ConfigBuilder struct {
 	mode          Mode
 	moduleEnabled bool
-	settings      types.DeckhouseSettings
 }
 
 type ConfigBuilderWithPKI struct {
@@ -44,24 +58,6 @@ type ConfigBuilderWithPKI struct {
 // =======================
 // ConfigBuilder
 // =======================
-func (cb *ConfigBuilder) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	if !cb.moduleEnabled {
-		return false, nil, nil
-	}
-
-	data, err := json.Marshal(cb.settings)
-	if err != nil {
-		return true, nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
-	}
-
-	var ret map[string]interface{}
-	if err := json.Unmarshal(data, &ret); err != nil {
-		return true, nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
-	}
-
-	return true, ret, nil
-}
-
 func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
 	address, path := helpers.SplitAddressAndPath(cb.mode.InClusterImagesRepo())
 	return map[string]interface{}{
@@ -71,10 +67,7 @@ func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
 }
 
 func (cb *ConfigBuilder) WithPKI(pki PKIProvider) *ConfigBuilderWithPKI {
-	return &ConfigBuilderWithPKI{
-		ConfigBuilder: *cb,
-		pki:           pki,
-	}
+	return NewConfigBuilderWithPKI(cb.mode, cb.moduleEnabled, pki)
 }
 
 // =======================

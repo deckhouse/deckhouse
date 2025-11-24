@@ -143,9 +143,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 	hasRegistrySettings, registrySettings, err := metaConfig.
-		Registry.
-		Builder.
-		DeckhouseSettings()
+		Registry.DeckhouseSettings()
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare registry settings for ModuleConfig deckhouse: %w", err)
 	}
