@@ -27,7 +27,7 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-If you need to send logs to the loki cluster module, specify d8-loki in the `.spec.destinationRefs` parameter of the `ClusterLoggingConfig` resource. For more examples, see [documentation](/modules/loki/examples.html)
+To send logs to the loki cluster module, specify `d8-loki` in the ClusterLoggingConfig [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs). More examples read [in the documentation](/modules/loki/examples.html).
 
 ## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
