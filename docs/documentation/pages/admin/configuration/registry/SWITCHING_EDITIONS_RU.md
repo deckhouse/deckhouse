@@ -520,27 +520,29 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      d8 k delete pod cse-image
      ```
 
-   ```shell
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: del-temp-config.sh
-   spec:
-     nodeGroups:
-     - '*'
-     bundles:
-     - '*'
-     weight: 90
-     content: |
-       if [ -f /etc/containerd/conf.d/cse-registry.toml ]; then
-         rm -f /etc/containerd/conf.d/cse-registry.toml
-       fi
-       if [ -f /etc/containerd/conf.d/cse-sandbox.toml ]; then
-         rm -f /etc/containerd/conf.d/cse-sandbox.toml
-       fi
-   EOF
-   ```
+   - Создайте и примените временный ресурс NodeGroupConfiguration для очистки:
+
+     ```shell
+     d8 k apply -f - <<EOF
+     apiVersion: deckhouse.io/v1alpha1
+     kind: NodeGroupConfiguration
+     metadata:
+       name: del-temp-config.sh
+     spec:
+       nodeGroups:
+       - '*'
+       bundles:
+       - '*'
+       weight: 90
+       content: |
+         if [ -f /etc/containerd/conf.d/cse-registry.toml ]; then
+           rm -f /etc/containerd/conf.d/cse-registry.toml
+         fi
+         if [ -f /etc/containerd/conf.d/cse-sandbox.toml ]; then
+           rm -f /etc/containerd/conf.d/cse-sandbox.toml
+         fi
+     EOF
+     ```
 
    После синхронизации (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
