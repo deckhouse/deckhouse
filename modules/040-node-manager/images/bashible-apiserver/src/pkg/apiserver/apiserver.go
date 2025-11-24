@@ -200,7 +200,14 @@ func (cs checksumSecretUpdater) OnChecksumUpdate(ngmap map[string][]byte) {
 		Data: ngmap,
 	}
 
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+	extendedErrors := func(e error) bool {
+		if errors.IsConflict(e) || errors.IsServerTimeout(e) || errors.IsTimeout(e) || errors.IsServiceUnavailable(e) {
+			return true
+		}
+		return false
+	}
+
+	err := retry.OnError(retry.DefaultBackoff, extendedErrors, func() error {
 		_, err := cs.client.CoreV1().Secrets(configurationsSecretNamespace).Get(context.Background(), configurationsSecretName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
