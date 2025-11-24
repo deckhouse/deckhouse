@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DeckhouseReleaseLister helps list DeckhouseReleases.
@@ -27,39 +27,19 @@ import (
 type DeckhouseReleaseLister interface {
 	// List lists all DeckhouseReleases in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.DeckhouseRelease, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.DeckhouseRelease, err error)
 	// Get retrieves the DeckhouseRelease from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.DeckhouseRelease, error)
+	Get(name string) (*deckhouseiov1alpha1.DeckhouseRelease, error)
 	DeckhouseReleaseListerExpansion
 }
 
 // deckhouseReleaseLister implements the DeckhouseReleaseLister interface.
 type deckhouseReleaseLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha1.DeckhouseRelease]
 }
 
 // NewDeckhouseReleaseLister returns a new DeckhouseReleaseLister.
 func NewDeckhouseReleaseLister(indexer cache.Indexer) DeckhouseReleaseLister {
-	return &deckhouseReleaseLister{indexer: indexer}
-}
-
-// List lists all DeckhouseReleases in the indexer.
-func (s *deckhouseReleaseLister) List(selector labels.Selector) (ret []*v1alpha1.DeckhouseRelease, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.DeckhouseRelease))
-	})
-	return ret, err
-}
-
-// Get retrieves the DeckhouseRelease from the index for a given name.
-func (s *deckhouseReleaseLister) Get(name string) (*v1alpha1.DeckhouseRelease, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("deckhouserelease"), name)
-	}
-	return obj.(*v1alpha1.DeckhouseRelease), nil
+	return &deckhouseReleaseLister{listers.New[*deckhouseiov1alpha1.DeckhouseRelease](indexer, deckhouseiov1alpha1.Resource("deckhouserelease"))}
 }

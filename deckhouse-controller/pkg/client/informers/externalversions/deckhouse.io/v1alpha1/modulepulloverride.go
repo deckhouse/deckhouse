@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ModulePullOverrides.
 type ModulePullOverrideInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModulePullOverrideLister
+	Lister() deckhouseiov1alpha1.ModulePullOverrideLister
 }
 
 type modulePullOverrideInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredModulePullOverrideInformer(client versioned.Interface, resyncPer
 				return client.DeckhouseV1alpha1().ModulePullOverrides().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModulePullOverride{},
+		&apisdeckhouseiov1alpha1.ModulePullOverride{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *modulePullOverrideInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *modulePullOverrideInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModulePullOverride{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ModulePullOverride{}, f.defaultInformer)
 }
 
-func (f *modulePullOverrideInformer) Lister() v1alpha1.ModulePullOverrideLister {
-	return v1alpha1.NewModulePullOverrideLister(f.Informer().GetIndexer())
+func (f *modulePullOverrideInformer) Lister() deckhouseiov1alpha1.ModulePullOverrideLister {
+	return deckhouseiov1alpha1.NewModulePullOverrideLister(f.Informer().GetIndexer())
 }
