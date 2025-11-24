@@ -68,6 +68,13 @@ func NewClientWithOptions(registry string, opts *Options) *Client {
 
 	remoteOptions := buildRemoteOptions(opts)
 
+	opts.Insecure = false
+
+	opts.Scheme = strings.ToLower(opts.Scheme)
+	if opts.Scheme == "http" {
+		opts.Insecure = true
+	}
+
 	if opts.TLSSkipVerify {
 		logger.Debug("TLS certificate verification disabled",
 			slog.String("registry", registry))
