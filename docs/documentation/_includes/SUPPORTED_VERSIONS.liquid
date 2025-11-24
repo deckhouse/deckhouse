@@ -46,8 +46,9 @@
     {%- assign osData = osItem[1] %}
     {%- assign osName = osData.name | default: osKey  %}
     {%- assign osVersionsList = osData.versions | default: osItem[1] %}
-    {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
-    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey osVersions=osVersionsList %}
+    {%- assign langSupport = site.data.supported_versions.osDistributions[osKey][langSupportKey] %}
+    {%- if langSupport == false %}{% continue %}{% endif %}
+    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey osVersions=osVersionsList supported_img_url=supported_img_url partially_supported_img_url=partially_supported_img_url notes_img_url=notes_img_url not_supported_img_url=not_supported_img_url %}
     {% endfor %}
     </tbody>
   </table>
@@ -58,33 +59,33 @@
 {{ site.data.i18n.common['k8s_supported_phrase'][page.lang] }}:
 
 <div markdown="0">
-<table class="supported_versions supported_versions__kubernetes fixed-header-table">
-<thead>
+  <table class="supported_versions supported_versions__kubernetes fixed-header-table">
+    <thead>
     <tr>
       <th style="width: 5%;"></th>
       <th style="text-align: center; width: 1%;">{{ site.data.i18n.common['version'][page.lang] | capitalize }}</th>
       <th>{{site.data.i18n.common['status'][page.lang] | capitalize }}</th>
     </tr>
-</thead>
-<tbody>
-{%- for k8sItem in k8sVersions %}
-{%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
-{%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
-<tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
-  <td style="text-align: center">
-    <div class="icon">
-      <img src="{{ iconStatus }}" alt="" />
-    </div>
-  </td>
-  <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>
-  <td style="text-align: left">
-    <p>{%- if k8sItem[1].default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
-    {{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
-  </td>
-</tr>
-{%- endfor %}
-</tbody>
-</table>
+    </thead>
+    <tbody>
+    {%- for k8sItem in k8sVersions %}
+    {%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
+    {%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
+    <tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
+      <td style="text-align: center">
+        <div class="icon">
+          <img src="{{ iconStatus }}" alt="" />
+        </div>
+      </td>
+      <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>
+      <td style="text-align: left">
+        <p>{%- if k8sItem[1].default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
+          {{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
+      </td>
+    </tr>
+    {%- endfor %}
+    </tbody>
+  </table>
 </div>
 
 ## Container registry
@@ -98,44 +99,44 @@ Deckhouse should work with any container registry supporting Bearer authenticati
 {% endalert %}
 
 <div markdown="0">
-<table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container fixed-header-table">
-<thead>
-<tr><th>
-{%- if page.lang == 'ru' %}
-Container registry, с которыми Deckhouse гарантированно работает
-{%- else %}
-Container registries that Deckhouse is guaranteed to work with
-{%- endif %}
-</th></tr>
-</thead>
-<tbody>
-{%- for registry in site.data.supported_versions.registries %}
-<tr>
-  <td style="text-align: left"
-  {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
-  <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}{% if registry[1].additionalInfo %}<sup>*</sup>{% endif %}</a></p>
-  </td>
-</tr>
-{%- endfor %}
-</tbody>
-</table>
+  <table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container fixed-header-table">
+    <thead>
+    <tr><th>
+      {%- if page.lang == 'ru' %}
+      Container registry, с которыми Deckhouse гарантированно работает
+      {%- else %}
+      Container registries that Deckhouse is guaranteed to work with
+      {%- endif %}
+    </th></tr>
+    </thead>
+    <tbody>
+    {%- for registry in site.data.supported_versions.registries %}
+    <tr>
+      <td style="text-align: left"
+          {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
+        <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}{% if registry[1].additionalInfo %}<sup>*</sup>{% endif %}</a></p>
+      </td>
+    </tr>
+    {%- endfor %}
+    </tbody>
+  </table>
 </div>
 
 <script type="text/javascript">
-$(document).ready(function () {
-{%- for registry in site.data.supported_versions.registries %}
-{%- if registry[1].additionalInfo %}
-    tippy('[table__hint_{{ registry[0] }}]', {
-        interactive: true,
-        interactiveDebounce: 10,
-        maxWidth: 600,
-        theme: 'light',
-        allowHTML: true,
-        arrow: false,
-        content: `{{ registry[1].additionalInfo[page.lang] }}`
-      });
-{%- endif -%}
-{%- endfor %}
-});
+  $(document).ready(function () {
+  {%- for registry in site.data.supported_versions.registries %}
+  {%- if registry[1].additionalInfo %}
+      tippy('[table__hint_{{ registry[0] }}]', {
+          interactive: true,
+          interactiveDebounce: 10,
+          maxWidth: 600,
+          theme: 'light',
+          allowHTML: true,
+          arrow: false,
+          content: `{{ registry[1].additionalInfo[page.lang] }}`
+        });
+  {%- endif -%}
+  {%- endfor %}
+  });
 
 </script>
