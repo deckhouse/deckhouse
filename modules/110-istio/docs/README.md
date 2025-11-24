@@ -345,11 +345,11 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 
 In case of issues when working with a multi-cluster, it is necessary to check in each cluster:
 
-1. The status of the `IstioMultiCluster` resources. To do this, run the command `kubectl describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
+1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
 2. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-3. Using the `istioctl` utility ([installation](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
+3. Using the `istioctl` utility ([how to install...](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
 
-```bash
+```console
 istioctl remote-clusters -i d8-istio
 NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
