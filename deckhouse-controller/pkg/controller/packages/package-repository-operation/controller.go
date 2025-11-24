@@ -227,7 +227,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		return res, fmt.Errorf("get package repository: %w", err)
 	}
 
-	if operation.Status.Packages != nil && operation.Status.Packages.Discovered == operation.Status.Packages.Processed {
+	if operation.Status.Packages != nil && len(operation.Status.Packages.Discovered) == operation.Status.Packages.ProcessedOverall {
 		r.logger.Info("all packages processed, marking as completed",
 			slog.Int("total", operation.Status.Packages.Total))
 
@@ -253,7 +253,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 	}
 
 	// If packagesToProcess is empty, we need to discover packages
-	if len(operation.Status.PackagesToProcess) == 0 {
+	if len(operation.Status.Packages.Discovered) == 0 {
 		return r.discoverPackages(ctx, operation, repo)
 	}
 
@@ -338,17 +338,8 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	discoveredPackagesMap := make(map[string]struct{}, len(packages))
 
 	for _, pkg := range packages {
-		// Get package type from Docker image label by inspecting manifest
-		packageType, err := r.determinePackageType(ctx, repo.Spec.Registry.Repo, pkg, opts)
-		if err != nil {
-			r.logger.Warn("failed to determine package type, skipping", slog.String("package", pkg), log.Err(err))
-
-			continue
-		}
-
 		queueItem := v1alpha1.PackageRepositoryOperationStatusPackageQueue{
 			Name: pkg,
-			Type: packageType,
 		}
 
 		operationStatusPackages = append(operationStatusPackages, queueItem)
@@ -386,13 +377,12 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 	}
 
 	// Update operation status with packages to process
-	operation.Status.PackagesToProcess = operationStatusPackages
+	operation.Status.Packages.Discovered = operationStatusPackages
 	if operation.Status.Packages == nil {
 		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
 	}
-	operation.Status.Packages.Discovered = len(operationStatusPackages)
 	operation.Status.Packages.Total = len(operationStatusPackages)
-	operation.Status.Packages.Processed = 0
+	operation.Status.Packages.ProcessedOverall = 0
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(originalOperation)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -403,7 +393,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 
 func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	// Get first package from queue
-	currentPackage := operation.Status.PackagesToProcess[0]
+	currentPackage := operation.Status.Packages.Discovered[0]
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name),
 		slog.String("type", currentPackage.Type))
@@ -437,11 +427,11 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 	// Remove processed package from queue
 	original := operation.DeepCopy()
-	if len(operation.Status.PackagesToProcess) > 0 {
-		operation.Status.PackagesToProcess = operation.Status.PackagesToProcess[1:]
+	if len(operation.Status.Packages.Discovered) > 0 {
+		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
 	}
 	if operation.Status.Packages != nil {
-		operation.Status.Packages.Processed++
+		operation.Status.Packages.ProcessedOverall++
 	}
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {

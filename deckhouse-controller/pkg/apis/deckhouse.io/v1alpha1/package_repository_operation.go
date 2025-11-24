@@ -91,18 +91,18 @@ type PackageRepositoryOperationUpdate struct {
 }
 
 type PackageRepositoryOperationStatus struct {
-	Phase             string                                         `json:"phase,omitempty"`
-	StartTime         *metav1.Time                                   `json:"startTime,omitempty"`
-	CompletionTime    *metav1.Time                                   `json:"completionTime,omitempty"`
-	Packages          *PackageRepositoryOperationStatusPackages      `json:"packages,omitempty"`
-	PackagesToProcess []PackageRepositoryOperationStatusPackageQueue `json:"packagesToProcess,omitempty"`
-	Conditions        []PackageRepositoryOperationStatusCondition    `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Phase          string                                      `json:"phase,omitempty"`
+	StartTime      *metav1.Time                                `json:"startTime,omitempty"`
+	CompletionTime *metav1.Time                                `json:"completionTime,omitempty"`
+	Packages       *PackageRepositoryOperationStatusPackages   `json:"packages,omitempty"`
+	Conditions     []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered int `json:"discovered,omitempty"`
-	Processed  int `json:"processed,omitempty"`
-	Total      int `json:"total,omitempty"`
+	Discovered       []PackageRepositoryOperationStatusPackageQueue `json:"discovered,omitempty"`
+	Processed        []PackageRepositoryOperationStatusPackageQueue `json:"processed,omitempty"`
+	ProcessedOverall int                                            `json:"processedOverall,omitempty"`
+	Total            int                                            `json:"total,omitempty"`
 }
 
 type PackageRepositoryOperationStatusPackageQueue struct {
