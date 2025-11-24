@@ -104,3 +104,9 @@ spec:
       - jsonPath: .spec.version
         name: Version
         type: string
+      - jsonPath: .status.conditions[?(@.type=='Ready')].status
+        name: Ready
+        type: string
+      - name: Age
+        type: date
+        jsonPath: .metadata.creationTimestamp
