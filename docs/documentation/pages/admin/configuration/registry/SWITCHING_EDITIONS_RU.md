@@ -7,9 +7,9 @@ lang: ru
 
 ## Переключение DKP с EE на CSE
 
-Переключение DKP на EE на CSE может быть выполнено одним из следующих способов:
+Переключение DKP с EE на CSE может быть выполнено одним из следующих способов:
 
-- [с использованием модуля `registry`](#переключение-с-использованием-модуля-registry),
+- [с использованием модуля `registry`](#переключение-с-использованием-модуля-registry);
 - [без модуля `registry`](#переключение-без-модуля-registry).
 
 {% alert level="warning" %}
@@ -34,15 +34,15 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Убедитесь, что кластер был переключен на использование модуля [`registry`](/modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите к инструкции по переключению [без модуля `registry`](#переключение-без-модуля-registry).
 1. Настройте кластер на использование необходимой версии Kubernetes (информация о версионности приведена в разделе [Переключение DKP с EE на CSE](#переключение-dkp-с-ee-на-cse)). Для этого:
-   1. Выполните команду:
+   - Выполните команду:
 
-      ```shell
-      d8 platform edit cluster-configuration
-      ```
+     ```shell
+     d8 platform edit cluster-configuration
+     ```
 
-   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
-   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+   - Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+   - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Подготовьте переменные с лицензионным ключом:
 
@@ -74,7 +74,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [`prometheus`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
 
    Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 
@@ -112,11 +112,11 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k delete secret/cse-image-pull-secret
    ```
 
-1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/)):
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/configuration.html)):
 
    ```yaml
    ---
-   # Пример для Direct режима.
+   # Пример для Direct-режима.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -136,7 +136,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
            # Укажите свой параметр <LICENSE_TOKEN>.
            license: <LICENSE_TOKEN>
    ---
-   # Пример для Unmanaged режима.
+   # Пример для Unmanaged-режима.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -203,7 +203,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
-   Для Unmanaged режима:
+   Для Unmanaged-режима:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
@@ -213,11 +213,11 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Для других режимов, использующих фиксированный адрес (данная проверка не учитывает внешние модули):
 
    ```shell
-   # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse.
+   # Получаем список актуальных дайджестов из файла images_digests.json внутри Deckhouse.
    IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
-   # Проверяем, есть ли Pod'ы, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
-   # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS.
+   # Проверяем, есть ли поды, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+   # с дайджестом, отсутствующим в списке актуальных дайджестов из IMAGES_DIGESTS.
    d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
@@ -247,15 +247,15 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Настройте кластер на использование необходимой версии Kubernetes (информация о версионности приведена в разделе [Переключение DKP с EE на CSE](#переключение-dkp-с-ee-на-cse)). Для этого:
    1. Выполните команду:
 
-      ```shell
-      d8 platform edit cluster-configuration
-      ```
+     ```shell
+     d8 platform edit cluster-configuration
+     ```
 
-   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
-   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+   - Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+   - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
-1. Подготовьте переменные с лицензионным ключом и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+1. Подготовьте переменные с лицензионным ключом и создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry-cse.deckhouse.ru`:
 
    > Перед созданием ресурса ознакомьтесь с разделом [Как добавить конфигурацию для дополнительного registry](/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
@@ -352,7 +352,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    > ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [`prometheus`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../reference/api/global.html#parameters-modules-https-mode), отвечающий за режим работы HTTPS в кластере.
 
    Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 
@@ -360,7 +360,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    echo $MODULES_WILL_DISABLE
    ```
 
-   > Проверьте список и убедитесь, что функциональность указанных модулей не задействован в кластере, и вы готовы к их отключению.
+   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована в кластере, и вы готовы к их отключению.
 
    Отключите неподдерживаемые в Deckhouse CSE модули:
 
@@ -383,7 +383,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k get modules
    ```
 
-1. Создайте NodeGroupConfiguration:
+1. Создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
    ```shell
    d8 k apply -f - <<EOF
@@ -466,13 +466,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
-   Посмотреть статус пода Deckhouse:
+   Чтобы узнать статус пода Deckhouse, используйте следующую команду:
 
    ```shell
    d8 k -n d8-system get po -l app=deckhouse
    ```
 
-   Проверить состояние очереди Deckhouse:
+   Чтобы проверить состояние очереди Deckhouse, используйте следующую команду:
 
    ```shell
    d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
@@ -500,19 +500,25 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
-1. Очистите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
+1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
-   ```shell
-   rm /tmp/cse-deckhouse-registry.yaml
-   ```
+   - Удалите временный файл:
 
-   ```shell
-   d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-   ```
+     ```shell
+     rm /tmp/cse-deckhouse-registry.yaml
+     ```
 
-   ```shell
-   d8 k delete pod cse-image
-   ```
+   - Удалите ресурс NodeGroupConfiguration:
+
+     ```shell
+     d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+     ```
+
+   - Удалите под:
+
+     ```shell
+     d8 k delete pod cse-image
+     ```
 
    ```shell
    d8 k apply -f - <<EOF
