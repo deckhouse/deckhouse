@@ -229,46 +229,38 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
-// func TestPrepareRegistry(t *testing.T) {
-// 	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
-// 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-// 			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
-// 			"imagesRepo": "r.example.com/deckhouse/ce/",
-// 		})
+func TestPrepareRegistry(t *testing.T) {
+	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
+			"imagesRepo": "r.example.com/deckhouse/ce/",
+		})
 
-// 		t.Run("Trim right slash for imagesRepo", func(t *testing.T) {
-// 			require.Equal(t, cfg.DeckhouseConfig.ImagesRepo, "r.example.com/deckhouse/ce")
-// 		})
+		t.Run("Correct prepare registry object", func(t *testing.T) {
+			registry := cfg.Registry.Mode.RemoteData()
+			require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, registry.ImagesRepo, "r.example.com/deckhouse/ce")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "a")
+			require.Equal(t, registry.Password, "b")
+			require.Equal(t, registry.CA, "")
+		})
+	})
 
-// 		t.Run("Correct prepare registry object", func(t *testing.T) {
-// 			expectedData := registry.Data{
-// 				Address:   "r.example.com",
-// 				Path:      "/deckhouse/ce",
-// 				Scheme:    "https",
-// 				CA:        "",
-// 				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
-// 			}
+	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
-// 			require.Equal(t, cfg.Registry, expectedData)
-// 		})
-// 	})
-
-// 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
-// 		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-
-// 		t.Run("Registry object for CE edition", func(t *testing.T) {
-// 			expectedData := registry.Data{
-// 				Address:   "registry.deckhouse.io",
-// 				Path:      "/deckhouse/ce",
-// 				Scheme:    "https",
-// 				CA:        "",
-// 				DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
-// 			}
-
-// 			require.Equal(t, cfg.Registry, expectedData)
-// 		})
-// 	})
-// }
+		t.Run("Registry object for CE edition", func(t *testing.T) {
+			registry := cfg.Registry.Mode.RemoteData()
+			require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Password, "")
+			require.Equal(t, registry.Username, "")
+			require.Equal(t, registry.CA, "")
+		})
+	})
+}
 
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {

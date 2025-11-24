@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -53,7 +53,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  registry.Config        `json:"-"`
+	Registry                  registry_config.Config `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -143,7 +143,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			break
 		}
 
-		registryCfg, err := registry.NewConfig(deckhouseSettings, initConfig, defaultCRI)
+		registryCfg, err := registry_config.NewConfig(deckhouseSettings, initConfig, defaultCRI)
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 		}
@@ -372,7 +372,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	registryData, err := m.Registry.
 		Builder.
-		WithPKI(registry.NewLazyPKIGenerator()).
+		WithPKI(registry_config.NewLazyPKIGenerator()).
 		BashibleTplCtx(context.TODO())
 	if err != nil {
 		return nil, err
