@@ -15,365 +15,372 @@
 package preflight
 
 import (
-// 	"context"
-// 	"crypto/tls"
-// 	"crypto/x509"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
-// 	"fmt"
-// 	"net/http"
-// 	"net/url"
-// 	"regexp"
-// 	"strings"
-// 	"time"
+	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+	"time"
 
-// 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-// 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-// 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-// 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 var (
 	ErrBadProxyConfig      = errors.New("Bad proxy config")
-// 	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
-// 	ErrAuthRegistryFailed  = errors.New("authentication failed")
+	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
+	ErrAuthRegistryFailed  = errors.New("authentication failed")
 
-// 	realmRe   = regexp.MustCompile(`realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"`)
-// 	serviceRe = regexp.MustCompile(`service="(.*?)"`)
+	realmRe   = regexp.MustCompile(`realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"`)
+	serviceRe = regexp.MustCompile(`service="(.*?)"`)
 )
 
 const (
 	ProxyTunnelPort      = "22323"
-	// registryPath         = "/v2/"
-	// httpClientTimeoutSec = 20
+	registryPath         = "/v2/"
+	httpClientTimeoutSec = 20
 )
 
-// func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
-// 	if app.PreflightSkipRegistryThroughProxy {
-// 		log.InfoLn("Checking if registry is accessible through proxy was skipped (via skip flag)")
-// 		return nil
-// 	}
+func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
+	if app.PreflightSkipRegistryThroughProxy {
+		log.InfoLn("Checking if registry is accessible through proxy was skipped (via skip flag)")
+		return nil
+	}
 
-// 	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
-// 	if !ok {
-// 		log.InfoLn("Checking if registry is accessible through proxy was skipped (local run)")
-// 		return nil
-// 	}
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		log.InfoLn("Checking if registry is accessible through proxy was skipped (local run)")
+		return nil
+	}
 
-// 	log.DebugLn("Checking if registry is accessible through proxy")
+	log.DebugLn("Checking if registry is accessible through proxy")
 
-// 	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
-// 	if err != nil {
-// 		return fmt.Errorf("get proxy config: %w", err)
-// 	}
-// 	if proxyUrl == nil {
-// 		log.DebugLn("No proxy is configured, skipping check")
-// 		return nil
-// 	}
+	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
+	if err != nil {
+		return fmt.Errorf("get proxy config: %w", err)
+	}
+	if proxyUrl == nil {
+		log.DebugLn("No proxy is configured, skipping check")
+		return nil
+	}
 
-// 	if shouldSkipProxyCheck(pc.metaConfig.Registry.Address, noProxyAddresses) {
-// 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
-// 		return nil
-// 	}
+	registry := pc.metaConfig.Registry.Mode.RemoteData()
+	registryAddress, _ := registry.AddressAndPath()
+	if shouldSkipProxyCheck(registryAddress, noProxyAddresses) {
+		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
+		return nil
+	}
 
-// 	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
-// 	if err != nil {
-// 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
-// Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
-// 	}
-// 	defer tun.Stop()
+	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
+	if err != nil {
+		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
+Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
+	}
+	defer tun.Stop()
 
-// 	registryURL := &url.URL{
-// 		Scheme: pc.metaConfig.Registry.Scheme,
-// 		Host:   pc.metaConfig.Registry.Address,
-// 		Path:   "/v2/",
-// 	}
-// 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-// 	defer cancel()
-// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
-// 	if err != nil {
-// 		return fmt.Errorf("prepare request: %w", err)
-// 	}
+	registryURL := &url.URL{
+		Scheme: strings.ToLower(registry.Scheme),
+		Host:   registryAddress,
+		Path:   "/v2/",
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
+	if err != nil {
+		return fmt.Errorf("prepare request: %w", err)
+	}
 
-// 	httpCl := buildHTTPClientWithLocalhostProxy(proxyUrl)
-// 	resp, err := httpCl.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.
-// Please check connectivity from the control-plane node to the proxy and from the proxy to the container registry.`, err)
-// 	}
+	httpCl := buildHTTPClientWithLocalhostProxy(proxyUrl)
+	resp, err := httpCl.Do(req)
+	if err != nil {
+		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.
+Please check connectivity from the control-plane node to the proxy and from the proxy to the container registry.`, err)
+	}
 
-// 	if err = checkResponseIsFromDockerRegistry(resp); err != nil {
-// 		return err
-// 	}
+	if err = checkResponseIsFromDockerRegistry(resp); err != nil {
+		return err
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
-// func checkResponseIsFromDockerRegistry(resp *http.Response) error {
-// 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
-// 		return fmt.Errorf(
-// 			"%w: got %d status code from the container registry API, this is not a valid registry API response.\n"+
-// 				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured.",
-// 			ErrRegistryUnreachable,
-// 			resp.StatusCode,
-// 		)
-// 	}
+func checkResponseIsFromDockerRegistry(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+		return fmt.Errorf(
+			"%w: got %d status code from the container registry API, this is not a valid registry API response.\n"+
+				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured.",
+			ErrRegistryUnreachable,
+			resp.StatusCode,
+		)
+	}
 
-// 	// https://docs.docker.com/registry/spec/api/#api-version-check
-// 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-// 		return fmt.Errorf(
-// 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-// 				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
-// 			ErrRegistryUnreachable,
-// 		)
-// 	}
+	// https://docs.docker.com/registry/spec/api/#api-version-check
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+			ErrRegistryUnreachable,
+		)
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
-// func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
-// 	if app.PreflightSkipRegistryCredentials {
-// 		log.InfoLn("Checking registry credentials was skipped")
-// 		return nil
-// 	}
+func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
+	if app.PreflightSkipRegistryCredentials {
+		log.InfoLn("Checking registry credentials was skipped")
+		return nil
+	}
 
-// 	image := pc.installConfig.GetImage(true)
-// 	log.DebugF("Image: %s\n", image)
-// 	// skip for CE edition
-// 	if image == "registry.deckhouse.ru/deckhouse/ce" {
-// 		log.InfoLn("Checking registry credentials was skipped for CE edition")
-// 		return nil
-// 	}
+	registry := pc.metaConfig.Registry.Mode.RemoteData()
+	image := pc.installConfig.GetRemoteImage(true)
 
-// 	log.DebugLn("Checking registry credentials")
-// 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
-// 	defer cancel()
+	log.DebugF("Image: %s\n", image)
+	// skip for CE edition
+	if image == "registry.deckhouse.ru/deckhouse/ce" {
+		log.InfoLn("Checking registry credentials was skipped for CE edition")
+		return nil
+	}
 
-// 	authData, err := pc.metaConfig.Registry.Auth()
-// 	if err != nil {
-// 		return err
-// 	}
+	log.DebugLn("Checking registry credentials")
+	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
+	defer cancel()
 
-// 	return checkRegistryAuth(ctx, pc.metaConfig, authData)
-// }
+	return checkRegistryAuth(ctx, pc.metaConfig, registry.AuthBase64())
+}
 
-// func prepareRegistryRequest(
-// 	ctx context.Context,
-// 	metaConfig *config.MetaConfig,
-// 	authData string,
-// ) (*http.Request, error) {
-// 	registryURL := &url.URL{
-// 		Scheme: metaConfig.Registry.Scheme,
-// 		Host:   metaConfig.Registry.Address,
-// 		Path:   registryPath,
-// 	}
+func prepareRegistryRequest(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+) (*http.Request, error) {
+	registry := metaConfig.Registry.Mode.RemoteData()
+	registryAddress, _ := registry.AddressAndPath()
 
-// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("prepare registry request: %w", err)
-// 	}
-// 	if authData != "" {
-// 		req.Header.Add("Authorization", "Basic "+authData)
-// 	}
+	registryURL := &url.URL{
+		Scheme: strings.ToLower(registry.Scheme),
+		Host:   registryAddress,
+		Path:   registryPath,
+	}
 
-// 	return req, nil
-// }
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("prepare registry request: %w", err)
+	}
+	if authData != "" {
+		req.Header.Add("Authorization", "Basic "+authData)
+	}
 
-// func prepareAuthRequest(
-// 	ctx context.Context,
-// 	authURL string,
-// 	registryService string,
-// 	authData string,
-// 	metaConfig *config.MetaConfig,
-// ) (*http.Request, error) {
-// 	authURLValues := url.Values{}
-// 	authURLValues.Add("service", registryService)
-// 	authURLValues.Add(
-// 		"scope",
-// 		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(metaConfig.Registry.Path, "/")),
-// 	)
+	return req, nil
+}
 
-// 	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
-// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("prepare auth request: %w", err)
-// 	}
-// 	if authData != "" {
-// 		req.Header.Add("Authorization", "Basic "+authData)
-// 	}
+func prepareAuthRequest(
+	ctx context.Context,
+	authURL string,
+	registryService string,
+	authData string,
+	metaConfig *config.MetaConfig,
+) (*http.Request, error) {
+	registry := metaConfig.Registry.Mode.RemoteData()
+	_, registryPath := registry.AddressAndPath()
 
-// 	return req, nil
-// }
+	authURLValues := url.Values{}
+	authURLValues.Add("service", registryService)
+	authURLValues.Add(
+		"scope",
+		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(registryPath, "/")),
+	)
 
-// func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
-// 	client := &http.Client{}
-// 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, authURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("prepare auth request: %w", err)
+	}
+	if authData != "" {
+		req.Header.Add("Authorization", "Basic "+authData)
+	}
 
-// 	if strings.ToLower(metaConfig.Registry.Scheme) == "http" {
-// 		httpTransport.TLSClientConfig = &tls.Config{
-// 			InsecureSkipVerify: true,
-// 		}
-// 	}
+	return req, nil
+}
 
-// 	if len(metaConfig.Registry.CA) == 0 {
-// 		client.Transport = httpTransport
-// 		return client, nil
-// 	}
+func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+	registry := metaConfig.Registry.Mode.RemoteData()
 
-// 	certPool := x509.NewCertPool()
-// 	if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
-// 		return nil, fmt.Errorf("invalid cert in CA PEM")
-// 	}
+	client := &http.Client{}
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-// 	httpTransport.TLSClientConfig = &tls.Config{
-// 		RootCAs: certPool,
-// 	}
+	if strings.ToLower(registry.Scheme) == "http" {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
 
-// 	client.Transport = httpTransport
+	if len(registry.CA) == 0 {
+		client.Transport = httpTransport
+		return client, nil
+	}
 
-// 	return client, nil
-// }
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM([]byte(registry.CA)); !ok {
+		return nil, fmt.Errorf("invalid cert in CA PEM")
+	}
 
-// func getAuthRealmAndService(
-// 	ctx context.Context,
-// 	metaConfig *config.MetaConfig,
-// 	client *http.Client,
-// ) (string, string, error) {
-// 	authURL := ""
-// 	registryService := ""
+	httpTransport.TLSClientConfig = &tls.Config{
+		RootCAs: certPool,
+	}
 
-// 	req, err := prepareRegistryRequest(ctx, metaConfig, "")
-// 	if err != nil {
-// 		return authURL, registryService, err
-// 	}
+	client.Transport = httpTransport
 
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return authURL, registryService, fmt.Errorf("cannot auth in registry. %w", err)
-// 	}
-// 	defer resp.Body.Close()
+	return client, nil
+}
 
-// 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-// 		return authURL, registryService, fmt.Errorf(
-// 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-// 				"Check if container registry address is correct",
-// 			ErrAuthRegistryFailed,
-// 		)
-// 	}
-// 	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
+func getAuthRealmAndService(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	client *http.Client,
+) (string, string, error) {
+	authURL := ""
+	registryService := ""
 
-// 	if len(wwwAuthHeader) == 0 {
-// 		return authURL, registryService, fmt.Errorf(
-// 			"WWW-Authenticate header not found. %w",
-// 			ErrAuthRegistryFailed,
-// 		)
-// 	}
-// 	// Bearer realm="https://registry.local:5001/auth",service="Docker registry"
-// 	log.DebugF("WWW-Authenticate: %s\n", wwwAuthHeader)
+	req, err := prepareRegistryRequest(ctx, metaConfig, "")
+	if err != nil {
+		return authURL, registryService, err
+	}
 
-// 	// realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"
-// 	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
-// 	if len(realmMatches) == 0 {
-// 		return authURL, registryService, fmt.Errorf(
-// 			"couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w",
-// 			wwwAuthHeader,
-// 			ErrAuthRegistryFailed,
-// 		)
-// 	}
-// 	authURL = realmMatches[1]
+	resp, err := client.Do(req)
+	if err != nil {
+		return authURL, registryService, fmt.Errorf("cannot auth in registry. %w", err)
+	}
+	defer resp.Body.Close()
 
-// 	// service="(.*?)"
-// 	serviceMatches := serviceRe.FindStringSubmatch(wwwAuthHeader)
-// 	if len(serviceMatches) > 0 {
-// 		registryService = serviceMatches[1]
-// 	}
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return authURL, registryService, fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct",
+			ErrAuthRegistryFailed,
+		)
+	}
+	wwwAuthHeader := resp.Header.Get("WWW-Authenticate")
 
-// 	return authURL, registryService, nil
-// }
+	if len(wwwAuthHeader) == 0 {
+		return authURL, registryService, fmt.Errorf(
+			"WWW-Authenticate header not found. %w",
+			ErrAuthRegistryFailed,
+		)
+	}
+	// Bearer realm="https://registry.local:5001/auth",service="Docker registry"
+	log.DebugF("WWW-Authenticate: %s\n", wwwAuthHeader)
 
-// func checkResponseError(resp *http.Response) error {
-// 	if resp.StatusCode == http.StatusUnauthorized {
-// 		return ErrAuthRegistryFailed
-// 	}
+	// realm="(http[s]{0,1}:\/\/[a-z0-9\.\:\/\-]+)"
+	realmMatches := realmRe.FindStringSubmatch(wwwAuthHeader)
+	if len(realmMatches) == 0 {
+		return authURL, registryService, fmt.Errorf(
+			"couldn't find bearer realm parameter, consider enabling bearer token auth in your registry, returned header:%s. %w",
+			wwwAuthHeader,
+			ErrAuthRegistryFailed,
+		)
+	}
+	authURL = realmMatches[1]
 
-// 	if resp.StatusCode != http.StatusOK {
-// 		return fmt.Errorf(
-// 			"unexpected response status code %d, %w",
-// 			resp.StatusCode,
-// 			ErrAuthRegistryFailed,
-// 		)
-// 	}
+	// service="(.*?)"
+	serviceMatches := serviceRe.FindStringSubmatch(wwwAuthHeader)
+	if len(serviceMatches) > 0 {
+		registryService = serviceMatches[1]
+	}
 
-// 	return nil
-// }
+	return authURL, registryService, nil
+}
 
-// func checkBasicRegistryAuth(
-// 	ctx context.Context,
-// 	metaConfig *config.MetaConfig,
-// 	authData string,
-// 	client *http.Client,
-// ) error {
-// 	req, err := prepareRegistryRequest(ctx, metaConfig, authData)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf("cannot request to registry. %w", err)
-// 	}
-// 	defer resp.Body.Close()
+func checkResponseError(resp *http.Response) error {
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrAuthRegistryFailed
+	}
 
-// 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-// 		return fmt.Errorf(
-// 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-// 				"Check if container registry address is correct",
-// 			ErrAuthRegistryFailed,
-// 		)
-// 	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"unexpected response status code %d, %w",
+			resp.StatusCode,
+			ErrAuthRegistryFailed,
+		)
+	}
 
-// 	return checkResponseError(resp)
-// }
+	return nil
+}
 
-// func checkTokenRegistryAuth(
-// 	ctx context.Context,
-// 	metaConfig *config.MetaConfig,
-// 	authData string,
-// 	client *http.Client,
-// ) error {
-// 	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
-// 	if err != nil {
-// 		return err
-// 	}
+func checkBasicRegistryAuth(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+	client *http.Client,
+) error {
+	req, err := prepareRegistryRequest(ctx, metaConfig, authData)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot request to registry. %w", err)
+	}
+	defer resp.Body.Close()
 
-// 	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, metaConfig)
-// 	if err != nil {
-// 		return err
-// 	}
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return fmt.Errorf(
+			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
+				"Check if container registry address is correct",
+			ErrAuthRegistryFailed,
+		)
+	}
 
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf("cannot auth in registry. %w", err)
-// 	}
-// 	defer resp.Body.Close()
+	return checkResponseError(resp)
+}
 
-// 	log.DebugF("Status Code: %d\n", resp.StatusCode)
+func checkTokenRegistryAuth(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	authData string,
+	client *http.Client,
+) error {
+	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
+	if err != nil {
+		return err
+	}
 
-// 	return checkResponseError(resp)
-// }
+	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, metaConfig)
+	if err != nil {
+		return err
+	}
 
-// func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
-// 	client, err := prepareAuthHTTPClient(metaConfig)
-// 	if err != nil {
-// 		return err
-// 	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot auth in registry. %w", err)
+	}
+	defer resp.Body.Close()
 
-// 	err = checkBasicRegistryAuth(ctx, metaConfig, authData, client)
-// 	if err == nil {
-// 		return nil
-// 	}
+	log.DebugF("Status Code: %d\n", resp.StatusCode)
 
-// 	if !errors.Is(err, ErrAuthRegistryFailed) {
-// 		return err
-// 	}
+	return checkResponseError(resp)
+}
 
-// 	return checkTokenRegistryAuth(ctx, metaConfig, authData, client)
-// }
+func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
+	client, err := prepareAuthHTTPClient(metaConfig)
+	if err != nil {
+		return err
+	}
+
+	err = checkBasicRegistryAuth(ctx, metaConfig, authData, client)
+	if err == nil {
+		return nil
+	}
+
+	if !errors.Is(err, ErrAuthRegistryFailed) {
+		return err
+	}
+
+	return checkTokenRegistryAuth(ctx, metaConfig, authData, client)
+}
