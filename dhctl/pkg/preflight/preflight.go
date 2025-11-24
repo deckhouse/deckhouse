@@ -63,7 +63,7 @@ func NewChecker(
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		bootstrapState:          bootstrapState,
-		// imageDescriptorProvider: remoteDescriptorProvider{},
+		imageDescriptorProvider: remoteDescriptorProvider{},
 	}
 }
 
