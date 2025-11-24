@@ -46,17 +46,11 @@
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
     {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
-    {{- $propagated := false }}
-    {{- $useObservabilityRules := false }}
-    {{- if ( $context.Values.global.enabledModules | has "observability" ) }}
-      {{- if ($context.Values.global.discovery.apiVersions | has "observability.deckhouse.io/v1alpha1/ClusterObservabilityMetricsRulesGroup") }}
-        {{- $useObservabilityRules = true }}
-        {{- $propagated = contains "propagated-" $resourceName }}
-      {{- end}}
-    {{- end }}
-    {{- $resourceName = $resourceName | replace "propagated-" "" }}
-
-    {{- if or $propagated $useObservabilityRules }}
+    {{- $propagated := contains "propagated-" $resourceName }}
+    {{- $hasObservabilityModule := has "observability" $context.Values.global.enabledModules }}
+    {{- $useObservabilityRules := has "observability.deckhouse.io/v1alpha1/ClusterObservabilityMetricsRulesGroup" $context.Values.global.discovery.apiVersions }}
+    {{- $resourceName = $resourceName | replace "propagated-" }}
+    {{- if and $hasObservabilityModule $useObservabilityRules }}
       {{- range $idx, $group := $definitionStruct.Rules }}
         {{- $_ := unset $group "name" }}
         {{- $groupResourceName := printf "%s-%d" $resourceName $idx }}
