@@ -346,8 +346,8 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 In case of issues when working with a multi-cluster, it is necessary to check in each cluster:
 
 1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
-2. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-3. Using the `istioctl` utility ([how to install...](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
+1. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
+1. Using the `istioctl` utility ([how to install...](https://istio.io/v1.25/docs/setup/additional-setup/download-istio-release/)):
 
 ```console
 istioctl remote-clusters -i d8-istio
