@@ -40,14 +40,18 @@ type Options struct {
 	Insecure bool
 	// TLSSkipVerify skips TLS certificate verification
 	TLSSkipVerify bool
-	// Logger for client operations
-	Logger *log.Logger
+	// Scheme sets the URL scheme (http or https)
+	// TODO: remove Scheme field in favor of Insecure field
+	Scheme string
 	// UserAgent sets the User-Agent header for requests
 	UserAgent string
 	// CA sets a custom CA certificate for TLS verification
 	CA string
 	// Timeout sets the timeout for registry operations
 	Timeout time.Duration
+
+	// Logger for client operations
+	Logger *log.Logger
 }
 
 // ensureLogger sets a default logger if none is provided
