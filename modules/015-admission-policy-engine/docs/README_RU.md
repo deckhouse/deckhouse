@@ -12,7 +12,7 @@ Pod Security Standards определяют три политики, охват�
 {% endalert %}
 
 {% alert level="info" %}
-Просим обратить внимание, что при включение модуля **multitenancy-manager**, он создает свои *OperationPolicy* (например в  namespace "default"). На них не вляют настройки [podSecurityStandards](../configuration.html#parameters-podsecuritystandards).
+При включение модуля **multitenancy-manager**, модуль создает свои *OperationPolicy* (например, в  namespace "default"). На них не влияют настройки [podSecurityStandards](../configuration.html#parameters-podsecuritystandards).
 {% endalert %}
 
 Список политик, доступных для использования:
