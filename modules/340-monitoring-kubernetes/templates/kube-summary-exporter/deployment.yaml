@@ -1,6 +1,6 @@
 {{- define "kube_summary_exporter_resources" }}
-cpu: 100m
-memory: 128Mi
+cpu: 10m
+memory: 25Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

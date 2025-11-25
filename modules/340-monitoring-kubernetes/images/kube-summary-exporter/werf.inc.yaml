@@ -6,8 +6,6 @@ import:
   add: /src/kube-summary-exporter
   to: /bin/kube-summary-exporter
   before: setup
-git:
-{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/kube-summary-exporter"]
