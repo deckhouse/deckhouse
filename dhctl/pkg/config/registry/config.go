@@ -36,10 +36,26 @@ var (
 
 type CRIType = string
 
+type TestConfigUpdateRegistrySettings func(*types.RegistrySettings)
+type TestConfigUpdateModuleEnabled func() bool
+type TestConfigUpdateMode func() registry_const.ModeType
+
 type Config struct {
 	Mode          Mode
 	ModuleEnabled bool
 	Settings      types.DeckhouseSettings
+}
+
+func (cfg *Config) ConfigBuilder() *ConfigBuilder {
+	return NewConfigBuilder(cfg.Mode, cfg.ModuleEnabled)
+}
+
+func (cfg *Config) DeckhouseSettings() (bool, map[string]interface{}, error) {
+	if !cfg.ModuleEnabled {
+		return false, nil, nil
+	}
+	ret, err := cfg.Settings.ToMap()
+	return true, ret, err
 }
 
 func NewConfig(
@@ -60,7 +76,7 @@ func NewConfig(
 	case deckhouseSettings != nil:
 		settings = *deckhouseSettings
 	case initConfig != nil:
-		registrySettings, err := initConfig.ToDeckhouseRegistrySettings()
+		registrySettings, err := initConfig.ToRegistrySettings()
 		if err != nil {
 			return Config{}, fmt.Errorf("failed to get registry settings from initConfig: %w", err)
 		}
@@ -91,13 +107,13 @@ func NewConfig(
 	switch {
 	case settings.Direct != nil:
 		remote := types.Data{}
-		remote.FromDeckhouseRegistrySettings(settings.Direct.RegistrySettings)
+		remote.FromRegistrySettings(settings.Direct.RegistrySettings)
 		mode = &DirectMode{
 			Remote: remote,
 		}
 	case settings.Unmanaged != nil:
 		remote := types.Data{}
-		remote.FromDeckhouseRegistrySettings(settings.Unmanaged.RegistrySettings)
+		remote.FromRegistrySettings(settings.Unmanaged.RegistrySettings)
 		mode = &UnmanagedMode{
 			Remote: remote,
 		}
@@ -105,7 +121,7 @@ func NewConfig(
 		return Config{}, ErrUnknownMode
 	}
 
-	// Check is module enable
+	// Check module enable
 	moduleEnabled = slices.Contains(SupportedCRI, defaultCRI)
 	if mode.IsModuleRequired() && !moduleEnabled {
 		return Config{}, fmt.Errorf(
@@ -123,14 +139,117 @@ func NewConfig(
 	}, nil
 }
 
-func (cfg *Config) ConfigBuilder() *ConfigBuilder {
-	return NewConfigBuilder(cfg.Mode, cfg.ModuleEnabled)
+func NewTestConfig(opts ...interface{}) Config {
+	registrySettings := types.RegistrySettings{
+		ImagesRepo: DefaultImagesRepo,
+		Scheme:     DefaultScheme,
+	}
+
+	var mode = registry_const.ModeUnmanaged
+	var settings types.DeckhouseSettings
+	var modeObj Mode
+	moduleEnabled := true
+	for _, opt := range opts {
+		switch fn := opt.(type) {
+		case TestConfigUpdateRegistrySettings:
+			fn(&registrySettings)
+		case TestConfigUpdateModuleEnabled:
+			moduleEnabled = fn()
+		case TestConfigUpdateMode:
+			mode = fn()
+		}
+	}
+
+	switch mode {
+	case registry_const.ModeDirect:
+		settings = types.DeckhouseSettings{
+			Mode: registry_const.ModeDirect,
+			Direct: &types.DirectModeSettings{
+				RegistrySettings: registrySettings,
+			},
+		}
+		remote := types.Data{}
+		remote.FromRegistrySettings(registrySettings)
+		modeObj = &DirectMode{Remote: remote}
+		// UpdateModuleEnabled is ignored for Direct mode (module always enabled)
+		moduleEnabled = true
+
+	default: // Unmanaged mode
+		settings = types.DeckhouseSettings{
+			Mode: registry_const.ModeUnmanaged,
+			Unmanaged: &types.UnmanagedModeSettings{
+				RegistrySettings: registrySettings,
+			},
+		}
+		remote := types.Data{}
+		remote.FromRegistrySettings(registrySettings)
+		modeObj = &UnmanagedMode{Remote: remote}
+	}
+
+	return Config{
+		Mode:          modeObj,
+		ModuleEnabled: moduleEnabled,
+		Settings:      settings,
+	}
 }
 
-func (cfg *Config) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	if !cfg.ModuleEnabled {
-		return false, nil, nil
+func WithImagesRepo(repo string) TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.ImagesRepo = repo
 	}
-	ret, err := cfg.Settings.ToMap()
-	return true, ret, err
+}
+
+func WithSchemeHTTP() TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.Scheme = types.SchemeHTTP
+	}
+}
+
+func WithSchemeHTTPS() TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.Scheme = types.SchemeHTTPS
+	}
+}
+
+func WithCredentials(username, password string) TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.Username = username
+		rs.Password = password
+	}
+}
+
+func WithCA(ca string) TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.CA = ca
+	}
+}
+
+func WithLicense(license string) TestConfigUpdateRegistrySettings {
+	return func(rs *types.RegistrySettings) {
+		rs.License = license
+	}
+}
+
+func WithModuleEnable() TestConfigUpdateModuleEnabled {
+	return func() bool {
+		return true
+	}
+}
+
+func WithModuleDisable() TestConfigUpdateModuleEnabled {
+	return func() bool {
+		return false
+	}
+}
+
+func WithModeDirect() TestConfigUpdateMode {
+	return func() registry_const.ModeType {
+		return registry_const.ModeDirect
+	}
+}
+
+func WithModeUnmanaged() TestConfigUpdateMode {
+	return func() registry_const.ModeType {
+		return registry_const.ModeUnmanaged
+	}
 }

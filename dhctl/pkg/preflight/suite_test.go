@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
 
 type PreflightChecksTestSuite struct {
@@ -37,16 +36,10 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
 	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "registry.deckhouse.io/deckhouse/ce",
-					Username:   "",
-					Password:   "",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+			registry_config.WithSchemeHTTPS(),
+		),
 		DevBranch: "pr1111",
 	}
 }

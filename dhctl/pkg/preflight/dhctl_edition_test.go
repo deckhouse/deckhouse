@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
 
 func (s *PreflightChecksTestSuite) TestEditionBad() {
@@ -37,15 +36,10 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "test.registry.io/test",
-					CA:         "",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("test.registry.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
@@ -70,15 +64,10 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "test.registry.io/test",
-					CA:         "",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("test.registry.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
@@ -103,15 +92,10 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "test.registry.io/test",
-					CA:         "",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("test.registry.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).

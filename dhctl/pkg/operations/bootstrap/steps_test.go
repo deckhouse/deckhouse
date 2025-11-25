@@ -34,18 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func createRegistryDefaultConfig(moduleEnable bool) registry_config.Config {
-	return registry_config.Config{
-		ModuleEnabled: moduleEnable,
-		Mode: &registry_config.UnmanagedMode{
-			Remote: registry_types.Data{
-				ImagesRepo: registry_config.DefaultImagesRepo,
-				Scheme:     registry_config.DefaultScheme,
-			},
-		},
-	}
-}
-
 func TestNewRegistryClientConfigGetter(t *testing.T) {
 	t.Run("Path with leading slash", func(t *testing.T) {
 		config := registry_types.Data{
@@ -192,7 +180,10 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &config.DeckhouseInstaller{
-		Registry:  createRegistryDefaultConfig(false),
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithModeUnmanaged(),
+			registry_config.WithModuleDisable(),
+		),
 		Bundle:    "minimal",
 		LogLevel:  "Info",
 		UUID:      clusterUUID,

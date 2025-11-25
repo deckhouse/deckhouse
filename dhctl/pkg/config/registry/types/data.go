@@ -31,7 +31,7 @@ type Data struct {
 	Password   string     `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
-func (d *Data) FromDeckhouseRegistrySettings(settings RegistrySettings) {
+func (d *Data) FromRegistrySettings(settings RegistrySettings) {
 	*d = Data{
 		ImagesRepo: settings.ImagesRepo,
 		Scheme:     settings.Scheme,

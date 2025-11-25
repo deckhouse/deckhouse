@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
@@ -73,14 +72,10 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "registry.deckhouse.io/test",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -103,14 +98,10 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "registry.deckhouse.io/test",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -132,14 +123,10 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.Config{
-			Mode: &registry_config.UnmanagedMode{
-				Remote: registry_types.Data{
-					Scheme:     "https",
-					ImagesRepo: "registry.deckhouse.io/test",
-				},
-			},
-		},
+		Registry: registry_config.NewTestConfig(
+			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_config.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -271,28 +258,16 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: registry_config.Config{
-						Mode: &registry_config.UnmanagedMode{
-							Remote: registry_types.Data{
-								Scheme:     "https",
-								ImagesRepo: "registry.deckhouse.io/deckhouse/ce",
-								Username:   "",
-								Password:   "",
-							},
-						},
-					},
+					Registry: registry_config.NewTestConfig(
+						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_config.WithSchemeHTTPS(),
+					),
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: registry_config.Config{
-						Mode: &registry_config.UnmanagedMode{
-							Remote: registry_types.Data{
-								Scheme:     "https",
-								ImagesRepo: "registry.deckhouse.io/deckhouse/ce",
-								Username:   "",
-								Password:   "",
-							},
-						},
-					},
+					Registry: registry_config.NewTestConfig(
+						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_config.WithSchemeHTTPS(),
+					),
 				},
 			},
 			wantErr: assert.NoError,

@@ -33,7 +33,7 @@ type InitConfig struct {
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
 }
 
-func (config *InitConfig) ToDeckhouseRegistrySettings() (RegistrySettings, error) {
+func (config *InitConfig) ToRegistrySettings() (RegistrySettings, error) {
 	imagesRepo := strings.TrimRight(config.ImagesRepo, "/")
 
 	// Validate and pars dockerCfg
