@@ -397,7 +397,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 	}
 
 	// TODO: change finalizing
-	if operation.Status.Packages != nil && len(operation.Status.Packages.Discovered) == operation.Status.Packages.ProcessedOverall {
+	if operation.Status.Packages != nil && len(operation.Status.Packages.Processed) == operation.Status.Packages.ProcessedOverall {
 		r.logger.Info("all packages processed, marking as completed",
 			slog.Int("total", operation.Status.Packages.Total))
 
