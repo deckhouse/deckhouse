@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2025-11-25-1
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/build/kubernetes-oomkill-exporter
@@ -12,6 +13,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: 2025-11-25-1
 final: false
 shell:
   install:
@@ -19,6 +21,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: 2025-11-25-1
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
