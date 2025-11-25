@@ -41,6 +41,10 @@ Provider specific environment variables:
 \$LAYOUT_YANDEX_FOLDER_ID
 \$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
 
+  DVP:
+
+\$LAYOUT_DVP_KUBECONFIGDATABASE64
+
   GCP:
 
 \$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
@@ -211,6 +215,29 @@ function prepare_environment() {
     }"
     ;;
 
+  "DVP")
+    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
+    ssh_user="debian"
+    bastion_host="185.11.73.171"
+    bastion_user="e2e-user"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
   "GCP")
     ssh_user="user"
     values="{
@@ -284,7 +311,6 @@ function prepare_environment() {
     bastion_user="ubuntu"
     bastion_host="31.128.54.168"
     bastion_port="53359"
-    # ssh_bastion="ProxyJump=${bastion_user}@${bastion_host}:${bastion_port}"
     ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -1351,7 +1377,7 @@ if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "STATIC" ] || [ "$PROVIDER" = "VCD"
     fi
 
     # Waiting to cluster cleanup
-    testRunAttempts=40
+    testRunAttempts=80
     sleep=30
     for ((i=1; i<=testRunAttempts; i++)); do
       cluster_status="$(curl -s -X 'GET' \
