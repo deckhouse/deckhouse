@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "DVP" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
   LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
@@ -441,7 +441,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
@@ -864,7 +864,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
