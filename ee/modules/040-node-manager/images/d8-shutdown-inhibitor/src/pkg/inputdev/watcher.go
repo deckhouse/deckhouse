@@ -59,25 +59,26 @@ func (w *Watcher) watch() {
 		}
 	}
 }
+
 func (w *Watcher) readEvents(evCh chan *inputEvent) {
 	var fds []int
-	
+
 	for {
 		if w.shouldStop() {
 			return
 		}
-		
+
 		err := w.processDeviceCycle(evCh, fds)
 		if err == nil {
 			return
 		}
-		
+
 		if errors.Is(err, errDevicesNeedRefresh) {
 			w.refreshDevsOnError()
 			fds = fds[:0]
 			continue
 		}
-		
+
 		dlog.Warn("power button watcher: unexpected error", dlog.Err(err))
 	}
 }
@@ -96,9 +97,9 @@ func (w *Watcher) processDeviceCycle(evCh chan *inputEvent, fds []int) error {
 	if !ok {
 		return nil
 	}
-	
+
 	defer closeFDs(fds)
-	
+
 	return w.handleDeviceEvents(evCh, fds, &fdSet, fdMax, w.stopCh)
 }
 
@@ -195,7 +196,6 @@ func (w *Watcher) refreshDevsOnError() {
 		dlog.Error("power button watcher: refresh devs list", dlog.Err(err))
 		return
 	}
-
 }
 
 type inputEvent struct {
