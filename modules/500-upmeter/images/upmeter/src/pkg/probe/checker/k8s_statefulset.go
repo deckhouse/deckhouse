@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
@@ -122,11 +123,6 @@ func (s statefulSetDeleter) Do(ctx context.Context) error {
 	return err
 }
 
-// boolPtr returns a pointer to the given bool value.
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 	replicas := int32(1)
 
@@ -171,12 +167,12 @@ func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 								"/pause",
 							},
 							SecurityContext: &v1.SecurityContext{
-								ReadOnlyRootFilesystem:   boolPtr(true),
-								AllowPrivilegeEscalation: boolPtr(false),
+								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &v1.Capabilities{
 									Drop: []v1.Capability{"ALL"},
 								},
-								RunAsNonRoot: boolPtr(true),
+								RunAsNonRoot: ptr.To(true),
 								SeccompProfile: &v1.SeccompProfile{
 									Type: v1.SeccompProfileTypeRuntimeDefault,
 								},
