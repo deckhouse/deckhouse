@@ -52,6 +52,10 @@ func init() {
 }
 
 func main() {
+	if os.Getenv("HELM_DEBUG") != "true" {
+		_ = os.Setenv("HELM_DEBUG", "true")
+		_ = os.Setenv("LOG_LEVEL", "DEBUG")
+	}
 	flag.Parse()
 
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
