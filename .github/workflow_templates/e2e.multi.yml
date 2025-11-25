@@ -93,7 +93,7 @@ on:
       test_config:
         description: 'JSON string of parameters of current test'
         required: false
-        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.32","edition":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false

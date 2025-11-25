@@ -76,7 +76,7 @@ on:
       test_config:
         description: 'JSON string of parameters which was tested'
         required: false
-        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.32","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
