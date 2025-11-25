@@ -182,7 +182,7 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 					slog.String("name", app.GetName()),
 					slog.String("monitor", kubeEvent.MonitorId),
 					slog.String("event", kubeEvent.String()))
-				return nil
+				continue
 			}
 
 			// Process the event and generate tasks via the builder callback
@@ -220,7 +220,7 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 					slog.String("hook", hook.GetName()),
 					slog.String("name", app.GetName()),
 					slog.String("crontab", crontab))
-				return nil
+				continue
 			}
 
 			// Process the schedule event and generate tasks via the builder callback
