@@ -1,0 +1,125 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: packagerepositoryoperations.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: PackageRepositoryOperation
+    listKind: PackageRepositoryOperationList
+    plural: packagerepositoryoperations
+    singular: packagerepositoryoperation
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PackageRepositoryOperation represents an operation to scan/update
+          a package repository.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the behavior of a PackageRepositoryOperation.
+            properties:
+              packageRepository:
+                type: string
+              type:
+                type: string
+              update:
+                properties:
+                  fullScan:
+                    type: boolean
+                  timeout:
+                    type: string
+                type: object
+            required:
+            - packageRepository
+            - type
+            type: object
+          status:
+            description: Status of a PackageRepositoryOperation.
+            properties:
+              completionTime:
+                format: date-time
+                type: string
+              conditions:
+                items:
+                  properties:
+                    lastProbeTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              packages:
+                properties:
+                  discovered:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  processed:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  processedOverall:
+                    type: integer
+                  total:
+                    type: integer
+                type: object
+              phase:
+                type: string
+              startTime:
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

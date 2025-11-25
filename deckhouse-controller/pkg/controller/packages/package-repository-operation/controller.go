@@ -976,8 +976,7 @@ func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, r
 	default:
 		{
 			r.logger.Warn("unsupported package version list type",
-				slog.String("package", packageName),
-				slog.String("type", packageType))
+				slog.String("package", packageName))
 			return ""
 		}
 	}
