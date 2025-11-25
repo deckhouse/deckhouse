@@ -138,10 +138,8 @@ func (w *Watcher) handleDeviceEvents(evCh chan *inputEvent, fds []int, fdSet *sy
 	// Read events until stopped via channel.
 	for {
 		// Return if watcher was stopped.
-		select {
-		case <-stopCh:
+		if w.shouldStop() {
 			return nil
-		default:
 		}
 
 		InitFdSet(fdSet, fds...)
