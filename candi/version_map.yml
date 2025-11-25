@@ -1,39 +1,33 @@
 bashible: &bashible
-  ubuntu:
-    "18.04":
-    "20.04":
-    "22.04":
-    "24.04":
-  debian:
-    "10":
-    "11":
-    "12":
-    "13":
-  centos:
-    "7":
-    "8":
-    "9":
-  opensuse:
-    "15.4":
-    "15.5":
-    "15.6":
-  redos:
-    "7.3":
-    "8.0":
-  rosa:
-    "7.9":
-    "12.4":
-    "12.5":
-    "12.6":
-  astra:
-    "1.7":
-    "1.8":
-  altlinux:
-    "p10":
-    "10.0":
-    "10.1":
-    "10.2":
-    "11":
+  os:
+    debian:
+      packageManager: apt
+      distributions:
+        - name: ubuntu
+          ids: [ubuntu]
+        - name: debian
+          ids: [debian]
+        - name: astra
+          ids: [astra]
+    rhel:
+      packageManager: dnf
+      distributions:
+        - name: centos
+          ids: [centos, rocky, almalinux, rhel, ol]
+        - name: redos
+          ids: [redos]
+        - name: rosa
+          ids: [rosa, rels]
+    suse:
+      packageManager: zypper
+      distributions:
+        - name: opensuse
+          ids: [mosos-arbat, opensuse-leap]
+    altlinux:
+      packageManager: apt-rpm
+      distributions:
+        - name: altlinux
+          ids: [altlinux]
 k8s:
   "1.30":
     status: end-of-life

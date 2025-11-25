@@ -2,102 +2,234 @@ osDistributions:
   altlinux:
     name: ALT Linux
     url: https://www.altlinux.org/
-    ru_support: 'true'
-    en_support: 'false'
-    cse_support:
-      versions:
-        - '8 СП (релиз 10)'
-    ce_support:
-      versions:
-        - '10.0'
-        - '10.1'
-        - '10.2'
-        - '11'
-        - 'p10'
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '8 СП (релиз 10)'
+        ce_support: false
+        be_plus_support: true
+        cse_support: true
+      - version: 'p10'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '10.0'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '10.1'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '10.2'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '11'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
-    ru_support: 'true'
-    en_support: 'false'
-    cse_support:
-      versions:
-        - '1.7'
-    ce_support:
-      versions:
-        - '1.7'
-        - '1.8'
-      note_content:
-        ru: |
-          В версии <b>1.7.6</b> модуль <b>runtime-audit-engine будет работать с ядром <a href='/modules/runtime-audit-engine/#требования'>5.15-generic</a></b>.
-    note_content:
-      ru: |
-        В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
-        Перечень поддержки некоторыми модулями DKP версий ядра Linux в Astra 1.8:<br>
-        <ul>
-          <li><b>linux-image-6.1</b> – cni-cilium;</li>
-          <li><b>linux-image-6.1-debug</b> – cni-cilium, runtime-audit-engine;</li>
-          <li><b>linux-image-6.6</b> – cni-cilium.</li>
-        </ul>
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '1.7'
+        ce_support: true
+        be_plus_support: true
+        cse_support: true
+        note_content:
+          ru: |
+            В версии <b>1.7.6</b> модуль <b>runtime-audit-engine будет работать с ядром <a href='/modules/runtime-audit-engine/#требования'>5.15-generic</a></b>.
+      - version: '1.8'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
+            Перечень поддержки некоторыми модулями DKP версий ядра Linux в Astra 1.8:<br>
+            <ul>
+              <li><b>linux-image-6.1</b> – cni-cilium;</li>
+              <li><b>linux-image-6.1-debug</b> – cni-cilium, runtime-audit-engine;</li>
+              <li><b>linux-image-6.6</b> – cni-cilium.</li>
+            </ul>
   centos:
     name: CentOS
     url: https://www.centos.org/download/
-    note_content:
-      ru: |
-        <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
-      en: |
-        <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
+    ru_support: true
+    en_support: true
+    versions:
+      - version: '7'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
+          en: |
+            <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
+      - version: '8'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
+          en: |
+            <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
+      - version: '9'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   debian:
     name: Debian
     url: https://www.debian.org/download
-    note_content:
-      ru: <b>Debian 10</b> более не поддерживается разработчиками дистрибутива Debian
-      en: <b>Debian 10</b> is no longer supported by Debian developers
+    ru_support: true
+    en_support: true
+    versions:
+      - version: '10'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: <b>Debian 10</b> более не поддерживается разработчиками дистрибутива Debian
+          en: <b>Debian 10</b> is no longer supported by Debian developers
+      - version: '11'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '12'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '13'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   opensuse:
     name: openSUSE
     url: https://get.opensuse.org/
+    ru_support: true
+    en_support: true
+    versions:
+      - version: '15.4'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '15.5'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '15.6'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
-    note_content:
-      ru: Для <b>Rocky Linux 8</b> прекращена активная поддержка разработчиками дистрибутива Rocky Linux (продолжается только поддержка безопасности)
-      en: Active support for <b>Rocky Linux 8</b> has been discontinued by Rocky Linux developers (there is only security support)
+    ru_support: true
+    en_support: true
+    versions:
+      - version: '8'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: Для <b>Rocky Linux 8</b> прекращена активная поддержка разработчиками дистрибутива Rocky Linux (продолжается только поддержка безопасности)
+          en: Active support for <b>Rocky Linux 8</b> has been discontinued by Rocky Linux developers (there is only security support)
+      - version: '9'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
-    note_content:
-      ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
-      en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
+    ru_support: true
+    en_support: true
+    versions:
+      - version: '18.04'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
+          en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
+      - version: '20.04'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '22.04'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+      - version: '24.04'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   'redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
-    ru_support: 'true'
-    en_support: 'false'
-    cse_support:
-      versions:
-        - '7.3'
-    ce_support:
-      versions:
-        - '7.3'
-        - '8.0'
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '7.3'
+        ce_support: true
+        be_plus_support: true
+        cse_support: true
+      - version: '8.0'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
   'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
-    ru_support: 'true'
-    en_support: 'false'
-    ce_support:
-      versions:
-        - '7.9'
-        - '12.4'
-        - '12.5'
-        - '12.6'
-      note_content:
-        ru: |
-          Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '7.9'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+      - version: '12.4'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+      - version: '12.5'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+      - version: '12.6'
+        ce_support: true
+        be_plus_support: true
+        cse_support: false
+        note_content:
+          ru: |
+            Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
   '_mosos-arbat':
     name: 'МОС ОС'
     url: https://os.mos.ru/
-    ru_support: 'true'
-    en_support: 'false'
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '15.4'
+        ce_support: false
+        be_plus_support: true
+        cse_support: false
+      - version: '15.5'
+        ce_support: false
+        be_plus_support: true
+        cse_support: false
 
 k8s_statuses:
   end-of-life:
