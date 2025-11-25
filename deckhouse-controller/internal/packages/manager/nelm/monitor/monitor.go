@@ -211,6 +211,7 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
+	span.SetAttributes(attribute.Int("resources", len(m.resources)))
 
 	m.logger.Debug("check resources")
 
