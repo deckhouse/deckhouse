@@ -188,6 +188,8 @@ spec:
               value: "true"
             - name: LOG_TYPE
               value: "json"
+            - name: HELM_DEBUG
+              value: "true"
             - name: DECKHOUSE_HA
 {{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
               value: "true"
