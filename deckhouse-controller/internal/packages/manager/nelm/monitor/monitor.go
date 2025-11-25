@@ -207,7 +207,7 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 // On first run, it parses the rendered manifest to build the expected resource index.
 // Resource checks are performed in parallel for better performance.
 func (m *resourcesMonitor) checkResources(ctx context.Context) error {
-	_, span := otel.Tracer(monitorTracer).Start(ctx, "checkResources")
+	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResources")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
@@ -285,6 +285,9 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObjectMetadata, error) {
 	dec := yaml.NewYAMLOrJSONDecoder(strings.NewReader(rendered), 4096)
 
+	// TODO: debug only
+	m.logger.Debug("parse manifest", slog.String("rendered", rendered))
+
 	var res []*metav1.PartialObjectMetadata
 	for {
 		obj := new(metav1.PartialObjectMetadata)
@@ -306,8 +309,7 @@ func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObje
 			continue
 		}
 
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Empty() {
+		if obj.GetObjectKind().GroupVersionKind().Empty() {
 			return nil, errors.New("object has no gvk")
 		}
 
@@ -320,7 +322,7 @@ func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObje
 // checkResource checks if all expected resources of a given type are present in the cluster.
 // Returns ErrAbsentManifest if any expected resource is missing.
 func (m *resourcesMonitor) checkResource(ctx context.Context, res namespacedGVK) error {
-	_, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
+	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
@@ -343,6 +345,12 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res namespacedGVK)
 	if err != nil {
 		return fmt.Errorf("list resources: %w", err)
 	}
+
+	span.SetAttributes(attribute.Int("resources", len(objects)))
+	m.logger.Debug("found resources",
+		slog.Int("resources", len(objects)),
+		slog.String("namespace", res.namespace),
+		slog.String("gvk", res.gvk.String()))
 
 	// Check if each expected resource name exists in the cluster
 	for obj := range m.resources[res] {
