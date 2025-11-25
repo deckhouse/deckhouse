@@ -115,11 +115,11 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	var maxmindErr error
 	// if not leader download db from leader
 	if !d.isLeader() {
-		account.Mirror = d.getLeaderLinkForDownload(headlessServiceName, cfg.Namespace, kubeRBACProxyPort)
-		if account.Mirror == "" {
-			log.Warn(fmt.Sprintf("Skip download %s: leader endpoint is unknown yet", edition))
-			return nil
+		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
+		if err != nil {
+			return fmt.Errorf("wait leader endpoint: %w", err)
 		}
+		account.Mirror = link
 		account.SkipTLS = true // skip TLS kubeRbacProxy
 		return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 	}
@@ -491,6 +491,30 @@ func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port strin
 
 	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
 	return fmt.Sprintf("https://%s.%s.%s.svc:%s", leaderPod, serviceName, namespace, port)
+}
+
+// waitLeaderLink waits until leader link is known or ctx expires, returning an error on timeout.
+func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string) (string, error) {
+	const waitStep = time.Second
+	const maxWait = 30 * time.Second
+
+	deadline := time.Now().Add(maxWait)
+	for {
+		link := d.getLeaderLinkForDownload(headlessServiceName, namespace, port)
+		if link != "" {
+			return link, nil
+		}
+
+		if time.Now().After(deadline) {
+			return "", fmt.Errorf("leader endpoint is still unknown after %s", maxWait)
+		}
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(waitStep):
+		}
+	}
 }
 
 func (d *Downloader) isLeader() bool {
