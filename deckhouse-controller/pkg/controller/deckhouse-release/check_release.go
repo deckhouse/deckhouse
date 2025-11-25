@@ -784,11 +784,6 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		meta.Changelog = changelog
 	}
 
-	cooldown := f.fetchCooldown(img)
-	if cooldown != nil {
-		meta.Cooldown = cooldown
-	}
-
 	return meta, nil
 }
 
@@ -1038,12 +1033,10 @@ type ReleaseMetadata struct {
 	Changelog        map[string]interface{}  `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 
-	// TODO: review fields below. it can be useless now
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
-	Cooldown     *metav1.Time              `json:"-"`
 }
 
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {

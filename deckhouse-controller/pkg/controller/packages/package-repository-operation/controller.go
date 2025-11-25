@@ -21,6 +21,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -33,12 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 const (
@@ -56,6 +57,7 @@ const (
 type reconciler struct {
 	client client.Client
 	dc     dependency.Container
+	psm    *registryService.PackageServiceManager
 	logger *log.Logger
 }
 
@@ -67,6 +69,7 @@ func RegisterController(
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
 		dc:     dc,
+		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
 		logger: logger,
 	}
 
@@ -138,6 +141,8 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 		res, err = r.handleInitialState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhasePending:
 		res, err = r.handlePendingState(ctx, operation)
+	case v1alpha1.PackageRepositoryOperationPhaseDiscover:
+		res, err = r.handleDiscoverState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
@@ -180,10 +185,102 @@ func (r *reconciler) handlePendingState(ctx context.Context, operation *v1alpha1
 	// Move to Processing phase
 	original := operation.DeepCopy()
 
-	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseDiscover
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+	}
+
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", operation.Name))
+
+	logger.Debug("handling discover state")
+
+	// Get PackageRepository
+	repo := &v1alpha1.PackageRepository{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: operation.Spec.PackageRepository}, repo)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Warn("package repository operation not found")
+
+			original := operation.DeepCopy()
+
+			now := metav1.Now()
+			operation.Status.CompletionTime = &now
+			message := fmt.Sprintf("PackageRepository not found: %v", err)
+
+			r.SetConditionFalse(
+				operation,
+				v1alpha1.PackageRepositoryOperationConditionProcessed,
+				v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound,
+				message,
+			)
+
+			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+			return ctrl.Result{}, nil
+		}
+
+		return res, fmt.Errorf("get package repository: %w", err)
+	}
+
+	// Create registry service for the packages path
+	svc, err := r.psm.PackagesService(
+		repo.Spec.Registry.Repo,
+		repo.Spec.Registry.DockerCFG,
+		repo.Spec.Registry.CA,
+		"deckhouse-package-controller",
+		repo.Spec.Registry.Scheme,
+	)
+	if err != nil {
+		r.logger.Error("failed to get registry service", log.Err(err))
+
+		original := operation.DeepCopy()
+
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+		message := fmt.Sprintf("Failed to get registry service: %v", err)
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
+			message,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+		return ctrl.Result{}, nil
+	}
+
+	if operation.Status.Packages == nil {
+		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
+	}
+
+	r.logger.Info("discovering packages", slog.String("repository", repo.Name))
+
+	discovered, err := r.discoverPackages(ctx, operation, svc)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("discover packages: %w", err)
+	}
+
+	// Handle discovered packages
+	err = r.handleOperationDiscoverResult(ctx, operation, discovered)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("handle operation discover result: %w", err)
 	}
 
 	return ctrl.Result{Requeue: true}, nil
@@ -228,6 +325,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		return res, fmt.Errorf("get package repository: %w", err)
 	}
 
+	// TODO: change finalizing
 	if operation.Status.Packages != nil && len(operation.Status.Packages.Discovered) == operation.Status.Packages.ProcessedOverall {
 		r.logger.Info("all packages processed, marking as completed",
 			slog.Int("total", operation.Status.Packages.Total))
@@ -253,58 +351,57 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		return ctrl.Result{}, nil
 	}
 
-	// If packagesToProcess is empty, we need to discover packages
-	if len(operation.Status.Packages.Discovered) == 0 {
-		return r.discoverPackages(ctx, operation, repo)
-	}
+	// // Create registry service for the packages path
+	// svc, err := r.psm.PackagesService(
+	// 	repo.Spec.Registry.Repo,
+	// 	repo.Spec.Registry.DockerCFG,
+	// 	repo.Spec.Registry.CA,
+	// 	"deckhouse-package-controller",
+	// 	repo.Spec.Registry.Scheme,
+	// )
+	// if err != nil {
+	// 	r.logger.Error("failed to get registry service", log.Err(err))
+
+	// 	original := operation.DeepCopy()
+
+	// 	now := metav1.Now()
+	// 	operation.Status.CompletionTime = &now
+	// 	message := fmt.Sprintf("Failed to get registry service: %v", err)
+
+	// 	r.SetConditionFalse(
+	// 		operation,
+	// 		v1alpha1.PackageRepositoryOperationConditionProcessed,
+	// 		v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
+	// 		message,
+	// 	)
+
+	// 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+	// 		return ctrl.Result{}, err
+	// 	}
+
+	// 	r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
+
+	// 	return ctrl.Result{}, nil
+	// }
 
 	// Process the first package in the queue
 	return r.processNextPackage(ctx, operation, repo)
 }
 
-func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	r.logger.Info("discovering packages", slog.String("repository", repo.Name))
+type discoverResult struct {
+	Packages        []packageInfo
+	RepositoryPhase string
+	SyncTime        time.Time
+}
 
-	_ = (registry.Client)(nil)
+type packageInfo struct {
+	Name string
+	Type string
+}
 
-	// Generate registry options
-	registryConfig := &utils.RegistryConfig{
-		DockerConfig: repo.Spec.Registry.DockerCFG,
-		Scheme:       repo.Spec.Registry.Scheme,
-		CA:           repo.Spec.Registry.CA,
-		UserAgent:    "deckhouse-package-controller",
-	}
-	opts := utils.GenerateRegistryOptions(registryConfig, r.logger)
-
-	// Create registry client for the packages path
-	registryClient, err := r.dc.GetRegistryClient(repo.Spec.Registry.Repo, opts...)
-	if err != nil {
-		r.logger.Error("failed to create registry client", log.Err(err))
-
-		original := operation.DeepCopy()
-
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-		message := fmt.Sprintf("Failed to create registry client: %v", err)
-
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-			v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
-			message,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-		return ctrl.Result{}, nil
-	}
-
+func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, svc *registryService.PackagesService) (*discoverResult, error) {
 	// List packages (packages at the packages level)
-	packages, err := registryClient.ListTags(ctx)
+	packages, err := svc.ListTags(ctx)
 	if err != nil {
 		r.logger.Error("failed to list packages", log.Err(err))
 
@@ -322,84 +419,88 @@ func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.P
 		)
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, err
+			return nil, err
 		}
 
 		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
 
-		return ctrl.Result{}, nil
+		return nil, err
 	}
 
 	r.logger.Info("discovered packages", slog.Int("count", len(packages)))
 
-	originalRepo := repo.DeepCopy()
-	originalOperation := operation.DeepCopy()
-
-	// Build list of packages with their types
-	operationStatusPackages := make([]v1alpha1.PackageRepositoryOperationStatusPackageQueue, 0, len(packages))
-	repoStatusPackages := make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
-	discoveredPackagesMap := make(map[string]struct{}, len(packages))
+	discoveredPackages := make([]packageInfo, 0, len(packages))
 
 	for _, pkg := range packages {
-		queueItem := v1alpha1.PackageRepositoryOperationStatusPackageQueue{
+		discoveredPackages = append(discoveredPackages, packageInfo{
 			Name: pkg,
+		})
+	}
+
+	res := &discoverResult{
+		Packages:        discoveredPackages,
+		RepositoryPhase: v1alpha1.PackageRepositoryPhaseActive,
+		SyncTime:        time.Now(),
+	}
+
+	return res, nil
+}
+
+func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, discovered *discoverResult) error {
+	// Update operation status with discovered packages
+	original := operation.DeepCopy()
+
+	operationStatusPackages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered.Packages))
+
+	for _, pkg := range discovered.Packages {
+		queueItem := v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage{
+			Name: pkg.Name,
 		}
 
 		operationStatusPackages = append(operationStatusPackages, queueItem)
-		repoStatusPackages = append(repoStatusPackages, v1alpha1.PackageRepositoryStatusPackage(queueItem))
-
-		discoveredPackagesMap[pkg] = struct{}{}
 	}
 
-	// Compare with existing packages in PackageRepository status
-	existingPackages := make(map[string]bool)
-	for _, pkg := range repo.Status.Packages {
-		existingPackages[pkg.Name] = true
-	}
-
-	for _, pkg := range operationStatusPackages {
-		if !existingPackages[pkg.Name] {
-			r.logger.Info("new package discovered", slog.String("package", pkg.Name), slog.String("type", pkg.Type))
-		}
-	}
-
-	for _, pkg := range repo.Status.Packages {
-		_, ok := discoveredPackagesMap[pkg.Name]
-		if !ok {
-			r.logger.Warn("package removed from registry", slog.String("package", pkg.Name))
-		}
-	}
-
-	repo.Status.Packages = repoStatusPackages
-	repo.Status.PackagesCount = len(repoStatusPackages)
-	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-	repo.Status.SyncTime = metav1.Now()
-
-	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(originalRepo)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update package repository status: %w", err)
-	}
-
-	// Update operation status with packages to process
 	operation.Status.Packages.Discovered = operationStatusPackages
-	if operation.Status.Packages == nil {
-		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
-	}
-	operation.Status.Packages.Total = len(operationStatusPackages)
+	operation.Status.Packages.Total = len(discovered.Packages)
 	operation.Status.Packages.ProcessedOverall = 0
+	operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
 
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(originalOperation)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update operation status: %w", err)
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return nil
 }
+
+// // TODO
+// func (r *reconciler) handleRepositoryProcessingResult(ctx context.Context, repo *v1alpha1.PackageRepository, discovered *discoverResult) error {
+// 	original := repo.DeepCopy()
+
+// 	repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(discovered.Packages))
+
+// 	for _, pkg := range discovered.Packages {
+// 		repo.Status.Packages = append(repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
+// 			Name: pkg.Name,
+// 			Type: pkg.Type,
+// 		})
+// 	}
+
+// 	repo.Status.PackagesCount = len(discovered.Packages)
+// 	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+// 	repo.Status.SyncTime = metav1.NewTime(discovered.SyncTime)
+
+// 	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+// 		return fmt.Errorf("update repository status: %w", err)
+// 	}
+
+// 	return nil
+// }
 
 func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	// Get first package from queue
 	currentPackage := operation.Status.Packages.Discovered[0]
 	r.logger.Info("processing package",
-		slog.String("package", currentPackage.Name),
-		slog.String("type", currentPackage.Type))
+		slog.String("package", currentPackage.Name))
 
 	// Generate registry options
 	registryConfig := &utils.RegistryConfig{
@@ -411,7 +512,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	opts := utils.GenerateRegistryOptions(registryConfig, r.logger)
 
 	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := r.ensurePackageResource(ctx, currentPackage.Name, currentPackage.Type, repo.Name)
+	err := r.ensurePackageResource(ctx, currentPackage.Name, repo.Name)
 	if err != nil {
 		r.logger.Error("failed to ensure package resource",
 			slog.String("package", currentPackage.Name),
@@ -420,7 +521,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	}
 
 	// List versions for this package
-	err = r.processPackageVersions(ctx, currentPackage, repo, operation, opts)
+	err = r.processPackageVersions(ctx, currentPackage.Name, repo, operation, opts)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
@@ -437,6 +538,10 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 		operation.Status.Packages.ProcessedOverall++
 	}
 
+	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
+		Name: currentPackage.Name,
+	})
+
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
@@ -445,9 +550,9 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.PackageRepositoryOperationStatusPackageQueue, repo *v1alpha1.PackageRepository, operation *v1alpha1.PackageRepositoryOperation, opts []cr.Option) error {
+func (r *reconciler) processPackageVersions(ctx context.Context, packageName string, repo *v1alpha1.PackageRepository, operation *v1alpha1.PackageRepositoryOperation, opts []cr.Option) error {
 	// Create registry client for package versions
-	packagePath := path.Join(repo.Spec.Registry.Repo, pkg.Name)
+	packagePath := path.Join(repo.Spec.Registry.Repo, packageName)
 	registryClient, err := r.dc.GetRegistryClient(packagePath, opts...)
 	if err != nil {
 		return fmt.Errorf("create registry client for package: %w", err)
@@ -458,47 +563,47 @@ func (r *reconciler) processPackageVersions(ctx context.Context, pkg v1alpha1.Pa
 
 	// Handle fullScan vs incremental scan
 	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		allTags, scanErr = r.performFullScan(ctx, registryClient, pkg.Name)
+		allTags, scanErr = r.performFullScan(ctx, registryClient, packageName)
 		if scanErr != nil {
 			return scanErr
 		}
 		r.logger.Info("found package versions",
-			slog.String("package", pkg.Name),
+			slog.String("package", packageName),
 			slog.Int("versions", len(allTags)))
 
 		// Create PackageVersion resources for each version
-		return r.createPackageVersions(ctx, pkg, repo, allTags)
+		return r.createPackageVersions(ctx, packageName, repo, allTags)
 	}
 
-	allTags, scanErr = r.performIncrementalScan(ctx, registryClient, pkg.Name, pkg.Type, repo.Name)
+	allTags, scanErr = r.performIncrementalScan(ctx, registryClient, packageName, repo.Name)
 	if scanErr != nil {
 		return scanErr
 	}
 
 	r.logger.Info("found package versions",
-		slog.String("package", pkg.Name),
+		slog.String("package", packageName),
 		slog.Int("versions", len(allTags)))
 
 	// Create PackageVersion resources for each version
-	return r.createPackageVersions(ctx, pkg, repo, allTags)
+	return r.createPackageVersions(ctx, packageName, repo, allTags)
 }
 
-func (r *reconciler) createPackageVersions(ctx context.Context, pkg v1alpha1.PackageRepositoryOperationStatusPackageQueue, repo *v1alpha1.PackageRepository, allTags []string) error {
+func (r *reconciler) createPackageVersions(ctx context.Context, packageName string, repo *v1alpha1.PackageRepository, allTags []string) error {
 	for _, versionTag := range allTags {
 		// Skip non-version tags (like "release-channel", "version", etc.)
 		if err := r.checkVersionTag(versionTag); err != nil {
 			r.logger.Debug("skipping non-version tag",
-				slog.String("package", pkg.Name),
+				slog.String("package", packageName),
 				slog.String("tag", versionTag),
 				log.Err(err))
 
 			continue
 		}
 
-		err := r.ensurePackageVersion(ctx, pkg.Name, pkg.Type, versionTag, repo.Name)
+		err := r.ensurePackageVersion(ctx, packageName, versionTag, repo.Name)
 		if err != nil {
 			r.logger.Warn("failed to create package version",
-				slog.String("package", pkg.Name),
+				slog.String("package", packageName),
 				slog.String("version", versionTag),
 				log.Err(err))
 			// Continue with other versions
@@ -509,13 +614,8 @@ func (r *reconciler) createPackageVersions(ctx context.Context, pkg v1alpha1.Pac
 	return nil
 }
 
-func (r *reconciler) ensurePackageResource(ctx context.Context, packageName, packageType, repositoryName string) error {
-	switch packageType {
-	case packageTypeApplication:
-		return r.ensureApplicationPackage(ctx, packageName, repositoryName)
-	default:
-		return fmt.Errorf("unsupported package type: %s", packageType)
-	}
+func (r *reconciler) ensurePackageResource(ctx context.Context, packageName, repositoryName string) error {
+	return r.ensureApplicationPackage(ctx, packageName, repositoryName)
 }
 
 func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, repositoryName string) error {
@@ -565,15 +665,10 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 	return nil
 }
 
-func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, packageType, version, repositoryName string) error {
+func (r *reconciler) ensurePackageVersion(ctx context.Context, packageName, version, repositoryName string) error {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(repositoryName, packageName, version)
 
-	switch packageType {
-	case packageTypeApplication:
-		return r.ensureApplicationPackageVersion(ctx, apvName, packageName, version, repositoryName)
-	default:
-		return fmt.Errorf("unsupported package type: %s", packageType)
-	}
+	return r.ensureApplicationPackageVersion(ctx, apvName, packageName, version, repositoryName)
 }
 
 func (r *reconciler) ensureApplicationPackageVersion(ctx context.Context, resourceName, packageName, version, repositoryName string) error {
@@ -743,11 +838,11 @@ func (r *reconciler) performFullScan(ctx context.Context, registryClient cr.Clie
 	return tags, nil
 }
 
-func (r *reconciler) performIncrementalScan(ctx context.Context, registryClient cr.Client, packageName, packageType, repositoryName string) ([]string, error) {
+func (r *reconciler) performIncrementalScan(ctx context.Context, registryClient cr.Client, packageName, repositoryName string) ([]string, error) {
 	// Incremental scan: start from the last processed version
 	r.logger.Debug("performing incremental scan", slog.String("package", packageName))
 
-	lastVersion := r.getLastProcessedVersion(ctx, packageName, packageType, repositoryName)
+	lastVersion := r.getLastProcessedVersion(ctx, packageName, repositoryName)
 	if lastVersion != "" {
 		r.logger.Debug("found last processed version",
 			slog.String("package", packageName),
@@ -781,16 +876,11 @@ func (r *reconciler) setOwnerReference(ctx context.Context, obj client.Object, r
 	return nil
 }
 
-func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, packageType, repositoryName string) string {
+func (r *reconciler) getLastProcessedVersion(ctx context.Context, packageName, repositoryName string) string {
 	// Find the latest PackageVersion for this package from this repository
 	var versionList client.ObjectList
 
-	switch packageType {
-	case packageTypeApplication:
-		versionList = &v1alpha1.ApplicationPackageVersionList{}
-	default:
-		return ""
-	}
+	versionList = &v1alpha1.ApplicationPackageVersionList{}
 
 	err := r.client.List(ctx, versionList, client.MatchingLabels{
 		"repository": repositoryName,

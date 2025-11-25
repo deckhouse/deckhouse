@@ -30,6 +30,7 @@ const (
 	PackageRepositoryOperationTypeScan = "Update"
 
 	PackageRepositoryOperationPhasePending    = "Pending"
+	PackageRepositoryOperationPhaseDiscover   = "Discover"
 	PackageRepositoryOperationPhaseProcessing = "Processing"
 	PackageRepositoryOperationPhaseCompleted  = "Completed"
 	PackageRepositoryOperationPhaseFailed     = "Failed"
@@ -99,15 +100,19 @@ type PackageRepositoryOperationStatus struct {
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered       []PackageRepositoryOperationStatusPackageQueue `json:"discovered,omitempty"`
-	Processed        []PackageRepositoryOperationStatusPackageQueue `json:"processed,omitempty"`
-	ProcessedOverall int                                            `json:"processedOverall,omitempty"`
-	Total            int                                            `json:"total,omitempty"`
+	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
+	Processed        []PackageRepositoryOperationStatusPackage           `json:"processed,omitempty"`
+	ProcessedOverall int                                                 `json:"processedOverall,omitempty"`
+	Total            int                                                 `json:"total,omitempty"`
 }
 
-type PackageRepositoryOperationStatusPackageQueue struct {
+type PackageRepositoryOperationStatusDiscoveredPackage struct {
 	Name string `json:"name"`
-	Type string `json:"type"`
+}
+
+type PackageRepositoryOperationStatusPackage struct {
+	Name string `json:"name"`
+	Type string `json:"type,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {
