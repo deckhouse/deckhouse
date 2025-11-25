@@ -96,10 +96,16 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	versionPath := filepath.Join(modulePath, version)
 
 	// Remove old version if exists (for atomic update)
-	if _, err := os.Stat(versionPath); err != nil {
-		if err = os.Remove(versionPath); err != nil {
+	if _, err := os.Stat(versionPath); err == nil {
+		if err = os.RemoveAll(versionPath); err != nil {
 			return fmt.Errorf("delete old version '%s': %w", versionPath, err)
 		}
+	}
+
+	// Copy module files to permanent location
+	if err := cp.Copy(tempModulePath, versionPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("copy module '%s': %w", modulePath, err)
 	}
 
 	// Prepare symlink location: /deckhouse/downloaded/modules/<module>
@@ -111,12 +117,6 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		if err = os.Remove(symlinkPoint); err != nil {
 			return fmt.Errorf("delete old symlink '%s': %w", symlinkPoint, err)
 		}
-	}
-
-	// Copy module files to permanent location
-	if err := cp.Copy(tempModulePath, versionPath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("copy module '%s': %w", modulePath, err)
 	}
 
 	// Create new symlink pointing to permanent location
