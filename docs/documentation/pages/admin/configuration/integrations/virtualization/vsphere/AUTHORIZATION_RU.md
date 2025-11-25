@@ -191,7 +191,8 @@ govc role.create deckhouse \
    Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
    Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
    VcIdentityProviders.Read \
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.' -e 'Infraprofile.')
+   Infraprofile.Read\
+   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.')
 ```
 
 Назначьте роль пользователю:
