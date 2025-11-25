@@ -21,11 +21,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
-const (
-	moduleSegment   = "modules"
-	packagesSegment = "packages"
-)
-
 // Service provides high-level registry operations using a registry client
 type Service struct {
 	client registry.Client

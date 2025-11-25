@@ -787,49 +787,6 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	return meta, nil
 }
 
-func (f *DeckhouseReleaseFetcher) fetchCooldown(image registryv1.Image) *metav1.Time {
-	cfg, err := image.ConfigFile()
-	if err != nil {
-		f.logger.Warn("image config error", log.Err(err))
-		return nil
-	}
-
-	if cfg == nil {
-		return nil
-	}
-
-	if len(cfg.Config.Labels) == 0 {
-		return nil
-	}
-
-	if v, ok := cfg.Config.Labels["cooldown"]; ok {
-		t, err := parseTime(v)
-		if err != nil {
-			f.logger.Error("parse cooldown", slog.String("cooldown", v), log.Err(err))
-			return nil
-		}
-		mt := metav1.NewTime(t)
-
-		return &mt
-	}
-
-	return nil
-}
-
-func parseTime(s string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02 15:04", s)
-	if err == nil {
-		return t, nil
-	}
-
-	t, err = time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		return t, nil
-	}
-
-	return time.Parse(time.RFC3339, s)
-}
-
 // FetchReleasesMetadata realize step by step update
 func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewReleasesMetadata")
