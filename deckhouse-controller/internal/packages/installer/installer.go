@@ -126,8 +126,8 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
-	// /deckhouse/downloaded/<package>
-	packagePath := filepath.Join(i.downloaded, name)
+	// /deckhouse/downloaded/<registry>/<package>
+	packagePath := filepath.Join(i.downloaded, reg.Name, name)
 	if err := os.MkdirAll(packagePath, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create package dir '%s': %w", packagePath, err)
@@ -135,7 +135,7 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 
 	// <version>.erofs
 	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<package>/<version>.erofs
+	// /deckhouse/downloaded/<registry>/<package>/<version>.erofs
 	imagePath := filepath.Join(packagePath, image)
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, reg, name, version)
@@ -170,13 +170,14 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 }
 
 // Install creates device mapper for application and mounts it
-func (i *Installer) Install(ctx context.Context, name, packageName, version string) error {
+func (i *Installer) Install(ctx context.Context, registry, name, packageName, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("registry", registry))
 
 	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
 	logger.Debug("install application")
@@ -199,11 +200,11 @@ func (i *Installer) Install(ctx context.Context, name, packageName, version stri
 		return fmt.Errorf("close app mapper: %w", err)
 	}
 
-	// /deckhouse/downloaded/<package>
-	packagePath := filepath.Join(i.downloaded, packageName)
+	// /deckhouse/downloaded/<registry>/<package>
+	packagePath := filepath.Join(i.downloaded, registry, packageName)
 	// <version>.erofs
 	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<package>/<version>.erofs
+	// /deckhouse/downloaded/<package>/<registry>/<version>.erofs
 	imagePath := filepath.Join(packagePath, image)
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))

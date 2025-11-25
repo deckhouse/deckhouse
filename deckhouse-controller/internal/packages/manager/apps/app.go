@@ -141,15 +141,13 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetMetaValues returns values that is not part of schema(name, namespace, version)
-func (a *Application) GetMetaValues() addonutils.Values {
+// GetRuntimeValues returns values that is not part of schema(name, namespace, version)
+func (a *Application) GetRuntimeValues() addonutils.Values {
 	return addonutils.Values{
 		"Name":      a.instance,
 		"Namespace": a.namespace,
 		"Digests":   a.digests,
 		"Registry":  a.registry,
-		"Package":   a.definition.Name,
-		"Version":   a.definition.Version,
 	}
 }
 

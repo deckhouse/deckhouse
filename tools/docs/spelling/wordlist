@@ -23,6 +23,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -1129,6 +1130,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration

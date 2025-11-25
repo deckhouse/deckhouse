@@ -140,16 +140,16 @@ spec:
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
 {% endalert %}
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что очередь Deckhouse пуста:
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
+1. Убедитесь, что очередь DKP пуста:
 
    ```shell
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -165,7 +165,7 @@ spec:
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
    >
    > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
@@ -174,54 +174,22 @@ spec:
    > - "Auto"
    > ```
 
-1. Снимите следующие лейблы с удаляемых master-узлов:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Команда для снятия лейблов:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
-
-   ```bash
-   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-     if [ $? -eq 0 ]; then
-       break
-     fi
-   done
-   ```
-
-1. Выполните `drain` для удаляемых узлов:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
-
-1. Удалите в кластере поды, оставшиеся на удаленных узлах:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Удалите в кластере объекты `Node` удаленных узлов:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   >
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   >
+   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе ETCD.
+
+1. Выполните проверку очереди Deckhouse и убедитесь, что отсутствуют ошибки, с помощью команды:
+
+   ```shell
+   d8 system queue list
    ```
 
 ## Как убрать роль master-узла, сохранив узел?

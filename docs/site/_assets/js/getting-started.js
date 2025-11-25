@@ -209,11 +209,11 @@ async function getLicenseToken(token = '', revision = '') {
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
-      if (revision && data.redactions && Array.isArray(data.redactions)) {
+      if (revision && data.redactions && Array.isArray(data.redactions) && data.redactions.length > 0) {
         const revisionUpper = revision.toUpperCase();
         const redactionsUpper = data.redactions.map(r => r.toUpperCase());
         if (!redactionsUpper.includes(revisionUpper)) {
-          handlerRejectData(token, span, input);
+          handlerRejectData(token, span, input, null, revision, data.redactions);
           return;
         }
       }
@@ -239,9 +239,22 @@ function handlerResolveData(data = '', licenseToken = '', messageElement = '', i
   update_license_parameters(licenseToken);
 }
 
-function handlerRejectData(licenseToken, messageElement, inputField, message = null) {
+function handlerRejectData(licenseToken, messageElement, inputField, message = null, revision = '', redactions = null) {
+  let rejectionMessage = null;
+  
+  if (revision && redactions && Array.isArray(redactions) && redactions.length > 0) {
+    const revisionUpper = revision.toUpperCase();
+    const redactionsUpper = redactions.map(r => r.toUpperCase());
+    if (!redactionsUpper.includes(revisionUpper)) {
+      const redactionNames = redactions.map(r => revisionNames[r.toLowerCase()]).filter(Boolean).join(', ');
+      rejectionMessage = responseFromLicense[pageLang]['invalid_revision'] + redactionNames;
+    }
+  }
+
   if (message) {
     messageElement.html(message);
+  } else if (rejectionMessage) {
+    messageElement.html(rejectionMessage);
   } else {
     messageElement.html(responseFromLicense[pageLang]['reject']);
   }
