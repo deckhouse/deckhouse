@@ -68,7 +68,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $src_version }}" -o vsphere-syncer ./cmd/syncer
+  - GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $src_version }}" -o vsphere-syncer ./cmd/syncer
   {{- end }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
