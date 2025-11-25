@@ -250,10 +250,8 @@ func TestPrepareRegistry(t *testing.T) {
 
 	t.Run("Registry from init configuration", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"initConfig": map[string]interface{}{
-				"imagesRepo": "r.example.com/test/",
-				"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
-			},
+			"imagesRepo": "r.example.com/test/",
+			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
 		})
 		registry := cfg.Registry.Mode.RemoteData()
 		require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
