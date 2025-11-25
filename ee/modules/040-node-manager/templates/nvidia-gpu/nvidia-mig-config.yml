@@ -663,7 +663,7 @@ data:
       attempt=0
       until
         kubectl get node ${NODE_NAME} -o json | \
-        jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
+        jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved") or has("update.node.deckhouse.io/draining") or has("update.node.deckhouse.io/drained")'  >/dev/null
       do
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
