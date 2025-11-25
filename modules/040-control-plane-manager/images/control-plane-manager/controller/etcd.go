@@ -63,7 +63,7 @@ func EtcdJoinConverge() error {
 	minVersion := semver.MustParse("1.33.0")
 	if err != nil {
 		log.Warn("failed to parse Kubernetes version", slog.String("version", config.KubernetesVersion), log.Err(err))
-	} else if currentVersion.GreaterThan(minVersion) || currentVersion.Equal(minVersion) { // cur >= min
+	} else if currentVersion.GreaterThan(minVersion) || currentVersion.Equal(minVersion) {
 		etcdSubphase = "etcd-join"
 	}
 
