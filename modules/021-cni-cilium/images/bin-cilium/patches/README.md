@@ -68,3 +68,7 @@ Added an implementation of the Least Connections load balancing algorithm.
 ## 013-ignore-egress-gateway-inactual-warning.patch
 
 Ignore error when using IPv4 address for egress gateway other than assigned
+
+## 014-kernel-verifier-stat.patch
+
+Added kernel verifer statistics in logs and prometeus metric as max bpf program complexity
