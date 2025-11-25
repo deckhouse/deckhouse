@@ -449,7 +449,7 @@ type bundleK8sVersionContext struct {
 }
 
 type normal struct {
-	PodSubnetNodeCIDRPrefix int               `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	PodSubnetNodeCIDRPrefix string            `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
 	ClusterDomain           string            `json:"clusterDomain" yaml:"clusterDomain"`
 	ClusterDNSAddress       string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	BootstrapTokens         map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
@@ -459,7 +459,7 @@ type normal struct {
 }
 
 type inputData struct {
-	PodSubnetNodeCIDRPrefix    int                    `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	PodSubnetNodeCIDRPrefix    string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
 	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
 	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
