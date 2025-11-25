@@ -181,7 +181,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.CacheDir = s.params.CacheDir
+	app.SetCacheDir(s.params.CacheDir)
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
