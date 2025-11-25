@@ -75,6 +75,7 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 	}
 
 	if m.onValuesChanged != nil && oldChecksum != app.GetValuesChecksum() {
+		m.logger.Debug("values changed during the hook", slog.String("hook", hook), slog.String("name", name))
 		m.onValuesChanged(ctx, name)
 	}
 
