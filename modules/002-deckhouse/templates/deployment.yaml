@@ -183,7 +183,7 @@ spec:
   {{- end }}
 {{- end }}
             - name: LOG_LEVEL
-              value: {{ .Values.deckhouse.logLevel }}
+              value: "DEBUG"
             - name: USE_NELM
               value: "true"
             - name: LOG_TYPE
