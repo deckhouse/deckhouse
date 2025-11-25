@@ -69,14 +69,14 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         }
 
         const splitRunFor = ranFor.replace(';', ' ');
-        const outConnectStr = connectStr ? `\`ssh -i ~/.ssh/e2e-id-rsa ${bastionPart} ${connectStr}\` - connect for debugging;` : '';
+        const outConnectStr = connectStr ? `\`\`\`ssh -i ~/.ssh/e2e-id-rsa ${bastionPart} ${connectStr}\`\`\` - connect for debugging;` : '';
 
         return `
 <!--- failed_clusters_start ${ranFor} -->
-E2e for ${splitRunFor} was failed. Use:
+E2E for ${splitRunFor} has failed. Use:
   ${outConnectStr}
 
-  \`${argv.join(' ')}\` - for abort failed cluster
+  \`\`\`${argv.join(' ')}\`\`\` - to abort failed cluster
 <!--- failed_clusters_end ${ranFor} -->
 
 `
