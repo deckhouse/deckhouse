@@ -1,7 +1,7 @@
 From 06d79e4d9c32e5a08ed3fcd9b3f727a4bb30c1ae Mon Sep 17 00:00:00 2001
 From: Vladislav Denisov <vlad144denisov@gmail.com>
 Date: Mon, 24 Nov 2025 17:22:02 +0300
-Subject: [PATCH] Fix: add EnterpriseProjectID support to EVS v2
+Subject: [PATCH] Fix: add EnterpriseProjectID support for Cinder-based (<10Gi) volumes
 
 ---
  pkg/evs/services/volumes.go | 30 +++++++++++++++++++++++++++---
