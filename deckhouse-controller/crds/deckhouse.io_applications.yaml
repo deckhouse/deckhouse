@@ -45,7 +45,7 @@ spec:
                 type: string
               releaseChannel:
                 type: string
-              settings: 
+              settings:
                 x-kubernetes-preserve-unknown-fields: true
               version:
                 type: string

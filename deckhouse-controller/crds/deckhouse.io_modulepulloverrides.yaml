@@ -44,8 +44,9 @@ spec:
               rollback:
                 type: boolean
               scanInterval:
-                format: date-time
-                type: string
+                description: Duration custom type for appropriate json marshalling
+                  / unmarshalling (like "15m")
+                type: object
             required:
             - imageTag
             - rollback
