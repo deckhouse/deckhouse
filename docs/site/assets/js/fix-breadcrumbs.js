@@ -1,18 +1,22 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const breadcrumbsContainer = document.querySelector('.navigation__container');
-    let lastScrollWindowTop = 0;
+    const navigationContainer = document.querySelector('.navigation__container');
+    let lastScroll = window.scrollY;
+    const range = 10;
 
-    if(breadcrumbsContainer) {
+    if(navigationContainer) {
         window.addEventListener('scroll', function() {
-            let scrollWindowTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollWindowTop = window.scrollY;
+            const scrollDelta = scrollWindowTop - lastScroll;
 
-            if(scrollWindowTop > lastScrollWindowTop) {
-                breadcrumbsContainer.classList.add('hidden');
-            } else {
-                breadcrumbsContainer.classList.remove('hidden');
-            }
-
-            lastScrollWindowTop = scrollWindowTop <= 0 ? 0 : scrollWindowTop;
+                if(scrollWindowTop > lastScroll) {
+                    navigationContainer.classList.add('hidden');
+                    lastScroll = scrollWindowTop;
+                } else {
+                    if(Math.abs(scrollDelta) > range) {
+                      navigationContainer.classList.remove('hidden'); 
+                      lastScroll = scrollWindowTop; 
+                    }
+                }
         })
     }
 })
