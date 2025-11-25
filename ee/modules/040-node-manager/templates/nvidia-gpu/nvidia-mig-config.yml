@@ -654,7 +654,8 @@ data:
           echo "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
           kubectl \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= || { echo "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
+            annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= node.deckhouse.io/configuration-checksum= update.node.deckhouse.io/approved= --overwrite \
+            || { echo "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
       done
 
       echo "Disruption required, waiting for approval"
