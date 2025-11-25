@@ -2,12 +2,12 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   labels:
-    draft: "true"
+    packages.deckhouse.io/draft: "true"
   name: deckhouse-test-v1.0.0
 spec:
   packageName: test
+  packageRepository: deckhouse
   version: "v1.0.0"
-  repository: deckhouse
 status:
   conditions:
   - lastProbeTime: "2025-10-27T15:51:01Z"
@@ -16,7 +16,7 @@ status:
       MANIFEST_UNKNOWN: manifest unknown; map[Tag:v0.1.1000]'
     reason: GetImageError
     status: "False"
-    type: IsEnriched
+    type: MetadataLoaded
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

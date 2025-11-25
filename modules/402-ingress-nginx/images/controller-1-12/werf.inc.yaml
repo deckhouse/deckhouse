@@ -1,5 +1,6 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxVersion := "1.25.5" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.26.1" }}
+{{ $nginxVersion := "1.26.1" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
 {{ $modSecurityBranch := "v3.0.14" }}
@@ -68,7 +69,7 @@ shell:
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
   - mkdir -p /src/nginx-deps
-  - git clone -b {{ $controllerBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
+  - git clone -b {{ $nginxDepsBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
     # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
   - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   - git clone -b {{ $nlohmannJsonBranch }} $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
@@ -655,7 +656,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-09-22"
 final: false
 mount:
 - from: build_dir
@@ -881,7 +881,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
-fromCacheVersion: "2025-09-18"
 mount:
 - from: build_dir
   to: /apps

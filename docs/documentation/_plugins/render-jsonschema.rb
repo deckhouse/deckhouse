@@ -304,6 +304,7 @@ module JSONSchemaRenderer
         result = Array.new()
         exampleObject = nil
         lang = @lang
+        editionsString = ''
 
         if parent.has_key?('required') && parent['required'].include?(name)
             result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
@@ -362,6 +363,7 @@ module JSONSchemaRenderer
 
         if attributes['description']
           result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
+
         elsif editionsString and editionsString.size > 0
           result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
         end
@@ -596,6 +598,22 @@ module JSONSchemaRenderer
             end
         else
             # result.push("no properties for #{name}")
+        end
+
+        # Render additionalProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
+            additionalProps = attributes['additionalProperties']
+            # Only render if additionalProperties is a schema object
+            if additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                additionalPropsData = additionalProps
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                result.push('<ul>')
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            end
+            
         end
 
         if parameterTitle != ''

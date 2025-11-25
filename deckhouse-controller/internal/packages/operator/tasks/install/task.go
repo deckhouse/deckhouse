@@ -30,7 +30,7 @@ const (
 
 type installer interface {
 	Download(ctx context.Context, reg registry.Registry, packageName, version string) error
-	Install(ctx context.Context, instance, packageName, version string) error
+	Install(ctx context.Context, registry, instance, packageName, version string) error
 }
 
 type task struct {
@@ -74,7 +74,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// Install (mount) package to apps directory
 	logger.Debug("install application")
-	if err := t.installer.Install(ctx, t.instance, t.packageName, t.version); err != nil {
+	if err := t.installer.Install(ctx, t.registry.Name, t.instance, t.packageName, t.version); err != nil {
 		return fmt.Errorf("install application: %w", err)
 	}
 

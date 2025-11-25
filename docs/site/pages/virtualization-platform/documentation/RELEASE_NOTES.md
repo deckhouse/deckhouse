@@ -3,6 +3,14 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.1.2
+
+### Fixes
+
+- [vd] Fixed live disk migration between storage classes that use different drivers. Limitations:
+  - Migration between `Block` and `Filesystem` is not supported. Only migrations between the same volume mode are allowed: `Block` → `Block` and `Filesystem` → `Filesystem`.
+- [vm] In the `Migrating` state, detailed error information is now displayed when a live migration of a virtual machine fails.
+
 ## v1.1.1
 
 ### Fixes

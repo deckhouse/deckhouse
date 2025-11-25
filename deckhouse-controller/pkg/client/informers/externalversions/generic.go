@@ -16,7 +16,7 @@
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -57,12 +57,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ApplicationPackages().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("applicationpackageversions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ApplicationPackageVersions().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("clusterapplications"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ClusterApplications().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("clusterapplicationpackages"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ClusterApplicationPackages().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("clusterapplicationpackageversions"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ClusterApplicationPackageVersions().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("deckhousereleases"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().DeckhouseReleases().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modules"):

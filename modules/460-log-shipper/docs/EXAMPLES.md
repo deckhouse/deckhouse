@@ -27,6 +27,8 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
+Specify `d8-loki` in the ClusterLoggingConfig [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) field to send logs to the loki cluster module. More examples [in the documentation](/modules/loki/examples.html).
+
 ## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:

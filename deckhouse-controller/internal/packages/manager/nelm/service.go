@@ -132,10 +132,17 @@ func (s *Service) Render(ctx context.Context, app *apps.Application) (string, er
 	}
 	defer os.Remove(valuesPath)
 
+	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("marshal metadata values: %w", err)
+	}
+
 	return s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
-		Path:          app.GetPath(),
-		ValuesPaths:   []string{valuesPath},
-		ReleaseLabels: nil,
+		Path:        app.GetPath(),
+		ValuesPaths: []string{valuesPath},
+		// Format as "Instance=<json>"
+		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
 	})
 }
 
@@ -201,7 +208,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
-	marshalledMeta, err := json.Marshal(app.GetMetaValues())
+	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("marshal metadata values: %w", err)
@@ -211,8 +218,8 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	renderedManifests, err := s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		// Format as "Meta=<json>"
-		ExtraValues: fmt.Sprintf("Meta=%s", marshalledMeta),
+		// Format as "Instance=<json>"
+		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -243,8 +250,8 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		// Format as "Meta=<json>"
-		ExtraValues: fmt.Sprintf("Meta=%s", marshalledMeta),
+		// Format as "Instance=<json>"
+		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

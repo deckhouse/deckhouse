@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ApplicationPackageVersions.
 type ApplicationPackageVersionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ApplicationPackageVersionLister
+	Lister() deckhouseiov1alpha1.ApplicationPackageVersionLister
 }
 
 type applicationPackageVersionInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredApplicationPackageVersionInformer(client versioned.Interface, re
 				return client.DeckhouseV1alpha1().ApplicationPackageVersions().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ApplicationPackageVersion{},
+		&apisdeckhouseiov1alpha1.ApplicationPackageVersion{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *applicationPackageVersionInformer) defaultInformer(client versioned.Int
 }
 
 func (f *applicationPackageVersionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ApplicationPackageVersion{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ApplicationPackageVersion{}, f.defaultInformer)
 }
 
-func (f *applicationPackageVersionInformer) Lister() v1alpha1.ApplicationPackageVersionLister {
-	return v1alpha1.NewApplicationPackageVersionLister(f.Informer().GetIndexer())
+func (f *applicationPackageVersionInformer) Lister() deckhouseiov1alpha1.ApplicationPackageVersionLister {
+	return deckhouseiov1alpha1.NewApplicationPackageVersionLister(f.Informer().GetIndexer())
 }

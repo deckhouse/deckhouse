@@ -27,8 +27,6 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	ApplicationProcessedFinalizer = "application.deckhouse.io/processed"
-
 	ApplicationConditionRequirementsMet        = "RequirementsMet"
 	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
 	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
@@ -102,15 +100,15 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	ApplicationPackageName string          `json:"applicationPackageName"`
-	Repository             string          `json:"repository,omitempty"`
-	Version                string          `json:"version"`
-	ReleaseChannel         string          `json:"releaseChannel,omitempty"`
-	Settings               *SettingsValues `json:"settings,omitempty"`
+	PackageName       string         `json:"packageName"`
+	PackageRepository string         `json:"packageRepository,omitempty"`
+	Version           string         `json:"version"`
+	ReleaseChannel    string         `json:"releaseChannel,omitempty"`
+	Settings          SettingsValues `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
-	Version            *ApplicationStatusVersion            `json:"version,omitempty"`
+	CurrentVersion     *ApplicationStatusVersion            `json:"currentVersion,omitempty"`
 	Repository         string                               `json:"repository,omitempty"`
 	Status             string                               `json:"status,omitempty"`
 	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
