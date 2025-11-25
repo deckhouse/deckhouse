@@ -39,6 +39,7 @@ import (
 	networkv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
 	"deckhouse.io/cni-switch-helper/internal/controller"
 	"deckhouse.io/cni-switch-helper/internal/webhook"
+	"golang.org/x/sync/errgroup"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -126,39 +127,42 @@ func newHealthzHandler(checker healthz.Checker) http.HandlerFunc {
 }
 
 func startWebhookServer(probeAddr string) error {
-	// Start a separate server for health probes.
-	go func() {
+	var eg errgroup.Group
+
+	// Goroutine for the health probe server
+	eg.Go(func() error {
 		healthMux := http.NewServeMux()
 		healthMux.HandleFunc("/healthz", newHealthzHandler(healthz.Ping))
 		healthMux.HandleFunc("/readyz", newHealthzHandler(healthz.Ping))
 		setupLog.Info("starting health probe server", "addr", probeAddr)
-		if err := http.ListenAndServe(probeAddr, healthMux); err != nil {
-			setupLog.Error(err, "unable to start health probe server")
+		return http.ListenAndServe(probeAddr, healthMux)
+	})
+
+	// Goroutine for the main webhook server
+	eg.Go(func() error {
+		webhookClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+		if err != nil {
+			return fmt.Errorf("creating webhook client: %w", err)
 		}
-	}()
 
-	// Create a client for the webhook handler.
-	webhookClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
-	if err != nil {
-		return fmt.Errorf("creating webhook client: %w", err)
-	}
+		podAnnotator := &webhook.PodAnnotator{
+			Client: webhookClient,
+		}
 
-	podAnnotator := &webhook.PodAnnotator{
-		Client: webhookClient,
-	}
+		mux := http.NewServeMux()
+		mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
 
-	// Create the main webhook server mux.
-	mux := http.NewServeMux()
-	mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
+		const webhookServerPort = 9443
+		server := &http.Server{
+			Addr:         fmt.Sprintf(":%d", webhookServerPort),
+			Handler:      mux,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		setupLog.Info("webhook server starting", "port", webhookServerPort)
+		return server.ListenAndServeTLS("/etc/tls/tls.crt", "/etc/tls/tls.key")
+	})
 
-	const webhookServerPort = 9443
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", webhookServerPort),
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
-
-	setupLog.Info("webhook server starting", "port", webhookServerPort)
-	return server.ListenAndServeTLS("/etc/tls/tls.crt", "/etc/tls/tls.key")
+	// Wait for either server to return an error
+	return eg.Wait()
 }
