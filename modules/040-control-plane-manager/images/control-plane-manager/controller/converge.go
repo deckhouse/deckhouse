@@ -110,6 +110,7 @@ func convergeComponents() error {
 
 func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
+	log.Infof("test log: phase: converge kubernetes components")
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 

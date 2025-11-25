@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -56,12 +57,14 @@ type Etcd struct {
 }
 
 func EtcdJoinConverge() error {
-	var etcdSubphase string
+	var etcdSubphase string = "etcd" // default subphase
 
-	if config.KubernetesVersion >= "1.33" {
+	currentVersion, err := semver.NewVersion(config.KubernetesVersion)
+	minVersion := semver.MustParse("1.33.0")
+	if err != nil {
+		log.Warn("failed to parse Kubernetes version", slog.String("version", config.KubernetesVersion), log.Err(err))
+	} else if currentVersion.GreaterThan(minVersion) || currentVersion.Equal(minVersion) { // cur >= min
 		etcdSubphase = "etcd-join"
-	} else {
-		etcdSubphase = "etcd"
 	}
 
 	args := []string{"-v=5", "join", "phase", "control-plane-join", etcdSubphase, "--config", deckhousePath + "/kubeadm/config.yaml"}
