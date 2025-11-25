@@ -66,6 +66,8 @@ spec:
         env:
         - name: PROMETHEUS_SCRAPE_INTERVAL
           value: {{ .Values.global.discovery.prometheusScrapeInterval | default 30 | quote }}
+        args:
+        - "--listen-address=127.0.0.1:{{ $port }}"
         readinessProbe:
           httpGet:
             path: /ready

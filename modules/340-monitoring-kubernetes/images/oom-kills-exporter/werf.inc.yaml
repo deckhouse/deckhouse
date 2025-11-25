@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /src/oom-kills-exporter
+  add: /src/build/kubernetes-oomkill-exporter
   to: /bin/oom-kills-exporter
   before: setup
 imageSpec:
@@ -13,15 +13,9 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
-  - cd /src
+  - git clone --depth 1 --branch v0.6.0 https://github.com/sapcc/kubernetes-oomkill-exporter.git /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -37,11 +31,13 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - go test ./... -v
-  - go build -ldflags '-s -w' .
+  - make build
   - chown -R 64535:64535 /src
-  - chmod 0755 /src/oom-kills-exporter
+  - chmod 0755 /src/build/kubernetes-oomkill-exporter
