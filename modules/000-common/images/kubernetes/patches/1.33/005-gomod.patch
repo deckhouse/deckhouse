@@ -352,7 +352,7 @@ index 3d8f7559ff5..d4d513eaae9 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.6.0/go.mod h1:XuuZiQF7WdcvZzEYyNww9A0p3LazCKeJmCjeycN8e1I=
  sigs.k8s.io/kustomize/kyaml v0.19.0 h1:RFge5qsO1uHhwJsu3ipV7RNolC7Uozc0jUBC/61XSlA=
 diff --git a/hack/tools/go.mod b/hack/tools/go.mod
-index 22d9d830fdd..f252f930c55 100644
+index 22d9d830fdd..22dce23d578 100644
 --- a/hack/tools/go.mod
 +++ b/hack/tools/go.mod
 @@ -76,11 +76,11 @@ require (
@@ -360,7 +360,7 @@ index 22d9d830fdd..f252f930c55 100644
  	github.com/go-toolsmith/strparse v1.1.0 // indirect
  	github.com/go-toolsmith/typep v1.1.0 // indirect
 -	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
-+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
++	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
  	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
  	github.com/gobwas/glob v0.2.3 // indirect
  	github.com/gofrs/flock v0.12.1 // indirect
@@ -370,7 +370,7 @@ index 22d9d830fdd..f252f930c55 100644
  	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
  	github.com/golangci/go-printf-func-name v0.1.0 // indirect
 diff --git a/hack/tools/go.sum b/hack/tools/go.sum
-index 80462d11a06..b0f42def933 100644
+index 80462d11a06..e5ac6b0201d 100644
 --- a/hack/tools/go.sum
 +++ b/hack/tools/go.sum
 @@ -206,8 +206,8 @@ github.com/go-toolsmith/strparse v1.1.0 h1:GAioeZUK9TGxnLS+qfdqNbA4z0SSm5zVNtCQi
@@ -379,8 +379,8 @@ index 80462d11a06..b0f42def933 100644
  github.com/go-toolsmith/typep v1.1.0/go.mod h1:fVIw+7zjdsMxDA3ITWnH1yOiw1rnTQKCsF/sk2H/qig=
 -github.com/go-viper/mapstructure/v2 v2.2.1 h1:ZAaOCxANMuZx5RCeg0mBdEZk7DZasvvZIxtHqx8aGss=
 -github.com/go-viper/mapstructure/v2 v2.2.1/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
-+github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
-+github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
++github.com/go-viper/mapstructure/v2 v2.3.0 h1:27XbWsHIqhbdR5TIC911OfYvgSaW93HM+dX7970Q7jk=
++github.com/go-viper/mapstructure/v2 v2.3.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
  github.com/go-xmlfmt/xmlfmt v1.1.3 h1:t8Ey3Uy7jDSEisW2K3somuMKIpzktkWptA0iFCnRUWY=
  github.com/go-xmlfmt/xmlfmt v1.1.3/go.mod h1:aUCEOzzezBEjDBbFBoSiya/gduyIiWYRP6CnSFIV8AM=
  github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=

@@ -35,11 +35,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Synchronize extra files with the destination directory,
-// ensuring the destination contains exactly the same set of files as in the config.
-func syncExtraFiles() error {
+func installExtraFiles() error {
 	dstDir := filepath.Join(deckhousePath, "extra-files")
-	log.Infof("phase: sync extra files to %s", dstDir)
+	log.Infof("phase: install extra files to %s", dstDir)
+
+	if err := removeDirectory(dstDir); err != nil {
+		return err
+	}
 
 	if err := os.MkdirAll(dstDir, 0o700); err != nil {
 		return err
@@ -50,7 +52,6 @@ func syncExtraFiles() error {
 		return err
 	}
 
-	expected := make(map[string]struct{})
 	for _, entry := range dirEntries {
 		if entry.IsDir() {
 			continue
@@ -59,41 +60,10 @@ func syncExtraFiles() error {
 			continue
 		}
 
-		dstName := strings.TrimPrefix(entry.Name(), "extra-file-")
-		expected[dstName] = struct{}{}
-
-		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, dstName), 0o600); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0o600); err != nil {
 			return err
 		}
 	}
-
-	// Remove unexpected files/dirs after writes
-	entries, err := os.ReadDir(dstDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if _, ok := expected[name]; ok {
-			continue
-		}
-		path := filepath.Join(dstDir, name)
-		if entry.IsDir() {
-			log.Info("remove unexpected directory", slog.String("path", path))
-			if err := os.RemoveAll(path); err != nil {
-				return err
-			}
-			continue
-		}
-		log.Info("remove unexpected file", slog.String("path", path))
-		if err := removeFile(path); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -108,7 +78,7 @@ func convergeComponents() error {
 }
 
 func convergeComponent(componentName string) error {
-	log.Info("converge component", slog.String("component", componentName))
+	log.Infof("converge component %s", componentName)
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
@@ -157,7 +127,7 @@ func convergeComponent(componentName string) error {
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
 	} else {
-		log.Info("skip manifest generation for component because checksum in manifest is up to date", slog.String("component", componentName))
+		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
 	}
 
 	err = waitPodIsReady(componentName, checksum)
@@ -200,14 +170,6 @@ func prepareConverge(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
-
-	log.Info("run kubeadm",
-		slog.String("phase", "prepare-converge"),
-		slog.String("component", componentName),
-		slog.Any("args", args),
-		slog.Bool("temp_rootfs", isTemp),
-	)
-
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
