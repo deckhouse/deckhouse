@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -87,17 +86,24 @@ func RegisterController(
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	r.logger.Debug("reconciling Application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
+	r.logger.Debug("reconcile application",
+		slog.String("name", req.Name),
+		slog.String("namespace", req.Namespace))
 
 	app := new(v1alpha1.Application)
 	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Debug("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
+			r.logger.Debug("application not found",
+				slog.String("name", req.Name),
+				slog.String("namespace", req.Namespace))
 
 			return res, nil
 		}
 
-		r.logger.Warn("failed to get application", slog.String("name", req.Name), slog.String("namespace", req.Namespace), log.Err(err))
+		r.logger.Warn("failed to get application",
+			slog.String("name", req.Name),
+			slog.String("namespace", req.Namespace),
+			log.Err(err))
 
 		return res, err
 	}
@@ -112,9 +118,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	err := r.handleCreateOrUpdate(ctx, app)
-	if err != nil {
-		r.logger.Warn("failed to handle application", slog.String("name", app.Name), log.Err(err))
+	if err := r.handleCreateOrUpdate(ctx, app); err != nil {
+		r.logger.Warn("failed to handle application",
+			slog.String("namespace", req.Namespace),
+			slog.String("name", app.Name),
+			log.Err(err))
 
 		return ctrl.Result{RequeueAfter: requeueTime}, nil
 	}
@@ -131,7 +139,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
-	if err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		r.SetConditionFalse(
 			app,
 			v1alpha1.ApplicationConditionTypeProcessed,
@@ -163,12 +171,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	repository := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repository); err != nil {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repo); err != nil {
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepository, err)
 	}
 
-	r.operator.Update(ctx, repository, packageoperator.Instance{
+	r.operator.Update(ctx, repo, packageoperator.Instance{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -180,16 +188,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerProcessed)
+	}
+
 	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
-	}
-
-	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
-		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerProcessed)
 	}
 
 	logger.Debug("handle application complete")
