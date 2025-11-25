@@ -116,12 +116,12 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	// if not leader download db from leader
 	if !d.isLeader() {
 		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
-		if err != nil {
-			return fmt.Errorf("wait leader endpoint: %w", err)
+		if err == nil && link != "" {
+			account.Mirror = link
+			account.SkipTLS = true // skip TLS kubeRbacProxy
+			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 		}
-		account.Mirror = link
-		account.SkipTLS = true // skip TLS kubeRbacProxy
-		return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
+		log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
 	}
 
 	// try download db bu official library
