@@ -27,6 +27,8 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
+	ApplicationFinalizerProcessed = "packages.deckhouse.io/processed"
+
 	ApplicationConditionRequirementsMet        = "RequirementsMet"
 	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
 	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"

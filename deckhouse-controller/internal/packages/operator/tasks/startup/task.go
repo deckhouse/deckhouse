@@ -94,7 +94,7 @@ func (t *task) Execute(ctx context.Context) error {
 				// Place wait tasks in separate sync queue to avoid blocking main queue
 				// This prevents deadlocks when multiple hooks need to sync
 				if hookInfo.KubernetesBinding.WaitForSynchronization {
-					queueName = fmt.Sprintf("%s-sync", t.packageName)
+					queueName = fmt.Sprintf("%s.sync", t.packageName)
 				}
 			}
 

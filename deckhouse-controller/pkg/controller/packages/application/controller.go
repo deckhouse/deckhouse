@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
@@ -103,7 +104,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !app.DeletionTimestamp.IsZero() {
-		r.handleDelete(ctx, app)
+		if err := r.handleDelete(ctx, app); err != nil {
+			return res, fmt.Errorf("delete: %w", err)
+		}
 
 		return res, nil
 	}
@@ -122,14 +125,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name))
 
-	logger.Debug("handling Application")
+	logger.Debug("handle application")
 
 	original := app.DeepCopy()
 
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
-	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
-	if err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv); err != nil {
 		r.SetConditionFalse(
 			app,
 			v1alpha1.ApplicationConditionTypeProcessed,
@@ -162,7 +164,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	}
 
 	repository := new(v1alpha1.PackageRepository)
-	if err = r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repository); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repository); err != nil {
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepository, err)
 	}
 
@@ -178,29 +180,41 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
-	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
-	if err != nil {
+	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
-	err = r.client.Patch(ctx, app, client.MergeFrom(original))
-	if err != nil {
+	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
-	logger.Debug("handle Application complete")
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerProcessed)
+	}
+
+	logger.Debug("handle application complete")
 
 	return nil
 }
 
-func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) {
+func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name))
 
-	logger.Debug("deleting Application")
-
+	logger.Debug("delete application")
 	r.operator.Remove(ctx, app.Namespace, app.Name)
 
-	logger.Debug("delete Application complete")
+	// remove finalizer
+	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
+		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizerProcessed)
+
+		if err := r.client.Update(ctx, app); err != nil {
+			return fmt.Errorf("remove finalizer for %s: %w", app.Name, err)
+		}
+	}
+
+	logger.Debug("delete application complete")
+
+	return nil
 }
 
 func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
@@ -232,13 +246,13 @@ func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string
 }
 
 func (r *reconciler) SetConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) *v1alpha1.Application {
-	time := metav1.NewTime(r.dc.GetClock().Now())
+	now := metav1.NewTime(r.dc.GetClock().Now())
 
 	for idx, cond := range app.Status.Conditions {
 		if cond.Type == condType {
-			app.Status.Conditions[idx].LastProbeTime = time
+			app.Status.Conditions[idx].LastProbeTime = now
 			if cond.Status != corev1.ConditionFalse {
-				app.Status.Conditions[idx].LastTransitionTime = time
+				app.Status.Conditions[idx].LastTransitionTime = now
 				app.Status.Conditions[idx].Status = corev1.ConditionFalse
 			}
 
@@ -254,8 +268,8 @@ func (r *reconciler) SetConditionFalse(app *v1alpha1.Application, condType strin
 		Status:             corev1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
+		LastProbeTime:      now,
+		LastTransitionTime: now,
 	})
 
 	return app

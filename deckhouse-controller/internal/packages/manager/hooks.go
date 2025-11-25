@@ -167,6 +167,9 @@ type TaskBuilder func(ctx context.Context, name, hook string, info hookcontrolle
 func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.KubeEvent, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
@@ -174,6 +177,7 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 			// Check if this hook's binding criteria match the incoming event
 			// (e.g., resource type, namespace, labels, event type)
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
+				m.logger.Debug("skip kube hook", slog.String("hook", hook.GetName()), slog.String("event", kubeEvent.String()))
 				return nil
 			}
 
@@ -198,6 +202,9 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 // Returns a map of queue names to tasks, allowing hooks to specify their execution queue.
 func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
