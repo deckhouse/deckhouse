@@ -177,7 +177,11 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 			// Check if this hook's binding criteria match the incoming event
 			// (e.g., resource type, namespace, labels, event type)
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
-				m.logger.Debug("skip kube hook", slog.String("hook", hook.GetName()), slog.String("event", kubeEvent.String()))
+				m.logger.Debug("skip kube hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("monitor", kubeEvent.MonitorId),
+					slog.String("event", kubeEvent.String()))
 				return nil
 			}
 
@@ -212,6 +216,10 @@ func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builde
 
 			// Check if this hook's cron schedule matches the triggered event
 			if !hookCtrl.CanHandleScheduleEvent(crontab) {
+				m.logger.Debug("skip schedule hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("crontab", crontab))
 				return nil
 			}
 

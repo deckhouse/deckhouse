@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -310,7 +311,10 @@ func (m *Manager) UnlockKubernetesMonitors(name, hook string, monitors ...string
 		return
 	}
 
-	m.logger.Debug("unlock kubernetes monitors", slog.String("name", name), slog.String("hook", hook))
+	m.logger.Debug("unlock kubernetes monitors",
+		slog.String("name", name),
+		slog.String("hook", hook),
+		slog.String("monitors", strings.Join(monitors, ",")))
 	app.UnlockKubernetesMonitors(hook, monitors...)
 }
 
