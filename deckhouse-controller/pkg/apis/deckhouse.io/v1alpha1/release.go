@@ -46,6 +46,7 @@ type Release interface {
 	GetUpdateSpec() *UpdateSpec
 }
 
+// +kubebuilder:pruning:PreserveUnknownFields
 type Changelog map[string]any
 
 func GetReleaseApprovalAnnotation(release Release) string {

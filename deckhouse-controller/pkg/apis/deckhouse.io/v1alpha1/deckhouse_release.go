@@ -187,12 +187,13 @@ func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
 }
 
 type DeckhouseReleaseSpec struct {
-	Version       string            `json:"version,omitempty"`
-	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
-	Requirements  map[string]string `json:"requirements,omitempty"`
-	Disruptions   []string          `json:"disruptions,omitempty"`
-	Changelog     Changelog         `json:"changelog,omitempty"`
-	ChangelogLink string            `json:"changelogLink,omitempty"`
+	Version      string            `json:"version,omitempty"`
+	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
+	Requirements map[string]string `json:"requirements,omitempty"`
+	Disruptions  []string          `json:"disruptions,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Changelog     Changelog `json:"changelog,omitempty"`
+	ChangelogLink string    `json:"changelogLink,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {

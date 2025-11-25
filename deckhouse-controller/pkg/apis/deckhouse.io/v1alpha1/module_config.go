@@ -71,6 +71,7 @@ type ModuleConfig struct {
 }
 
 // SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
+// +kubebuilder:pruning:PreserveUnknownFields
 type SettingsValues map[string]any
 
 func (v *SettingsValues) DeepCopy() *SettingsValues {
@@ -114,12 +115,13 @@ func deepCopyValue(val any) any {
 }
 
 type ModuleConfigSpec struct {
-	Version      int            `json:"version,omitempty"`
-	Settings     SettingsValues `json:"settings,omitempty"`
-	Enabled      *bool          `json:"enabled,omitempty"`
-	UpdatePolicy string         `json:"updatePolicy,omitempty"`
-	Source       string         `json:"source,omitempty"`
-	Maintenance  string         `json:"maintenance,omitempty"`
+	Version      int    `json:"version,omitempty"`
+	Enabled      *bool  `json:"enabled,omitempty"`
+	UpdatePolicy string `json:"updatePolicy,omitempty"`
+	Source       string `json:"source,omitempty"`
+	Maintenance  string `json:"maintenance,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Settings SettingsValues `json:"settings,omitempty"`
 }
 
 type ModuleConfigStatus struct {
