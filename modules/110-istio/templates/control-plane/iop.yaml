@@ -42,8 +42,6 @@ spec:
       enabled: true
       k8s:
         env:
-        - name: ISTIO_WATCH_NAMESPACE
-          value: d8-{{ $.Chart.Name }}
         - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
           value: "true"
         - name: ISTIO_MULTIROOT_MESH
