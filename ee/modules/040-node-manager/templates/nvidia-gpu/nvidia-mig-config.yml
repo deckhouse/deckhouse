@@ -679,32 +679,30 @@ data:
       echo "Disruption approved!"
       # Drain the node after confirming approval
       attempt=0
-      until
-        kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
-      do
-        attempt=$(( attempt + 1 ))
-        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            echo "ERROR: Failed to annotate node ${NODE_NAME}"
-            exit_failed
-        fi
-        echo "Could not annotate node"
-        echo "Retry in 10sec..."
-        sleep 10
-      done
+      while true
+        do
+          attempt=$(( attempt + 1 ))
+          if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "failed to drain node ${NODE_NAME}"
+            exit 1
+          fi
+          annotations=$(kubectl get no ${NODE_NAME} -o json |jq  -r '.metadata.annotations')
 
-      attempt=0
-      until
-        kubectl get node ${NODE_NAME} -o json | \
-        jq -e '.metadata.annotations | has("update.node.deckhouse.io/drained")' >/dev/null
-      do
-        attempt=$(( attempt + 1 ))
-        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            echo "ERROR: Failed to get annotation 'update.node.deckhouse.io/drained' from ${NODE_NAME}"
-            exit_failed
+          DRAINING_ANNOTATION=$(jq -rn --argjson data "$annotations" '$data."update.node.deckhouse.io/draining"')
+          DRAINED_ANNOTATION=$(jq -rn --argjson data "$annotations" '$data."update.node.deckhouse.io/drained"')
+          if [[ $DRAINED_ANNOTATION != "null" ]]
+            then
+              echo "node ${NODE_NAME} was drained"
+              break
+            else
+              if [[ $DRAINING_ANNOTATION == "null" ]]
+          then
+            kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
         fi
-        echo "Could not get node annotation"
-        echo "Retry in 30sec..."
-        sleep 30
+          fi
+          echo "Could not get node annotation"
+          echo "Retry in 30sec..."
+          sleep 30
       done
     }
 
