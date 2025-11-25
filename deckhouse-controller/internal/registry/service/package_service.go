@@ -25,10 +25,11 @@ import (
 	"io"
 	"log/slog"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
-	"github.com/goccy/go-yaml"
 )
 
 const (

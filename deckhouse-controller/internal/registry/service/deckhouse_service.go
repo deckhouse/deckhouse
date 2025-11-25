@@ -26,10 +26,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
-	"github.com/goccy/go-yaml"
 )
 
 const (
