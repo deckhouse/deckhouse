@@ -15,7 +15,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 --branch v0.6.0 https://github.com/sapcc/kubernetes-oomkill-exporter.git /src
+  - git clone --depth 1 --branch 0.6.0 https://github.com/sapcc/kubernetes-oomkill-exporter.git /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
