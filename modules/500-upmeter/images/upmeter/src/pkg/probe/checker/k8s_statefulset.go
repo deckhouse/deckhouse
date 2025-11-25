@@ -122,6 +122,11 @@ func (s statefulSetDeleter) Do(ctx context.Context) error {
 	return err
 }
 
+// boolPtr returns a pointer to the given bool value.
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 	replicas := int32(1)
 
@@ -164,6 +169,17 @@ func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 							Image: "registry.k8s.io/upmeter-nonexistent:3.1415",
 							Command: []string{
 								"/pause",
+							},
+							SecurityContext: &v1.SecurityContext{
+								ReadOnlyRootFilesystem:   boolPtr(true),
+								AllowPrivilegeEscalation: boolPtr(false),
+								Capabilities: &v1.Capabilities{
+									Drop: []v1.Capability{"ALL"},
+								},
+								RunAsNonRoot: boolPtr(true),
+								SeccompProfile: &v1.SeccompProfile{
+									Type: v1.SeccompProfileTypeRuntimeDefault,
+								},
 							},
 						},
 					},
