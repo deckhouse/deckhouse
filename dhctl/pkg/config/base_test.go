@@ -201,14 +201,16 @@ spec:
 	t.Run("Registry from default", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
 		require.NoError(t, err)
-		registry := metaConfig.Registry.Mode.RemoteData()
-		require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
-		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
-		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "")
-		require.Equal(t, registry.Password, "")
-		require.Equal(t, registry.CA, "")
+		t.Run("CE edition config", func(t *testing.T) {
+			registry := metaConfig.Registry.Mode.RemoteData()
+			require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
+			require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "")
+			require.Equal(t, registry.Password, "")
+			require.Equal(t, registry.CA, "")
+		})
 	})
 	t.Run("Registry from init configuration", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
@@ -247,9 +249,9 @@ spec:
     registry:
       mode: Direct
       direct:
-        imagesRepo: registry.deckhouse.io/test
-        username: test_username
-        password: test_password
+        imagesRepo: r.example.com/test
+        username: test-user
+        password: test-password
         scheme: HTTPS
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
@@ -259,10 +261,10 @@ spec:
 		registry := metaConfig.Registry.Mode.RemoteData()
 		require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
 		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Direct")
-		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/test")
+		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "test_username")
-		require.Equal(t, registry.Password, "test_password")
+		require.Equal(t, registry.Username, "test-user")
+		require.Equal(t, registry.Password, "test-password")
 		require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
 	})
 
