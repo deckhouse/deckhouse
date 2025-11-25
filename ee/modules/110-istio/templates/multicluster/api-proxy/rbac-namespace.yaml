@@ -1,0 +1,42 @@
+{{- if .Values.istio.multicluster.enabled }}
+---
+# Role for reading specific secrets in d8-istio namespace
+# This is needed because resourceNames in ClusterRole only works when the request
+# is made at namespace scope (/api/v1/namespaces/d8-istio/secrets)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:istio:multicluster:api-proxy:secrets
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - "cacerts"
+  - "d8-remote-clusters-public-metadata"
+  - "d8-remote-authn-keypair"
+  - "d8-istio-sidecar-registry"
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:istio:multicluster:api-proxy:secrets
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:istio:multicluster:api-proxy:secrets
+subjects:
+- kind: ServiceAccount
+  name: multicluster-api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+{{- end }}
+

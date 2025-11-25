@@ -27,19 +27,11 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  resourceNames:
-  - "cacerts"
-  - "d8-remote-clusters-public-metadata"
-  - "d8-remote-authn-keypair"
-  - "d8-istio-sidecar-registry"
-  verbs:
-  - get
-  - list
-  - watch
+# Note: resourceNames in ClusterRole does NOT work for namespace-scoped resources when
+# the request is made at cluster scope (/api/v1/secrets). We need a Role in the namespace.
+# However, if the request is made at namespace scope (/api/v1/namespaces/d8-istio/secrets),
+# then resourceNames in ClusterRole will work. So we keep this rule assuming the code
+# will make namespace-scoped requests.
 - apiGroups:
   - ""
   resources:
