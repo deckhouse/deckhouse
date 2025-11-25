@@ -42,5 +42,6 @@ shell:
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - make build
+  - ls -la 
   - chown -R 64535:64535 /src
   - chmod 0755 /src/build/kubernetes-oomkill-exporter
