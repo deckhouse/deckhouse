@@ -2,7 +2,7 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-"}}
   {{- if $value.csi.vsphere }}
-    {{- $src_version := toString $value.csi.vsphere }}
+    {{- $src_version := "v3.3.1" }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
