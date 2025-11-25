@@ -308,15 +308,24 @@ func (c *SSHCommand) StderrBytes() []byte {
 	if len(c.ErrBytes.Bytes()) > 0 {
 		return c.ErrBytes.Bytes()
 	}
-	return c.err.Bytes()
+
+	if c.err != nil {
+		return c.err.Bytes()
+	}
+
+	return nil
 }
 
 func (c *SSHCommand) StdoutBytes() []byte {
 	if len(c.OutBytes.Bytes()) > 0 {
 		return c.OutBytes.Bytes()
 	}
-	return c.out.Bytes()
 
+	if c.out != nil {
+		return c.out.Bytes()
+	}
+
+	return nil
 }
 
 func (c *SSHCommand) WithMatchers(matchers ...*process.ByteSequenceMatcher) *SSHCommand {

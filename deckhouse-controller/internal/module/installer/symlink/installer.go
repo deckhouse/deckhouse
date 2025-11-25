@@ -40,7 +40,7 @@ const (
 
 // Installer manages module installation via symlinks.
 // Modules are copied to /deckhouse/downloaded/<module>/ and symlinked
-// from /deckhouse/downloaded/modules/<module> for use by the operator.
+// to /deckhouse/downloaded/modules/<module> for use by the operator.
 type Installer struct {
 	symlinkDir string // Path to symlink directory: /deckhouse/downloaded/modules
 	downloaded string // Base download path: /deckhouse/downloaded
@@ -69,9 +69,10 @@ func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
 // Install copies a module from temp location to permanent storage and creates symlink.
 // Process:
 //  1. Create /deckhouse/downloaded/<module>/ directory
-//  2. Copy module files from tempModulePath to permanent location
-//  3. Remove old symlink if exists (atomic update)
-//  4. Create new symlink: /deckhouse/downloaded/<module> -> /deckhouse/downloaded/modules/<version>
+//  2. Remove old module version if exists(atomic update)
+//  3. Copy module files from tempModulePath to permanent location
+//  4. Remove old symlink if exists (atomic update)
+//  5. Create new symlink: /deckhouse/downloaded/<module> -> /deckhouse/downloaded/modules/<version>
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Install")
 	defer span.End()
@@ -91,6 +92,22 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
 
+	// /deckhouse/downloaded/<module>/<version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Remove old version if exists (for atomic update)
+	if _, err := os.Stat(versionPath); err == nil {
+		if err = os.RemoveAll(versionPath); err != nil {
+			return fmt.Errorf("delete old version '%s': %w", versionPath, err)
+		}
+	}
+
+	// Copy module files to permanent location
+	if err := cp.Copy(tempModulePath, versionPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("copy module '%s': %w", modulePath, err)
+	}
+
 	// Prepare symlink location: /deckhouse/downloaded/modules/<module>
 	symlinkPoint := filepath.Join(i.symlinkDir, module)
 
@@ -100,15 +117,6 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		if err = os.Remove(symlinkPoint); err != nil {
 			return fmt.Errorf("delete old symlink '%s': %w", symlinkPoint, err)
 		}
-	}
-
-	// /deckhouse/downloaded/<module><version>
-	versionPath := filepath.Join(modulePath, version)
-
-	// Copy module files to permanent location
-	if err := cp.Copy(tempModulePath, versionPath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("copy module '%s': %w", modulePath, err)
 	}
 
 	// Create new symlink pointing to permanent location
