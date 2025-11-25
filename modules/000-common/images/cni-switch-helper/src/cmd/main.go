@@ -72,7 +72,7 @@ func main() {
 
 	if mode == "webhook" {
 		setupLog.Info("starting in webhook mode")
-		if err := startWebhookServer(); err != nil {
+		if err := startWebhookServer(probeAddr); err != nil {
 			setupLog.Error(err, "problem running webhook server")
 			os.Exit(1)
 		}
@@ -114,16 +114,40 @@ func main() {
 	}
 }
 
-func startWebhookServer() error {
-	client, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+func newHealthzHandler(checker healthz.Checker) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := checker(r); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}
+}
+
+func startWebhookServer(probeAddr string) error {
+	// Start a separate server for health probes.
+	go func() {
+		healthMux := http.NewServeMux()
+		healthMux.HandleFunc("/healthz", newHealthzHandler(healthz.Ping))
+		healthMux.HandleFunc("/readyz", newHealthzHandler(healthz.Ping))
+		setupLog.Info("starting health probe server", "addr", probeAddr)
+		if err := http.ListenAndServe(probeAddr, healthMux); err != nil {
+			setupLog.Error(err, "unable to start health probe server")
+		}
+	}()
+
+	// Create a client for the webhook handler.
+	webhookClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
 		return fmt.Errorf("creating webhook client: %w", err)
 	}
 
 	podAnnotator := &webhook.PodAnnotator{
-		Client: client,
+		Client: webhookClient,
 	}
 
+	// Create the main webhook server mux.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
 
@@ -131,10 +155,8 @@ func startWebhookServer() error {
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", webhookServerPort),
 		Handler:      mux,
-		TLSConfig:    nil,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  30 * time.Second,
 	}
 
 	setupLog.Info("webhook server starting", "port", webhookServerPort)
