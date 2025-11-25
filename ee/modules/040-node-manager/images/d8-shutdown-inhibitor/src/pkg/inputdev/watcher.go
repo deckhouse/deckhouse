@@ -59,11 +59,56 @@ func (w *Watcher) watch() {
 		}
 	}
 }
-
 func (w *Watcher) readEvents(evCh chan *inputEvent) {
 	var fds []int
+	
+	for {
+		if w.shouldStop() {
+			return
+		}
+		
+		err := w.processDeviceCycle(evCh, fds)
+		if err == nil {
+			return
+		}
+		
+		if errors.Is(err, errDevicesNeedRefresh) {
+			w.refreshDevsOnError()
+			fds = fds[:0]
+			continue
+		}
+		
+		dlog.Warn("power button watcher: unexpected error", dlog.Err(err))
+	}
+}
 
-refreshDevices:
+func (w *Watcher) shouldStop() bool {
+	select {
+	case <-w.stopCh:
+		return true
+	default:
+		return false
+	}
+}
+
+func (w *Watcher) processDeviceCycle(evCh chan *inputEvent, fds []int) error {
+	fds, fdSet, fdMax, ok := w.prepareDeviceFDs(fds)
+	if !ok {
+		return nil
+	}
+	
+	defer closeFDs(fds)
+	
+	return w.handleDeviceEvents(evCh, fds, &fdSet, fdMax, w.stopCh)
+}
+
+func closeFDs(fds []int) {
+	for _, fd := range fds {
+		_ = syscall.Close(fd)
+	}
+}
+
+func (w *Watcher) prepareDeviceFDs(fds []int) ([]int, syscall.FdSet, int, bool) {
 	fds = fds[:0]
 
 	// Open each device.
@@ -78,7 +123,7 @@ refreshDevices:
 
 	if len(fds) == 0 {
 		dlog.Warn("power button watcher: no file descriptors to watch")
-		return
+		return fds, syscall.FdSet{}, 0, false
 	}
 
 	// Create FdSet bitmask
@@ -86,20 +131,23 @@ refreshDevices:
 	// Max fd to check for Select.
 	fdMax := fds[len(fds)-1] + 1
 
+	return fds, fdSet, fdMax, true
+}
+
+func (w *Watcher) handleDeviceEvents(evCh chan *inputEvent, fds []int, fdSet *syscall.FdSet, fdMax int, stopCh <-chan struct{}) error {
 	// Read events until stopped via channel.
 	for {
 		// Return if watcher was stopped.
 		select {
-		case <-w.stopCh:
-			closeFDs(fds)
-			return
+		case <-stopCh:
+			return nil
 		default:
 		}
 
-		InitFdSet(&fdSet, fds...)
+		InitFdSet(fdSet, fds...)
 		// Wait when read is available on any of the fds.
 		// TODO add timeout to check stopCh more frequently?
-		_, err := syscall.Select(fdMax, &fdSet, nil, nil, nil)
+		_, err := syscall.Select(fdMax, fdSet, nil, nil, nil)
 		if err != nil {
 			dlog.Warn("power button watcher: select failed", dlog.Err(err))
 			continue
@@ -107,15 +155,14 @@ refreshDevices:
 
 		// Check if fd is set and read event.
 		for _, fd := range fds {
-			if !FD_ISSET(fd, &fdSet) {
+			if !FD_ISSET(fd, fdSet) {
 				continue
 			}
 
 			event, err := w.readEvent(fd)
 			if err != nil {
 				if errors.Is(err, errDevicesNeedRefresh) {
-					closeFDs(fds)
-					goto refreshDevices
+					return errDevicesNeedRefresh
 				}
 				dlog.Warn("power button watcher: read event failed", slog.Int("fd", fd), dlog.Err(err))
 				continue
@@ -126,20 +173,12 @@ refreshDevices:
 	}
 }
 
-
-func closeFDs(fds []int) {
-	for _, fd := range fds {
-		_ = syscall.Close(fd)
-	}
-}
-
 func (w *Watcher) readEvent(fd int) (*inputEvent, error) {
 	var event inputEvent
 	err := w.binaryRead(fd, unsafe.Pointer(&event), unsafe.Sizeof(event))
 	if err != nil {
 		if errors.Is(err, syscall.ENODEV) {
 			dlog.Error("power button watcher: device disappeared", slog.Int("fd", fd))
-			w.refreshDevsOnError()
 			return nil, fmt.Errorf("%w: %v", errDevicesNeedRefresh, err)
 		}
 
@@ -156,7 +195,9 @@ func (w *Watcher) refreshDevsOnError() {
 	w.devs, err = ListInputDevicesWithAnyButton(KEY_POWER, KEY_POWER2)
 	if err != nil {
 		dlog.Error("power button watcher: refresh devs list", dlog.Err(err))
+		return
 	}
+
 }
 
 type inputEvent struct {
