@@ -235,7 +235,7 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 func TestPrepareRegistry(t *testing.T) {
 	t.Run("Registry from default", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
-		t.Run("CE edition config", func(t *testing.T) {
+		t.Run("Registry CE edition config", func(t *testing.T) {
 			registry := cfg.Registry.Mode.RemoteData()
 			require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
@@ -249,8 +249,8 @@ func TestPrepareRegistry(t *testing.T) {
 	t.Run("Registry from init configuration", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
 			"initConfiguration": map[string]interface{}{
-				"imagesRepo": "r.example.com/test/",
-				"registryDockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
+				"imagesRepo":        "r.example.com/test/",
+				"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
 			},
 		})
 		registry := cfg.Registry.Mode.RemoteData()
