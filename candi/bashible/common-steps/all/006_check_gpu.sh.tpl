@@ -61,7 +61,7 @@ version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,3}[.][0-9]{1,3}" /proc/driver/nvidia
 compare $version $required_version
 
 got_capability=$(nvidia-smi --query-gpu="compute_cap" --format=csv,noheader)
-if is_valid_greater_than "$version" "$threshold"; then
+if is_valid_greater_than "$got_capability" "6.0"; then
     echo "compute_cap ${got_capability} is valid"
 else
     echo "compute_cap ${got_capability} is invalid"
