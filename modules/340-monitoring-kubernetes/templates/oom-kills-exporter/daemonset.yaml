@@ -66,7 +66,13 @@ spec:
         - name: PROMETHEUS_SCRAPE_INTERVAL
           value: {{ .Values.global.discovery.prometheusScrapeInterval | default 30 | quote }}
         args:
-        - "--listen-address=0.0.0.0:4205"
+          - "--listen-address=0.0.0.0:4205"
+        volumeMounts:
+          - name: kmsg
+            mountPath: /dev/kmsg
+            readOnly: true
+          - name: containerd
+            mountPath: /run/containerd/containerd.sock
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -113,3 +119,10 @@ spec:
 {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      volumes:
+      - name: kmsg
+        hostPath:
+          path: /dev/kmsg
+      - name: containerd
+        hostPath:
+          path: /run/containerd/containerd.sock
