@@ -131,6 +131,12 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 }
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
+	// PKI
+	pkiResult, err := state.PKI.Process(log)
+	if err != nil {
+		return fmt.Errorf("cannot process PKI: %w", err)
+	}
+
 	// check upstream registry
 	checkerRegistryParams := checker.RegistryParams{
 		Address:  inputs.Params.ImagesRepo,
@@ -156,12 +162,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	if !state.bashiblePreflightCheck(inputs) {
 		state.setReadyCondition(false, inputs)
 		return nil
-	}
-
-	// PKI
-	pkiResult, err := state.PKI.Process(log)
-	if err != nil {
-		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
 	// Secrets

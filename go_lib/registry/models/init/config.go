@@ -19,14 +19,10 @@ package init
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 )
 
 type Config struct {
-	CA     *CertKey    `json:"ca,omitempty" yaml:"ca,omitempty"`
-	UserRW *users.User `json:"userRW,omitempty" yaml:"userRW,omitempty"`
-	UserRO *users.User `json:"userRO,omitempty" yaml:"userRO,omitempty"`
+	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
 }
 
 type CertKey struct {
@@ -49,20 +45,9 @@ func (c Config) ToMap() (map[string]interface{}, error) {
 
 func (c Config) DeepCopy() Config {
 	ret := Config{}
-
 	if c.CA != nil {
 		ca := c.CA.DeepCopy()
 		ret.CA = &ca
-	}
-
-	if c.UserRW != nil {
-		userRW := c.UserRW.DeepCopy()
-		ret.UserRW = &userRW
-	}
-
-	if c.UserRO != nil {
-		userRO := c.UserRO.DeepCopy()
-		ret.UserRO = &userRO
 	}
 	return ret
 }

@@ -35,10 +35,10 @@ func (params Params) Any() bool {
 type Inputs map[string]User
 
 type State struct {
-	RO *User `json:"ro,omitempty"`
-	// RW           *User `json:"rw,omitempty"`
-	// MirrorPuller *User `json:"mirror_puller,omitempty"`
-	// MirrorPusher *User `json:"mirror_pusher,omitempty"`
+	RO           *User `json:"ro,omitempty"`
+	RW           *User `json:"rw,omitempty"`
+	MirrorPuller *User `json:"mirror_puller,omitempty"`
+	MirrorPusher *User `json:"mirror_pusher,omitempty"`
 }
 
 func (state *State) GetParams() Params {

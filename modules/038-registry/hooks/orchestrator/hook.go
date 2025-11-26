@@ -293,9 +293,6 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			values.State.PKI.CA.Cert = initConfig.CA.Cert
 			values.State.PKI.CA.Key = initConfig.CA.Key
 		}
-		if initConfig.UserRO != nil {
-			values.State.Users.RO = initConfig.UserRO
-		}
 	}
 
 	// Initialize RegistrySecret before processing

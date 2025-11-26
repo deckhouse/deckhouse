@@ -20,15 +20,12 @@ import (
 	"sync"
 
 	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
-	registry_users "github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 const (
-	readOnlyUser          = "ro"
-	readWriteUser         = "rw"
 	certificateCommonName = "registry-ca"
 )
 
@@ -104,21 +101,9 @@ func generatePKI() (PKI, error) {
 		return PKI{}, fmt.Errorf("failed to encode CA cert/key: %w", err)
 	}
 
-	rwUser, err := registry_users.New(readWriteUser)
-	if err != nil {
-		return PKI{}, fmt.Errorf("failed to create %q user: %w", readWriteUser, err)
-	}
-
-	roUser, err := registry_users.New(readOnlyUser)
-	if err != nil {
-		return PKI{}, fmt.Errorf("failed to create %q user: %w", readOnlyUser, err)
-	}
-
 	ret.CA = &CertKey{
 		Cert: string(cert),
 		Key:  string(key),
 	}
-	ret.UserRW = &rwUser
-	ret.UserRO = &roUser
 	return ret, nil
 }
