@@ -2,6 +2,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 fromCacheVersion: 2025-11-25-1
+git:
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/build/kubernetes-oomkill-exporter
