@@ -91,7 +91,7 @@ func (a *PodAnnotator) Handle(w http.ResponseWriter, r *http.Request) {
 		patchType := admissionv1.PatchTypeJSONPatch
 		admissionResponse.Patch = patch
 		admissionResponse.PatchType = &patchType
-		logger.Info("Pod annotated with effective CNI", "Pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "CNI", currentCNI)
+		logger.Info("Pod annotated with effective CNI", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "CNI", currentCNI)
 	}
 
 	sendAdmissionResponse(w, admissionResponse)
