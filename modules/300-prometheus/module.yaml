@@ -3,8 +3,6 @@ stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring
-description: |
-  The Prometheus monitoring module
 descriptions:
   en: |
     The Prometheus monitoring module

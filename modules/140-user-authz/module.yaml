@@ -3,8 +3,6 @@ stage: "General Availability"
 namespace: d8-user-authz
 subsystems:
   - security
-description: |
-  The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
 descriptions:
   en: |
     The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
