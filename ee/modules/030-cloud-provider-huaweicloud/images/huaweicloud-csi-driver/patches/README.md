@@ -8,6 +8,6 @@ Update dependencies
 
 Add support enterprise-project-id
 
-### 003-fix-add-EnterpriseProjectID-support-to-EVS-v2.patch
+### 003-fix-add-enterprise-project-id-support-for-cinder-volumes.patch
 
 Add support enterprise-project-id to cinders
