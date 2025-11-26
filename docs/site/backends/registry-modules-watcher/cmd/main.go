@@ -42,10 +42,6 @@ import (
 )
 
 func main() {
-	if os.Getenv("HELM_DEBUG") != "true" {
-		_ = os.Setenv("HELM_DEBUG", "true")
-		_ = os.Setenv("LOG_LEVEL", "DEBUG")
-	}
 	logger := log.NewLogger(
 		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 		log.WithHandlerType(log.TextHandlerType),

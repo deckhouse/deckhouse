@@ -35,10 +35,6 @@ func NewLogger() *zap.Logger {
 	zapConfig.DisableCaller = true
 	zapConfig.DisableStacktrace = true
 	zapConfig.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
-	if os.Getenv("HELM_DEBUG") != "true" {
-		_ = os.Setenv("HELM_DEBUG", "true")
-		_ = os.Setenv("LOG_LEVEL", "DEBUG")
-	}
 	if level := os.Getenv("LOG_LEVEL"); level != "" {
 		var parsedLevel zap.AtomicLevel
 		err := parsedLevel.UnmarshalText([]byte(level))

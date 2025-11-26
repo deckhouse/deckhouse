@@ -65,10 +65,6 @@ const (
 )
 
 func main() {
-	if os.Getenv("HELM_DEBUG") != "true" {
-		_ = os.Setenv("HELM_DEBUG", "true")
-	}
-
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
 
