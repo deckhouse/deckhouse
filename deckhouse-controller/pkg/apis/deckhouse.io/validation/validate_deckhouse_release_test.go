@@ -112,26 +112,6 @@ func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 	}
 }
 
-func createDisabledModule(name string) *v1alpha1.Module {
-	return &v1alpha1.Module{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Status: v1alpha1.ModuleStatus{
-			Conditions: []v1alpha1.ModuleCondition{
-				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleManager,
-					Status: corev1.ConditionFalse,
-				},
-				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
-					Status: corev1.ConditionFalse,
-				},
-			},
-		},
-	}
-}
-
 func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -277,7 +257,6 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createDisabledModuleConfig("disabled-module"),
-				createDisabledModule("disabled-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -326,7 +305,6 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createDisabledModuleConfig("module-x"),
-				createDisabledModule("module-x"),
 				createModuleSource("src", []string{}),
 			},
 			operation:   "CREATE",
