@@ -70,6 +70,7 @@
       },
       "labels": {
         "app": "{{ parsed_data.ap_p[0].a }}",
+        "file": "{{ file }}",
         "foo": "bar",
         "host": "{{ host }}"
       },
