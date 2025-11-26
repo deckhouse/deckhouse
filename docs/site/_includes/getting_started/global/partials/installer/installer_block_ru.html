@@ -78,15 +78,15 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
             </div>
             <div id="tab-mac-content-file" class="tab-content">
               <p>Скачайте установщик:
-                <a href="/downloads/installer/darwin-arm64/d8install" class="download-btn">d8install-darwin-arm64</a>
-                <a href="/downloads/installer/darwin-amd64/d8install" class="download-btn">d8install-darwin-amd64</a>
+                <a href="/downloads/installer/darwin-arm64/d8install" class="download-btn">darwin-arm64</a>
+                <a href="/downloads/installer/darwin-amd64/d8install" class="download-btn">darwin-amd64</a>
               </p>
-              <p>Запустите его, выполнив команды ниже. Например, для архитектуры arm64:</p>
+              <p>Запустите его, выполнив команды ниже:</p>
 {% capture command %}
 ```bash
-chmod +x d8install-darwin-arm64
-xattr -c d8install-darwin-arm64
-./d8install-darwin-arm64 -b
+chmod +x d8install
+xattr -c d8install
+./d8install -b
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -136,12 +136,12 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
               </ol>
             </div>
             <div id="tab-linux-content-file" class="tab-content">
-              <p>Скачайте установщик: <a href="/downloads/installer/linux-amd64/d8install" class="download-btn">d8install-linux-amd64</a></p>
+              <p>Скачайте установщик: <a href="/downloads/installer/linux-amd64/d8install" class="download-btn">amd64</a></p>
               <p>Запустите его, выполнив команды:</p>
 {% capture command %}
 ```bash
-chmod +x d8install-linux-amd64
-./d8install-linux-amd64 -b
+chmod +x d8install
+./d8install -b
 ```
 {% endcapture %}
 {{ command | markdownify }}
