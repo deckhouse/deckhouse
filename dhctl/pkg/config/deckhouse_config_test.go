@@ -78,6 +78,149 @@ func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[stri
 	return generateMetaConfig(t, configOverridesTemplate, data, true)
 }
 
+func TestModuleDeckhouseConfigRegistryOverrides(t *testing.T) {
+	tpl := `
+{{ with .moduleEnable }}
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.30"
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1alpha1
+# type of the configuration section
+kind: StaticClusterConfiguration
+# address space for the cluster's internal network
+internalNetworkCIDRs:
+- 192.168.199.0/24
+{{- end }}
+{{- with .manifests }}
+	{{- range . }}
+---
+		{{- . }}
+	{{- end }}
+{{- end }}
+`
+	t.Run("Registry", func(t *testing.T) {
+
+		t.Run("Registry with module disable", func(t *testing.T) {
+			data := map[string]interface{}{
+				"moduleEnable": false,
+			}
+			metaConfig := generateMetaConfig(t, tpl, data, false)
+			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+			require.NoError(t, err)
+			require.Len(t, installConfig.ModuleConfigs, 1)
+			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
+				"bundle":   "Default",
+				"logLevel": "Info",
+			})
+		})
+		t.Run("Registry from default (CE edition config)", func(t *testing.T) {
+			data := map[string]interface{}{
+				"moduleEnable": true,
+			}
+			metaConfig := generateMetaConfig(t, tpl, data, false)
+			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+			require.NoError(t, err)
+			require.Len(t, installConfig.ModuleConfigs, 1)
+			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
+				"bundle":   "Default",
+				"logLevel": "Info",
+				"registry": map[string]interface{}{
+					"mode": "Unmanaged",
+					"unmanaged": map[string]interface{}{
+						"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
+						"scheme":     "HTTPS",
+					},
+				},
+			})
+		})
+
+		t.Run("Registry from init configuration", func(t *testing.T) {
+			data := map[string]interface{}{
+				"moduleEnable": true,
+				"manifests": []string{`
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: "r.example.com/test/"
+  # registryDockerCfg: {"auths":{"r.example.com":{"username":"test-user","password":"test-password"}}}
+  registryDockerCfg: eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoidGVzdC11c2VyIiwicGFzc3dvcmQiOiJ0ZXN0LXBhc3N3b3JkIn19fQ==
+  registryCA: "-----BEGIN CERTIFICATE-----"
+  registryScheme: HTTPS
+`,
+				},
+			}
+			metaConfig := generateMetaConfig(t, tpl, data, false)
+			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+			require.NoError(t, err)
+			require.Len(t, installConfig.ModuleConfigs, 1)
+			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
+				"bundle":   "Default",
+				"logLevel": "Info",
+				"registry": map[string]interface{}{
+					"mode": "Unmanaged",
+					"unmanaged": map[string]interface{}{
+						"imagesRepo": "r.example.com/test",
+						"username":   "test-user",
+						"password":   "test-password",
+						"scheme":     "HTTPS",
+						"ca":         "-----BEGIN CERTIFICATE-----",
+					},
+				},
+			})
+		})
+
+		t.Run("Registry from deckhouse moduleConfig", func(t *testing.T) {
+			data := map[string]interface{}{
+				"moduleEnable": true,
+				"manifests": []string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    bundle: Default
+    logLevel: Info
+    registry:
+      mode: Direct
+      direct:
+        imagesRepo: r.example.com/test/
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`,
+				},
+			}
+			metaConfig := generateMetaConfig(t, tpl, data, false)
+			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+			require.NoError(t, err)
+			require.Len(t, installConfig.ModuleConfigs, 1)
+			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
+				"bundle":   "Default",
+				"logLevel": "Info",
+				"registry": map[string]interface{}{
+					"mode": "Direct",
+					"direct": map[string]interface{}{
+						"imagesRepo": "r.example.com/test",
+						"username":   "test-user",
+						"password":   "test-password",
+						"scheme":     "HTTPS",
+						"ca":         "-----BEGIN CERTIFICATE-----",
+					},
+				},
+			})
+		})
+	})
+}
+
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {
 	t.Run("Use default bundle and logLevel", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{

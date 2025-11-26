@@ -150,7 +150,7 @@ provider:
        "public_key": "publicKey",
        "private_key": "privateKey"
     }
-{{- with .moduleConfigs }}
+{{- with .manifests }}
 	{{- range . }}
 ---
 		{{- . }}
@@ -233,17 +233,15 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 
 // Registry
 func TestPrepareRegistry(t *testing.T) {
-	t.Run("Registry from default", func(t *testing.T) {
+	t.Run("Registry from default (CE edition config)", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
-		t.Run("Registry CE edition config", func(t *testing.T) {
-			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-			registry := cfg.Registry.Settings.Remote
-			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-			require.Equal(t, registry.Scheme, "HTTPS")
-			require.Equal(t, registry.Password, "")
-			require.Equal(t, registry.Username, "")
-			require.Equal(t, registry.CA, "")
-		})
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
+		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Password, "")
+		require.Equal(t, registry.Username, "")
+		require.Equal(t, registry.CA, "")
 	})
 
 	t.Run("Registry from init configuration", func(t *testing.T) {
@@ -264,7 +262,7 @@ func TestPrepareRegistry(t *testing.T) {
 
 	t.Run("Registry from deckhouse moduleConfig", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"moduleConfigs": []string{`
+			"manifests": []string{`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

@@ -198,10 +198,10 @@ spec:
   nodeType: CloudEphemeral
 `
 	// Registry
-	t.Run("Registry from default", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
-		require.NoError(t, err)
-		t.Run("Registry CE edition config", func(t *testing.T) {
+	t.Run("Registry", func(t *testing.T) {
+		t.Run("Registry from default (CE edition config)", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
+			require.NoError(t, err)
 			require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
 			require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
 			registry := metaConfig.Registry.Settings.Remote
@@ -211,33 +211,32 @@ spec:
 			require.Equal(t, registry.Password, "")
 			require.Equal(t, registry.CA, "")
 		})
-	})
-	t.Run("Registry from init configuration", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
-		require.NoError(t, err)
-		require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
-		require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-		registry := metaConfig.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "test")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "")
-		require.Equal(t, registry.Password, "")
-		require.Equal(t, registry.CA, "")
-	})
-	t.Run("Registry from init configuration with module enable", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
-		require.NoError(t, err)
-		require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-		require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-		registry := metaConfig.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "test")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "")
-		require.Equal(t, registry.Password, "")
-		require.Equal(t, registry.CA, "")
-	})
-	t.Run("Registry from deckhouse moduleConfig with module enable", func(t *testing.T) {
-		deckhouseMC := `
+		t.Run("Registry from init configuration", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
+			require.NoError(t, err)
+			require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
+			require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+			registry := metaConfig.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "test")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "")
+			require.Equal(t, registry.Password, "")
+			require.Equal(t, registry.CA, "")
+		})
+		t.Run("Registry from init configuration with module enable", func(t *testing.T) {
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
+			require.NoError(t, err)
+			require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
+			require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+			registry := metaConfig.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "test")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "")
+			require.Equal(t, registry.Password, "")
+			require.Equal(t, registry.CA, "")
+		})
+		t.Run("Registry from deckhouse moduleConfig with module enable", func(t *testing.T) {
+			deckhouseMC := `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -256,16 +255,17 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+deckhouseMC, DummyPreparatorProvider())
-		require.NoError(t, err)
-		require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-		require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
-		registry := metaConfig.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "test-user")
-		require.Equal(t, registry.Password, "test-password")
-		require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+deckhouseMC, DummyPreparatorProvider())
+			require.NoError(t, err)
+			require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
+			require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
+			registry := metaConfig.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "test-user")
+			require.Equal(t, registry.Password, "test-password")
+			require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
+		})
 	})
 
 	t.Run("Standard Static", func(t *testing.T) {
