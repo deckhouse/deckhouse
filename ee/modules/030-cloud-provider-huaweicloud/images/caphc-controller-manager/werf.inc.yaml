@@ -18,7 +18,7 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="fix-providerid"
+  - export VERSION="v0.5.0"
   - export VERSION_COMMON="v0.7.0"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/caphc-controller-manager.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
