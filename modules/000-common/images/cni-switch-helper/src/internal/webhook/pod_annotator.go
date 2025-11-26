@@ -25,6 +25,7 @@ import (
 
 	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +48,8 @@ type patchOperation struct {
 }
 
 func (a *PodAnnotator) Handle(w http.ResponseWriter, r *http.Request) {
+	logger := log.FromContext(r.Context())
+
 	admissionReview, err := decodeAdmissionReview(r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not decode admission review: %v", err), http.StatusBadRequest)
@@ -88,6 +91,7 @@ func (a *PodAnnotator) Handle(w http.ResponseWriter, r *http.Request) {
 		patchType := admissionv1.PatchTypeJSONPatch
 		admissionResponse.Patch = patch
 		admissionResponse.PatchType = &patchType
+		logger.Info("Pod annotated with effective CNI", "Pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "CNI", currentCNI)
 	}
 
 	sendAdmissionResponse(w, admissionResponse)

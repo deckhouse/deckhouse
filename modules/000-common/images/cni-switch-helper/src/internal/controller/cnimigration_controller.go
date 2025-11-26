@@ -173,8 +173,7 @@ func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigrat
 
 		if err := r.Patch(ctx, patchedPod, client.MergeFrom(&pod)); err != nil {
 			logger.Error(err, "Failed to annotate pod", "Pod", pod.Name)
-			// TODO: Update status with error and reason
-			return ctrl.Result{}, err
+			return r.updateNodeStatusWithError(ctx, cniNodeMigration, "PodAnnotationFailed", err)
 		}
 		podsAnnotated++
 	}
@@ -323,7 +322,7 @@ func (r *CNIMigrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cniswitcherv1alpha1.CNIMigration{}). // Watch CNIMigration resources
+		For(&cniswitcherv1alpha1.CNIMigration{}).      // Watch CNIMigration resources
 		Owns(&cniswitcherv1alpha1.CNINodeMigration{}). // Watch owned CNINodeMigration resources
 		Complete(r)
 }
