@@ -19,7 +19,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --branch=v0.4.7 --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/utilitywarehouse/kube-summary-exporter.git .
+  - git clone --branch=v0.4.7 --depth=1 $(cat /run/secrets/SOURCE_REPO)/utilitywarehouse/kube-summary-exporter.git .
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
