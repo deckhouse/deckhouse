@@ -160,7 +160,7 @@ func (s *Client) Start() error {
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
 		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
 			log.InfoF("Connect to %s\n", fullHost)
-			bastionClient, err = DialTimeout("tcp", bastionAddr, bastionConfig)
+			bastionClient, err = DialTimeout(s.ctx, "tcp", bastionAddr, bastionConfig)
 			return err
 		})
 		if err != nil {
@@ -220,7 +220,7 @@ func (s *Client) Start() error {
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = DialTimeout("tcp", addr, config)
+			client, err = DialTimeout(s.ctx, "tcp", addr, config)
 			return err
 		})
 		if err != nil {
@@ -255,7 +255,7 @@ func (s *Client) Start() error {
 		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		log.InfoF("Connect to target host '%s' with user '%s' through bastion host\n", addr, s.Settings.User)
-		targetConn, err = bastionClient.Dial("tcp", addr)
+		targetConn, err = bastionClient.DialContext(s.ctx, "tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -327,27 +327,39 @@ func (s *Client) restart() {
 	s.sessionList = nil
 }
 
-func DialTimeout(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	conn, err := net.DialTimeout(network, addr, config.Timeout)
+func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	d := net.Dialer{Timeout: config.Timeout}
+	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
+		return nil, err
+	}
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		conn.Close()
+		return nil, err
+	}
+
+	err = tcpConn.SetKeepAlive(true)
+	if err != nil {
+		tcpConn.Close()
 		return nil, err
 	}
 
 	timeFactor := time.Duration(3)
-	err = conn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
+	err = tcpConn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
 	if err != nil {
-		conn.Close()
+		tcpConn.Close()
 		return nil, err
 	}
 
-	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	c, chans, reqs, err := ssh.NewClientConn(tcpConn, addr, config)
 	if err != nil {
 		return nil, err
 	}
 
-	err = conn.SetDeadline(time.Time{})
+	err = tcpConn.SetDeadline(time.Time{})
 	if err != nil {
-		conn.Close()
+		tcpConn.Close()
 		return nil, err
 	}
 
