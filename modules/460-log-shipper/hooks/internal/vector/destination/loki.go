@@ -83,7 +83,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType s
 		// File logs only have the host field (node hostname)
 		labels = map[string]string{
 			"host": "{{ host }}",
-			// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
+			"file": "{{ file }}",
 		}
 	default:
 		// Fallback to empty labels if source type is unknown
