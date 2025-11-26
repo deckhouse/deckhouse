@@ -31,15 +31,6 @@ type User struct {
 	HashedPassword string `json:"password_hash"`
 }
 
-func New(name string) (User, error) {
-	ret := User{UserName: name}
-	err := ret.GenerateNewPassword()
-	if err != nil {
-		return ret, fmt.Errorf("failed to generate user password: %w", err)
-	}
-	return ret, nil
-}
-
 func (u *User) IsValid() bool {
 	if u == nil {
 		return false
@@ -100,12 +91,4 @@ func (u *User) DecodeSecretData(data map[string][]byte) error {
 	u.HashedPassword = string(data["passwordHash"])
 
 	return nil
-}
-
-func (u User) DeepCopy() User {
-	return User{
-		UserName:       u.UserName,
-		Password:       u.Password,
-		HashedPassword: u.HashedPassword,
-	}
 }
