@@ -202,9 +202,9 @@ spec:
 		metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
 		require.NoError(t, err)
 		t.Run("Registry CE edition config", func(t *testing.T) {
-			registry := metaConfig.Registry.Mode.RemoteData()
 			require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
-			require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+			registry := metaConfig.Registry.Settings.Remote
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Username, "")
@@ -215,9 +215,9 @@ spec:
 	t.Run("Registry from init configuration", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
-		registry := metaConfig.Registry.Mode.RemoteData()
 		require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
-		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+		registry := metaConfig.Registry.Settings.Remote
 		require.Equal(t, registry.ImagesRepo, "test")
 		require.Equal(t, registry.Scheme, "HTTPS")
 		require.Equal(t, registry.Username, "")
@@ -227,9 +227,9 @@ spec:
 	t.Run("Registry from init configuration with module enable", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
-		registry := metaConfig.Registry.Mode.RemoteData()
 		require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+		registry := metaConfig.Registry.Settings.Remote
 		require.Equal(t, registry.ImagesRepo, "test")
 		require.Equal(t, registry.Scheme, "HTTPS")
 		require.Equal(t, registry.Username, "")
@@ -258,9 +258,9 @@ spec:
 `
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+deckhouseMC, DummyPreparatorProvider())
 		require.NoError(t, err)
-		registry := metaConfig.Registry.Mode.RemoteData()
 		require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-		require.Equal(t, metaConfig.Registry.Mode.Mode(), "Direct")
+		require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
+		registry := metaConfig.Registry.Settings.Remote
 		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 		require.Equal(t, registry.Scheme, "HTTPS")
 		require.Equal(t, registry.Username, "test-user")
@@ -417,8 +417,8 @@ func TestParseConfigFromFiles(t *testing.T) {
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
 		t.Run("Registry CE edition config", func(t *testing.T) {
-			registry := metaConfig.Registry.Mode.RemoteData()
-			require.Equal(t, metaConfig.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+			registry := metaConfig.Registry.Settings.Remote
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Username, "")

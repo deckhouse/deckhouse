@@ -32,10 +32,6 @@ const (
 type PKI = registry_init.Config
 type CertKey = registry_init.CertKey
 
-type PKIProvider interface {
-	Get(ctx context.Context) (PKI, error)
-}
-
 type ClusterPKIManager struct {
 	kubeClient client.KubeClient
 
@@ -57,7 +53,7 @@ func NewClusterPKIManager(kubeClient client.KubeClient) *ClusterPKIManager {
 	return &ClusterPKIManager{kubeClient: kubeClient}
 }
 
-func (g *LazyPKIGenerator) Get(_ context.Context) (PKI, error) {
+func (g *LazyPKIGenerator) Get() (PKI, error) {
 	g.once.Do(func() {
 		g.pki, g.err = generatePKI()
 	})

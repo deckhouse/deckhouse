@@ -26,13 +26,12 @@ type TestConfigUpdateMode func() registry_const.ModeType
 
 func NewTestConfig(opts ...interface{}) Config {
 	registrySettings := types.RegistrySettings{
-		ImagesRepo: DefaultImagesRepo,
-		Scheme:     DefaultScheme,
+		ImagesRepo: types.CEImagesRepo,
+		Scheme:     types.CEScheme,
 	}
 
 	var mode = registry_const.ModeUnmanaged
 	var settings types.DeckhouseSettings
-	var modeObj Mode
 	moduleEnabled := true
 	for _, opt := range opts {
 		switch fn := opt.(type) {
@@ -53,28 +52,30 @@ func NewTestConfig(opts ...interface{}) Config {
 				RegistrySettings: registrySettings,
 			},
 		}
-		remote := types.Data{}
-		remote.FromRegistrySettings(registrySettings)
-		modeObj = &DirectMode{Remote: remote}
-		// UpdateModuleEnabled is ignored for Direct mode (module always enabled)
 		moduleEnabled = true
-
-	default: // Unmanaged mode
+	default:
 		settings = types.DeckhouseSettings{
 			Mode: registry_const.ModeUnmanaged,
 			Unmanaged: &types.UnmanagedModeSettings{
 				RegistrySettings: registrySettings,
 			},
 		}
-		remote := types.Data{}
-		remote.FromRegistrySettings(registrySettings)
-		modeObj = &UnmanagedMode{Remote: remote}
 	}
 
+	settings, err := prepareDeckhouseSettings(&settings, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare mode settings
+	modeSettings, err := NewModeSettings(settings)
+	if err != nil {
+		panic(err)
+	}
 	return Config{
-		Mode:          modeObj,
-		ModuleEnabled: moduleEnabled,
-		Settings:      settings,
+		Settings:          modeSettings,
+		DeckhouseSettings: settings,
+		ModuleEnabled:     moduleEnabled,
 	}
 }
 

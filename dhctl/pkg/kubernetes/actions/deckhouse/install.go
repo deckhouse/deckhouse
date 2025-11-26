@@ -291,11 +291,10 @@ func CreateDeckhouseManifests(
 	}
 
 	// Registry secrets
-	registryBulder := cfg.Registry.
-		ConfigBuilder().
-		WithPKI(registry.NewClusterPKIManager(kubeCl))
-
-	deckhouseRegistrySecretData, err := registryBulder.DeckhouseRegistrySecretData(ctx)
+	registryManifest := cfg.Registry.Manifest()
+	registryPKI := registry.NewClusterPKIManager(kubeCl)
+	deckhouseRegistrySecretData, err := registryManifest.DeckhouseRegistrySecretData(
+		func() (registry.PKI, error) { return registryPKI.Get(ctx) })
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +311,7 @@ func CreateDeckhouseManifests(
 		},
 	})
 
-	isExist, registryBashibleConfigSecretData, err := registryBulder.RegistryBashibleConfigSecretData(ctx)
+	isExist, registryBashibleConfigSecretData, err := registryManifest.RegistryBashibleConfigSecretData()
 	if err != nil {
 		return nil, err
 	}

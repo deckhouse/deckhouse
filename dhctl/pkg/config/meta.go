@@ -319,7 +319,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	}
 
 	registryData := m.Registry.
-		ConfigBuilder().
+		Manifest().
 		KubeadmTplCtx()
 
 	result["registry"] = registryData
@@ -370,10 +370,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
+	registryPKI := registry_config.NewLazyPKIGenerator()
 	registryData, err := m.Registry.
-		ConfigBuilder().
-		WithPKI(registry_config.NewLazyPKIGenerator()).
-		BashibleTplCtx(context.TODO())
+		Manifest().
+		BashibleTplCtx(
+			func() (registry_config.PKI, error) { return registryPKI.Get() })
 	if err != nil {
 		return nil, err
 	}

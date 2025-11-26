@@ -18,13 +18,20 @@ import (
 	"strings"
 )
 
-var (
+const (
 	SchemeHTTP      SchemeType = "HTTP"
 	SchemeHTTPS     SchemeType = "HTTPS"
-	LicenseUsername            = "license-token"
+	CRIContainerdV1 CRIType    = "Containerd"
+	CRIContainerdV2 CRIType    = "ContainerdV2"
+
+	LicenseUsername = "license-token"
+
+	CEImagesRepo = "registry.deckhouse.io/deckhouse/ce"
+	CEScheme     = SchemeHTTPS
 )
 
 type SchemeType = string
+type CRIType = string
 
 func SchemeFromString(scheme string) SchemeType {
 	if strings.EqualFold(scheme, SchemeHTTP) {

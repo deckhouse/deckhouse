@@ -236,8 +236,8 @@ func TestPrepareRegistry(t *testing.T) {
 	t.Run("Registry from default", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
 		t.Run("Registry CE edition config", func(t *testing.T) {
-			registry := cfg.Registry.Mode.RemoteData()
-			require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
+			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+			registry := cfg.Registry.Settings.Remote
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Password, "")
@@ -253,8 +253,8 @@ func TestPrepareRegistry(t *testing.T) {
 				"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
 			},
 		})
-		registry := cfg.Registry.Mode.RemoteData()
-		require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
 		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 		require.Equal(t, registry.Scheme, "HTTPS")
 		require.Equal(t, registry.Username, "a")
@@ -284,8 +284,8 @@ spec:
 `,
 			},
 		})
-		registry := cfg.Registry.Mode.RemoteData()
-		require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
 		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 		require.Equal(t, registry.Scheme, "HTTPS")
 		require.Equal(t, registry.Username, "test-user")

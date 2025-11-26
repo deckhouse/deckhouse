@@ -14,7 +14,6 @@
 package registry
 
 import (
-	"context"
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -23,156 +22,186 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
 
-var (
-	_ Mode = &DirectMode{}
-	_ Mode = &UnmanagedMode{}
-)
-
-type Mode interface {
-	Mode() string
-	IsModuleRequired() bool
-	RemoteImagesRepo() string
-	InClusterImagesRepo() string
-	RemoteData() types.Data
-	InClusterData(ctx context.Context, pki PKIProvider) (types.Data, error)
-	BashibleMirrors(
-		ctx context.Context,
-		pki PKIProvider,
-	) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error)
-}
-
-type DirectMode struct {
+type ModeSettings struct {
+	Mode   registry_const.ModeType
 	Remote types.Data
 }
 
-type UnmanagedMode struct {
-	Remote types.Data
+func NewModeSettings(settings types.DeckhouseSettings) (ModeSettings, error) {
+	switch {
+	case settings.Direct != nil:
+		remote := types.Data{}
+		remote.FromRegistrySettings(settings.Direct.RegistrySettings)
+		return ModeSettings{
+			Mode:   registry_const.ModeDirect,
+			Remote: remote,
+		}, nil
+	case settings.Unmanaged != nil:
+		remote := types.Data{}
+		remote.FromRegistrySettings(settings.Unmanaged.RegistrySettings)
+		return ModeSettings{
+			Mode:   registry_const.ModeUnmanaged,
+			Remote: remote,
+		}, nil
+	}
+	return ModeSettings{}, ErrUnknownMode
 }
 
-func (m *DirectMode) Mode() registry_const.ModeType {
-	return registry_const.ModeDirect
+func (s ModeSettings) ToModel() ModeModel {
+	switch s.Mode {
+	case registry_const.ModeDirect:
+		return s.directModel()
+	default:
+		return s.unmanagedModel()
+	}
 }
 
-func (m *DirectMode) IsModuleRequired() bool {
-	return true
+func (s ModeSettings) directModel() ModeModel {
+	return ModeModel{
+		ModuleRequired:      true,
+		Mode:                registry_const.ModeDirect,
+		InClusterImagesRepo: registry_const.HostWithPath,
+		RemoteImagesRepo:    s.Remote.ImagesRepo,
+		RemoteData:          s.Remote,
+	}
 }
 
-func (m *DirectMode) RemoteImagesRepo() string {
-	return m.Remote.ImagesRepo
+func (s ModeSettings) unmanagedModel() ModeModel {
+	return ModeModel{
+		ModuleRequired:      false,
+		Mode:                registry_const.ModeUnmanaged,
+		InClusterImagesRepo: s.Remote.ImagesRepo,
+		RemoteImagesRepo:    s.Remote.ImagesRepo,
+		RemoteData:          s.Remote,
+	}
 }
 
-func (m *DirectMode) InClusterImagesRepo() string {
-	return registry_const.HostWithPath
+type ModeModel struct {
+	ModuleRequired      bool
+	Mode                registry_const.ModeType
+	InClusterImagesRepo string
+	RemoteImagesRepo    string
+	RemoteData          types.Data
 }
 
-func (m *DirectMode) RemoteData() types.Data {
-	return m.Remote
+func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (types.Data, error) {
+	switch m.Mode {
+	case registry_const.ModeDirect:
+		return m.directInClusterData(getPKI)
+	default:
+		return m.unmanagedInClusterData()
+	}
 }
 
-func (m *DirectMode) InClusterData(
-	ctx context.Context,
-	pkiProvider PKIProvider,
-) (types.Data, error) {
-	pki, err := pkiProvider.Get(ctx)
+func (m ModeModel) BashibleMirrors() (
+	ctxHosts map[string]bashible.ContextHosts,
+	cfgHosts map[string]bashible.ConfigHosts,
+) {
+	switch m.Mode {
+	case registry_const.ModeDirect:
+		return m.directBashibleMirrors()
+	default:
+		return m.unmanagedBashibleMirrors()
+	}
+}
+
+func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (types.Data, error) {
+	pki, err := getPKI()
 	if err != nil {
 		return types.Data{}, err
 	}
 
-	remote := m.RemoteData()
-
 	return types.Data{
 		ImagesRepo: registry_const.HostWithPath,
 		Scheme:     types.SchemeHTTPS,
-		Username:   remote.Username,
-		Password:   remote.Password,
+		Username:   m.RemoteData.Username,
+		Password:   m.RemoteData.Password,
 		CA:         pki.CA.Cert,
 	}, nil
 }
 
-func (m *DirectMode) BashibleMirrors(
-	_ context.Context,
-	_ PKIProvider,
-) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
-	host, path := m.Remote.AddressAndPath()
-	username, password := m.Remote.Username, m.Remote.Password
-	scheme := strings.ToLower(string(m.Remote.Scheme))
-	ca := m.Remote.CA
+func (m ModeModel) unmanagedInClusterData() (types.Data, error) {
+	return m.RemoteData, nil
+}
 
+func (m ModeModel) directBashibleMirrors() (
+	map[string]bashible.ContextHosts,
+	map[string]bashible.ConfigHosts,
+) {
+	host, path := m.RemoteData.AddressAndPath()
+	scheme := strings.ToLower(string(m.RemoteData.Scheme))
 	from := registry_const.PathRegexp
 	to := strings.TrimLeft(path, "/")
 
-	ctxMirrors := []bashible.ContextMirrorHost{{
+	ctxMirror := bashible.ContextMirrorHost{
 		Host:   host,
 		Scheme: scheme,
-		CA:     ca,
-		Auth:   bashible.ContextAuth{Username: username, Password: password},
+		CA:     m.RemoteData.CA,
+		Auth: bashible.ContextAuth{
+			Username: m.RemoteData.Username,
+			Password: m.RemoteData.Password,
+		},
 		Rewrites: []bashible.ContextRewrite{{
 			From: from,
 			To:   to,
 		}},
-	}}
+	}
 
-	cfgMirrors := []bashible.ConfigMirrorHost{{
+	cfgMirror := bashible.ConfigMirrorHost{
 		Host:   host,
 		Scheme: scheme,
-		CA:     ca,
-		Auth:   bashible.ConfigAuth{Username: username, Password: password},
+		CA:     m.RemoteData.CA,
+		Auth: bashible.ConfigAuth{
+			Username: m.RemoteData.Username,
+			Password: m.RemoteData.Password,
+		},
 		Rewrites: []bashible.ConfigRewrite{{
 			From: from,
 			To:   to,
 		}},
-	}}
-	return registry_const.Host, ctxMirrors, cfgMirrors, nil
+	}
+
+	return map[string]bashible.ContextHosts{
+			registry_const.Host: {
+				Mirrors: []bashible.ContextMirrorHost{ctxMirror}},
+		}, map[string]bashible.ConfigHosts{
+			registry_const.Host: {
+				Mirrors: []bashible.ConfigMirrorHost{cfgMirror}},
+		}
 }
 
-func (m *UnmanagedMode) Mode() registry_const.ModeType {
-	return registry_const.ModeUnmanaged
-}
+func (m ModeModel) unmanagedBashibleMirrors() (
+	map[string]bashible.ContextHosts,
+	map[string]bashible.ConfigHosts,
+) {
+	host, _ := m.RemoteData.AddressAndPath()
+	scheme := strings.ToLower(string(m.RemoteData.Scheme))
 
-func (m *UnmanagedMode) IsModuleRequired() bool {
-	return false
-}
-
-func (m *UnmanagedMode) RemoteImagesRepo() string {
-	return m.Remote.ImagesRepo
-}
-
-func (m *UnmanagedMode) InClusterImagesRepo() string {
-	return m.Remote.ImagesRepo
-}
-
-func (m *UnmanagedMode) RemoteData() types.Data {
-	return m.Remote
-}
-
-func (m *UnmanagedMode) InClusterData(
-	_ context.Context,
-	_ PKIProvider,
-) (types.Data, error) {
-	return m.Remote, nil
-}
-
-func (m *UnmanagedMode) BashibleMirrors(
-	_ context.Context,
-	_ PKIProvider,
-) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost, error) {
-	host, _ := m.Remote.AddressAndPath()
-	username, password := m.Remote.Username, m.Remote.Password
-	scheme := strings.ToLower(string(m.Remote.Scheme))
-	ca := m.Remote.CA
-
-	ctxMirrors := []bashible.ContextMirrorHost{{
+	ctxMirror := bashible.ContextMirrorHost{
 		Host:   host,
 		Scheme: scheme,
-		CA:     ca,
-		Auth:   bashible.ContextAuth{Username: username, Password: password},
-	}}
+		CA:     m.RemoteData.CA,
+		Auth: bashible.ContextAuth{
+			Username: m.RemoteData.Username,
+			Password: m.RemoteData.Password,
+		},
+	}
 
-	cfgMirrors := []bashible.ConfigMirrorHost{{
+	cfgMirror := bashible.ConfigMirrorHost{
 		Host:   host,
 		Scheme: scheme,
-		CA:     ca,
-		Auth:   bashible.ConfigAuth{Username: username, Password: password},
-	}}
-	return host, ctxMirrors, cfgMirrors, nil
+		CA:     m.RemoteData.CA,
+		Auth: bashible.ConfigAuth{
+			Username: m.RemoteData.Username,
+			Password: m.RemoteData.Password,
+		},
+	}
+
+	return map[string]bashible.ContextHosts{
+			host: {
+				Mirrors: []bashible.ContextMirrorHost{ctxMirror}},
+		}, map[string]bashible.ConfigHosts{
+			host: {
+				Mirrors: []bashible.ConfigMirrorHost{cfgMirror}},
+		}
 }

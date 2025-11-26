@@ -15,7 +15,6 @@
 package registry
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -28,78 +27,48 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
 )
 
-func NewConfigBuilder(mode Mode, moduleEnable bool) *ConfigBuilder {
-	return &ConfigBuilder{
-		mode:          mode,
+func NewManifestBuilder(modeModel ModeModel, moduleEnable bool) *ManifestBuilder {
+	return &ManifestBuilder{
+		modeModel:     modeModel,
 		moduleEnabled: moduleEnable,
 	}
 }
 
-func NewConfigBuilderWithPKI(mode Mode, moduleEnable bool, pki PKIProvider) *ConfigBuilderWithPKI {
-	return &ConfigBuilderWithPKI{
-		ConfigBuilder: ConfigBuilder{
-			mode:          mode,
-			moduleEnabled: moduleEnable,
-		},
-		pki: pki,
-	}
-}
-
-type ConfigBuilder struct {
-	mode          Mode
+type ManifestBuilder struct {
+	modeModel     ModeModel
 	moduleEnabled bool
 }
 
-type ConfigBuilderWithPKI struct {
-	ConfigBuilder
-	pki PKIProvider
-}
-
 // =======================
-// ConfigBuilder
+// Secrets
 // =======================
-func (cb *ConfigBuilder) KubeadmTplCtx() map[string]interface{} {
-	address, path := helpers.SplitAddressAndPath(cb.mode.InClusterImagesRepo())
-	return map[string]interface{}{
-		"address": address,
-		"path":    path,
-	}
-}
-
-func (cb *ConfigBuilder) WithPKI(pki PKIProvider) *ConfigBuilderWithPKI {
-	return NewConfigBuilderWithPKI(cb.mode, cb.moduleEnabled, pki)
-}
-
-// =======================
-// ConfigBuilderWithPKI
-// =======================
-func (cb *ConfigBuilderWithPKI) DeckhouseRegistrySecretData(ctx context.Context) (map[string][]byte, error) {
-	data, err := cb.mode.InClusterData(ctx, cb.pki)
+func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI func() (PKI, error)) (map[string][]byte, error) {
+	inClusterData, err := b.modeModel.InClusterData(getPKI)
 	if err != nil {
 		return nil, err
 	}
 
-	address, path := data.AddressAndPath()
-	dockerCfg, err := data.DockerCfg()
+	address, path := inClusterData.AddressAndPath()
+	dockerCfg, err := inClusterData.DockerCfg()
 	if err != nil {
 		return nil, err
 	}
 	regCfg := deckhouse_registry.Config{
 		Address:      address,
 		Path:         path,
-		Scheme:       strings.ToLower(string(data.Scheme)),
-		CA:           data.CA,
+		Scheme:       strings.ToLower(string(inClusterData.Scheme)),
+		CA:           inClusterData.CA,
 		DockerConfig: dockerCfg,
 	}
 	return regCfg.ToMap(), nil
 }
 
-func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData(ctx context.Context) (bool, map[string][]byte, error) {
-	if !cb.moduleEnabled {
+func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
+	if !b.moduleEnabled {
 		return false, nil, nil
 	}
 
-	_, cfg, err := cb.bashibleContextAndConfig(ctx)
+	_, cfg, err := b.bashibleContextAndConfig()
 	if err != nil {
 		return true, nil, err
 	}
@@ -111,8 +80,19 @@ func (cb *ConfigBuilderWithPKI) RegistryBashibleConfigSecretData(ctx context.Con
 	return true, map[string][]byte{"config": cfgYaml}, nil
 }
 
-func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]interface{}, error) {
-	bashibleCtx, _, err := cb.bashibleContextAndConfig(ctx)
+// =======================
+// Context
+// =======================
+func (b *ManifestBuilder) KubeadmTplCtx() map[string]interface{} {
+	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
+	return map[string]interface{}{
+		"address": address,
+		"path":    path,
+	}
+}
+
+func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]interface{}, error) {
+	bashibleCtx, _, err := b.bashibleContextAndConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +102,7 @@ func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]
 		return nil, err
 	}
 
-	initCfg, err := cb.pki.Get(ctx)
+	initCfg, err := getPKI()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PKI: %w", err)
 	}
@@ -136,27 +116,20 @@ func (cb *ConfigBuilderWithPKI) BashibleTplCtx(ctx context.Context) (map[string]
 	return mapCtx, nil
 }
 
-func (cb *ConfigBuilderWithPKI) bashibleContextAndConfig(ctx context.Context) (bashible.Context, bashible.Config, error) {
-	mirrorHost, ctxMirrors, cfgMirrors, err := cb.mode.BashibleMirrors(ctx, cb.pki)
-	if err != nil {
-		return bashible.Context{}, bashible.Config{}, err
-	}
+func (b *ManifestBuilder) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
+	ctxMirrors, cfgMirrors := b.modeModel.BashibleMirrors()
 
 	bashibleCtx := bashible.Context{
-		Mode:                 cb.mode.Mode(),
-		ImagesBase:           cb.mode.InClusterImagesRepo(),
-		RegistryModuleEnable: cb.moduleEnabled,
-		Hosts: map[string]bashible.ContextHosts{
-			mirrorHost: {Mirrors: ctxMirrors},
-		},
+		Mode:                 b.modeModel.Mode,
+		ImagesBase:           b.modeModel.InClusterImagesRepo,
+		RegistryModuleEnable: b.moduleEnabled,
+		Hosts:                ctxMirrors,
 	}
 
 	bashibleCfg := bashible.Config{
-		Mode:       cb.mode.Mode(),
-		ImagesBase: cb.mode.InClusterImagesRepo(),
-		Hosts: map[string]bashible.ConfigHosts{
-			mirrorHost: {Mirrors: cfgMirrors},
-		},
+		Mode:       b.modeModel.Mode,
+		ImagesBase: b.modeModel.InClusterImagesRepo,
+		Hosts:      cfgMirrors,
 	}
 
 	version, err := pki.ComputeHash(&bashibleCfg)

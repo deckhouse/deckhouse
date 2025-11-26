@@ -23,114 +23,97 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 )
 
-const (
-	CRIContainerdV1   CRIType = "Containerd"
-	CRIContainerdV2   CRIType = "ContainerdV2"
-	DefaultImagesRepo         = "registry.deckhouse.io/deckhouse/ce"
-)
-
 var (
-	DefaultScheme = types.SchemeHTTPS
-	SupportedCRI  = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	SupportedCRI = []types.CRIType{types.CRIContainerdV1, types.CRIContainerdV2}
 )
-
-type CRIType = string
 
 type Config struct {
-	Mode          Mode
-	ModuleEnabled bool
-	Settings      types.DeckhouseSettings
+	Settings          ModeSettings
+	DeckhouseSettings types.DeckhouseSettings
+	ModuleEnabled     bool
 }
 
-func (cfg *Config) ConfigBuilder() *ConfigBuilder {
-	return NewConfigBuilder(cfg.Mode, cfg.ModuleEnabled)
+func (c *Config) Manifest() *ManifestBuilder {
+	return NewManifestBuilder(c.Settings.ToModel(), c.ModuleEnabled)
 }
 
-func (cfg *Config) DeckhouseSettings() (bool, map[string]interface{}, error) {
-	if !cfg.ModuleEnabled {
+func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) {
+	if !c.ModuleEnabled {
 		return false, nil, nil
 	}
-	ret, err := cfg.Settings.ToMap()
-	return true, ret, err
+	mapSettings, err := c.DeckhouseSettings.ToMap()
+	return true, mapSettings, err
 }
 
 func NewConfig(
 	deckhouseSettings *types.DeckhouseSettings,
 	initConfig *types.InitConfig,
-	defaultCRI string,
+	defaultCRI types.CRIType,
 ) (Config, error) {
-	// if deckhouseSettings != nil && initConfig != nil {
-	// 	return Config{}, fmt.Errorf("conflicting registry settings: specify either 'initConfig' or 'deckhouseSettings', not both")
-	// }
-
-	var settings types.DeckhouseSettings
-	var mode Mode
-	moduleEnabled := false
-
-	// Prepare deckhouse settings
-	switch {
-	case deckhouseSettings != nil:
-		settings = *deckhouseSettings
-	case initConfig != nil:
-		registrySettings, err := initConfig.ToRegistrySettings()
-		if err != nil {
-			return Config{}, fmt.Errorf("failed to get registry settings from initConfig: %w", err)
-		}
-		settings = types.DeckhouseSettings{
-			Mode: registry_const.ModeUnmanaged,
-			Unmanaged: &types.UnmanagedModeSettings{
-				RegistrySettings: registrySettings,
-			},
-		}
-	default:
-		settings = types.DeckhouseSettings{
-			Mode: registry_const.ModeUnmanaged,
-			Unmanaged: &types.UnmanagedModeSettings{
-				RegistrySettings: types.RegistrySettings{
-					ImagesRepo: DefaultImagesRepo,
-					Scheme:     DefaultScheme,
-				},
-			},
-		}
+	moduleEnabled := slices.Contains(SupportedCRI, defaultCRI)
+	settings, err := prepareDeckhouseSettings(deckhouseSettings, initConfig)
+	if err != nil {
+		return Config{}, err
 	}
-
-	settings.Correct()
-	if err := settings.Validate(); err != nil {
-		return Config{}, fmt.Errorf("failed to validate registry settings: %w", err)
-	}
-
-	// Prepare mode settings
-	switch {
-	case settings.Direct != nil:
-		remote := types.Data{}
-		remote.FromRegistrySettings(settings.Direct.RegistrySettings)
-		mode = &DirectMode{
-			Remote: remote,
-		}
-	case settings.Unmanaged != nil:
-		remote := types.Data{}
-		remote.FromRegistrySettings(settings.Unmanaged.RegistrySettings)
-		mode = &UnmanagedMode{
-			Remote: remote,
-		}
-	default:
-		return Config{}, ErrUnknownMode
+	mode, err := NewModeSettings(settings)
+	if err != nil {
+		return Config{}, err
 	}
 
 	// Check module enable
-	moduleEnabled = slices.Contains(SupportedCRI, defaultCRI)
-	if mode.IsModuleRequired() && !moduleEnabled {
+	if mode.ToModel().ModuleRequired && !moduleEnabled {
 		return Config{}, fmt.Errorf(
 			"registry module is required for mode '%s', but defaultCRI='%s' is not supported; supported: %v",
-			mode.Mode(),
+			mode.Mode,
 			defaultCRI,
 			SupportedCRI,
 		)
 	}
 
 	return Config{
-		Mode:          mode,
-		ModuleEnabled: moduleEnabled,
-		Settings:      settings,
+		Settings:          mode,
+		DeckhouseSettings: settings,
+		ModuleEnabled:     moduleEnabled,
 	}, nil
+}
+
+func prepareDeckhouseSettings(
+	deckhouseSettings *types.DeckhouseSettings,
+	initConfig *types.InitConfig,
+) (types.DeckhouseSettings, error) {
+	// Use deckhouse settings if available
+	if deckhouseSettings != nil {
+		settings := *deckhouseSettings
+		settings.Correct()
+		if err := settings.Validate(); err != nil {
+			return types.DeckhouseSettings{}, fmt.Errorf("validate deckhouse settings: %w", err)
+		}
+		return settings, nil
+	}
+
+	// Build registry settings from init config or use defaults
+	registrySettings := types.RegistrySettings{
+		ImagesRepo: types.CEImagesRepo,
+		Scheme:     types.CEScheme,
+	}
+
+	if initConfig != nil {
+		var err error
+		registrySettings, err = initConfig.ToRegistrySettings()
+		if err != nil {
+			return types.DeckhouseSettings{}, fmt.Errorf("get registry settings from init config: %w", err)
+		}
+	}
+
+	settings := types.DeckhouseSettings{
+		Mode: registry_const.ModeUnmanaged,
+		Unmanaged: &types.UnmanagedModeSettings{
+			RegistrySettings: registrySettings,
+		},
+	}
+	settings.Correct()
+	if err := settings.Validate(); err != nil {
+		return settings, fmt.Errorf("validate deckhouse settings: %w", err)
+	}
+	return settings, nil
 }

@@ -78,12 +78,12 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 
 func (c *DeckhouseInstaller) GetInclusteImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Mode.InClusterImagesRepo(), tag)
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
 }
 
 func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Mode.RemoteImagesRepo(), tag)
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -143,7 +143,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 	hasRegistrySettings, registrySettings, err := metaConfig.
-		Registry.DeckhouseSettings()
+		Registry.DeckhouseSettingsToMap()
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare registry settings for ModuleConfig deckhouse: %w", err)
 	}
