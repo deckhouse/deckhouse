@@ -652,6 +652,11 @@ data:
         fi
           echo "Disruption required, asking for approval."
           echo "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
+          # To get approve from update_approvel hook, two conditions must be satisfied:
+          # - update.node.deckhouse.io/approved= annotation exists (needed by approveDisruptions func)
+          # - node checksum must be differemt from nodegroup checksum or empty (to not unset annotations listed above)
+          # and we cannot run it as ngc inside bashible, because this action must be triggered by node labels change, and mig-manager/partition-manager
+          # are not present on the node
           kubectl \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
             annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= node.deckhouse.io/configuration-checksum= update.node.deckhouse.io/approved= --overwrite \
