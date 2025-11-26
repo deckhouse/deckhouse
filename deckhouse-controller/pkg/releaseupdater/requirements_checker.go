@@ -447,8 +447,9 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
 					ModuleEnabled = true
+				} else {
+					c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
 				}
-				c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
 				break
 			}
 		}
