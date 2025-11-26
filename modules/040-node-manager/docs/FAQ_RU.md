@@ -471,7 +471,7 @@ spec:
 
 Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](cr.html#nodegroup).
 
-В случае изменения параметров `InstanceClass` или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит. Количество заказываемых одновременно `MachineDeployment` определяется параметром `cloudInstances.maxSurgePerZone`.
+При изменении параметров `InstanceClass` или `instancePrefix` будет происходить процесс, аналогичный обновлению Deployment в Kubernetes (при изменении `InstanceClass` будет создан новый MachineSet, а при изменении `instancePrefix` — новый MachineDeployment). Новые инстансы будут создаваться в соответствии со значением [параметра `cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone). По мере их создания старые инстансы будут постепенно удаляться с предварительным выполнением операции drain.
 
 При обновлении, которое требует прерывания работы узла (disruption update), выполняется процесс вытеснения подов с узла. Если какой-либо под не может быть вытеснен, попытка повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После истечения этого времени, поды, которые не удалось вытеснить, удаляются принудительно.
 
