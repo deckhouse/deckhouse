@@ -57,7 +57,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 ```bash
 URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
 ROOT_VERSION=1
-ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | cut -c 1-128)
+ROOT_SHA512=4f2323bdda2bef5c15df2b1cd129d4514c46c963e889bfaf1924dd3e7f4cfcedf80798c83dfb7b2a6a3fd310f37c30236b456b9b16282e0e708ec2cd874789a6
 REPO=d8-installer
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
@@ -116,7 +116,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 ```bash
 URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
 ROOT_VERSION=1
-ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | cut -c 1-128)
+ROOT_SHA512=4f2323bdda2bef5c15df2b1cd129d4514c46c963e889bfaf1924dd3e7f4cfcedf80798c83dfb7b2a6a3fd310f37c30236b456b9b16282e0e708ec2cd874789a6
 REPO=d8-installer
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
