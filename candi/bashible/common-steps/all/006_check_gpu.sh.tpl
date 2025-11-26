@@ -38,8 +38,36 @@ function compare() {
 }
 required_version="450.80.02"
 
+is_valid_greater_than() {
+    local value="$1"
+    local threshold="$2"
+    
+    if [[ -z "$value" ]]; then
+        return 1
+    fi
+    
+    if ! [[ "$value" =~ ^[0-9]+\.[0-9]$ ]]; then
+        return 1
+    fi
+    
+    if (( $(echo "$value > $threshold" | bc -l) )); then
+        return 0
+    else
+        return 1
+    fi
+}
+
 version=$(egrep -E -o "[0-9]{3,4}[.][0-9]{1,3}[.][0-9]{1,3}" /proc/driver/nvidia/version)
 compare $version $required_version
+
+got_capability=$(nvidia-smi --query-gpu="compute_cap" --format=csv,noheader)
+if is_valid_greater_than "$version" "$threshold"; then
+    echo "compute_cap ${got_capability} is valid"
+else
+    echo "compute_cap ${got_capability} is invalid"
+    exit 1
+fi
+
 
   {{- end }}
 {{- end }}
