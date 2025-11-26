@@ -2,7 +2,7 @@
 cpu: 1m
 memory: 20Mi
 {{- end }}
-{{- $port := "4205" -}}
+{{- $port := "9102" -}}
 
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -62,11 +62,9 @@ spec:
       - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
         name: oom-kills-exporter
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
-        env:
-        - name: PROMETHEUS_SCRAPE_INTERVAL
-          value: {{ .Values.global.discovery.prometheusScrapeInterval | default 30 | quote }}
         args:
-          - "--listen-address=0.0.0.0:4205"
+          - -logtostderr
+          - -v=5
         volumeMounts:
           - name: kmsg
             mountPath: /dev/kmsg
@@ -111,6 +109,16 @@ spec:
         ports:
         - containerPort: {{ $port }}
           name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 9102
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 9102
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
