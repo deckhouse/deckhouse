@@ -69,9 +69,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 
 		logger.LogInfoLn("Check started ...\n")
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
+		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
 		if err := terminal.AskBastionPassword(); err != nil {
 			return err
 		}
