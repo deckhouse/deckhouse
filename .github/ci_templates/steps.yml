@@ -215,9 +215,14 @@
 {!{ define "werf_install_step" }!}
 # <template: werf_install_step>
 - name: Install werf CLI
-  uses: {!{ index (ds "actions") "werf/actions/install" }!}
-  with:
-    version: ${{env.WERF_VERSION}}
+  shell: bash
+  run: |
+    mkdir -p ~/bin
+    curl --fail -sSL -o ~/bin/werf \
+    -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+    "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+    chmod +x ~/bin/werf
+    echo "$HOME/bin" >> $GITHUB_PATH
 # </template: werf_install_step>
 {!{- end -}!}
 
