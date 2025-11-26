@@ -28,9 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -42,14 +41,17 @@ type nodeGroupGetter interface {
 }
 
 type kubeNgGetter struct {
-	kubeCl *client.KubernetesClient
+	kubeProvider kubernetes.KubeClientProviderWithCtx
 }
 
 func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
-		var err error
-		ngs, err = entity.GetNodeGroups(ctx, n.kubeCl)
+		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+		ngs, err = entity.GetNodeGroups(ctx, kubeCl)
 		return err
 	})
 
@@ -80,8 +82,12 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Event, error) {
 	var list *eventsv1.EventList
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
-		var err error
-		list, err = n.kubeCl.EventsV1().Events("default").List(ctx, metav1.ListOptions{
+		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+
+		list, err = kubeCl.EventsV1().Events("default").List(ctx, metav1.ListOptions{
 			FieldSelector: "reason=MachineFailed",
 			TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
 		})
@@ -97,19 +103,19 @@ func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Even
 }
 
 type clusterIsBootstrapCheck struct {
-	ngGetter nodeGroupGetter
-	logger   log.Logger
-	kubeCl   *client.KubernetesClient
+	ngGetter       nodeGroupGetter
+	loggerProvider log.LoggerProvider
+	kubeProvider   kubernetes.KubeClientProviderWithCtx
 
 	startCheckTime time.Time
 	attempts       int32
 }
 
-func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, kubeCl *client.KubernetesClient) *clusterIsBootstrapCheck {
+func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, params constructorParams) *clusterIsBootstrapCheck {
 	return &clusterIsBootstrapCheck{
-		ngGetter: ngGetter,
-		kubeCl:   kubeCl,
-		logger:   log.GetDefaultLogger(),
+		ngGetter:       ngGetter,
+		kubeProvider:   params.kubeProvider,
+		loggerProvider: params.loggerProvider,
 
 		startCheckTime: time.Now().Add(1 * time.Minute),
 		// start from 1 for prevent output table at first time because
@@ -147,7 +153,12 @@ func (n *clusterIsBootstrapCheck) lastEvents(ctx context.Context, lastTime time.
 func (n *clusterIsBootstrapCheck) hasBootstrappedCM(ctx context.Context) (bool, error) {
 	hasCm := false
 	err := retry.NewSilentLoop("get is-bootstrapped cm", 3, 3*time.Second).RunContext(ctx, func() error {
-		_, err := n.kubeCl.CoreV1().ConfigMaps("kube-system").
+		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+
+		_, err = kubeCl.CoreV1().ConfigMaps("kube-system").
 			Get(ctx, "d8-cluster-is-bootstraped", metav1.GetOptions{})
 		if err == nil {
 			hasCm = true
@@ -170,9 +181,11 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
 		return
 	}
 
+	logger := n.loggerProvider()
+
 	ngs, err := n.ngGetter.NodeGroups(ctx)
 	if err != nil {
-		n.logger.LogDebugF("Error while getting node groups: %v", err)
+		logger.LogWarnF("Error while getting node groups: %v", err)
 		return
 	}
 
@@ -181,10 +194,10 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
 	}
 
 	fs := "%-30s %-8s %-8s %-9s %-8s %-17s\n"
-	n.logger.LogInfoF(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
+	logger.LogInfoF(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
 	for _, ng := range ngs {
 		stat := ng.Status
-		n.logger.LogInfoF(fs,
+		logger.LogInfoF(fs,
 			ng.Name,
 			fmt.Sprint(stat.Ready),
 			fmt.Sprint(stat.Nodes),
@@ -195,14 +208,16 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
 }
 
 func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
+	logger := n.loggerProvider()
+
 	if time.Now().Before(n.startCheckTime) {
-		n.logger.LogDebugF("Waiting 1 minute for stabilizing node group events\n")
+		logger.LogDebugF("Waiting 1 minute for stabilizing node group events\n")
 		return
 	}
 
 	events, err := n.lastEvents(ctx, 1*time.Minute)
 	if err != nil {
-		n.logger.LogDebugF("Error while getting last events: %v", err)
+		logger.LogDebugF("Error while getting last events: %v", err)
 		return
 	}
 
@@ -210,9 +225,9 @@ func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
 		return
 	}
 
-	n.logger.LogErrorF("\nMachine Failures:\n")
+	logger.LogErrorF("\nMachine Failures:\n")
 	for _, e := range events {
-		n.logger.LogErrorF("\t%s\n", e.Note)
+		logger.LogErrorF("\t%s\n", e.Note)
 	}
 }
 
@@ -225,28 +240,30 @@ func (n *clusterIsBootstrapCheck) Single() bool {
 }
 
 func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
+	logger := n.loggerProvider()
+
 	defer func() {
 		n.attempts++
-		n.logger.LogInfoF("\n")
+		logger.LogInfoF("\n")
 	}()
 
-	n.logger.LogInfoF("Waiting for the cluster to be in the 'bootstrapped' state:\n")
+	logger.LogInfoF("Waiting for the cluster to be in the 'bootstrapped' state:\n")
 
 	notBootstrappedMsg := "The cluster has not been bootstrapped yet. Waiting for at least one non-master node in Ready status.\n"
 
 	ok, err := n.hasBootstrappedCM(ctx)
 	if err != nil {
-		n.logger.LogDebugF("Error while checking cluster state: %v\n", err)
-		n.logger.LogInfoF(notBootstrappedMsg)
+		logger.LogDebugF("Error while checking cluster state: %v\n", err)
+		logger.LogInfoF(notBootstrappedMsg)
 		return false, nil
 	}
 
 	if ok {
-		n.logger.LogInfoF("The cluster is bootstrapped. Waiting for the creation of resources.\n")
+		logger.LogInfoF("The cluster is bootstrapped. Waiting for the creation of resources.\n")
 		return true, nil
 	}
 
-	n.logger.LogInfoF(notBootstrappedMsg)
+	logger.LogInfoF(notBootstrappedMsg)
 
 	n.outputNodeGroups(ctx)
 
@@ -255,12 +272,11 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func tryToGetClusterIsBootstrappedChecker(
-	kubeCl *client.KubernetesClient,
-	_ *config.MetaConfig,
-	r *template.Resource) (Checker, error) {
+func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params constructorParams) (Checker, error) {
+	logger := params.loggerProvider()
+
 	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
-		log.DebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
+		logger.LogDebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
 			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
 		return nil, nil
 	}
@@ -271,51 +287,51 @@ func tryToGetClusterIsBootstrappedChecker(
 	}
 
 	if ng.Spec.NodeType != "CloudEphemeral" {
-		log.DebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
+		logger.LogDebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
 		return nil, nil
 	}
 
 	if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
-		log.DebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
+		logger.LogDebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
 		return nil, nil
 	}
 
 	if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
-		log.DebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
+		logger.LogDebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
 			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
 		return nil, nil
 	}
 
-	log.DebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
-	return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
+	logger.LogDebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
+
+	ngGetter := &kubeNgGetter{kubeProvider: params.kubeProvider}
+	return newClusterIsBootstrapCheck(ngGetter, params), nil
 }
 
 func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
 	content, err := o.MarshalJSON()
 	if err != nil {
-		log.ErrorF("Can not marshal nodegroup %s: %v", o.GetName(), err)
-		return nil, err
+		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
 	}
 
 	var ng v1.NodeGroup
 
 	err = json.Unmarshal(content, &ng)
 	if err != nil {
-		log.ErrorF("Can not unmarshal nodegroup %s: %v", o.GetName(), err)
-		return nil, err
+		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
 	}
 
 	return &ng, nil
 }
 
-func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (Checker, error) {
-	if metaConfig == nil {
+func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) (Checker, error) {
+	if params.metaConfig == nil {
 		return nil, nil
 	}
 
-	for _, terraNg := range metaConfig.GetTerraNodeGroups() {
+	for _, terraNg := range params.metaConfig.GetTerraNodeGroups() {
 		if terraNg.Replicas > 0 {
-			checker := newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl)
+			checker := newClusterIsBootstrapCheck(&kubeNgGetter{kubeProvider: params.kubeProvider}, params)
 			return checker, nil
 		}
 	}

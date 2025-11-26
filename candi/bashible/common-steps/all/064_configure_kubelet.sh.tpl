@@ -328,9 +328,20 @@ kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-{{- $max_pods := 110 }}
-{{- if hasKey .nodeGroup "kubelet" }}
-  {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
+{{- $max_pods := 120 }}
+{{- if (((.nodeGroup).kubelet).maxPods) }}
+  {{- $max_pods = .nodeGroup.kubelet.maxPods | int }}
+{{- else }}
+  {{- $prefix := .normal.podSubnetNodeCIDRPrefix | default "24" | int }}
+  {{- if ge $prefix 24 }}
+    {{- $max_pods = 120 }}
+  {{- else if eq $prefix 23 }}
+    {{- $max_pods = 250 }}
+  {{- else if eq $prefix 22 }}
+    {{- $max_pods = 500 }}
+  {{- else if le $prefix 21 }}
+    {{- $max_pods = 1000 }}
+  {{- end }}
 {{- end }}
 maxPods: {{ $max_pods }}
 nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s

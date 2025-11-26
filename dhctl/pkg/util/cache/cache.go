@@ -29,7 +29,7 @@ import (
 
 // NewTempStateCache creates new cache instance in tmp directory
 func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
+	cacheDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
 	return NewStateCache(cacheDir)
 }
 

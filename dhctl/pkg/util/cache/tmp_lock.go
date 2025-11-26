@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -84,7 +85,7 @@ func TmpDirLockAlreadyAcquired(tmpDir string) error {
 	return getTmpLockedByErr(existsIn, tmpDir)
 }
 
-func AcquireTmpDirLock(tmpDir string, loggerProvider LoggerProvider, cmdName string) (ReleaseLockFunc, error) {
+func AcquireTmpDirLock(tmpDir string, loggerProvider log.LoggerProvider, cmdName string) (ReleaseLockFunc, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
@@ -107,7 +108,7 @@ func AcquireTmpDirLock(tmpDir string, loggerProvider LoggerProvider, cmdName str
 	return func() {
 		err := os.Remove(lockFullPath)
 		if err != nil && !os.IsNotExist(err) {
-			safeLoggerProvider(loggerProvider).LogWarnF("Cannot remove tmp dir lock '%s': %v\n", lockFullPath, err)
+			log.SafeProvideLogger(loggerProvider).LogWarnF("Cannot remove tmp dir lock '%s': %v\n", lockFullPath, err)
 		}
 	}, nil
 }

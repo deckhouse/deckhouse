@@ -86,9 +86,7 @@ func (c *AutoConverger) convergerLoop(ctx *convergectx.Context, shutdownCh <-cha
 		RemoveTombStone: true,
 		TmpDir:          c.params.TmpDir,
 		DefaultTmpDir:   c.params.TmpDir, // do not remove root tmp dir
-		LoggerProvider: func() log.Logger {
-			return c.params.Logger
-		},
+		LoggerProvider:  log.SimpleLoggerProvider(c.params.Logger),
 	})
 
 	c.runConverge(ctx, clearTmp)

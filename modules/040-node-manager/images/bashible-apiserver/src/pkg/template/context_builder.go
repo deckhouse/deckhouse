@@ -147,12 +147,13 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		versionMapWrapper: versionMapFromMap(cb.versionMap),
 		RunType:           "Normal",
 		Normal: normal{
-			ClusterDomain:      cb.clusterInputData.ClusterDomain,
-			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
-			BootstrapTokens:    cb.clusterInputData.BootstrapTokens,
-			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
-			KubernetesCA:       cb.clusterInputData.KubernetesCA,
-			ModuleSourcesCA:    cb.moduleSourcesCA,
+			PodSubnetNodeCIDRPrefix: cb.clusterInputData.PodSubnetNodeCIDRPrefix,
+			ClusterDomain:           cb.clusterInputData.ClusterDomain,
+			ClusterDNSAddress:       cb.clusterInputData.ClusterDNSAddress,
+			BootstrapTokens:         cb.clusterInputData.BootstrapTokens,
+			ApiserverEndpoints:      cb.clusterInputData.APIServerEndpoints,
+			KubernetesCA:            cb.clusterInputData.KubernetesCA,
+			ModuleSourcesCA:         cb.moduleSourcesCA,
 		},
 		Registry:                   cb.registryData,
 		Images:                     cb.imagesDigests,
@@ -456,15 +457,17 @@ type bundleK8sVersionContext struct {
 }
 
 type normal struct {
-	ClusterDomain      string            `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	BootstrapTokens    map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
-	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
+	PodSubnetNodeCIDRPrefix string            `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string            `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens         map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	ApiserverEndpoints      []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA            string            `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA         map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
 type inputData struct {
+	PodSubnetNodeCIDRPrefix    string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
 	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
 	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`

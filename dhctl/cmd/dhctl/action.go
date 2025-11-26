@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -43,8 +42,10 @@ type (
 func doNothingOnShutdownFunc() {}
 
 type actionIniterParams struct {
-	tmpDirName string
-	isDebug    bool
+	stateCacheDirName string
+	tmpDirName        string
+
+	isDebug bool
 
 	loggerType          string
 	debugLogFilePath    string
@@ -84,9 +85,18 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	}
 
 	tmpDir := i.params.tmpDirName
+	if tmpDir == "" {
+		return fmt.Errorf("Internal error: action initer not initialized. Tmp dir is empty")
+	}
+
+	stateDir := i.params.stateCacheDirName
+	if stateDir == "" {
+		return fmt.Errorf("Internal error: action initer not initialized. State dir is empty")
+	}
 
 	dirsToInitialize := directoriesToInitialize{
-		"temp dir": tmpDir,
+		"temp dir":  tmpDir,
+		"state dir": stateDir,
 	}
 
 	if err := i.initDirectories(dirsToInitialize); err != nil {
@@ -98,6 +108,10 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	// it will return error
 	tmpDir, err = i.prepareTmpDirPath(tmpDir)
 	if err != nil {
+		return err
+	}
+
+	if err := i.prepareStateCacheDirPath(stateDir, c, tmpDir); err != nil {
 		return err
 	}
 
@@ -123,19 +137,41 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	i.registerOnShutdown("Clear dhctl temporary directory", runTmpCleaner)
 
 	i.registerOnShutdown("Cleanup providers from default cache", func() {
-		infrastructureprovider.CleanupProvidersFromDefaultCache(defaultLoggerProvider)
+		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLoggerProvider())
 	})
 
 	return nil
 }
 
+func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin.ParseContext, tmpDir string) error {
+	absPath, err := fs.DoAbsolutePath(stateCacheDir, true)
+	if err != nil {
+		return err
+	}
+
+	if fs.IsRoot(absPath) {
+		return fmt.Errorf("State cache dir '%s' cannot be a root directory", stateCacheDir)
+	}
+
+	if app.GetDefaultCacheDir() == absPath {
+		absPath = tmpDir
+	}
+
+	if skipCheckAcquire, _ := i.skipCheckAcquireTmpLock(c); !skipCheckAcquire {
+		if err := cache.TmpDirLockAlreadyAcquired(absPath); err != nil {
+			return fmt.Errorf("Cannot use state cache dir '%s' because it can be cleaned by another instance: %v", stateCacheDir, err)
+		}
+	}
+
+	app.SetCacheDir(absPath)
+	return nil
+}
+
 func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
-	absPath, err := filepath.Abs(tmpDir)
+	absPath, err := fs.DoAbsolutePath(tmpDir, true)
 	if err != nil {
 		return "", err
 	}
-
-	absPath = filepath.Clean(absPath)
 
 	if fs.IsRoot(absPath) {
 		return "", fmt.Errorf("Tmp dir '%s' cannot be a root directory", tmpDir)
@@ -177,12 +213,18 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		}
 	}
 
+	app.SetTmpDir(absPath)
 	return absPath, nil
 }
 
-func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
+func (i *actionIniter) skipCheckAcquireTmpLock(c *kingpin.ParseContext) (bool, string) {
 	cmdName := getCommandName(c)
-	if cmdName == "" || cmdName == grpcServerCmd {
+	return cmdName == "" || cmdName == grpcServerCmd, cmdName
+}
+
+func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
+	skipAcquire, cmdName := i.skipCheckAcquireTmpLock(c)
+	if skipAcquire {
 		// do not lock for grpc server because for singleshot dhctl runner we create
 		// tmp dir in sub directory of server
 		return doNothingOnShutdownFunc, nil
@@ -192,7 +234,7 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 		return nil, err
 	}
 
-	releaseLock, err := cache.AcquireTmpDirLock(tmpDir, defaultLoggerProvider, cmdName)
+	releaseLock, err := cache.AcquireTmpDirLock(tmpDir, log.GetDefaultLoggerProvider(), cmdName)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +247,7 @@ func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string)
 		IsDebug:        i.params.isDebug,
 		DefaultTmpDir:  app.GetDefaultTmpDir(),
 		TmpDir:         tmpDir,
-		LoggerProvider: defaultLoggerProvider,
+		LoggerProvider: log.GetDefaultLoggerProvider(),
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process
@@ -301,10 +343,6 @@ func getCommandName(c *kingpin.ParseContext) string {
 	}
 
 	return c.SelectedCommand.FullCommand()
-}
-
-func defaultLoggerProvider() log.Logger {
-	return log.GetDefaultLogger()
 }
 
 func disableCleanupOnInterrupted(s os.Signal) {

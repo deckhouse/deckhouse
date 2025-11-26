@@ -302,8 +302,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	stateCache := cache.Global()
 
-	log.InfoF("State directory: %s\n", stateCache.Dir())
-
 	if app.DropCache {
 		stateCache.Clean()
 		stateCache.Delete(state.TombstoneKey)
