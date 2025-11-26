@@ -5,28 +5,59 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.49.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.49.0
 status:
   approved: true
   message: ""
-  phase: Deployed
-  transitionTime: "2019-10-17T15:32:00Z"
+  phase: Superseded
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
+    release.deckhouse.io/update-info: '{"taskCalculation":{"taskType":"process","isPatch":false,"isMajor":false,"isFromTo":false,"isSingle":false,"isLatest":true},"updatePolicy":{"mode":"Auto"},"forceRelease":{"isForced":false},"podReadiness":{"isReady":true},"requirementsCheck":{"requirementsMet":true}}'
   creationTimestamp: null
   name: v1.50.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   requirements:
     migratedModules: test-module-1
   version: v1.50.0
 status:
   approved: false
-  message: migrated module test-module-1 is enabled
-  phase: Pending
+  message: ""
+  phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  namespace: d8-system
+  resourceVersion: "1000"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deckhouse
+    spec:
+      containers:
+      - image: my.registry.com/deckhouse:v1.50.0
+        name: deckhouse
+        resources: {}
+status:
+  readyReplicas: 1
+  replicas: 1

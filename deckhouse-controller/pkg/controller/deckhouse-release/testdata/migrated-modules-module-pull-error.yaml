@@ -40,6 +40,11 @@ status:
   modulesCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-1
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: test-module-1

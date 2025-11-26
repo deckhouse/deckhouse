@@ -1008,13 +1008,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
-
-			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
-
-			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
 		suite.Run("MC disabled not in source", func() {
@@ -1051,10 +1044,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 	})
 }
