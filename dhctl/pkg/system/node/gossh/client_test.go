@@ -497,6 +497,29 @@ func TestClientKeepalive(t *testing.T) {
 	})
 }
 
+func TestDialContext(t *testing.T) {
+	t.Run("client start with small context test", func(t *testing.T) {
+		settings := session.NewSession(session.Input{
+			AvailableHosts: []session.Host{{Host: "1.2.3.4", Name: "1.2.3.4"}},
+			User:           "user",
+			Port:           "22",
+			BecomePass:     "VeryStrongPasswordWhatCannotBeGuessed",
+		})
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(200*time.Millisecond))
+		defer cancel()
+		sshClient := NewClient(ctx, settings, make([]session.AgentPrivateKey, 0, 1))
+		err := sshClient.Start()
+		// expecting error on client start: host is unreachable, but loop should exit on context deadline exceeded
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Loop was canceled: context deadline exceeded")
+		// expecting client is not live
+		sshClient.Stop()
+		err = sshClient.Start()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "deadline exceeded")
+	})
+}
+
 func TestClientLoop(t *testing.T) {
 	t.Run("SSH client Loop test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
