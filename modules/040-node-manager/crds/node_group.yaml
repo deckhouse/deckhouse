@@ -1594,7 +1594,8 @@ spec:
                                     count:
                                       type: integer
                                       minimum: 1
-                                      description: Number of slices with the selected profile.
+                                      maximum: 7
+                                      description: Number of slices with the selected profile (1–7 per GPU).
                                       x-doc-default: 1
                     timeSlicing:
                       description: |
