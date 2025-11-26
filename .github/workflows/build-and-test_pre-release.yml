@@ -3131,12 +3131,39 @@ jobs:
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |
-          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
-          if [[ -n "${TAG_FROM}" ]]; then
-            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+          # Tags from git are used and each tag is checked in the registry.
+          # This is done because the regctl ls tag takes a long time to execute
+          TAGS="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V)"
+          tag_count=$(echo "$TAGS" | wc -w)
+
+          COMPARE_TAG=""
+          if [ "$tag_count" -gt 0 ]; then
+            tags_array=($TAGS)
+            reversed_tags=()
+            for ((i=${#tags_array[@]}-1; i>=0; i--)); do
+              reversed_tags+=("${tags_array[i]}")
+            done
+
+            for tag in "${reversed_tags[@]}"; do
+              echo "Check $tag"
+              if regctl image digest "${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${tag}" 2>/dev/null; then
+                echo "Tag ${tag} found in registry"
+                COMPARE_TAG=$tag
+                break
+              else
+                exit_code=$?
+                echo "Tag ${tag} not found (error: $exit_code), trying next..."
+              fi
+            done
+          fi
+
+          if [[ -n "$COMPARE_TAG" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${COMPARE_TAG}"
             python .github/scripts/python/compare_version_modules.py
           else
+            echo "Compare tag is empty"
             echo "No released versions exist. Skipping."
+            exit 1
           fi
 
       # <template: send_fail_report>

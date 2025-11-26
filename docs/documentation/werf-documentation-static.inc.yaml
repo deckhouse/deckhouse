@@ -34,8 +34,7 @@ shell:
 
         echo '[] Filling in the array of supported OS & K8S versions...'
         cd _data
-        yq eval version_map.yml -j > version_map.json && rm version_map.yml
-        jq -MsS '.[0] * .[1]' version_map.json version_map_addition.json | yq eval -P >> supported_versions.yml
+        yq eval-all 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s}' supported_versions.yml version_map.yml > supported_versions.yml.tmp && mv supported_versions.yml.tmp supported_versions.yml && rm version_map.yml
 
         echo '[] Converting editions structure...'
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
