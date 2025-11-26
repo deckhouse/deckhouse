@@ -66,12 +66,7 @@ spec:
         - name: PROMETHEUS_SCRAPE_INTERVAL
           value: {{ .Values.global.discovery.prometheusScrapeInterval | default 30 | quote }}
         args:
-        - "--listen-address=127.0.0.1:4205"
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: {{ $port }}
-            scheme: HTTPS
+        - "--listen-address=0.0.0.0:4205"
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -110,16 +105,6 @@ spec:
         ports:
         - containerPort: {{ $port }}
           name: https-metrics
-        livenessProbe:
-          httpGet:
-            path: /livez
-            port: {{ $port }}
-            scheme: HTTPS
-        readinessProbe:
-          httpGet:
-            path: /livez
-            port: {{ $port }}
-            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
