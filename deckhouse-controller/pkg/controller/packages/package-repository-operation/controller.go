@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
@@ -279,20 +280,9 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 		if apierrors.IsNotFound(err) {
 			logger.Warn("package repository operation not found")
 
-			original := operation.DeepCopy()
-
-			now := metav1.Now()
-			operation.Status.CompletionTime = &now
 			message := fmt.Sprintf("PackageRepository not found: %v", err)
 
-			r.SetConditionFalse(
-				operation,
-				v1alpha1.PackageRepositoryOperationConditionProcessed,
-				v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound,
-				message,
-			)
-
-			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound, message); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -315,20 +305,9 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 	if err != nil {
 		r.logger.Error("failed to get registry service", log.Err(err))
 
-		original := operation.DeepCopy()
-
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
 		message := fmt.Sprintf("Failed to get registry service: %v", err)
 
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-			v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
-			message,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed, message); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -343,8 +322,14 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	r.logger.Info("discovering packages", slog.String("repository", repo.Name))
 
-	discovered, err := r.discoverPackages(ctx, operation, svc)
+	discovered, err := r.discoverPackages(ctx, svc)
 	if err != nil {
+		message := fmt.Sprintf("Failed to list packages: %v", err)
+
+		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patching status after discover packages fail: %w", err)
+		}
+
 		return ctrl.Result{}, fmt.Errorf("discover packages: %w", err)
 	}
 
@@ -371,20 +356,9 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		if apierrors.IsNotFound(err) {
 			logger.Warn("package repository operation not found")
 
-			original := operation.DeepCopy()
-
-			now := metav1.Now()
-			operation.Status.CompletionTime = &now
 			message := fmt.Sprintf("PackageRepository not found: %v", err)
 
-			r.SetConditionFalse(
-				operation,
-				v1alpha1.PackageRepositoryOperationConditionProcessed,
-				v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound,
-				message,
-			)
-
-			if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound, message); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -401,20 +375,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		r.logger.Info("all packages processed, marking as completed",
 			slog.Int("total", operation.Status.Packages.Total))
 
-		original := operation.DeepCopy()
-
-		// All packages processed, mark as completed
-		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-
-		r.SetConditionTrue(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		if err := r.setOperationTruePhase(ctx, operation, v1alpha1.PackageRepositoryOperationPhaseCompleted); err != nil {
+			return ctrl.Result{}, err
 		}
 
 		r.logger.Info("operation completed", slog.String("name", operation.Name))
@@ -422,38 +384,29 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		return ctrl.Result{}, nil
 	}
 
-	// // Create registry service for the packages path
-	// svc, err := r.psm.PackagesService(
-	// 	repo.Spec.Registry.Repo,
-	// 	repo.Spec.Registry.DockerCFG,
-	// 	repo.Spec.Registry.CA,
-	// 	"deckhouse-package-controller",
-	// 	repo.Spec.Registry.Scheme,
-	// )
-	// if err != nil {
-	// 	r.logger.Error("failed to get registry service", log.Err(err))
+	// Create registry service for the packages path
+	svc, err := r.psm.PackagesService(
+		repo.Spec.Registry.Repo,
+		repo.Spec.Registry.DockerCFG,
+		repo.Spec.Registry.CA,
+		"deckhouse-package-controller",
+		repo.Spec.Registry.Scheme,
+	)
+	if err != nil {
+		r.logger.Error("failed to get registry service", log.Err(err))
 
-	// 	original := operation.DeepCopy()
+		message := fmt.Sprintf("Failed to get registry service: %v", err)
 
-	// 	now := metav1.Now()
-	// 	operation.Status.CompletionTime = &now
-	// 	message := fmt.Sprintf("Failed to get registry service: %v", err)
+		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed, message); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// 	r.SetConditionFalse(
-	// 		operation,
-	// 		v1alpha1.PackageRepositoryOperationConditionProcessed,
-	// 		v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed,
-	// 		message,
-	// 	)
+		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
 
-	// 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-	// 		return ctrl.Result{}, err
-	// 	}
+		return ctrl.Result{}, nil
+	}
 
-	// 	r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-	// 	return ctrl.Result{}, nil
-	// }
+	_ = svc
 
 	// Process the first package in the queue
 	return r.processNextPackage(ctx, operation, repo)
@@ -470,32 +423,13 @@ type packageInfo struct {
 	Type string
 }
 
-func (r *reconciler) discoverPackages(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, svc *registryService.PackagesService) (*discoverResult, error) {
+func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.PackagesService) (*discoverResult, error) {
 	// List packages (packages at the packages level)
 	packages, err := svc.ListTags(ctx)
 	if err != nil {
 		r.logger.Error("failed to list packages", log.Err(err))
 
-		original := operation.DeepCopy()
-
-		now := metav1.Now()
-		operation.Status.CompletionTime = &now
-		message := fmt.Sprintf("Failed to list packages: %v", err)
-
-		r.SetConditionFalse(
-			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
-			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
-			message,
-		)
-
-		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return nil, err
-		}
-
-		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-		return nil, err
+		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
 	r.logger.Info("discovered packages", slog.Int("count", len(packages)))
@@ -1077,4 +1011,41 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	})
 
 	return operation
+}
+
+func (r *reconciler) setOperationFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, condType, reason, message string) error {
+	original := operation.DeepCopy()
+
+	operation.Status.CompletionTime = ptr.To(metav1.Now())
+
+	r.SetConditionFalse(
+		operation,
+		condType,
+		reason,
+		message,
+	)
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, phase string) error {
+	original := operation.DeepCopy()
+
+	operation.Status.Phase = phase
+	operation.Status.CompletionTime = ptr.To(metav1.Now())
+
+	r.SetConditionTrue(
+		operation,
+		v1alpha1.PackageRepositoryOperationConditionProcessed,
+	)
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return err
+	}
+
+	return nil
 }
