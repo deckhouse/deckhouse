@@ -484,10 +484,17 @@ func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port strin
 		return ""
 	}
 
-	leaderPod := d.leader.le.GetLeader()
-	if leaderPod == "" {
+	leaderID := d.leader.le.GetLeader()
+	if leaderID == "" {
 		return ""
 	}
+
+	// Identity format: "<podName>#<random>". Extract podName before '#'.
+	hashIdx := strings.Index(leaderID, "#")
+	if hashIdx <= 0 {
+		return ""
+	}
+	leaderPod := leaderID[:hashIdx]
 
 	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
 	// Expose the same /download endpoint as used by external consumers so that kube-rbac-proxy
