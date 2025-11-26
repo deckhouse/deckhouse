@@ -52,7 +52,8 @@ kubernetes:
       {
         "defaultCRI": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*defaultCRI:[ ]+(.*)\n").captures[0].string),
         "clusterPrefixLen": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*prefix:[ ]+(.*)\n").captures[0].string | length),
-        "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string)
+        "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string),
+        "podSubnetNodeCIDRPrefix": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*podSubnetNodeCIDRPrefix:[ ]+(.*)\n").captures[0].string)
       }
   - name: provider_cluster_config
     apiVersion: v1
@@ -150,6 +151,21 @@ EOF
 {"allowed":false, "message":"it is forbidden to set maxPerZone lower than minPerZone for NodeGroup"}
 EOF
     return 0
+  fi
+
+  # Check maxPods vs podSubnetNodeCIDRPrefix
+  maxPods=$(context::jq -r '.review.request.object.spec.kubelet.maxPods // null')
+  if [[ "$maxPods" != "null" ]]; then
+    podSubnetNodeCIDRPrefix=$(context::jq -r '.snapshots.cluster_config[0].filterResult.podSubnetNodeCIDRPrefix // null')
+    if [[ "$podSubnetNodeCIDRPrefix" != "null" && "$podSubnetNodeCIDRPrefix" != "" ]]; then
+      availableIPs=$((2**(32 - podSubnetNodeCIDRPrefix) - 3))
+      if [[ "$maxPods" -gt "$availableIPs" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to set .spec.kubelet.maxPods ($maxPods) greater than available IPs ($availableIPs) in podSubnetNodeCIDRPrefix /$podSubnetNodeCIDRPrefix"}
+EOF
+        return 0
+      fi
+    fi
   fi
 
   # Check zones existence for CloudEphemeral nodes
