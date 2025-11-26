@@ -42,8 +42,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: test-module-1
-spec:
-  enabled: true
 status:
   conditions:
     - type: EnabledByModuleManager
@@ -52,8 +50,6 @@ status:
       status: "True"
     - type: IsReady
       status: "True"
-    - type: LastReleaseDeployed
-      status: "Unknown"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
