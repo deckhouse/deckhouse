@@ -44,7 +44,9 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  WERF_VERSION: "v2.51.0+dk"
+  WERF_SIGN_MANIFEST: "1"
+  WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   WERF_ENV: "FE"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
@@ -296,6 +298,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -378,9 +386,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -460,6 +473,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
@@ -681,6 +702,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -763,9 +790,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -845,6 +877,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
@@ -1066,6 +1106,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1148,9 +1194,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -1230,6 +1281,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
@@ -1439,6 +1498,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1521,9 +1586,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -1603,6 +1673,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
@@ -1812,6 +1890,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -1894,9 +1978,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -1976,6 +2065,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
@@ -2185,6 +2282,12 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ADDR | VAULT_ADDR ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_ROLE_ID | VAULT_ROLE_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs VAULT_SECRET_ID | VAULT_SECRET_ID ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_CERT | WERF_SIGN_CERT ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_INTERMEDIATES | WERF_SIGN_INTERMEDIATES ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/sign_images/dev_signs WERF_SIGN_KEY | WERF_SIGN_KEY ;
 
       # </template: import_secrets>
 
@@ -2267,9 +2370,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       # <template: add_ssh_keys>
@@ -2349,6 +2457,14 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ADDR: ${{ steps.secrets.outputs.VAULT_ADDR }}
+          WERF_VAULT_AUTH_ROLE_ID: ${{ steps.secrets.outputs.VAULT_ROLE_ID }}
+          WERF_VAULT_AUTH_SECRET_ID: ${{ steps.secrets.outputs.VAULT_SECRET_ID }}
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_SIGN_CERT: ${{ steps.secrets.outputs.WERF_SIGN_CERT }}
+          WERF_SIGN_INTERMEDIATES: ${{ steps.secrets.outputs.WERF_SIGN_INTERMEDIATES }}
+          WERF_SIGN_KEY: ${{ steps.secrets.outputs.WERF_SIGN_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           COSIGN_VAULT_KEY: "dh-2025-aug-ec"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"

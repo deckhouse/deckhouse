@@ -46,7 +46,9 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  WERF_VERSION: "v2.51.0+dk"
+  WERF_SIGN_MANIFEST: "1"
+  WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   WERF_ENV: "FE"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"

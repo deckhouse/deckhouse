@@ -40,7 +40,9 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  WERF_VERSION: "v2.51.0+dk"
+  WERF_SIGN_MANIFEST: "1"
+  WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   WERF_ENV: "FE"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
@@ -277,9 +279,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -611,9 +618,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -945,9 +957,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -1279,9 +1296,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -1613,9 +1635,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -1947,9 +1974,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -2281,9 +2313,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -2615,9 +2652,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -2949,9 +2991,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -3283,9 +3330,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -3617,9 +3669,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -3951,9 +4008,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -4285,9 +4347,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
@@ -4619,9 +4686,14 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
+        shell: bash
+        run: |
+          mkdir -p ~/bin
+          curl --fail -sSL -o ~/bin/werf \
+          -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" \
+          "https://${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}/api/v4/projects/4052/packages/generic/werf/${{ env.WERF_VERSION }}/werf"
+          chmod +x ~/bin/werf
+          echo "$HOME/bin" >> $GITHUB_PATH
       # </template: werf_install_step>
 
       - name: Setup
