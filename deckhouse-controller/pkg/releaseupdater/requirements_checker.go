@@ -443,12 +443,14 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		foundModule := false
 		// Check if module exists in ModuleList and is disabled
 		for _, module := range moduleList.Items {
-			if module.Name == moduleName &&
-				module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
-				return fmt.Errorf("migrated module %s is enabled", moduleName)
+			if module.Name == moduleName {
+				foundModule = true
+				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+					return fmt.Errorf("migrated module %s is enabled", moduleName)
+				}
+				c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
+				break
 			}
-			c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
-			foundModule = true
 		}
 		if foundModule {
 			continue
