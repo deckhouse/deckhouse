@@ -59,11 +59,15 @@ type Etcd struct {
 func EtcdJoinConverge() error {
 	var etcdSubphase string = "etcd" // default subphase
 
-	currentVersion, err := semver.NewVersion(config.KubernetesVersion)
-	minVersion := semver.MustParse("1.33.0")
+	v, err := semver.NewVersion(config.KubernetesVersion)
 	if err != nil {
-		log.Warn("failed to parse Kubernetes version", slog.String("version", config.KubernetesVersion), log.Err(err))
-	} else if currentVersion.GreaterThan(minVersion) || currentVersion.Equal(minVersion) {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
+	c, err := semver.NewConstraint(">= 1.33")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	if c.Check(v) { // >= 1.33
 		etcdSubphase = "etcd-join"
 	}
 
