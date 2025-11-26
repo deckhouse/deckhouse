@@ -1,4 +1,4 @@
-{{- $version := "v0.33.0" }}
+{{- $version := "v0.33.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -20,8 +20,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch yandex_fix_cve $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
-    #- git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
+    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
     - rm -rf .git
 ---
