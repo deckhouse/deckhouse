@@ -3,7 +3,7 @@
 #
 
 # <template: e2e_workflow_template>
-name: 'destroy cluster: OpenStack'
+name: 'destroy cluster: DVP'
 on:
   workflow_dispatch:
     inputs:
@@ -42,7 +42,6 @@ env:
   # <template: werf_envs>
   WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -119,7 +118,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const provider = 'openstack';
+            const provider = 'dvp';
             const kubernetesDefaultVersion = '1.32';
 
             const ci = require('./.github/scripts/js/ci');
@@ -130,12 +129,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_30:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.30"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.30' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes 1.30"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -164,7 +163,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.30';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -198,7 +197,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -334,9 +333,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -349,8 +348,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -378,7 +377,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -434,7 +433,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.30';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.30';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -455,12 +454,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_31:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.31"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.31' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes 1.31"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -489,7 +488,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.31';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.31';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -523,7 +522,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -659,9 +658,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -674,8 +673,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -703,7 +702,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -759,7 +758,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.31';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.31';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -780,12 +779,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_32:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.32"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.32' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes 1.32"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.32' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -814,7 +813,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.32';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.32';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -848,7 +847,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -984,9 +983,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -999,8 +998,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1028,7 +1027,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -1084,7 +1083,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.32';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.32';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1105,12 +1104,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_33:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.33"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.33' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes 1.33"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.33' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -1139,7 +1138,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.33';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.33';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1173,7 +1172,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -1309,9 +1308,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -1324,8 +1323,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1353,7 +1352,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -1409,7 +1408,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.33';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.33';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1430,12 +1429,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_1_34:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.34"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.34' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes 1.34"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.34' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -1464,7 +1463,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.34';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.34';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1498,7 +1497,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -1634,9 +1633,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -1649,8 +1648,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1678,7 +1677,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -1734,7 +1733,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes 1.34';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes 1.34';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1755,12 +1754,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerd_automatic:
-    name: "destroy cluster: OpenStack, Containerd, Kubernetes Automatic"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == 'Automatic' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, Containerd, Kubernetes Automatic"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: Containerd
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -1789,7 +1788,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes Automatic';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes Automatic';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1823,7 +1822,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -1959,9 +1958,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: Containerd
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -1974,8 +1973,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2003,7 +2002,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -2059,7 +2058,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, Containerd, Kubernetes Automatic';
+            const name = 'destroy cluster: DVP, Containerd, Kubernetes Automatic';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2080,12 +2079,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_1_30:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.30"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.30' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes 1.30"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -2114,7 +2113,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.30';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2148,7 +2147,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -2284,9 +2283,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -2299,8 +2298,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2328,7 +2327,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -2384,7 +2383,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.30';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.30';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2405,12 +2404,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_1_31:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.31"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.31' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes 1.31"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -2439,7 +2438,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.31';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.31';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2473,7 +2472,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -2609,9 +2608,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -2624,8 +2623,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2653,7 +2652,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -2709,7 +2708,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.31';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.31';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -2730,12 +2729,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_1_32:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.32"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.32' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes 1.32"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.32' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -2764,7 +2763,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.32';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.32';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2798,7 +2797,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -2934,9 +2933,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -2949,8 +2948,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2978,7 +2977,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3034,7 +3033,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.32';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.32';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -3055,12 +3054,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_1_33:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.33"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.33' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes 1.33"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.33' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -3089,7 +3088,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.33';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.33';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -3123,7 +3122,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -3259,9 +3258,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -3274,8 +3273,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3303,7 +3302,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3359,7 +3358,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.33';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.33';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -3380,12 +3379,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_1_34:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.34"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.34' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes 1.34"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == '1.34' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -3414,7 +3413,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.34';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.34';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -3448,7 +3447,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -3584,9 +3583,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -3599,8 +3598,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3628,7 +3627,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3684,7 +3683,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.34';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes 1.34';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -3705,12 +3704,12 @@ jobs:
 
   # <template: e2e_run_job_template>
   run_containerdv2_automatic:
-    name: "destroy cluster: OpenStack, ContainerdV2, Kubernetes Automatic"
-    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == 'Automatic' && github.event.inputs.layout == 'Standard' }}
+    name: "destroy cluster: DVP, ContainerdV2, Kubernetes Automatic"
+    if: ${{ fromJson(inputs.test_config).cri == 'containerdv2' && fromJson(inputs.test_config).ver == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
-      PROVIDER: OpenStack
+      PROVIDER: DVP
       CRI: ContainerdV2
-      LAYOUT: Standard
+      LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
@@ -3739,7 +3738,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes Automatic';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes Automatic';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -3773,7 +3772,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
 
       # </template: import_secrets>
 
@@ -3909,9 +3908,9 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          PROVIDER: OpenStack
+          PROVIDER: DVP
           CRI: ContainerdV2
-          LAYOUT: Standard
+          LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
@@ -3924,8 +3923,8 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
-          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3953,7 +3952,7 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -4009,7 +4008,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,separate';
-            const name = 'destroy cluster: OpenStack, ContainerdV2, Kubernetes Automatic';
+            const name = 'destroy cluster: DVP, ContainerdV2, Kubernetes Automatic';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -4036,7 +4035,7 @@ jobs:
     runs-on: "regular"
     env:
       JOB_NAMES: |
-        {"run_containerd_1_30":"destroy cluster: OpenStack, Containerd, Kubernetes 1.30","run_containerd_1_31":"destroy cluster: OpenStack, Containerd, Kubernetes 1.31","run_containerd_1_32":"destroy cluster: OpenStack, Containerd, Kubernetes 1.32","run_containerd_1_33":"destroy cluster: OpenStack, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: OpenStack, Containerd, Kubernetes 1.34","run_containerd_automatic":"destroy cluster: OpenStack, Containerd, Kubernetes Automatic","run_containerdv2_1_30":"destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.30","run_containerdv2_1_31":"destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.31","run_containerdv2_1_32":"destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: OpenStack, ContainerdV2, Kubernetes 1.34","run_containerdv2_automatic":"destroy cluster: OpenStack, ContainerdV2, Kubernetes Automatic"}
+        {"run_containerd_1_30":"destroy cluster: DVP, Containerd, Kubernetes 1.30","run_containerd_1_31":"destroy cluster: DVP, Containerd, Kubernetes 1.31","run_containerd_1_32":"destroy cluster: DVP, Containerd, Kubernetes 1.32","run_containerd_1_33":"destroy cluster: DVP, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: DVP, Containerd, Kubernetes 1.34","run_containerd_automatic":"destroy cluster: DVP, Containerd, Kubernetes Automatic","run_containerdv2_1_30":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.30","run_containerdv2_1_31":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.31","run_containerdv2_1_32":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.34","run_containerdv2_automatic":"destroy cluster: DVP, ContainerdV2, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
@@ -4058,7 +4057,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'workflow,final,no-skipped,restore-separate';
-            const name = 'destroy cluster: OpenStack';
+            const name = 'destroy cluster: DVP';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
