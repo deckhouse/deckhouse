@@ -7,7 +7,6 @@ documentationEnabled: true
 deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
-flowSchemaEnabled: true
 ingressNginxEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
