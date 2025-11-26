@@ -249,7 +249,7 @@ spec:
     registry:
       mode: Direct
       direct:
-        imagesRepo: r.example.com/test
+        imagesRepo: r.example.com/test/
         username: test-user
         password: test-password
         scheme: HTTPS

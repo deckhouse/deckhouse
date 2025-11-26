@@ -89,20 +89,17 @@ proxy:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if or .imagesRepo .dockerCfg }}
+{{- with .initConfiguration }}
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
-{{- if .imagesRepo }}
-  imagesRepo: {{ .imagesRepo }}
-{{- end }}
-
-{{- if .dockerCfg }}
-  # a special string with parameters to access Docker registry
-  registryDockerCfg: {{ .dockerCfg | b64enc }}
-{{- end }}
+	{{- with .imagesRepo }}
+  imagesRepo: {{ . }}
+	{{- end }}
+	{{- with .registryDockerCfg }}
+  registryDockerCfg: {{ . | b64enc }}
+	{{- end }}
 {{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -234,6 +231,7 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
+// Registry
 func TestPrepareRegistry(t *testing.T) {
 	t.Run("Registry from default", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
@@ -250,8 +248,10 @@ func TestPrepareRegistry(t *testing.T) {
 
 	t.Run("Registry from init configuration", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"imagesRepo": "r.example.com/test/",
-			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
+			"initConfiguration": map[string]interface{}{
+				"imagesRepo": "r.example.com/test/",
+				"registryDockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
+			},
 		})
 		registry := cfg.Registry.Mode.RemoteData()
 		require.Equal(t, cfg.Registry.Mode.Mode(), "Unmanaged")
@@ -275,7 +275,7 @@ spec:
     registry:
       mode: Unmanaged
       unmanaged:
-        imagesRepo: r.example.com/test
+        imagesRepo: r.example.com/test/
         username: test-user
         password: test-password
         scheme: HTTPS
