@@ -64,5 +64,19 @@ spec:
 status:
   replicas: 1
   readyReplicas: 1
-
-
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: disabled-module
+spec:
+  enabled: false
+status:
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "False"
+    - type: IsReady
+      status: "False"
+    - type: LastReleaseDeployed
+      status: "Unknown"
+---
