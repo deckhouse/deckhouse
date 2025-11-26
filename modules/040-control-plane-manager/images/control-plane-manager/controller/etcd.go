@@ -67,7 +67,7 @@ func EtcdJoinConverge() error {
 	if err != nil {
 		return fmt.Errorf("constraint not being parsable: %s", err.Error())
 	}
-	if c.Check(v) { // >= 1.33
+	if c.Check(v) {
 		etcdSubphase = "etcd-join"
 	}
 
