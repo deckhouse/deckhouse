@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"k8s.io/client-go/tools/leaderelection"
 	rl "k8s.io/client-go/tools/leaderelection/resourcelock"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,13 +54,15 @@ func (l *LeaderElection) AcquireLeaderElection(ctx context.Context) error {
 		log.Fatal(fmt.Sprintf("Failed get config for leader election: %v", err))
 	}
 
+	identity := fmt.Sprintf("%s#%s", l.podName, uuid.NewString())
+
 	// Create a new lock. This will be used to create a Lease resource in the cluster.
 	leader, err := rl.NewFromKubeconfig(
 		rl.LeasesResourceLock,
 		l.leaseLockNamespace,
 		l.leaseLockName,
 		rl.ResourceLockConfig{
-			Identity: l.podName,
+			Identity: identity,
 		},
 		cfg,
 		time.Second*10,
