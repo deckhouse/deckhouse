@@ -87,7 +87,7 @@
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах control-plane необходимо деплоить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Так как у пользователя нет возможности применять кастомные конфиги для control-plane компонентов, возможности включить openTelemetry нет.",
       "timestamp": "2025-11-26T08:49:10.258937Z"
-    },  
+    }
   ],
   "timestamp": "2025-11-07T13:55:00Z"
 }
