@@ -36,7 +36,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	editionavailablextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
@@ -97,7 +96,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			// skip firing alert for global module
 			if moduleConfig.Name != "global" {
 				// update metrics
-				converter := conversion.Store().Get(moduleConfig.Name)
+				converter := r.conversionsStore.Get(moduleConfig.Name)
 				// fire alert at obsolete version
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
 					r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleConfigObsoleteVersion, 1.0, map[string]string{
@@ -278,7 +277,7 @@ func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
 	// also create warning if version is unknown or outdated.
 	version := ""
 	versionWarning := ""
-	converter := conversion.Store().Get(config.Name)
+	converter := r.conversionsStore.Get(config.Name)
 	if config.Spec.Version == 0 {
 		// use latest version if spec.version is empty.
 		version = strconv.Itoa(converter.LatestVersion())

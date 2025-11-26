@@ -551,7 +551,7 @@ type testCheckClusterConfig struct {
 	kubeCl              *client.KubernetesClient
 	commanderMetaConfig *config.MetaConfig
 	checker             *Checker
-	logger              *log.InMemoryLogger
+	logger              log.Logger
 }
 
 func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) *testCheckClusterConfig {
@@ -562,7 +562,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NotEmpty(t, p.clusterType, p.testName)
 
 	kubeCl := client.NewFakeKubernetesClient()
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+	logger := log.NewSilentLogger()
 
 	commanderMetaConfig := &config.MetaConfig{}
 	commanderMetaConfig.ClusterType = p.clusterType
