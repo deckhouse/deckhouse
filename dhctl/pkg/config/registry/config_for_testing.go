@@ -30,8 +30,7 @@ func NewTestConfig(opts ...interface{}) Config {
 		Scheme:     types.CEScheme,
 	}
 
-	var mode = registry_const.ModeUnmanaged
-	var settings types.DeckhouseSettings
+	mode := registry_const.ModeUnmanaged
 	moduleEnabled := true
 	for _, opt := range opts {
 		switch fn := opt.(type) {
@@ -44,9 +43,10 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 	}
 
+	var dekhouseSettings types.DeckhouseSettings
 	switch mode {
 	case registry_const.ModeDirect:
-		settings = types.DeckhouseSettings{
+		dekhouseSettings = types.DeckhouseSettings{
 			Mode: registry_const.ModeDirect,
 			Direct: &types.DirectModeSettings{
 				RegistrySettings: registrySettings,
@@ -54,7 +54,7 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 		moduleEnabled = true
 	default:
-		settings = types.DeckhouseSettings{
+		dekhouseSettings = types.DeckhouseSettings{
 			Mode: registry_const.ModeUnmanaged,
 			Unmanaged: &types.UnmanagedModeSettings{
 				RegistrySettings: registrySettings,
@@ -62,19 +62,18 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 	}
 
-	settings, err := prepareDeckhouseSettings(&settings, nil)
+	dekhouseSettings, err := NewDeckhouseSettings(&dekhouseSettings, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	// Prepare mode settings
-	modeSettings, err := NewModeSettings(settings)
+	settings, err := NewModeSettings(dekhouseSettings)
 	if err != nil {
 		panic(err)
 	}
 	return Config{
-		Settings:          modeSettings,
-		DeckhouseSettings: settings,
+		Settings:          settings,
+		DeckhouseSettings: dekhouseSettings,
 		ModuleEnabled:     moduleEnabled,
 	}
 }

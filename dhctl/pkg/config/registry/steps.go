@@ -40,20 +40,22 @@ const (
 
 func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	return retry.NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).RunContext(ctx, func() error {
-		if err := checkInit(ctx, kubeClient, config); err != nil {
-			log.DebugF("Error while checking registry init: %v\n", err)
-			return ErrIsNotReady
-		}
-
-		msg, err := checkReady(ctx, kubeClient, config)
-		if err != nil {
-			if msg != "" {
-				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-				log.DebugF("Error while checking registry ready: %v\n", err)
-				return err
+		if config.ModuleEnabled {
+			if err := checkInit(ctx, kubeClient); err != nil {
+				log.DebugF("Error while checking registry init: %v\n", err)
+				return ErrIsNotReady
 			}
-			log.DebugF("Error while checking registry ready: %v\n", err)
-			return ErrIsNotReady
+
+			msg, err := checkReady(ctx, kubeClient)
+			if err != nil {
+				if msg != "" {
+					err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
+					log.DebugF("Error while checking registry ready: %v\n", err)
+					return err
+				}
+				log.DebugF("Error while checking registry ready: %v\n", err)
+				return ErrIsNotReady
+			}
 		}
 
 		if err := removeInitSecret(ctx, kubeClient); err != nil {
@@ -65,11 +67,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 	})
 }
 
-func checkInit(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	if !config.ModuleEnabled {
-		return nil
-	}
-
+func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
 	exists, applied, err := getInitSecretStatus(ctx, kubeClient)
 	if err != nil {
 		return err
@@ -78,15 +76,10 @@ func checkInit(ctx context.Context, kubeClient client.KubeClient, config Config)
 	if exists && !applied {
 		return ErrNotInitialized
 	}
-
 	return nil
 }
 
-func checkReady(ctx context.Context, kubeClient client.KubeClient, config Config) (string, error) {
-	if !config.ModuleEnabled {
-		return "", nil
-	}
-
+func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
 	conditions, err := fetchStateSecret(ctx, kubeClient)
 	if err != nil {
 		return "", err
@@ -126,7 +119,7 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient, config Config
 func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
 	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, stateSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
+		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
 	}
 
 	var conditions []metav1.Condition
@@ -137,7 +130,7 @@ func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]meta
 	}
 
 	if err := yaml.Unmarshal(conditionRaw, &conditions); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal secret data: %w", err)
+		return nil, fmt.Errorf("unmarshal secret data: %w", err)
 	}
 	return conditions, nil
 }
@@ -145,12 +138,12 @@ func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]meta
 func fetchInitSecret(ctx context.Context, kubeClient client.KubeClient) (registry_init.Config, error) {
 	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
 	if err != nil {
-		return registry_init.Config{}, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		return registry_init.Config{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
 	var config registry_init.Config
 	if err := yaml.Unmarshal(secret.Data["config"], &config); err != nil {
-		return registry_init.Config{}, fmt.Errorf("failed to unmarshal secret data: %w", err)
+		return registry_init.Config{}, fmt.Errorf("unmarshal secret data: %w", err)
 	}
 	return config, nil
 }
@@ -161,7 +154,7 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 		if apierrors.IsNotFound(err) {
 			return false, false, nil
 		}
-		return false, false, fmt.Errorf("failed to get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
 	_, applied := secret.Annotations[initSecretAppliedAnnotation]
@@ -171,7 +164,7 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 func removeInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	err := kubeClient.CoreV1().Secrets(secretsNamespace).Delete(ctx, initSecretName, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		return fmt.Errorf("remove secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 	return nil
 }

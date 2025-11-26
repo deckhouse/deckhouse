@@ -296,7 +296,7 @@ func CreateDeckhouseManifests(
 	deckhouseRegistrySecretData, err := registryManifest.DeckhouseRegistrySecretData(
 		func() (registry.PKI, error) { return registryPKI.Get(ctx) })
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
 	}
 	tasks = append(tasks, actions.ManifestTask{
 		Name:     `Secret "deckhouse-registry"`,
@@ -313,7 +313,7 @@ func CreateDeckhouseManifests(
 
 	isExist, registryBashibleConfigSecretData, err := registryManifest.RegistryBashibleConfigSecretData()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create registry bashible config secret data: %w", err)
 	}
 	if isExist {
 		tasks = append(tasks, actions.ManifestTask{

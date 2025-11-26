@@ -58,7 +58,7 @@ func (g *LazyPKIGenerator) Get() (PKI, error) {
 		g.pki, g.err = generatePKI()
 	})
 	if g.err != nil {
-		return PKI{}, fmt.Errorf("failed to generate registry PKI: %w", g.err)
+		return PKI{}, fmt.Errorf("generate registry PKI: %w", g.err)
 	}
 	return g.pki.DeepCopy(), nil
 }
@@ -77,7 +77,7 @@ func (m *ClusterPKIManager) Get(ctx context.Context) (PKI, error) {
 	if m.pki == nil {
 		pki, err := fetchInitSecret(ctx, m.kubeClient)
 		if err != nil {
-			return PKI{}, fmt.Errorf("failed to fetch registry PKI from cluster: %w", err)
+			return PKI{}, fmt.Errorf("fetch registry PKI from cluster: %w", err)
 		}
 		m.pki = &pki
 	}
@@ -89,12 +89,12 @@ func generatePKI() (PKI, error) {
 
 	certKey, err := registry_pki.GenerateCACertificate(certificateCommonName)
 	if err != nil {
-		return PKI{}, fmt.Errorf("failed to generate CA certificate: %w", err)
+		return PKI{}, fmt.Errorf("generate CA certificate: %w", err)
 	}
 
 	cert, key, err := registry_pki.EncodeCertKey(certKey)
 	if err != nil {
-		return PKI{}, fmt.Errorf("failed to encode CA cert/key: %w", err)
+		return PKI{}, fmt.Errorf("encode CA cert/key: %w", err)
 	}
 
 	ret.CA = &CertKey{

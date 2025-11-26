@@ -376,7 +376,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		BashibleTplCtx(
 			func() (registry_config.PKI, error) { return registryPKI.Get() })
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create registry bashible context: %s", err)
 	}
 
 	configForBashibleBundleTemplate := make(map[string]interface{})

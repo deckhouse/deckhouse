@@ -75,7 +75,7 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][
 
 	cfgYaml, err := yaml.Marshal(cfg)
 	if err != nil {
-		return true, nil, fmt.Errorf("failed to marshal bashible config: %w", err)
+		return true, nil, fmt.Errorf("marshal bashible config: %w", err)
 	}
 	return true, map[string][]byte{"config": cfgYaml}, nil
 }
@@ -104,7 +104,7 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 
 	initCfg, err := getPKI()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PKI: %w", err)
+		return nil, fmt.Errorf("get PKI: %w", err)
 	}
 
 	mapInitCfg, err := initCfg.ToMap()
@@ -134,7 +134,7 @@ func (b *ManifestBuilder) bashibleContextAndConfig() (bashible.Context, bashible
 
 	version, err := pki.ComputeHash(&bashibleCfg)
 	if err != nil {
-		return bashible.Context{}, bashible.Config{}, fmt.Errorf("failed to compute version: %w", err)
+		return bashible.Context{}, bashible.Config{}, fmt.Errorf("compute version: %w", err)
 	}
 
 	bashibleCfg.Version = version
