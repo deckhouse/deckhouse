@@ -490,7 +490,9 @@ func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port strin
 	}
 
 	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
-	return fmt.Sprintf("https://%s.%s.%s.svc:%s", leaderPod, serviceName, namespace, port)
+	// Expose the same /download endpoint as used by external consumers so that kube-rbac-proxy
+	// applies the same excludePaths rules (/download/*.tar.gz) and does not require auth.
+	return fmt.Sprintf("https://%s.%s.%s.svc:%s/download", leaderPod, serviceName, namespace, port)
 }
 
 // waitLeaderLink waits until leader link is known or ctx expires, returning an error on timeout.
