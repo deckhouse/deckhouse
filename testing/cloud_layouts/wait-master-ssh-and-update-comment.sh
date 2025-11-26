@@ -76,7 +76,7 @@ function get_comment(){
   fi
 
   local connection_str="${master_user}@${master_ip}"
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`\`\`ssh ${bastion_part} ${connection_str}\`\`\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`\`\`\nssh ${bastion_part} ${connection_str}\n\`\`\`"
   local bbody
   if ! bbody="$(cat "$response_file" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
     return 1
