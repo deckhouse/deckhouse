@@ -62,7 +62,7 @@ REPO=d8-installer
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
 {% endcapture %}
-{{ command | markdownify }}                  
+{{ command | markdownify }}
                 </li>
                 <li>
                   <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
@@ -78,8 +78,8 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
             </div>
             <div id="tab-mac-content-file" class="tab-content">
               <p>Скачайте установщик:
-                <a href="/downloads/installer/latest/d8install-darwin-arm64" class="download-btn">d8install-darwin-arm64</a>
-                <a href="/downloads/installer/latest/d8install-darwin-amd64" class="download-btn">d8install-darwin-amd64</a>
+                <a href="/downloads/installer/darwin-arm64/d8install" class="download-btn">d8install-darwin-arm64</a>
+                <a href="/downloads/installer/darwin-amd64/d8install" class="download-btn">d8install-darwin-amd64</a>
               </p>
               <p>Запустите его, выполнив команды ниже. Например, для архитектуры arm64:</p>
 {% capture command %}
@@ -121,7 +121,7 @@ REPO=d8-installer
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
 {% endcapture %}
-{{ command | markdownify }}                  
+{{ command | markdownify }}
                 </li>
                 <li>
                   <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
@@ -131,12 +131,12 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
 {% endcapture %}
 {{ command | markdownify }}
-                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>               
+                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>
                 </li>
               </ol>
             </div>
             <div id="tab-linux-content-file" class="tab-content">
-              <p>Скачайте установщик: <a href="/downloads/installer/latest/d8install-linux-amd64" class="download-btn">d8install-linux-amd64</a></p>
+              <p>Скачайте установщик: <a href="/downloads/installer/linux-amd64/d8install" class="download-btn">d8install-linux-amd64</a></p>
               <p>Запустите его, выполнив команды:</p>
 {% capture command %}
 ```bash
