@@ -84,6 +84,12 @@ func NewDeckhouseSettings(
 	deckhouse *types.DeckhouseSettings,
 	initConfig *types.InitConfig,
 ) (types.DeckhouseSettings, error) {
+	if deckhouse != nil && initConfig != nil {
+		return types.DeckhouseSettings{}, fmt.Errorf(
+			"duplicate registry configuration detected in initConfiguration.deckhouse " +
+				"and moduleConfig/deckhouse.spec.settings.registry. Please specify registry settings in only one location.")
+	}
+
 	// Use deckhouse settings if available
 	if deckhouse != nil {
 		deckhouseSettings := *deckhouse

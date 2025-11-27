@@ -40,7 +40,6 @@ apiVersions:
 
               The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
             minLength: 1
-            default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
             description: |
@@ -48,7 +47,6 @@ apiVersions:
 
               For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
             minLength: 1
-            default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
           registryCA:
             type: string
             description: |

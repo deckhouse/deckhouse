@@ -90,6 +90,13 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 	}
 
+	if rawDeckhouseCfg, exists := m.InitClusterConfig["deckhouse"]; exists {
+		if err := json.Unmarshal(rawDeckhouseCfg, &m.DeckhouseConfig); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %w", err)
+		}
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
+	}
+
 	// Prepare registry configuration
 	{
 		var (
@@ -106,11 +113,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		}
 
 		// Settings from initConfig
-		if rawDeckhouseCfg, exists := m.InitClusterConfig["deckhouse"]; exists {
-			if err := json.Unmarshal(rawDeckhouseCfg, &m.DeckhouseConfig); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %w", err)
-			}
-			m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
+		if m.DeckhouseConfig.ImagesRepo != "" ||
+			m.DeckhouseConfig.RegistryDockerCfg != "" ||
+			m.DeckhouseConfig.RegistryCA != "" {
 			initConfig = &registry_types.InitConfig{
 				ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
 				RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,

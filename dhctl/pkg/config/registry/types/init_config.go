@@ -36,6 +36,15 @@ type InitConfig struct {
 func (config *InitConfig) ToRegistrySettings() (RegistrySettings, error) {
 	imagesRepo := strings.TrimRight(config.ImagesRepo, "/")
 
+	if config.RegistryDockerCfg == "" {
+		registrySettings := RegistrySettings{
+			ImagesRepo: imagesRepo,
+			Scheme:     SchemeFromString(config.RegistryScheme),
+			CA:         config.RegistryCA,
+		}
+		return registrySettings, nil
+	}
+
 	// Validate and pars dockerCfg
 	address, _ := helpers.SplitAddressAndPath(config.ImagesRepo)
 	if err := validateRegistryDockerCfg(config.RegistryDockerCfg, address); err != nil {
