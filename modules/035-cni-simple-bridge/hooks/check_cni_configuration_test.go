@@ -132,7 +132,7 @@ data:
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: settings,
+				Settings: &settings,
 				Enabled:  enabled,
 			},
 		}

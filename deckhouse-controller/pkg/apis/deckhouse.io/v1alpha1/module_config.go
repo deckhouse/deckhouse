@@ -97,7 +97,7 @@ type ModuleConfigSpec struct {
 	Source       string `json:"source,omitempty"`
 	Maintenance  string `json:"maintenance,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Settings SettingsValues `json:"settings,omitempty"`
+	Settings *SettingsValues `json:"settings,omitempty"`
 }
 
 type ModuleConfigStatus struct {

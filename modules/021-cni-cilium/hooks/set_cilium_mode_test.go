@@ -81,7 +81,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: v1alpha1.SettingsValues{Raw: rawSettings},
+				Settings: &v1alpha1.SettingsValues{Raw: rawSettings},
 				Enabled:  enabled,
 			},
 		}

@@ -907,7 +907,7 @@ type: Opaque
 			},
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: v1alpha1.SettingsValues{},
+				Settings: &v1alpha1.SettingsValues{},
 			},
 		}
 		initObjects = append(initObjects, moduleConfig)

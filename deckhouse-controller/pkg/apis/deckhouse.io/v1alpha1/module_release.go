@@ -290,7 +290,7 @@ type ModuleReleaseSpec struct {
 	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
 	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
-	Changelog    Changelog                  `json:"changelog,omitempty"`
+	Changelog    *Changelog                 `json:"changelog,omitempty"`
 }
 
 type UpdateSpec struct {

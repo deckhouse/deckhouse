@@ -601,7 +601,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 			ApplyAfter:    applyAfter,
 			Requirements:  releaseMetadata.Requirements,
 			Disruptions:   disruptions,
-			Changelog:     v1alpha1.Changelog{Raw: rawChangelog},
+			Changelog:     &v1alpha1.Changelog{Raw: rawChangelog},
 			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version),
 		},
 		Approved: false,
