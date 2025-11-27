@@ -72,6 +72,10 @@ To enable Dex authentication for your application, follow these steps:
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
 
+    {% alert level="warning" %}
+    The application Ingress must have TLS configured. DexAuthenticator does not support HTTP-only Ingress resources.
+    {% endalert %}
+
 ### Setting up CIDR-based restrictions
 
 DexAuthenticator does not have a built-in system for allowing the user authentication based on its IP address. Instead, you can use annotations for Ingress resources:
@@ -91,6 +95,14 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 ## Authentication flow with DexAuthenticator
 
 ![Authentication flow with DexAuthenticator](images/dex_login.svg)
+
+{% alert level="warning" %}
+DexAuthenticator only works with HTTPS. It does not support Ingress resources configured for HTTP only.
+
+Authentication cookies are set with the `Secure` attribute, which means they are only sent over encrypted HTTPS connections. If you try to use DexAuthenticator with an HTTP Ingress (without TLS configuration), you will experience infinite redirect loops after login because the browser will not send the authentication cookies back to the server.
+
+Make sure your application Ingress has TLS configured before integrating with DexAuthenticator.
+{% endalert %}
 
 1. Dex redirects the user to the provider's login page in most cases and wait for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user should write credentials to the Dex login form instead, and Dex will make a request to the provider's API to validate them.
 
