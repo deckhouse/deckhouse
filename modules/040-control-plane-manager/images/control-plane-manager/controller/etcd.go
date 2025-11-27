@@ -88,6 +88,51 @@ func EtcdJoinConverge() error {
 	return err
 }
 
+func EtcdOnlyJoinConverge() error {
+	log.Info("[d8][etcd] Starting etcd-only join process")
+
+	etcdClient, err := NewEtcd()
+	if err != nil {
+		return fmt.Errorf("[d8][etcd] failed to create etcd client: %v", err)
+	}
+	defer etcdClient.client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	peerURL := fmt.Sprintf("https://%s:2380", config.MyIP)
+
+	resp, err := etcdClient.client.MemberList(ctx)
+	if err != nil {
+		log.Warnf("[d8][etcd] failed to list members, but will try to add anyway: %v", err)
+	} else {
+		for _, member := range resp.Members {
+			if member.Name == config.NodeName {
+				log.Infof("[d8][etcd] member with same name already exists in cluster: %s (ID: %x)", config.NodeName, member.ID)
+				return nil
+			}
+			
+			for _, currPeerURL := range member.PeerURLs {
+				if currPeerURL == peerURL {
+					log.Infof("[d8][etcd] member with same peerURL already exists in cluster: %s (Name: %s, ID: %x)", peerURL, member.Name, member.ID)
+					return nil
+				}
+			}
+		}
+	}
+
+	log.Infof("[d8][etcd] adding new member to cluster: %s, %s", config.NodeName, peerURL)
+
+	addResp, err := etcdClient.client.MemberAdd(ctx, []string{peerURL})
+	if err != nil {
+		return fmt.Errorf("[d8][etcd] failed to add member: %v", err)
+	}
+
+	log.Infof("[d8][etcd] member added successfully: %s, %d", config.NodeName, addResp.Member.ID)
+
+	return nil
+}
+
 func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
 	var (
 		learnerIDs []uint64
