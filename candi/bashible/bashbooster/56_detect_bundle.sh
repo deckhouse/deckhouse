@@ -47,7 +47,7 @@ bb-is-bundle(){
       esac
     ;;
     debian)
-      case "$VERSION_ID" in 10|11|12)
+      case "$VERSION_ID" in 10|11|12|13)
         os="debian" ;;
       esac
     ;;
