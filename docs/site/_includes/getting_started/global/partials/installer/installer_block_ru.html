@@ -68,11 +68,11 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
                   <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
 {% capture command %}
 ```bash
-. $(trdl use -d d8-installer 0 ea) && version
+. $(trdl use -d d8-installer 0 ea) && d8install version
 ```
 {% endcapture %}
 {{ command | markdownify }}
-                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>
+                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 0 ea)</code> в RC-файл вашей командной оболочки.</p>
                 </li>
               </ol>
             </div>
@@ -127,11 +127,11 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
                   <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
 {% capture command %}
 ```bash
-. $(trdl use -d d8-installer 0 ea) && version
+. $(trdl use -d d8-installer 0 ea) && d8install version
 ```
 {% endcapture %}
 {{ command | markdownify }}
-                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>alias d8-installer='trdl exec d8-installer 0 ea -- "$@"'</code> в RC-файл вашей командной оболочки.</p>
+                <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 0 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 0 ea)</code> в RC-файл вашей командной оболочки.</p>
                 </li>
               </ol>
             </div>

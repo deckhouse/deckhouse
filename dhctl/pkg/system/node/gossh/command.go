@@ -105,6 +105,7 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 		session, err = client.sshClient.NewSession()
 		return err
 	})
+	client.RegisterSession(session)
 
 	return &SSHCommand{
 		// Executor: process.NewDefaultExecutor(sess.Run(cmd)),
@@ -156,7 +157,6 @@ func (c *SSHCommand) Start() error {
 	}
 
 	log.DebugF("Register stoppable: '%s'\n", command)
-	c.sshClient.RegisterSession(c.session)
 
 	return nil
 }
@@ -287,7 +287,7 @@ func (c *SSHCommand) Run(ctx context.Context) error {
 	if c.session == nil {
 		return fmt.Errorf("ssh session not started")
 	}
-	defer c.session.Close()
+	defer c.closeSession()
 
 	err := c.Start()
 	if err != nil {
@@ -423,7 +423,7 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	if c.session == nil {
 		return nil, nil, fmt.Errorf("ssh session not started")
 	}
-	defer c.session.Close()
+	defer c.closeSession()
 
 	if c.out == nil {
 		c.out = new(bytes.Buffer)
@@ -470,7 +470,7 @@ func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("ssh session not started")
 	}
 
-	defer c.session.Close()
+	defer c.closeSession()
 
 	if c.out == nil {
 		c.out = new(bytes.Buffer)
@@ -793,4 +793,9 @@ func (c *SSHCommand) setWaitError(err error) {
 	defer c.lockWaitError.Unlock()
 	c.lockWaitError.Lock()
 	c.waitError = err
+}
+
+func (c *SSHCommand) closeSession() {
+	c.session.Close()
+	c.sshClient.UnregisterSession(c.session)
 }
