@@ -1,9 +1,60 @@
 {{- define "main" }}
+{{- $currentPage := $.Page }}
 
-<div class="breadcrumbs-container">
-  <div class="breadcrumbs__left">
+{{- $modulesList := .Site.Data.modules.channels }}
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $lang := .Site.Language.Lang }}
+{{- $sidebarRootMenu := slice }}
+{{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{- $ctx := $ }}
+
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
+
+{{- range $module, $data := $modulesList }}
+  {{- $moduleTitle := "" }}
+  {{- $moduleChannel := "" }}
+  {{- $isActiveItem := false }}
+  {{- $moduleStatus := "" }}
+
+  {{- if eq $currentModuleName $module }}
+    {{- $moduleChannel = $currentModuleChannel }}
+    {{- $isActiveItem = true }}
+  {{- end }}
+
+  {{- range sort $channelsInfo "stability" "desc" }}
+    {{- $code := .code }}
+    {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}
+    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
+      {{- if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
+      {{- if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+    {{- end }}
+  {{- end }}
+  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{- if $moduleChannel }}
+    {{- $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "moduleStatus" $moduleStatus) }}
+  {{- end }}
+{{- end}}
+
+{{- $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
+
+<div class="navigation__container">
+  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
+    <div>
+      <strong>{{ T "channel_or_version" }}:</strong>
+    </div>
+
+    <div id="doc-versions-menu" class="channel-menu submenu-parent">
+      {{- if $.IsPage }}
+        {{- if and $currentModuleName $currentModuleChannel }}
+          {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+        {{- end }}
+      {{- end }}
+    </div>
   </div>
-  <div class="breadcrumbs__right">
+  <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {{- partial "breadcrumbs" . }}
     </ol>
