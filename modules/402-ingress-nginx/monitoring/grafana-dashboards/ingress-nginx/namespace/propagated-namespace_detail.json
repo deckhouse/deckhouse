@@ -13615,7 +13615,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, namespace)",
+          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, exported_namespace)",
           "refId": "main-namespace-Variable-Query"
         },
         "refresh": 2,
