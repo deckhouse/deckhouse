@@ -151,7 +151,7 @@ apiVersions:
                 virtualMachine: &instanceClassVirtualMachine
                   type: object
                   description: |
-                    Virtual machine settings for the created node.
+                    Virtual machine settings for the created master node.
                   required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
