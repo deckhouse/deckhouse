@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Fixed AuthorizationPolicy CRD insufficiency for Istio 1.25.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16605
+
