@@ -34,8 +34,6 @@ rules:
   resourceNames:
   - cacets
   - d8-istio-sidecar-registry
-  - d8-remote-authn-keypair
-  - d8-remote-clusters-public-metadata
   - deckhouse-registry
   verbs:
   - get
@@ -50,7 +48,6 @@ rules:
   - nodes
   - replicationcontrollers
   - namespaces
-  - secrets
   verbs:
   - get
   - list
