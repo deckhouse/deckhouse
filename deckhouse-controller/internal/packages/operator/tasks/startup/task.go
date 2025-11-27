@@ -87,18 +87,11 @@ func (t *task) Execute(ctx context.Context) error {
 		for _, hookInfo := range info {
 			syncTask := taskhooksync.NewTask(t.packageName, hook, hookInfo, t.manager, t.logger)
 
-			queueName := hookInfo.QueueName
-			if queueName == "main" {
-				queueName = t.packageName
-
-				// Place wait tasks in separate sync queue to avoid blocking main queue
-				// This prevents deadlocks when multiple hooks need to sync
-				if hookInfo.KubernetesBinding.WaitForSynchronization {
-					queueName = fmt.Sprintf("%s.sync", t.packageName)
-				}
-			}
+			// queue = <name>/<queue>
+			queueName := fmt.Sprintf("%s/%s", t.packageName, hookInfo.QueueName)
 
 			if hookInfo.KubernetesBinding.WaitForSynchronization {
+				queueName = fmt.Sprintf("%s/sync", queueName)
 				// Add to WaitGroup - we'll block until this completes
 				t.queue.Enqueue(ctx, queueName, syncTask, queue.WithWait(wg))
 				continue
