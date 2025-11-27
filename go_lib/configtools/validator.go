@@ -17,6 +17,7 @@ limitations under the License.
 package configtools
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -67,9 +68,17 @@ func (v ValidationResult) HasError() bool {
 func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
+	var settings map[string]any
+	err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
+	if err != nil {
+		return ValidationResult{
+			Error: fmt.Sprintf("spec.settings is not a valid JSON: %v", err),
+		}
+	}
+
 	if config.Spec.Version == 0 {
 		// Resource is not valid when spec.settings are specified without version.
-		if len(config.Spec.Settings) > 0 {
+		if len(settings) > 0 {
 			result.Error = "spec.version is required when spec.settings are specified"
 		}
 		// Resource is valid without spec.version and spec.settings.
@@ -77,7 +86,7 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	}
 
 	// Can run conversions and validations if spec.version and spec.settings are specified.
-	if len(config.Spec.Settings) == 0 {
+	if len(settings) == 0 {
 		// Warn about spec.version without spec.settings.
 		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
@@ -103,7 +112,7 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 		return result
 	}
 
-	newVersion, newSettings, err := converter.ConvertToLatest(config.Spec.Version, config.Spec.Settings)
+	newVersion, newSettings, err := converter.ConvertToLatest(config.Spec.Version, settings)
 	if err != nil {
 		result.Error = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", config.Spec.Version, newVersion, err)
 		return result
@@ -219,5 +228,5 @@ func cleanupMultilineError(err error) string {
 }
 
 func hasVersionedSettings(cfg *v1alpha1.ModuleConfig) bool {
-	return cfg != nil && cfg.Spec.Version > 0 && cfg.Spec.Settings != nil
+	return cfg != nil && cfg.Spec.Version > 0 && len(cfg.Spec.Settings.Raw) > 0
 }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:generate=false
@@ -46,8 +47,8 @@ type Release interface {
 	GetUpdateSpec() *UpdateSpec
 }
 
-// +kubebuilder:pruning:PreserveUnknownFields
-type Changelog map[string]any
+// +kubebuilder:pruning:XPreserveUnknownFields
+type Changelog runtime.RawExtension // map[string]any
 
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {

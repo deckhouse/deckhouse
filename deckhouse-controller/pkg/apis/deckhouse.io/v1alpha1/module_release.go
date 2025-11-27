@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -257,23 +256,20 @@ func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
 	return mr.Spec.UpdateSpec
 }
 
-func (c Changelog) DeepCopy() Changelog {
-	if c == nil {
-		return nil
-	}
+func (v *Changelog) DeepCopy() *Changelog {
+	newSlice := make([]byte, len(v.Raw))
+	copy(newSlice, v.Raw)
 
-	data, err := json.Marshal(c)
-	if err != nil {
-		panic(err)
-	}
+	return &Changelog{Raw: newSlice}
+}
 
-	var out Changelog
-	err = json.Unmarshal(data, &out)
-	if err != nil {
-		panic(err)
+func (v Changelog) DeepCopyInto(out *Changelog) {
+	{
+		v := &v
+		clone := v.DeepCopy()
+		*out = *clone
+		return
 	}
-
-	return out
 }
 
 type ModuleReleaseRequirements struct {

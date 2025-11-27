@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -53,7 +54,14 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
 	}
-	return mc.Spec.Settings["virtualMachineCIDRs"], nil
+
+	var settings map[string]any
+	err = json.Unmarshal(mc.Spec.Settings.Raw, &settings)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal virtualization moduleconfig settings: %v", err)
+	}
+
+	return settings["virtualMachineCIDRs"], nil
 }
 
 func applyVMCIDRs(_ context.Context, input *go_hook.HookInput) error {

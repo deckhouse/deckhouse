@@ -225,23 +225,29 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	// Skip if in the secret key "flannel" does not exist or empty.
 	secretMatchesMC := true
 	if cniSecret.Flannel != (flannelConfigStruct{}) {
+		var settings map[string]any
+		err := json.Unmarshal(desiredCNIModuleConfig.Spec.Settings.Raw, &settings)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal cni moduleconfig settings: %v", err)
+		}
+
 		switch cniSecret.Flannel.PodNetworkMode {
 		case "host-gw":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				settings["podNetworkMode"] = "HostGW"
 				secretMatchesMC = false
 			}
 		case "vxlan":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "VXLAN" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
+				settings["podNetworkMode"] = "VXLAN"
 				secretMatchesMC = false
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				settings["podNetworkMode"] = "HostGW"
 				secretMatchesMC = false
 			}
 		default:

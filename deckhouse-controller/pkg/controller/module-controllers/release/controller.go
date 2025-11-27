@@ -1319,9 +1319,16 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	if err != nil {
 		return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 	}
+
+	var settings map[string]any
+	err = json.Unmarshal(config.Spec.Settings.Raw, &settings)
+	if err != nil {
+		return fmt.Errorf("unmarshal the '%s' module config settings: %w", release.GetModuleName(), err)
+	}
+
 	values := make(addonutils.Values)
 	if err == nil {
-		values = addonutils.Values(config.Spec.Settings)
+		values = addonutils.Values(settings)
 	}
 
 	// check conversions

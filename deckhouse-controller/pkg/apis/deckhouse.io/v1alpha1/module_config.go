@@ -71,19 +71,14 @@ type ModuleConfig struct {
 }
 
 // SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
-// +kubebuilder:pruning:PreserveUnknownFields
-type SettingsValues map[string]any
+// +kubebuilder:pruning:XPreserveUnknownFields
+type SettingsValues runtime.RawExtension // map[string]any
 
 func (v *SettingsValues) DeepCopy() *SettingsValues {
-	nmap := make(map[string]any, len(*v))
+	newSlice := make([]byte, len(v.Raw))
+	copy(newSlice, v.Raw)
 
-	for key, value := range *v {
-		nmap[key] = deepCopyValue(value)
-	}
-
-	vv := SettingsValues(nmap)
-
-	return &vv
+	return &SettingsValues{Raw: newSlice}
 }
 
 func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
@@ -92,25 +87,6 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 		clone := v.DeepCopy()
 		*out = *clone
 		return
-	}
-}
-
-func deepCopyValue(val any) any {
-	switch v := val.(type) {
-	case map[string]any:
-		newMap := make(map[string]any, len(v))
-		for k, vv := range v {
-			newMap[k] = deepCopyValue(vv)
-		}
-		return newMap
-	case []any:
-		newSlice := make([]any, len(v))
-		for i, vv := range v {
-			newSlice[i] = deepCopyValue(vv)
-		}
-		return newSlice
-	default:
-		return v
 	}
 }
 

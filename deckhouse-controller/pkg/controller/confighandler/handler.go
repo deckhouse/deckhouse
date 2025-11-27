@@ -16,7 +16,9 @@ package confighandler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
@@ -152,20 +154,31 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values{}, nil
 	}
 
+	var settings map[string]any
+	err := json.Unmarshal(moduleConfig.Spec.Settings.Raw, &settings)
+	if err != nil {
+		return utils.Values{}, fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
+	}
+
 	if moduleConfig.Spec.Version == 0 {
-		return utils.Values(moduleConfig.Spec.Settings), nil
+		return utils.Values(settings), nil
 	}
 
 	converter := h.conversionsStore.Get(moduleConfig.Name)
-	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
+	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, settings)
 	if err != nil {
 		return utils.Values{}, err
 	}
 
-	moduleConfig.Spec.Version = newVersion
-	moduleConfig.Spec.Settings = newSettings
+	rawSettings, err := json.Marshal(newSettings)
+	if err != nil {
+		return utils.Values{}, fmt.Errorf("cannot marshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
+	}
 
-	return utils.Values(moduleConfig.Spec.Settings), nil
+	moduleConfig.Spec.Version = newVersion
+	moduleConfig.Spec.Settings = v1alpha1.SettingsValues{Raw: rawSettings}
+
+	return utils.Values(newSettings), nil
 }
 
 // SaveConfigValues saving patches in ModuleConfigBackend.
