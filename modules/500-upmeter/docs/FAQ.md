@@ -20,3 +20,7 @@ As part of the test, a Pod is created and placed on a node. Then this pod is del
 `smoke-mini` objects implement network connectivity testing between nodes.
 Five `StatefulSet` with one replica are deployed for testing. The test checks connectivity between `smoke-mini` Pods as well as network connectivity with `upmeter-agent` Pods running on master nodes.  
 Once per minute, one of the `smoke-mini` Pods is migrated to another node.
+
+## How can I send metrics from multiple clusters to a centralized storage?
+
+The module implements a mechanism for sending metrics using the Prometheus remote write protocol, which allows you to send data to centralized storages that support this feature. However, to distinguish between metric series coming from different clusters, you need to explicitly specify additional labels for each cluster in the `upmeterremotewrite` configuration. The `cluster` label is used exactly for this purpose, and furthermore, it gives you the opportunity to use the Upmeter multi-cluster dashboard. You can find out how to set these extra labels by looking at the documentation for [`upmeterremotewrite`](cr.html#upmeterremotewrite-v1-spec-additionallabels).
