@@ -42,10 +42,10 @@ data:
         containerLabel: container
       window: 0s
     rules:
-    - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
+    - seriesQuery: 'ingress_nginx_detail_requests_total{exported_namespace!="",ingress!=""}'
       resources:
         overrides:
-          namespace: {resource: namespace}
+          exported_namespace: {resource: namespace}
           ingress: {resource: ingress}
       name:
         matches: ".*"
@@ -70,10 +70,10 @@ data:
         as: "memory_1m"
       metricsQuery: 'sum(avg_over_time(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[1m])) by (<<.GroupBy>>)'
 {{- range list "5m" "15m" }}
-    - seriesQuery: 'ingress_nginx_detail_requests_total{namespace!="",ingress!=""}'
+    - seriesQuery: 'ingress_nginx_detail_requests_total{exported_namespace!="",ingress!=""}'
       resources:
         overrides:
-          namespace: {resource: namespace}
+          exported_namespace: {resource: namespace}
           ingress: {resource: ingress}
       name:
         matches: ".*"
