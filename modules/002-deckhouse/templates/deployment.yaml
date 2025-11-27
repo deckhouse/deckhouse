@@ -138,7 +138,6 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
-          {{- "allowPrivilegeEscalation: false" | nindent 12 }}
           {{- "seccompProfile:" | nindent 12 }}
           {{- "type: RuntimeDefault" | nindent 14 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
