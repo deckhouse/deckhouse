@@ -41,17 +41,3 @@ properties:
       Список альтернативных доменов кластера, разрешаемых наравне с `global.discovery.clusterDomain`.
 
       **Обратите внимание:** альтернативный домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).
-  stsPodsHostsAppender:
-    description: |
-      Настройки вебхука, добавляющего FQDN-ы в `/etc/hosts` для Pod-ов со `spec.subdomain` при использовании `clusterDomainAliases`.
-    properties:
-      initContainerRequests:
-        description: |
-          Ресурсы (requests) init-контейнера, который вебхук добавляет в Pod.
-        properties:
-          cpu:
-            description: |
-              Запрашиваемый CPU для init-контейнера (например, `10m`, `50m`).
-          memory:
-            description: |
-              Запрашиваемая память для init-контейнера (например, `10Mi`, `16Mi`).
