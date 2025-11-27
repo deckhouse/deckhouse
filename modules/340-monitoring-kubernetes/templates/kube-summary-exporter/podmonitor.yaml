@@ -24,3 +24,9 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    metricRelabelings:
+    - sourceLabels: [name]
+      targetLabel: container
+      action: replace
+    - regex: name
+      action: labeldrop
