@@ -153,18 +153,19 @@ EOF
     return 0
   fi
 
-  # Check maxPods vs podSubnetNodeCIDRPrefix
+  # if maxPods == null then we do not set maxPods - it is allowed
   maxPods=$(context::jq -r '.review.request.object.spec.kubelet.maxPods // null')
   if [[ "$maxPods" != "null" ]]; then
-    podSubnetNodeCIDRPrefix=$(context::jq -r '.snapshots.cluster_config[0].filterResult.podSubnetNodeCIDRPrefix // null')
-    if [[ "$podSubnetNodeCIDRPrefix" != "null" && "$podSubnetNodeCIDRPrefix" != "" ]]; then
-      availableIPs=$((2**(32 - podSubnetNodeCIDRPrefix) - 3))
-      if [[ "$maxPods" -gt "$availableIPs" ]]; then
-        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to set .spec.kubelet.maxPods ($maxPods) greater than available IPs ($availableIPs) in podSubnetNodeCIDRPrefix /$podSubnetNodeCIDRPrefix"}
+    prefix=$(context::jq -r '.snapshots.cluster_config[0].filterResult.podSubnetNodeCIDRPrefix')
+    if [[ -z "$prefix" || "$prefix" == "null" ]]; then
+      prefix=24
+    fi
+    availableIPs=$((2**(32 - prefix) - 3))
+    if [[ "$maxPods" -gt "$availableIPs" ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to set .spec.kubelet.maxPods ($maxPods) greater than available IPs ($availableIPs) in podSubnetNodeCIDRPrefix /$prefix"}
 EOF
-        return 0
-      fi
+      return 0
     fi
   fi
 
