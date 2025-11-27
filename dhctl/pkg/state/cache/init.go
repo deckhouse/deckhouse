@@ -42,8 +42,8 @@ var (
 var globalCache state.Cache = &cache.DummyCache{}
 
 func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
-	tmpDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
-	log.DebugF("Cache dir %s\n", tmpDir)
+	tmpDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
+	log.InfoF("State cache directory: %s\n", tmpDir)
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}

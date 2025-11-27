@@ -4,7 +4,7 @@
 
 - This release includes several important security improvements. Multiple known vulnerabilities have been fixed, including one in the user-authn module (CVE-2025-22868) that could potentially allow bypassing authentication checks. It is recommended that you schedule this update. See the [Security](#security) section for details.
 
-- The `dashboard` module will be removed in DKP version 1.75. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/) module to be enabled).
+- The `dashboard` module will be removed in future DKP versions. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/) module to be enabled).
 
 - The `runtime-audit-engine` module is now loaded from an external source (the `deckhouse` ModuleSource).
 
@@ -46,7 +46,7 @@
 
 - Audit logs now show which OIDC provider issued the authentication token
 
-- Deckhouse CLI (`d8`) updated to v0.20.7:
+- Deckhouse CLI (`d8`) updated to v0.23.0:
   - Added the [`d8 status`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-status) command, which provides a quick cluster summary (nodes, releases, Deckhouse pods, alerts, registry, Deckhouse settings, CNI, queue state).
   - Added the [`d8 k debug`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-k-debug) command, which runs the DKP built-in debug container (image can be overridden via `--image`). This simplifies interactive pod debugging.
   - Added the `--watch` flag to the [`d8 system queue list`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-system-queue-list) command to track queue state changes.

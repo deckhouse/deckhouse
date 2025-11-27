@@ -32,8 +32,6 @@ import (
 
 const cleanupErrorPrefix = "Error during cleanup tmp dir:"
 
-type LoggerProvider func() log.Logger
-
 type ClearTmpParams struct {
 	IsDebug         bool
 	RemoveTombStone bool
@@ -41,7 +39,7 @@ type ClearTmpParams struct {
 	TmpDir        string
 	DefaultTmpDir string
 
-	LoggerProvider LoggerProvider
+	LoggerProvider log.LoggerProvider
 }
 
 type TmpCleaner interface {
@@ -104,11 +102,11 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 }
 
 type DummyTmpCleaner struct {
-	loggerProvider LoggerProvider
+	loggerProvider log.LoggerProvider
 	msg            string
 }
 
-func NewDummyTmpCleaner(loggerProvider LoggerProvider, msg string) *DummyTmpCleaner {
+func NewDummyTmpCleaner(loggerProvider log.LoggerProvider, msg string) *DummyTmpCleaner {
 	return &DummyTmpCleaner{
 		loggerProvider: loggerProvider,
 		msg:            msg,
@@ -117,7 +115,7 @@ func NewDummyTmpCleaner(loggerProvider LoggerProvider, msg string) *DummyTmpClea
 
 func (d *DummyTmpCleaner) Cleanup() {
 	if d.msg != "" {
-		safeLoggerProvider(d.loggerProvider).LogInfoLn(d.msg)
+		log.SafeProvideLogger(d.loggerProvider).LogInfoLn(d.msg)
 	}
 }
 
@@ -142,7 +140,7 @@ func newRegularTmpCleaner(params *ClearTmpParams, suffixesForSkip []string) *reg
 }
 
 func (r *regularTmpCleaner) Cleanup() {
-	logger := safeLoggerProvider(r.params.LoggerProvider)
+	logger := log.SafeProvideLogger(r.params.LoggerProvider)
 
 	if r.disableCleanup {
 		// lock file will deleted by callback returned from AcquireTmpDirLock
@@ -275,17 +273,6 @@ func (r *regularTmpCleaner) DisableCleanup(msg string) {
 	}
 
 	r.disableCleanupMsg = msg
-}
-
-func safeLoggerProvider(provider LoggerProvider) log.Logger {
-	if provider != nil {
-		logger := provider()
-		if !govalue.IsNil(logger) {
-			return logger
-		}
-	}
-
-	return log.GetDefaultLogger()
 }
 
 // sortByDepthDescending sorts paths by depth (number of slashes) in descending order

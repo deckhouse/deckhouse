@@ -154,7 +154,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.params.CacheDir
+	app.SetCacheDir(s.params.CacheDir)
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)

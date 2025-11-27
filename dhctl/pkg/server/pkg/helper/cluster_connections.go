@@ -57,7 +57,7 @@ func InitializeClusterConnections(ctx context.Context, opts ClusterConnectionsOp
 				return fmt.Errorf("parsing connection config: %w", err)
 			}
 
-			sshClient, cleanup, err = CreateSSHClient(connectionConfig)
+			sshClient, cleanup, err = CreateSSHClient(ctx, connectionConfig)
 			if err != nil {
 				return fmt.Errorf("preparing ssh client: %w", err)
 			}
