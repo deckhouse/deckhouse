@@ -198,7 +198,7 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
-{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNodes }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -346,7 +346,7 @@ spec:
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
-{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNodes }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet

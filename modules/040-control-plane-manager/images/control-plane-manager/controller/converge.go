@@ -154,13 +154,20 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
-			if err := EtcdJoinConverge(); err != nil {
-				return err
+			if config.EtcdOnly {
+				log.Info("etcd-only mode: adding member to existing cluster")
+				if err := EtcdOnlyJoinConverge(); err != nil {
+					return err
+				}
+			} else {
+				if err := EtcdJoinConverge(); err != nil {
+					return err
+				}
 			}
-		} else {
-			if err := prepareConverge(componentName, false); err != nil {
-				return err
-			}
+		}
+		
+		if err := prepareConverge(componentName, false); err != nil {
+			return err
 		}
 
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
