@@ -1,9 +1,8 @@
 .github/                        @Nikolay1224
 000-common/                     @name212 @sprait
 002-deckhouse/                  @yalosev @ldmonster
-005-external-module-manager/    @yalosev @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
-015-admission-policy-engine/    @yalosev @ldmonster
+015-admission-policy-engine/    @nabokihms
 021-cni-cilium/                 @apolovov
 025-static-routing-manager/     @apolovov
 030-cloud-provider-*/           @aleksey-su
@@ -22,17 +21,17 @@
 110-istio/                      @apolovov @skurbatov
 140-user-authz/                 @nabokihms
 150-user-authn/                 @nabokihms
-160-multitenancy-manager/       @yalosev @ldmonster
+160-multitenancy-manager/       @nabokihms
 200-operator-prometheus/        @vladimirGuryanov @lazovskiy
 300-prometheus/                 @vladimirGuryanov @lazovskiy
 301-prometheus-*/               @vladimirGuryanov @lazovskiy
-302-vertical-pod-autoscaler/    @RomanenkoDenys @name212 @sprait
+302-vertical-pod-autoscaler/    @yalosev
 303-prometheus-*/               @vladimirGuryanov @lazovskiy
 340-extended-monitoring/        @vladimirGuryanov @lazovskiy
 340-monitoring-*/               @vladimirGuryanov @lazovskiy
 350-node-local-dns/             @apolovov
 380-metallb/                    @apolovov
-400-descheduler/                @RomanenkoDenys @name212 @sprait
+400-descheduler/                @yalosev
 402-ingress-nginx/              @apolovov
 450-keepalived/                 @apolovov
 450-network-gateway/            @apolovov
@@ -46,7 +45,7 @@
 500-dashboard/                  @shvgn
 500-upmeter/                    @vladimirGuryanov @lazovskiy
 500-okmeter/                    @vladimirGuryanov @lazovskiy
-500-operator-trivy/             @yalosev @ldmonster
+500-operator-trivy/             @nabokihms
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
 610-service-with-healthchecks   @apolovov
