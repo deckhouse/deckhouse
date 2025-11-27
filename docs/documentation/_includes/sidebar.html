@@ -4,27 +4,6 @@
       {{ site.data.i18n.common.dev_menu_message[page.lang] }}
     </div>
   {%- else %}
-      <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
-          <div>
-          {%- if site.mode == 'module' %}
-            <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
-          {%- else if page.sidebar == 'embedded-modules' %}
-            <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
-          {%- else %}
-            <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
-          {%- endif %}
-
-          <!-- module-version-badge -->
-          <div id="doc-versions-menu" class="channel-menu submenu-parent">
-          {%- unless site.mode == 'module' %}
-            {%- if page.sidebar == 'embedded-modules' %}
-              <!--#include virtual="/includes/channel-menu-module.html" -->
-            {%- else %}
-              <!--#include virtual="/includes/channel-menu-v2.html" -->
-            {%- endif %}
-          {%- endunless -%}
-          </div>
-      </div>
       <div class="sidebar__wrapper-inner">
         <nav class="sidebar__container">
 
