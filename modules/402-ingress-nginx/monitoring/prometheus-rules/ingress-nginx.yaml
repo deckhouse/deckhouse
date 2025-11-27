@@ -1,11 +1,11 @@
 - name: kubernetes.ingress-nginx.info
   rules:
   - record: ingress_nginx_overall_info
-    expr: count({__name__=~"ingress_nginx_overall_.*", __name__!="ingress_nginx_overall_info"}) by (job,  controller, app, node, endpoint, content_kind, namespace, exported_namespace, vhost) * 0 + 1
+    expr: count({__name__=~"ingress_nginx_overall_.*", __name__!="ingress_nginx_overall_info"}) by (job,  controller, app, node, endpoint, content_kind, namespace, vhost) * 0 + 1
   - record: ingress_nginx_detail_info
-    expr: count({__name__=~"ingress_nginx_detail_.*", __name__!="ingress_nginx_detail_info", __name__!~"ingress_nginx_detail_backend_.*"}) by (job, controller, app, node, endpoint, content_kind, namespace, exported_namespace, ingress, service, service_port, vhost, location) * 0 + 1
+    expr: count({__name__=~"ingress_nginx_detail_.*", __name__!="ingress_nginx_detail_info", __name__!~"ingress_nginx_detail_backend_.*"}) by (job, controller, app, node, endpoint, content_kind, namespace, ingress, service, service_port, vhost, location) * 0 + 1
   - record: ingress_nginx_detail_backend_info
-    expr: count({__name__=~"ingress_nginx_detail_backend_.*", __name__!="ingress_nginx_detail_backend_info"}) by (job, controller, app, node, endpoint, namespace, exported_namespace, ingress, service, service_port, vhost, location, pod_ip) * 0 + 1
+    expr: count({__name__=~"ingress_nginx_detail_backend_.*", __name__!="ingress_nginx_detail_backend_info"}) by (job, controller, app, node, endpoint, namespace, ingress, service, service_port, vhost, location, pod_ip) * 0 + 1
   - alert: NginxIngressConfigTestFailed
     expr: nginx_ingress_controller_config_last_reload_successful == 0
     for: 10m
@@ -289,3 +289,4 @@
         **Type:** `{{ $labels.type }}`
 
         If this issue persists, investigate network connectivity or database availability.
+
