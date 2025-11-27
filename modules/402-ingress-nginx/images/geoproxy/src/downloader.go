@@ -119,6 +119,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 		if err == nil && link != "" {
 			account.Mirror = link
 			account.SkipTLS = true // skip TLS kubeRbacProxy
+			account.DownloadFromLeader = true
 			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 		}
 		log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
@@ -169,9 +170,12 @@ func (d *Downloader) tryMaxMindClient(ctx context.Context, client maxmindClient.
 
 func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account) error {
 	url := createURL(account.Mirror, licenseKey, edition)
-	if account.Mirror != "" {
+	switch {
+	case account.DownloadFromLeader:
+		log.Info(fmt.Sprintf("Downloading %v from leader: %s", edition, account.Mirror))
+	case account.Mirror != "":
 		log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror))
-	} else {
+	default:
 		log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
 	}
 
