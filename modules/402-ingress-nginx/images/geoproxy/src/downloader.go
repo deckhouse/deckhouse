@@ -294,8 +294,12 @@ func (d *Downloader) saveDB(data io.ReadCloser, dstPathRoot, edition string) (st
 }
 
 func (d *Downloader) downloadFromLeader(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account) error {
-	const maxAttempts = 3
-	backoff := time.Second * 2
+	const (
+		maxAttempts    = 5
+		initialBackoff = 2 * time.Second
+	)
+
+	backoff := initialBackoff
 	var legacyErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		legacyErr = d.downloadLegacyEdition(ctx, dstPathRoot, licenseKey, edition, account)
