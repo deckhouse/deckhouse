@@ -79,7 +79,7 @@ spec:
         - --maxmind-mirror=https://geoproxy:4250/download
         - --maxmind-skip-tls-verification=true
         - --maxmind-retries-count=5
-        - --maxmind-retries-timeout=10s
+        - --maxmind-retries-timeout=15s
         - --maxmind-edition-ids=GeoIPTest,GeoIPTest2
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-test
