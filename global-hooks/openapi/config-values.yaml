@@ -160,7 +160,7 @@ properties:
             default: {}
             additionalProperties: false
             description: |
-              The amount of resources (CPU and memory) allocated to control-plane components on each master node. The settings do not apply if the cluster control plane is managed by a cloud provider (e.g., Google Kubernetes Engine, Azure Kubernetes Service).
+              Amount of resources (CPU and memory) allocated to control plane components on each master node. These settings do not apply if the cluster control plane is managed by a cloud provider (for example, Google Kubernetes Engine or Azure Kubernetes Service).
             x-examples:
               - cpu: 1000m
                 memory: 500M
