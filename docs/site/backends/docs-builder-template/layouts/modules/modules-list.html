@@ -1,5 +1,5 @@
 {{ define "main" }}
-<div class="breadcrumbs-container">
+<div class="navigation__container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
       <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
@@ -167,6 +167,15 @@
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
+    <script>
+      function getHeaderHeight() {
+        const header = $('header');
+        return header.outerHeight(true);
+      }
+      const headerHeight = getHeaderHeight();
+      const $navigationContainer = $('.navigation__container');
+      $navigationContainer.css("top", headerHeight);
+    </script>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
     {{ end }}
