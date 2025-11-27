@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
+	"sync"
 	"time"
 
 	ssh "github.com/deckhouse/lib-gossh"
@@ -61,7 +63,8 @@ type Client struct {
 
 	signers []ssh.Signer
 
-	ctx context.Context
+	ctx          context.Context
+	sessionMutex sync.Mutex
 }
 
 func (s *Client) initSigners() error {
@@ -315,6 +318,17 @@ func (s *Client) keepAlive() {
 				}
 				errorsCount++
 			}
+			session.Close()
+			for _, sess := range s.sessionList {
+				if sess != nil {
+					if _, err := sess.SendRequest("keepalive@openssh.com", false, nil); err != nil {
+						log.DebugF("Keep-alive for session failed: %v\n", err)
+					}
+				} else {
+					s.UnregisterSession(sess)
+				}
+
+			}
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -495,7 +509,24 @@ func (s *Client) Live() bool {
 }
 
 func (s *Client) RegisterSession(sess *ssh.Session) {
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
 	s.sessionList = append(s.sessionList, sess)
+}
+
+func (s *Client) UnregisterSession(sess *ssh.Session) {
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
+	num := len(s.sessionList)
+	for i, s := range s.sessionList {
+		if s == sess {
+			num = i
+			break
+		}
+	}
+	if num < len(s.sessionList) {
+		s.sessionList = slices.Delete(s.sessionList, num, num+1)
+	}
 }
 
 func (s *Client) stopKubeproxy() {
