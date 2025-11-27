@@ -53,7 +53,7 @@ kubernetes:
         "defaultCRI": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*defaultCRI:[ ]+(.*)\n").captures[0].string),
         "clusterPrefixLen": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*prefix:[ ]+(.*)\n").captures[0].string | length),
         "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string),
-        "podSubnetNodeCIDRPrefix": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*podSubnetNodeCIDRPrefix:[ ]+(.*)\n").captures[0].string)
+        "podSubnetNodeCIDRPrefix": ((.data."cluster-configuration.yaml" // "" | @base64d | match("podSubnetNodeCIDRPrefix:[ ]*\"?([0-9]+)\"?") | .captures[0].string) // "")
       }
   - name: provider_cluster_config
     apiVersion: v1
