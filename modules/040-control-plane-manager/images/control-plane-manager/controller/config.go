@@ -57,6 +57,7 @@ type Config struct {
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
 	AllowedKubernetesVersions        string
+	EtcdOnly                         bool
 }
 
 var (
@@ -104,6 +105,13 @@ func (c *Config) readEnvs() error {
 
 	if c.AllowedKubernetesVersions, ok = os.LookupEnv("ALLOWED_KUBERNETES_VERSIONS"); !ok || len(c.AllowedKubernetesVersions) == 0 {
 		return errors.New("ALLOWED_KUBERNETES_VERSIONS env should be set")
+	}
+
+	if _, ok := os.LookupEnv("ETCD_ONLY"); ok {
+		c.EtcdOnly = true
+		log.Info("ETCD_ONLY mode enabled: running only etcd without control-plane components")
+	} else {
+		c.EtcdOnly = false
 	}
 
 	if err := c.checkKubernetesVersion(); err != nil {
