@@ -94,7 +94,8 @@
 <div markdown="1">
 ### Параметры доступа к хранилищу образов контейнеров (или проксирующему registry)
 
-> При необходимости ознакомьтесь с [особенностями настройки стороннего container registry](/products/kubernetes-platform/documentation/v1/installing/#установка-deckhouse-kubernetes-platform-из-стороннего-registry).
+> Не используйте учетную запись администратора registry для доступа Deckhouse Kubernetes Platform к registry. Создайте для Deckhouse Kubernetes Platform отдельную учетную запись с правами только на чтение и только в пределах нужного репозитория в registry. [Пример создания](/products/kubernetes-platform/documentation/v1/installing/#особенности-настройки-nexus) такой учетной записи.
+> Подробнее об особенностях настройки стороннего container registry — в [документации](/products/kubernetes-platform/documentation/v1/installing/#установка-deckhouse-kubernetes-platform-из-стороннего-registry).
 </div>
 
   <div class="form__row">
