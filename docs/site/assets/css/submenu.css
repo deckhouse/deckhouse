@@ -2,7 +2,7 @@
     position: absolute;
     z-index: 1000;
     padding: 0;
-    min-width: 100%;
+    max-width: 100%;
     visibility: hidden;
     opacity: 0;
     transition: all .2s;
@@ -85,10 +85,6 @@
 
 .submenu-item a:hover .submenu-item-release {
     color: #0066FF !important;
-}
-
-.submenu-parent {
-    position: relative;
 }
 
 .submenu-parent:not(.disabled):hover .submenu-container {
