@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,8 +47,8 @@ func applyEtcdOnlyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return obj.GetName(), nil
 }
 
-func handleCheckEtcdOnlyNode(input *go_hook.HookInput) error {
-	etcdOnlyNodes := input.Snapshots["etcd_only_node"]
+func handleCheckEtcdOnlyNode(_ context.Context, input *go_hook.HookInput) error {
+	etcdOnlyNodes := input.Snapshots.Get("etcd_only_node")
 	hasEtcdOnlyNode := len(etcdOnlyNodes) > 0
 
 	input.Values.Set("controlPlaneManager.internal.hasEtcdOnlyNode", hasEtcdOnlyNode)
