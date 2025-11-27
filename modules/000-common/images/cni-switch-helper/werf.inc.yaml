@@ -43,6 +43,10 @@ import:
     add: /cni-switch-helper
     to: /cni-switch-helper
     before: setup
+  - image: cni-cilium/agent-distroless
+    add: /usr/bin/cilium-dbg
+    to: /tools/cilium-dbg
+    before: setup
 imageSpec:
   config:
     workingDir: /
