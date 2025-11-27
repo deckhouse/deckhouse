@@ -24,6 +24,10 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
     metricRelabelings:
     - sourceLabels: [name]
       targetLabel: container
