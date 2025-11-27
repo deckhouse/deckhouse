@@ -200,7 +200,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		}
 
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)

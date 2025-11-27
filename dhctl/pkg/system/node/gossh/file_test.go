@@ -80,7 +80,7 @@ func TestSSHFileUpload(t *testing.T) {
 		User:           "user",
 		Port:           "20020"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestSSHFileUploadBytes(t *testing.T) {
 		User:           "user",
 		Port:           "20020"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)
@@ -342,7 +342,7 @@ func TestSSHFileDownload(t *testing.T) {
 		User:           "user",
 		Port:           "20020"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)
@@ -525,7 +525,7 @@ func TestSSHFileDownloadBytes(t *testing.T) {
 		User:           "user",
 		Port:           "20020"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)

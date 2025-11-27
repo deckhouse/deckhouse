@@ -31,8 +31,6 @@ spec:
           x-doc-d8Editions:
             - se+
             - ee
-            - cse-lite
-            - cse-pro
           properties:
             spec:
               type: object
@@ -41,8 +39,6 @@ spec:
                   x-doc-d8Editions:
                     - se+
                     - ee
-                    - cse-lite
-                    - cse-pro
                   description: |-
                     The selector for a group of nodes that will transfer network requests to external services. Among these nodes, eligible nodes will be detected and one of them will be assigned as the active one. Signs of an eligible node:
                     * The node is in Ready state.
@@ -60,8 +56,6 @@ spec:
                       x-doc-d8Editions:
                         - se+
                         - ee
-                        - cse-lite
-                        - cse-pro
                       description: |-
                         A method for determining the source IP address to be assigned to requests through this gateway.
 
@@ -92,16 +86,12 @@ spec:
                           x-doc-d8Editions:
                             - se+
                             - ee
-                            - cse-lite
-                            - cse-pro
                           description: The _virtual_ source IP address to be assigned to outgoing requests through the egress gateway.
                           type: string
                         interfaces:
                           x-doc-d8Editions:
                             - se+
                             - ee
-                            - cse-lite
-                            - cse-pro
                           description: The list of network interfaces to which the _virtual_ IP will be simulated.
                           type: array
                           default: []
@@ -116,8 +106,6 @@ spec:
                           x-doc-d8Editions:
                             - se+
                             - ee
-                            - cse-lite
-                            - cse-pro
                           description: The interface name on the egress nodes through which external requests are processed.
                           type: string
                       type: object

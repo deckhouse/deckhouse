@@ -47,6 +47,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -54,7 +55,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		cnf := lock.GetLockLeaseConfig("lock-releaser")
-		return lease.RemoveLease(context.Background(), kubeCl, cnf, confirm)
+		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
 	return cmd
 }

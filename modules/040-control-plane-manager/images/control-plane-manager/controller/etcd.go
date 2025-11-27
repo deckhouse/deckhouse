@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -56,18 +57,33 @@ type Etcd struct {
 }
 
 func EtcdJoinConverge() error {
-	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	var etcdSubphase string = "etcd" // default subphase
+
+	v, err := semver.NewVersion(config.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
+	c, err := semver.NewConstraint(">= 1.33")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	if c.Check(v) { // >= 1.33
+		etcdSubphase = "etcd-join"
+	}
+
+	args := []string{"-v=5", "join", "phase", "control-plane-join", etcdSubphase, "--config", deckhousePath + "/kubeadm/config.yaml"}
 
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),
 		slog.String("component", "etcd"),
+		slog.String("kubernetes_version", config.KubernetesVersion),
 		slog.Any("args", args),
 	)
 
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info("etcd join converge", slog.String("output", s))
 	}
 	return err
 }
