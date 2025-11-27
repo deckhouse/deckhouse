@@ -57,3 +57,9 @@ type Args map[string]interface{}
 func Combine(r1, r2 Rule) Rule {
 	return Rule(strings.TrimSpace(string(r1)) + "\n\n" + strings.TrimSpace(string(r2)))
 }
+
+// FileSourceHostIPRule sets the host_ip label from the VECTOR_HOST_IP environment variable for File sources.
+// This adds the node's IP address to the log metadata.
+const FileSourceHostIPRule Rule = `
+."host_ip" = "$VECTOR_HOST_IP"
+`
