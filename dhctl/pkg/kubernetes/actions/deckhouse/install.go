@@ -302,7 +302,14 @@ func CreateDeckhouseManifests(
 		Name:     `Secret "deckhouse-registry"`,
 		Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(deckhouseRegistrySecretData) },
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				}
+			} else {
+				log.InfoLn("Already exists. Skip!")
+			}
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
