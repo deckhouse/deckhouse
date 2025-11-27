@@ -1,0 +1,56 @@
+- name: extended_monitoring.cronjob.records
+  interval: 30s
+  rules:
+    # Identify CronJobs where the most recent schedule hasn't succeeded yet
+    # This captures CronJobs that either:
+    # - Have never succeeded (last_successful_time doesn't exist)
+    # - Have been scheduled more recently than their last success
+    - record: extended_monitoring:cronjob:recent_schedule_not_successful
+      expr: |
+        label_replace(
+          (
+            kube_cronjob_status_last_schedule_time
+            >= on(namespace, cronjob)
+            (
+              kube_cronjob_status_last_successful_time
+              or on(namespace, cronjob)
+              (kube_cronjob_status_last_schedule_time * 0)
+            )
+          ),
+          "owner_name", "$1", "cronjob", "(.*)"
+        )
+
+    # Identify Jobs that are from the latest CronJob execution
+    # A Job is "latest" if its start_time >= parent CronJob's last_schedule_time
+    # This prevents alerting on historical failed jobs that are still in history
+    - record: extended_monitoring:job:is_latest_for_cronjob
+      expr: |
+        kube_job_status_start_time
+        >= on (namespace, job_name) group_left(owner_name)
+        (
+          max by (owner_name, namespace) (
+            label_replace(
+              kube_cronjob_status_last_schedule_time,
+              "owner_name", "$1", "cronjob", "(.*)"
+            )
+          )
+          * on (namespace, owner_name) group_right()
+          max by (owner_name, namespace, job_name) (
+            kube_job_owner{owner_kind="cronjob"}
+          )
+        )
+
+    # Combine all conditions into a single metric
+    # This identifies Jobs that are:
+    # 1. Failed (kube_job_status_failed > 0)
+    # 2. From the latest CronJob execution
+    # 3. Belong to a CronJob whose recent execution hasn't succeeded
+    - record: extended_monitoring:job:failed_latest_from_pending_cronjob
+      expr: |
+        max by (namespace, job_name, owner_kind, owner_name) (
+          (kube_job_status_failed > 0)
+          * on (namespace, job_name) group_right()
+          extended_monitoring:job:is_latest_for_cronjob
+        )
+        >= on (namespace, owner_name) group_right()
+        extended_monitoring:cronjob:recent_schedule_not_successful
