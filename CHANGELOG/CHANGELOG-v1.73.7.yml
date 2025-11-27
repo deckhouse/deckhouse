@@ -1,0 +1,54 @@
+candi:
+  fixes:
+    - summary: Add missing debian 13 version to detect_bundle
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16617
+ci:
+  features:
+    - summary: Add Deckhouse Virtualization Platform testing to e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16636
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix Provider ID
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16705
+control-plane-manager:
+  fixes:
+    - summary: Fix  “etcd join” phase for control-plane scaling in v1.33.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16660
+      impact: Allows scaling control-plane from 1→3 in clusters where ControlPlaneKubeletLocalMode=true.
+deckhouse-controller:
+  fixes:
+    - summary: Fixed verifying migrated modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16693
+    - summary: fix conversion applying for external modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16656
+dhctl:
+  fixes:
+    - summary: Fix StaticInstance readiness check and refactoring readiness check for resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16616
+docs:
+  features:
+    - summary: Added Commander support for DVP EE in the Platform Editions table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16674
+  fixes:
+    - summary: >-
+        Outdated instructions for reducing the number of master nodes in cloud clusters have been
+        fixed. Users will correctly perform the converge of cloud clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16576
+      impact: >-
+        The instructions for reducing the number of master nodes have not been updated for a long
+        time, and for a long time now, the conversion to reducing the number of master nodes in
+        clusters in a cloud installation is automatic.
+kube-dns:
+  fixes:
+    - summary: Improved /etc/hosts renderer compatibility with admission-policy-engine Restricted mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16599
+log-shipper:
+  fixes:
+    - summary: Update documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16644
+upmeter:
+  fixes:
+    - summary: fix securityxontext for statefulset
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16534
+      impact: upmeter check
+
