@@ -126,9 +126,6 @@ spec:
             runAsUser: 0
             runAsNonRoot: false
             readOnlyRootFilesystem: true
-            allowPrivilegeEscalation: false
-            seccompProfile:
-              type: RuntimeDefault
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
@@ -138,9 +135,6 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
-          {{- "allowPrivilegeEscalation: false" | nindent 12 }}
-          {{- "seccompProfile:" | nindent 12 }}
-          {{- "type: RuntimeDefault" | nindent 14 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             capabilities:
               drop:
