@@ -33,9 +33,8 @@ type InitConfig struct {
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
 }
 
-func (config *InitConfig) ToRegistrySettings() (RegistrySettings, error) {
-	imagesRepo := strings.TrimRight(config.ImagesRepo, "/")
-
+func (config InitConfig) ToRegistrySettings() (RegistrySettings, error) {
+	imagesRepo := strings.TrimRight(strings.TrimSpace(config.ImagesRepo), "/")
 	if config.RegistryDockerCfg == "" {
 		registrySettings := RegistrySettings{
 			ImagesRepo: imagesRepo,

@@ -301,13 +301,13 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(registryRemote registry_types.Data) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(config registry_types.Data) (*registryClientConfigGetter, error) {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: registryRemote.ImagesRepo,
-			Scheme:     strings.ToLower(string(registryRemote.Scheme)),
-			CA:         registryRemote.CA,
-			Auth:       registryRemote.AuthBase64(),
+			Repository: config.ImagesRepo,
+			Scheme:     strings.ToLower(string(config.Scheme)),
+			CA:         config.CA,
+			Auth:       config.AuthBase64(),
 		},
 	}, nil
 }

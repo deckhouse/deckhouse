@@ -45,7 +45,7 @@ func (d *Data) FromRegistrySettings(settings RegistrySettings) {
 	}
 }
 
-func (d *Data) AuthBase64() string {
+func (d Data) AuthBase64() string {
 	if d.Username == "" {
 		return ""
 	}
@@ -53,13 +53,13 @@ func (d *Data) AuthBase64() string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func (d *Data) DockerCfg() ([]byte, error) {
+func (d Data) DockerCfg() ([]byte, error) {
 	address, _ := d.AddressAndPath()
 	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
 	return cfg, err
 }
 
-func (d *Data) DockerCfgBase64() (string, error) {
+func (d Data) DockerCfgBase64() (string, error) {
 	cfg, err := d.DockerCfg()
 	if err != nil {
 		return "", err
@@ -67,6 +67,6 @@ func (d *Data) DockerCfgBase64() (string, error) {
 	return base64.StdEncoding.EncodeToString(cfg), nil
 }
 
-func (d *Data) AddressAndPath() (string, string) {
+func (d Data) AddressAndPath() (string, string) {
 	return helpers.SplitAddressAndPath(d.ImagesRepo)
 }

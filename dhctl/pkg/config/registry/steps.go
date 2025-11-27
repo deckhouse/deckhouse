@@ -40,31 +40,35 @@ const (
 
 func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	return retry.NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).RunContext(ctx, func() error {
-		if config.ModuleEnabled {
-			if err := checkInit(ctx, kubeClient); err != nil {
-				log.DebugF("Error while checking registry init: %v\n", err)
-				return ErrIsNotReady
-			}
+		return checkRegistryInitialization(ctx, kubeClient, config)
+	})
+}
 
-			msg, err := checkReady(ctx, kubeClient)
-			if err != nil {
-				if msg != "" {
-					err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-					log.DebugF("Error while checking registry ready: %v\n", err)
-					return err
-				}
-				log.DebugF("Error while checking registry ready: %v\n", err)
-				return ErrIsNotReady
-			}
-		}
-
-		if err := removeInitSecret(ctx, kubeClient); err != nil {
-			log.DebugF("Error while removing registry init secret: %v\n", err)
+func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
+	if config.ModuleEnabled {
+		if err := checkInit(ctx, kubeClient); err != nil {
+			log.DebugF("Error while checking registry init: %v\n", err)
 			return ErrIsNotReady
 		}
 
-		return nil
-	})
+		msg, err := checkReady(ctx, kubeClient)
+		if err != nil {
+			if msg != "" {
+				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
+				log.DebugF("Error while checking registry ready: %v\n", err)
+				return err
+			}
+			log.DebugF("Error while checking registry ready: %v\n", err)
+			return ErrIsNotReady
+		}
+	}
+
+	if err := removeInitSecret(ctx, kubeClient); err != nil {
+		log.DebugF("Error while removing registry init secret: %v\n", err)
+		return ErrIsNotReady
+	}
+
+	return nil
 }
 
 func checkInit(ctx context.Context, kubeClient client.KubeClient) error {

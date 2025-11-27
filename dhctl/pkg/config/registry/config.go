@@ -93,7 +93,7 @@ func NewDeckhouseSettings(
 	// Use deckhouse settings if available
 	if deckhouse != nil {
 		deckhouseSettings := *deckhouse
-		deckhouseSettings.Correct()
+		deckhouseSettings.CorrectWithDefault()
 		if err := deckhouseSettings.Validate(); err != nil {
 			return types.DeckhouseSettings{}, fmt.Errorf("validate registry settings: %w", err)
 		}
@@ -101,11 +101,7 @@ func NewDeckhouseSettings(
 	}
 
 	// Build registry settings from init config or use defaults
-	registrySettings := types.RegistrySettings{
-		ImagesRepo: types.CEImagesRepo,
-		Scheme:     types.CEScheme,
-	}
-
+	var registrySettings types.RegistrySettings
 	if initConfig != nil {
 		var err error
 		registrySettings, err = initConfig.ToRegistrySettings()
@@ -113,14 +109,13 @@ func NewDeckhouseSettings(
 			return types.DeckhouseSettings{}, fmt.Errorf("get registry settings from init config: %w", err)
 		}
 	}
-
 	deckhouseSettings := types.DeckhouseSettings{
 		Mode: registry_const.ModeUnmanaged,
 		Unmanaged: &types.UnmanagedModeSettings{
 			RegistrySettings: registrySettings,
 		},
 	}
-	deckhouseSettings.Correct()
+	deckhouseSettings.CorrectWithDefault()
 	if err := deckhouseSettings.Validate(); err != nil {
 		return deckhouseSettings, fmt.Errorf("validate registry settings: %w", err)
 	}

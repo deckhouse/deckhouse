@@ -48,26 +48,36 @@ type RegistrySettings struct {
 	CheckMode  registry_const.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
 }
 
-func (settings *DeckhouseSettings) Correct() {
-	switch {
-	case settings.Direct != nil:
-		settings.Direct.ImagesRepo = strings.TrimRight(settings.Direct.ImagesRepo, "/")
-	case settings.Unmanaged != nil:
-		settings.Unmanaged.ImagesRepo = strings.TrimRight(settings.Unmanaged.ImagesRepo, "/")
-	}
-}
-
 func (settings DeckhouseSettings) ToMap() (map[string]interface{}, error) {
 	data, err := json.Marshal(settings)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal deckhouse registry settings: %w", err)
+		return nil, fmt.Errorf("marshal deckhouse registry settings: %w", err)
 	}
 
 	var ret map[string]interface{}
 	if err := json.Unmarshal(data, &ret); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal deckhouse registry settings: %w", err)
+		return nil, fmt.Errorf("unmarshal deckhouse registry settings: %w", err)
 	}
 	return ret, nil
+}
+
+func (settings *DeckhouseSettings) CorrectWithDefault() {
+	switch {
+	case settings.Direct != nil:
+		settings.Direct.CorrectWithDefault()
+	case settings.Unmanaged != nil:
+		settings.Unmanaged.CorrectWithDefault()
+	}
+}
+
+func (settings *RegistrySettings) CorrectWithDefault() {
+	settings.ImagesRepo = strings.TrimRight(strings.TrimSpace(settings.ImagesRepo), "/")
+	if strings.TrimSpace(settings.ImagesRepo) == "" {
+		settings.ImagesRepo = CEImagesRepo
+	}
+	if strings.TrimSpace(settings.Scheme) == "" {
+		settings.Scheme = CEScheme
+	}
 }
 
 func (settings DeckhouseSettings) Validate() error {
