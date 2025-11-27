@@ -250,14 +250,12 @@ func (p *Proxy) CheckAuthn(header http.Header, scope string) error {
 }
 
 func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
-
 	proxyDirector := func(req *http.Request) {
 		// impersonate as current ServiceAccount
 		saToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 		if err != nil {
 			logger.Printf("[api-proxy] Error reading SA token: %v", err)
 		}
-
 		req.Header.Del("Authorization")
 		req.Header.Add("Authorization", "Bearer "+string(saToken))
 		req.URL.Scheme = "https"
