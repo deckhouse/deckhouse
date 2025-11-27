@@ -44,7 +44,7 @@ apiVersions:
               properties:
                 virtualMachine: &instanceClassVirtualMachine
                   description: |
-                    Настройки виртуальной машины для созданного узла.
+                    Настройки виртуальной машины для созданного мастер узла.
                   properties:
                     cpu:
                       description: |
