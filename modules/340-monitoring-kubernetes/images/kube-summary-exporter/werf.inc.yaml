@@ -1,15 +1,4 @@
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /src/kube-summary-exporter
-  to: /bin/kube-summary-exporter
-  before: setup
-imageSpec:
-  config:
-    entrypoint: ["/bin/kube-summary-exporter"]
----
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -20,6 +9,7 @@ shell:
   install:
   - cd /src
   - git clone --branch=v0.4.7 --depth=1 $(cat /run/secrets/SOURCE_REPO)/utilitywarehouse/kube-summary-exporter.git .
+  - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -41,3 +31,14 @@ shell:
   - go build -ldflags="-s -w" -o kube-summary-exporter main.go
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/kube-summary-exporter
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/kube-summary-exporter
+  to: /bin/kube-summary-exporter
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/kube-summary-exporter"]
