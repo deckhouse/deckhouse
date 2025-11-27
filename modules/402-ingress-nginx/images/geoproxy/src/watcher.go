@@ -44,6 +44,8 @@ type Account struct {
 	Editions  []string `json:"editions,omitempty"`
 	Mirror    string   `json:"maxmindMirror,omitempty"`
 	SkipTLS   bool     `json:"maxmindMirrorSkipTLSVerify,omitempty"`
+	// DownloadFromLeader marks that Mirror points to the elected leader endpoint instead of a user-provided mirror.
+	DownloadFromLeader bool `json:"-"`
 }
 
 type LicenseEditions map[string]Account
