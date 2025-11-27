@@ -78,16 +78,12 @@ kubectl -n d8-ingress-nginx scale sts/geoproxy --replicas=<previous_number>
 ```
 
 > [!TIP]
-> You can also download a tarball directly from MaxMind and put it into the container:
+> You can also download a tarball directly from MaxMind:
 >
 > ```bash
 > wget -O GeoLite2-Countrys.tar.gz \
 >   'https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=LICENSE&suffix=tar.gz'
 >```
->```bash
-> kubectl -n d8-ingress-nginx cp GeoLite2-Countrys.tar.gz \
->   geoproxy-0:/data/GeoLite2-Countrys.tar.gz -c geoproxy
-> ```
 >
 > Replace `edition_id` and `LICENSE` with your actual edition and license key.
 

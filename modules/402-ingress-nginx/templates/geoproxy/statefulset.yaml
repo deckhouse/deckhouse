@@ -165,7 +165,7 @@ spec:
               {{- include "geoproxy_resources" . | nindent 14 }}
 {{- end }}
       serviceAccountName: geoproxy
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 30
 
 {{- $effectiveStorageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
 {{- if not $effectiveStorageClass }}
