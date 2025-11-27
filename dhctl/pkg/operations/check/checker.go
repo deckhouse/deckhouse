@@ -232,6 +232,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
 		},
+		false,
 	)
 	if err != nil {
 		return nil, err
