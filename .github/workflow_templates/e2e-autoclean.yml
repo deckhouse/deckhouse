@@ -26,11 +26,6 @@ env:
   SCRIPT_DIR: ".github/scripts/python/e2e-commander-clean"
   PYTHON_VERSION: '3.13'
 
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: read
-
 jobs:
   skip_tests_repos:
     name: Skip tests repos
@@ -44,6 +39,8 @@ jobs:
     name: Run
     needs:
     - skip_tests_repos
+    permissions:
+      id-token: write
     runs-on: [self-hosted, regular]
     steps:
     {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -71,6 +68,8 @@ jobs:
     name: Run
     needs:
     - skip_tests_repos
+    permissions:
+      id-token: write
     runs-on: [ self-hosted, regular ]
     steps:
     {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
