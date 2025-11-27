@@ -34,10 +34,18 @@ import (
 )
 
 type config struct {
-	certFile   string
-	keyFile    string
-	cpuRequest string
-	memRequest string
+	certFile string
+	keyFile  string
+}
+
+const (
+	initContainerCPURequest = "10m"
+	initContainerMemRequest = "16Mi"
+)
+
+var initContainerResourceRequests = corev1.ResourceList{
+	corev1.ResourceCPU:    resource.MustParse(initContainerCPURequest),
+	corev1.ResourceMemory: resource.MustParse(initContainerMemRequest),
 }
 
 //goland:noinspection SpellCheckingInspection
@@ -46,10 +54,7 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func initFlags() config {
-	cfg := config{
-		cpuRequest: "10m",
-		memRequest: "16Mi",
-	}
+	cfg := config{}
 
 	fl := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
@@ -58,7 +63,7 @@ func initFlags() config {
 	return cfg
 }
 
-func (c *config) addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
+func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		// If not a pod just continue the mutation chain(if there is one) and don't do nothing.
@@ -130,10 +135,7 @@ func (c *config) addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionR
 			SeccompProfile:           &corev1.SeccompProfile{Type: seccompType},
 		},
 		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(c.cpuRequest),
-				corev1.ResourceMemory: resource.MustParse(c.memRequest),
-			},
+			Requests: initContainerResourceRequests.DeepCopy(),
 		},
 	}
 
@@ -163,7 +165,7 @@ func main() {
 
 	cfg := initFlags()
 
-	mt := kwhmutating.MutatorFunc(cfg.addInitContainerToPod)
+	mt := kwhmutating.MutatorFunc(addInitContainerToPod)
 
 	mcfg := kwhmutating.WebhookConfig{
 		ID:      "addHostAliasesToPod",
