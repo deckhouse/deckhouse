@@ -15,9 +15,30 @@ By default, audit results are written to the `/var/log/kube-audit/audit.log` fil
 
 Deckhouse Virtualization Platform (DVP) creates a default set of audit policies that log:
 
-- Create, update, and delete operations on resources.
-- Requests made on behalf of service accounts from the `kube-system` and `d8-*` system namespaces.
-- Access to resources in the `kube-system` and `d8-*` system namespaces.
+**General Events:**
+- Creation and deletion of cluster nodes (`Node` objects);
+- Operations on creating, modifying, and deleting resources in all system namespaces (`kube-system`, `d8-*`);
+- Requests from service accounts in system namespaces (`kube-system`, `d8-*`);
+- Bulk requests (`LIST`) to all resources (for diagnosing high resource consumption by the API server);
+- Operations related to `Deckhouse Virtualization Platform` module resources;
+- Actions in the `d8-virtualization` namespace;
+- Operations with `moduleconfigs` objects;
+- Requests from unauthenticated users (only `Metadata` level events are recorded).
+- Creation, modification, and deletion of `Pod` objects;
+- Using container tags other than `@sha256`;
+- Creating and deleting `ServiceAccount` objects, including in system namespaces;
+- Creating, modifying, and deleting `Role` and `ClusterRole` objects;
+- Creating, modifying, and deleting `ClusterRoleBinding` objects
+- Using the attach and exec commands to Pods, as well as adding ephemeral containers (get and patch operations to the `pods/exec`, `pods/attach`, and `pods/ephemeralcontainers` objects);
+
+**Events not forcibly logged by audit policy:** (due to the high refresh rate of objects)
+- Operations on `Endpoints`, `Endpointslices`, and `Events` objects;
+- Operations on `Leases` objects (raft leader election in platform components);
+- Actions on `ConfigMap` objects used for raft leader election (`cert-manager-cainjector-leader-election`, `cert-manager-controller`, `ingress-nginx`, etc.);
+- Operations on `VerticalPodAutoscalerCheckpoints` objects;
+- `PATCH` operations on `VerticalPodAutoscaler` objects from the `d8-vertical-pod-autoscaler-recommender` service account;
+- Actions on `UpmeterHookProbes` objects;
+- Any operations in the `d8-upmeter` namespace;
 
 These policies are enabled by default.
 To disable them, set the [`basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) parameter to `false`.
