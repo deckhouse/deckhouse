@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+cacheVersion: "2025-11-28"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator

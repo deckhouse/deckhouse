@@ -268,7 +268,7 @@ func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
 		ErrorLog:      logger,
 		FlushInterval: 50 * time.Millisecond,
 		ModifyResponse: func(resp *http.Response) error {
-			logger.Println("[apiserver]", resp.Status)
+			logger.Println("[apiserver]", resp.Status, resp.Request.Method, resp.Request.URL.String(), resp.Body)
 			return nil
 		},
 	}
