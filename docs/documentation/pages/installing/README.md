@@ -477,7 +477,7 @@ The following container registries are tested and officially supported:
 During installation, DKP can be configured to work with an external registry (e.g., a proxy registry in an air-gapped environment).
 
 {% alert level="warning" %}
-When working with an external registry, do not use an administrator account to access it from the Deckhouse Kubernetes Platform. Create a separate account for the Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. [Example of creating](#nexus-configuration-notes) such an account.
+When working with an external registry, do not use an administrator account to access it from Deckhouse Kubernetes Platform. Create a separate account for Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
 {% endalert %}
 
 Set the following parameters in the `InitConfiguration` resource:
