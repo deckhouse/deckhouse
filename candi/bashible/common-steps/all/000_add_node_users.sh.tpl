@@ -215,6 +215,38 @@ function add_sudoer_group() {
     fi
 }
 
+# $1 - user name
+function add_node_annotation() {
+  local username="$1"
+  local failure_count=0
+  local failure_limit=5
+
+  until bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) node.deckhouse.io/nodeuser="${username}"; do
+    failure_count=$((failure_count + 1))
+    if [[ $failure_count -eq $failure_limit ]]; then
+      bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
+      break
+    fi
+    bb-log-error "failed to annotate node $(bb-d8-node-name)"
+    sleep 10
+  done
+}
+
+function remove_node_annotation() {
+  local failure_count=0
+  local failure_limit=5
+
+  until bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) node.deckhouse.io/nodeuser-; do
+    failure_count=$((failure_count + 1))
+    if [[ $failure_count -eq $failure_limit ]]; then
+      bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
+      break
+    fi
+    bb-log-error "failed to annotate node $(bb-d8-node-name)"
+    sleep 10
+  done
+}
+
 function main() {
   sudo_group="nodeadmin"
   add_sudoer_group $sudo_group
@@ -305,6 +337,10 @@ function main() {
         bb-log-error "Error adding user '$user_name': ${error_message}"
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
+      else
+        if [ "$user_name" == "d8-dhctl-converger" ]; then
+          add_node_annotation "$user_name"
+        fi
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
       if bb-error?
@@ -336,6 +372,9 @@ function main() {
           ps -u "$(id -nu $local_user_id)" --no-headers | awk '{print $1}' | xargs kill -9
           
           if errmsg=$(userdel -r "$(id -nu $local_user_id)" 2>&1); then
+            if [ "$user_name" == "d8-dhctl-converger" ]; then
+              remove_node_annotation
+            fi        
             break
           else 
             echo $errmsg |egrep -o "[0-9]{2,}" | xargs kill -9
