@@ -8,6 +8,8 @@ description: |-
   for the MySQL database.
 ---
 
+{% raw %}
+
 ## MySQL/MariaDB database secrets engine
 
 MySQL is one of the supported plugins for the database secrets engine. This
@@ -150,3 +152,5 @@ $ d8 stronghold write database/config/my-mysql-database \
     username="root" \
     password="mysql"
 ```
+
+{% endraw %}

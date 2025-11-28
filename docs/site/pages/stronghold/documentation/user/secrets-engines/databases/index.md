@@ -9,6 +9,8 @@ description: |-
   framework for running custom database types for extendability.
 ---
 
+{% raw %}
+
 ## Databases
 
 The database secrets engine generates database credentials dynamically based on
@@ -41,6 +43,7 @@ returns the current password for whichever database user is mapped to the
 requested role. With static roles, anyone with the proper Stronghold policies can
 access the associated user account in the database.
 
+{% endraw %}
 {% alert level="warning" %}[Do not use static roles for root database credentials]
    Do not manage the same root database credentials that you provide to Stronghold in
    <tt>config/</tt> with static roles.
@@ -55,6 +58,8 @@ access the associated user account in the database.
    `rotate-root-credentials` API endpoint.
 
 {% endalert %}
+{% raw %}
+
 Refer to the [database capabilities table](#database-capabilities) to determine
 if your chosen database backend supports static roles.
 
@@ -85,14 +90,16 @@ management tool.
        password="..." \
    ```
 
+{% endraw %}
 {% alert level="warning" %}
 
  It is highly recommended a user within the database is created
    specifically for Stronghold to use. This user will be used to manipulate
    dynamic and static users within the database. This user is called the
    "root" user within the documentation.
-
 {% endalert %}
+{% raw %}
+
    Stronghold will use the user specified here to create/update/revoke database
    credentials. That user must have the appropriate permissions to perform
    actions upon other database users (create, update credentials, delete, etc.).
@@ -109,14 +116,15 @@ management tool.
    d8 stronghold write -force database/rotate-root/my-database
    ```
 
+{% endraw %}
 {% alert level="critical" %}
-
- When this is done, the password for the user specified in the previous step
+When this is done, the password for the user specified in the previous step
    is no longer accessible. Because of this, it is highly recommended that a
    user is created specifically for Stronghold to use to manage database
    users.
 
 {% endalert %}
+{% raw %}
 
 1. Configure a role that maps a name in Stronghold to a set of creation statements to
    create the database credential:
@@ -223,3 +231,5 @@ username="root" \
 password='your#StrongPassword%' \
 disable_escaping="true"
 ```
+
+{% endraw %}
