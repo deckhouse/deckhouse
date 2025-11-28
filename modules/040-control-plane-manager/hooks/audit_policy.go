@@ -491,7 +491,7 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 }
 
 func appendUnauthenticatedRules(policy *audit.Policy) {
-	// A rule dropping all logs from unauthenticated users
+	// A rule dropping all logs from authenticated users
 	{
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
