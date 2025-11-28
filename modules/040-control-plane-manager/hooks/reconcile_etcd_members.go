@@ -54,6 +54,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
 		},
+		{
+			Name:       "etcd_only_node",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node-role.deckhouse.io/etcd-only": "",
+				},
+			},
+			FilterFunc: reconcicleEtcdFilterNode,
+		},
 		// common etcd certificate snapshot
 		etcdSecretK8sConfig,
 	},
@@ -96,10 +107,12 @@ type recicleEtcdNode struct {
 }
 
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	snaps := input.Snapshots.Get("master_nodes")
+	snapsM := input.Snapshots.Get("master_nodes")
+	snapsEO := input.Snapshots.Get("etcd_only_node")
+	snaps := append(snapsM, snapsEO...)
 
 	if len(snaps) == 0 {
-		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
+		input.Logger.Debug("No ETCD Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
@@ -107,7 +120,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	discoveredMasterMap := make(map[string]string, len(snaps))
 	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'master_nodes' snapshots: %v", err)
+			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
 		}
 
 		if node.Name == "" {
