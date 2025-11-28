@@ -1,0 +1,9 @@
+deckhouse-controller:
+  fixes:
+    - summary: Fix deprecated and experimental module metrics not being reset when module is disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16688
+dhctl:
+  fixes:
+    - summary: Fix panic during destroy. Change opentofu log level to INFO.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16726
+

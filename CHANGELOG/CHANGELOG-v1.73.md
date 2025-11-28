@@ -154,6 +154,7 @@
  - **[deckhouse-tools]** Added tolerations support to DexAuthenticator configuration. [#14869](https://github.com/deckhouse/deckhouse/pull/14869)
  - **[deckhouse-tools]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[descheduler]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[dhctl]** Fix panic during destroy. Change opentofu log level to INFO. [#16726](https://github.com/deckhouse/deckhouse/pull/16726)
  - **[dhctl]** Fix StaticInstance readiness check and refactoring readiness check for resources. [#16616](https://github.com/deckhouse/deckhouse/pull/16616)
  - **[dhctl]** Fix converge manifests for static cluster in commander. [#16504](https://github.com/deckhouse/deckhouse/pull/16504)
  - **[dhctl]** Validate WithNATInstance Yandex layout params only in bootstrap. [#16427](https://github.com/deckhouse/deckhouse/pull/16427)
