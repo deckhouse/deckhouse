@@ -1,0 +1,37 @@
+ci:
+  features:
+    - summary: Add k8s 1.34 to CI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15453
+    - summary: Make e2e removal automation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13173
+  fixes:
+    - summary: Fix the mechanism for sending reports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13440
+    - summary: Fix k8s autoupdate report, lock the creation of multiple pr.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13381
+cloud-provider-dvp:
+  features:
+    - summary: clarify CSI errors
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16434
+deckhouse-controller:
+  features:
+    - summary: Adds isolated shell executions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11192
+  fixes:
+    - summary: Remove track-termination-mode notation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16612
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+docs:
+  fixes:
+    - summary: Fixed typo on the GUI installer page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16719
+go_lib:
+  fixes:
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+tools:
+  fixes:
+    - summary: update dmt version to 0.1.55
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16715
+
