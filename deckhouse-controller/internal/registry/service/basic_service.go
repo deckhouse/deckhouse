@@ -90,12 +90,12 @@ func (s *BasicService) CheckImageExists(ctx context.Context, tag string) error {
 	return nil
 }
 
-func (s *BasicService) ListTags(ctx context.Context) ([]string, error) {
+func (s *BasicService) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
 	logger := s.logger.With(slog.String("service", s.name))
 
 	logger.Debug("Listing tags")
 
-	tags, err := s.client.ListTags(ctx)
+	tags, err := s.client.ListTags(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}

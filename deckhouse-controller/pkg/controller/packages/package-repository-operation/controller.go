@@ -36,7 +36,6 @@ import (
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -273,70 +272,20 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	logger.Debug("handling discover state")
 
-	// Get PackageRepository
-	repo := &v1alpha1.PackageRepository{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: operation.Spec.PackageRepository}, repo)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Warn("package repository operation not found")
-
-			message := fmt.Sprintf("PackageRepository not found: %v", err)
-
-			if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound, message); err != nil {
-				return ctrl.Result{}, err
-			}
-
-			r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-			return ctrl.Result{}, nil
-		}
-
-		return res, fmt.Errorf("get package repository: %w", err)
+		return res, fmt.Errorf("create operation service: %w", err)
 	}
 
-	// Create registry service for the packages path
-	svc, err := r.psm.PackagesService(
-		repo.Spec.Registry.Repo,
-		repo.Spec.Registry.DockerCFG,
-		repo.Spec.Registry.CA,
-		"deckhouse-package-controller",
-		repo.Spec.Registry.Scheme,
-	)
+	discovered, err := opService.DiscoverPackage(ctx)
 	if err != nil {
-		r.logger.Error("failed to get registry service", log.Err(err))
-
-		message := fmt.Sprintf("Failed to get registry service: %v", err)
-
-		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed, message); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-		return ctrl.Result{}, nil
-	}
-
-	if operation.Status.Packages == nil {
-		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
-	}
-
-	r.logger.Info("discovering packages", slog.String("repository", repo.Name))
-
-	discovered, err := r.discoverPackages(ctx, svc)
-	if err != nil {
-		message := fmt.Sprintf("Failed to list packages: %v", err)
-
-		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message); err != nil {
-			return ctrl.Result{}, fmt.Errorf("patching status after discover packages fail: %w", err)
-		}
-
-		return ctrl.Result{}, fmt.Errorf("discover packages: %w", err)
+		return res, fmt.Errorf("discover packages: %w", err)
 	}
 
 	// Handle discovered packages
 	err = r.handleOperationDiscoverResult(ctx, operation, discovered)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("handle operation discover result: %w", err)
+		return res, fmt.Errorf("handle operation discover result: %w", err)
 	}
 
 	return ctrl.Result{Requeue: true}, nil
@@ -349,78 +298,13 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	logger.Debug("handling processing state")
 
-	// Get PackageRepository
-	repo := &v1alpha1.PackageRepository{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: operation.Spec.PackageRepository}, repo)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Warn("package repository operation not found")
-
-			message := fmt.Sprintf("PackageRepository not found: %v", err)
-
-			if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound, message); err != nil {
-				return ctrl.Result{}, err
-			}
-
-			r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-			return ctrl.Result{}, nil
-		}
-
-		return res, fmt.Errorf("get package repository: %w", err)
+		return res, fmt.Errorf("create operation service: %w", err)
 	}
-
-	// TODO: change finalizing
-	if operation.Status.Packages != nil && len(operation.Status.Packages.Processed) == operation.Status.Packages.ProcessedOverall {
-		r.logger.Info("all packages processed, marking as completed",
-			slog.Int("total", operation.Status.Packages.Total))
-
-		if err := r.setOperationTruePhase(ctx, operation, v1alpha1.PackageRepositoryOperationPhaseCompleted); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		r.logger.Info("operation completed", slog.String("name", operation.Name))
-
-		return ctrl.Result{}, nil
-	}
-
-	// Create registry service for the packages path
-	svc, err := r.psm.PackagesService(
-		repo.Spec.Registry.Repo,
-		repo.Spec.Registry.DockerCFG,
-		repo.Spec.Registry.CA,
-		"deckhouse-package-controller",
-		repo.Spec.Registry.Scheme,
-	)
-	if err != nil {
-		r.logger.Error("failed to get registry service", log.Err(err))
-
-		message := fmt.Sprintf("Failed to get registry service: %v", err)
-
-		if err := r.setOperationFailed(ctx, operation, v1alpha1.PackageRepositoryOperationConditionProcessed, v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed, message); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		r.logger.Warn("operation failed", slog.String("name", operation.Name), slog.String("message", message))
-
-		return ctrl.Result{}, nil
-	}
-
-	_ = svc
 
 	// Process the first package in the queue
-	return r.processNextPackage(ctx, operation, repo)
-}
-
-type discoverResult struct {
-	Packages        []packageInfo
-	RepositoryPhase string
-	SyncTime        time.Time
-}
-
-type packageInfo struct {
-	Name string
-	Type string
+	return r.processNextPackage(ctx, operation, opService)
 }
 
 func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.PackagesService) (*discoverResult, error) {
@@ -501,32 +385,21 @@ func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operatio
 // 	return nil
 // }
 
-func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
+func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, svc *OperationService) (ctrl.Result, error) {
 	// Get first package from queue
 	currentPackage := operation.Status.Packages.Discovered[0]
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	// Generate registry options
-	registryConfig := &utils.RegistryConfig{
-		DockerConfig: repo.Spec.Registry.DockerCFG,
-		Scheme:       repo.Spec.Registry.Scheme,
-		CA:           repo.Spec.Registry.CA,
-		UserAgent:    "deckhouse-package-controller",
-	}
-	opts := utils.GenerateRegistryOptions(registryConfig, r.logger)
-
 	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := r.ensurePackageResource(ctx, currentPackage.Name, repo.Name)
+	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
 	if err != nil {
 		r.logger.Error("failed to ensure package resource",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
-		// Continue with next package even if this one fails
 	}
 
-	// List versions for this package
-	err = r.processPackageVersions(ctx, currentPackage.Name, repo, operation, opts)
+	err = svc.ProcessPackageVersions(ctx, currentPackage.Name, operation)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
