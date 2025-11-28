@@ -120,6 +120,11 @@ type PackageRepositoryOperationStatusDiscoveredPackage struct {
 }
 
 type PackageRepositoryOperationStatusFailedPackage struct {
+	Name   string                                               `json:"name"`
+	Errors []PackageRepositoryOperationStatusFailedPackageError `json:"errors"`
+}
+
+type PackageRepositoryOperationStatusFailedPackageError struct {
 	Name  string `json:"name"`
 	Error string `json:"error"`
 }

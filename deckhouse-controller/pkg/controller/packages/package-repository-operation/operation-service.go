@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -132,21 +131,20 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 	return nil
 }
 
-func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) ([]string, error) {
-	var foundTags []string
-	var err error
-
+func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) ([]*semver.Version, error) {
 	// Handle fullScan vs incremental scan
 	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		foundTags, err = s.svc.Package(packageName).ListTags(ctx)
+		rawTags, err := s.svc.Package(packageName).ListTags(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list package tags: %w", err)
 		}
 
+		foundTags := extractOnlySemverTags(rawTags)
+
 		return foundTags, nil
 	}
 
-	foundTags, err = s.performIncrementalScan(ctx, packageName)
+	foundTags, err := s.performIncrementalScan(ctx, packageName)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +152,7 @@ func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName s
 	return foundTags, nil
 }
 
-func (s *OperationService) performIncrementalScan(ctx context.Context, packageName string) ([]string, error) {
+func (s *OperationService) performIncrementalScan(ctx context.Context, packageName string) ([]*semver.Version, error) {
 	// Incremental scan: start from the last processed version
 	s.logger.Debug("performing incremental scan", slog.String("package", packageName))
 
@@ -173,41 +171,53 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 	return tags, nil
 }
 
-func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName string, lastVersion string) ([]string, error) {
+func extractOnlySemverTags(rawTags []string) []*semver.Version {
+	var allTags []*semver.Version
+	for _, tag := range rawTags {
+		// filter all non semver tags here
+		tagVer, err := semver.NewVersion(tag)
+		if err != nil {
+			continue
+		}
+
+		allTags = append(allTags, tagVer)
+	}
+
+	return allTags
+}
+
+func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName string, lastVersion string) ([]*semver.Version, error) {
 	// List all tags from the registry and filter those that are greater than lastVersion
 	// WARNING! it works only if your registry supports tag listing with filtering by last version
-	allTags, err := s.svc.Package(packageName).ListTags(ctx, regClient.WithTagsLast(lastVersion))
+	rawTags, err := s.svc.Package(packageName).ListTags(ctx, regClient.WithTagsLast(lastVersion))
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
+	allTags := extractOnlySemverTags(rawTags)
+
 	// Filter tags to only include versions after lastVersion
-	var newTags []string
 	lastVer, err := semver.NewVersion(lastVersion)
 	if err != nil {
 		// If we can't parse last version, return all tags
 		return allTags, nil
 	}
 
+	var newTags []*semver.Version
 	for _, tag := range allTags {
-		tagVer, err := semver.NewVersion(tag)
-		if err != nil {
-			continue
-		}
-
 		// Only include tags that are newer than lastVersion
-		if tagVer.GreaterThan(lastVer) {
+		if tag.GreaterThan(lastVer) {
 			newTags = append(newTags, tag)
 		}
 	}
 
 	// double check for registries that do not support filtering
 	// to warn user about it
-	if len(newTags) != len(allTags) {
+	if len(newTags) != len(rawTags) {
 		s.logger.Info("looks like your registry does not support tag listing with filtering by last version",
 			slog.String("package", packageName),
 			slog.String("lastVersion", lastVersion),
-			slog.Int("allTagsCount", len(allTags)),
+			slog.Int("allTagsCount", len(rawTags)),
 			slog.Int("newTagsCount", len(newTags)))
 	}
 
@@ -273,56 +283,66 @@ func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageN
 	return "v" + latest.String()
 }
 
-func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) error {
-	var foundTags []string
-
+func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
-		return fmt.Errorf("get found tags to process: %w", err)
+		return nil, fmt.Errorf("get found tags to process: %w", err)
 	}
 
 	s.logger.Info("found package versions",
 		slog.String("package", packageName),
 		slog.Int("versions", len(foundTags)))
 
-	s.ensurePackageVersionForTags(ctx, packageName, foundTags)
+	img, err := s.svc.Package(packageName).GetImage(ctx, "v"+foundTags[0].String())
+	if err != nil {
+		return nil, fmt.Errorf("get package image: %w", err)
+	}
 
-	return nil
-}
+	configFile, err := img.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("get package image config file: %w", err)
+	}
 
-// type processResult struct {
-// 	Failed []failedPackage
-// }
+	var packageType string
+	if configFile != nil && configFile.Config.Labels != nil {
+		packageType = configFile.Config.Labels[packageTypeLabel]
+	}
 
-// type failedPackage struct {
-// 	Name  string
-// 	Error error
-// }
-
-// TODO replace tags with semver.Version
-func (s *OperationService) ensurePackageVersionForTags(ctx context.Context, packageName string, tags []string) {
-	for _, versionTag := range tags {
-		// Skip non-version tags (like "release-channel", "version", etc.)
-		_, err := semver.NewVersion(strings.TrimPrefix(versionTag, "v"))
-		if err != nil {
-			s.logger.Debug("skipping non-version tag",
-				slog.String("package", packageName),
-				slog.String("tag", versionTag),
-				log.Err(err))
-
-			continue
-		}
-
-		err = s.ensureApplicationPackageVersion(ctx, packageName, versionTag)
+	var failedVersions = make([]failedVersion, 0)
+	for _, versionTag := range foundTags {
+		err := s.ensureApplicationPackageVersion(ctx, packageName, "v"+versionTag.String())
 		if err != nil {
 			s.logger.Warn("failed to create package version",
 				slog.String("package", packageName),
-				slog.String("version", versionTag),
-				log.Err(err))
+				slog.String("version", "v"+versionTag.String()),
+				log.Err(err),
+			)
+
+			failedVersions = append(failedVersions, failedVersion{
+				Name:  "v" + versionTag.String(),
+				Error: "ensure application package version: " + err.Error(),
+			})
 
 			continue
 		}
 	}
+
+	return &PackageProcessResult{
+		PackageType: packageType,
+		Done:        foundTags,
+		Failed:      failedVersions,
+	}, nil
+}
+
+type PackageProcessResult struct {
+	PackageType string
+	Done        []*semver.Version
+	Failed      []failedVersion
+}
+
+type failedVersion struct {
+	Name  string
+	Error string
 }
 
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) error {
