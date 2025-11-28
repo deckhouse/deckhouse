@@ -82,7 +82,7 @@ spec:
       {{- include "helm_lib_module_init_container_chown_deckhouse_volume" (tuple . "data") | nindent 6 }}
       containers:
         - name: server
-          {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list)) | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" . | nindent 10 }}
             readOnlyRootFilesystem: true
           image: {{ include "helm_lib_module_image" (list . "trivy") }}
           args:
