@@ -72,6 +72,9 @@
   {{- end }}  
 {{- end }}
 
+{{/* Global constraint for exec/attach on heritage: deckhouse pods - not tied to SecurityPolicy CR */}}
+{{- include "deny_exec_heritage" $context }}
+
 {{- end }} # end if bootstrapped
 
 {{- define "allow_privileged" }}
@@ -563,5 +566,23 @@ spec:
         kinds: ["Role", "RoleBinding"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "deny_exec_heritage" }}
+  {{- $context := . }}
+{{/* TODO: restore condition: if ne $context.Values.global.deckhouseVersion "dev" */}}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DenyExecHeritage
+metadata:
+  name: deny-exec-heritage-pods
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["*"]
+        kinds: ["*"]
+    scope: Namespaced
 {{- end }}
 
