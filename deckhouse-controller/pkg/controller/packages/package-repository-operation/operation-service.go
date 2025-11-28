@@ -293,6 +293,14 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.String("package", packageName),
 		slog.Int("versions", len(foundTags)))
 
+	// If no tags found, return empty result
+	if len(foundTags) == 0 {
+		return &PackageProcessResult{
+			Done:   nil,
+			Failed: nil,
+		}, nil
+	}
+
 	img, err := s.svc.Package(packageName).GetImage(ctx, "v"+foundTags[0].String())
 	if err != nil {
 		return nil, fmt.Errorf("get package image: %w", err)

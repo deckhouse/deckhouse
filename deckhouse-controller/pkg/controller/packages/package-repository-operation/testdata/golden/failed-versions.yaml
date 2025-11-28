@@ -29,8 +29,17 @@ status:
     status: "True"
     type: Processed
   packages:
+    failed:
+    - errors:
+      - error: 'ensure application package version: create application package version:
+          simulated create error for v1.1.0'
+        name: v1.1.0
+      - error: 'ensure application package version: create application package version:
+          simulated create error for v1.2.0'
+        name: v1.2.0
+      name: test-package
     processed:
-    - name: v1.0.0
+    - name: test-package
       type: Application
     processedOverall: 1
     total: 1
@@ -44,9 +53,9 @@ metadata:
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
-    packages.deckhouse.io/package: v1.0.0
+    packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-v1.0.0-v1.0.0
+  name: deckhouse-test-package-v1.0.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -55,7 +64,7 @@ metadata:
     uid: ""
   resourceVersion: "1"
 spec:
-  packageName: v1.0.0
+  packageName: test-package
   packageRepository: deckhouse
   version: v1.0.0
 status: {}
@@ -71,7 +80,7 @@ spec:
     repo: registry.example.com/test
 status:
   packages:
-  - name: v1.0.0
+  - name: test-package
     type: Application
   packagesCount: 1
   phase: Active
