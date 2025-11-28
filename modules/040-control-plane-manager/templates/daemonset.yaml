@@ -236,7 +236,8 @@ spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       {{- else }}
-      {{- include "helm_lib_node_selector" (tuple $ "etcd-only") | nindent 6 }}
+      nodeSelector:
+        node-role.deckhouse.io/etcd-only: ""
       {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "any-node" "uninitialized") | nindent 6 }}
