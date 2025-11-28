@@ -94,6 +94,25 @@ spec:
                       - name
                       type: object
                     type: array
+                  failed:
+                    additionalProperties:
+                      properties:
+                        errors:
+                          items:
+                            properties:
+                              error:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - error
+                            - name
+                            type: object
+                          type: array
+                      required:
+                      - errors
+                      type: object
+                    type: object
                   processed:
                     items:
                       properties:

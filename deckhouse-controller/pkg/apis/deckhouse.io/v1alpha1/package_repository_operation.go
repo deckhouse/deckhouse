@@ -108,11 +108,11 @@ type PackageRepositoryOperationStatus struct {
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
-	Failed           []PackageRepositoryOperationStatusFailedPackage     `json:"failed,omitempty"`
-	Processed        []PackageRepositoryOperationStatusPackage           `json:"processed,omitempty"`
-	ProcessedOverall int                                                 `json:"processedOverall,omitempty"`
-	Total            int                                                 `json:"total,omitempty"`
+	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage      `json:"discovered,omitempty"`
+	Failed           map[string]PackageRepositoryOperationStatusFailedPackage `json:"failed,omitempty"`
+	Processed        []PackageRepositoryOperationStatusPackage                `json:"processed,omitempty"`
+	ProcessedOverall int                                                      `json:"processedOverall,omitempty"`
+	Total            int                                                      `json:"total,omitempty"`
 }
 
 type PackageRepositoryOperationStatusDiscoveredPackage struct {
@@ -120,7 +120,6 @@ type PackageRepositoryOperationStatusDiscoveredPackage struct {
 }
 
 type PackageRepositoryOperationStatusFailedPackage struct {
-	Name   string                                               `json:"name"`
 	Errors []PackageRepositoryOperationStatusFailedPackageError `json:"errors"`
 }
 

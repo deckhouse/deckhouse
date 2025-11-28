@@ -514,10 +514,9 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 	// Only add to Failed list if there were actual failures
 	if len(failedList) > 0 {
-		operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
-			Name:   currentPackage.Name,
+		operation.Status.Packages.Failed[currentPackage.Name] = v1alpha1.PackageRepositoryOperationStatusFailedPackage{
 			Errors: failedList,
-		})
+		}
 	}
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
