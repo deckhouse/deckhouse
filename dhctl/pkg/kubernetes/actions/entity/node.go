@@ -429,3 +429,20 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 
 	return exists, err
 }
+
+func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeUser string) error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on %s", nodeUser, nodeName), 30, 5*time.Second).
+		RunContext(ctx, func() error {
+			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			value, ok := node.Annotations[global.NodeUserAnnotation]
+			if ok && value == nodeUser {
+				return nil
+			}
+
+			return fmt.Errorf("NodeUser %s is not present on %s yet", nodeUser, nodeName)
+		})
+}

@@ -91,6 +91,16 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		if err != nil {
 			return fmt.Errorf("failed to create or update NodeUser: %w", err)
 		}
+		sshCl := s.ctx.KubeClient().NodeInterfaceAsSSHClient()
+		if sshCl == nil {
+			return fmt.Errorf("Node interface is not ssh")
+		}
+		currentHost := sshCl.Session().Host()
+
+		err = entity.WaitForNodeUserPresentOnNode(ctx, s.ctx.KubeClient(), currentHost, global.ConvergeNodeUserName)
+		if err != nil {
+			return fmt.Errorf("could not ensure %s is presented on %s: %w", global.ConvergeNodeUserName, currentHost, err)
+		}
 
 		convergeState.NodeUserCredentials = nodeUserCredentials
 
@@ -137,7 +147,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 
 	sshCl := kubeCl.NodeInterfaceAsSSHClient()
 	if sshCl == nil {
-		panic("Node interface is not ssh")
+		return fmt.Errorf("Node interface is not ssh")
 	}
 
 	settings := sshCl.Session()
