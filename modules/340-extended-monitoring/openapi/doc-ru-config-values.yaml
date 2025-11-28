@@ -44,7 +44,7 @@ properties:
           Включен ли eventsExporter.
       severityLevel:
         description: |
-          Enables eventsExporter.
+          Настройка уровня логирования.
   certificates:
     description: |
       Настройки для мониторинга сертификатов в кластере Kubernetes.
