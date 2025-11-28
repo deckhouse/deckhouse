@@ -1,4 +1,4 @@
-# registry
+# 📦 registry
 
 A comprehensive container registry client package for Golang applications that provides an intuitive interface for interacting with OCI-compliant container registries. Built on top of `google/go-containerregistry`, this package offers enhanced functionality with path segmentation, flexible authentication, and seamless integration with the Deckhouse ecosystem.
 
