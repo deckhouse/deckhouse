@@ -655,15 +655,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
   labels:
   - "type/dependencies"

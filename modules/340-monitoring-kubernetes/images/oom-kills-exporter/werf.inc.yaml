@@ -1,0 +1,49 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+fromCacheVersion: 2025-11-25-1
+git:
+{{- include "image mount points" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/build/kubernetes-oomkill-exporter
+  to: /bin/oom-kills-exporter
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/oom-kills-exporter"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+fromCacheVersion: 2025-11-25-1
+final: false
+shell:
+  install:
+  - git clone --depth 1 --branch 0.6.0 https://github.com/sapcc/kubernetes-oomkill-exporter.git /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+fromCacheVersion: 2025-11-25-1
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -ldflags '-s -w -X github.com/sapcc/go-api-declarations/bininfo.binName=kubernetes-oomkill-exporter -X github.com/sapcc/go-api-declarations/bininfo.version=0.6.0' -o build/kubernetes-oomkill-exporter .
+  - ls -la 
+  - chown -R 64535:64535 /src
+  - chmod 0755 /src/build/kubernetes-oomkill-exporter
