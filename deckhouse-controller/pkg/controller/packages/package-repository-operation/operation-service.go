@@ -23,14 +23,15 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/pkg/log"
-	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 type OperationService struct {
@@ -68,7 +69,7 @@ func NewOperationService(ctx context.Context, client client.Client, repoName str
 	}, nil
 }
 
-type discoverResult struct {
+type DiscoverResult struct {
 	Packages        []packageInfo
 	RepositoryPhase string
 	SyncTime        time.Time
@@ -79,7 +80,7 @@ type packageInfo struct {
 	Type string
 }
 
-func (s *OperationService) DiscoverPackage(ctx context.Context) (*discoverResult, error) {
+func (s *OperationService) DiscoverPackage(ctx context.Context) (*DiscoverResult, error) {
 	// List packages (packages at the packages level)
 	packages, err := s.svc.ListTags(ctx)
 	if err != nil {
@@ -98,7 +99,7 @@ func (s *OperationService) DiscoverPackage(ctx context.Context) (*discoverResult
 		})
 	}
 
-	res := &discoverResult{
+	res := &DiscoverResult{
 		Packages:        discoveredPackages,
 		RepositoryPhase: v1alpha1.PackageRepositoryPhaseActive,
 		SyncTime:        time.Now(),
@@ -284,25 +285,22 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.String("package", packageName),
 		slog.Int("versions", len(foundTags)))
 
-	err = s.ensurePackageVersionForTags(ctx, packageName, foundTags)
-	if err != nil {
-		return fmt.Errorf("ensure package versions for tags: %w", err)
-	}
+	s.ensurePackageVersionForTags(ctx, packageName, foundTags)
 
 	return nil
 }
 
-type processResult struct {
-	Failed []failedPackage
-}
+// type processResult struct {
+// 	Failed []failedPackage
+// }
 
-type failedPackage struct {
-	Name  string
-	Error error
-}
+// type failedPackage struct {
+// 	Name  string
+// 	Error error
+// }
 
 // TODO replace tags with semver.Version
-func (s *OperationService) ensurePackageVersionForTags(ctx context.Context, packageName string, tags []string) error {
+func (s *OperationService) ensurePackageVersionForTags(ctx context.Context, packageName string, tags []string) {
 	for _, versionTag := range tags {
 		// Skip non-version tags (like "release-channel", "version", etc.)
 		_, err := semver.NewVersion(strings.TrimPrefix(versionTag, "v"))
@@ -325,8 +323,6 @@ func (s *OperationService) ensurePackageVersionForTags(ctx context.Context, pack
 			continue
 		}
 	}
-
-	return nil
 }
 
 func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) error {

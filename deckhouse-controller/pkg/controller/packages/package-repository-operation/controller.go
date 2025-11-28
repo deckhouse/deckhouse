@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 // nolint: unused
 package packagerepositoryoperation
 
@@ -35,12 +36,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
@@ -283,7 +285,8 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
-		if apierrors.IsNotFound(err) {
+		switch {
+		case apierrors.IsNotFound(err):
 			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
 			// Extract the root cause error for cleaner message
 			var statusErr *apierrors.StatusError
@@ -292,10 +295,10 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			} else {
 				message = fmt.Sprintf("PackageRepository not found: %v", err)
 			}
-		} else if strings.Contains(err.Error(), "create package service") {
+		case strings.Contains(err.Error(), "create package service"):
 			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
 			message = fmt.Sprintf("Failed to create registry client: %v", err)
-		} else {
+		default:
 			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
@@ -372,7 +375,8 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		var reason, message string
 		// Check if the underlying error is NotFound (works with wrapped errors)
-		if apierrors.IsNotFound(err) {
+		switch {
+		case apierrors.IsNotFound(err):
 			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
 			// Extract the root cause error for cleaner message
 			var statusErr *apierrors.StatusError
@@ -381,10 +385,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			} else {
 				message = fmt.Sprintf("PackageRepository not found: %v", err)
 			}
-		} else if strings.Contains(err.Error(), "create package service") {
+		case strings.Contains(err.Error(), "create package service"):
 			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
 			message = fmt.Sprintf("Failed to create registry client: %v", err)
-		} else {
+		default:
 			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
 			message = fmt.Sprintf("Failed to create operation service: %v", err)
 		}
@@ -439,7 +443,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 	return r.processNextPackage(ctx, operation, opService)
 }
 
-func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.PackagesService) (*discoverResult, error) {
+func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.PackagesService) (*DiscoverResult, error) {
 	// List packages (packages at the packages level)
 	packages, err := svc.ListTags(ctx)
 	if err != nil {
@@ -458,7 +462,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.
 		})
 	}
 
-	res := &discoverResult{
+	res := &DiscoverResult{
 		Packages:        discoveredPackages,
 		RepositoryPhase: v1alpha1.PackageRepositoryPhaseActive,
 		SyncTime:        time.Now(),
@@ -467,7 +471,7 @@ func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.
 	return res, nil
 }
 
-func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, discovered *discoverResult) error {
+func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, discovered *DiscoverResult) error {
 	// Update operation status with discovered packages
 	original := operation.DeepCopy()
 
