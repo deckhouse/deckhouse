@@ -8,6 +8,11 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- $profiles := list "main" }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
+  {{- $profiles = append $profiles "etcd-only" }}
+{{- end }}
+
 {{- $kubeImageRepoSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "-" }}
 {{- $kubeImageTagSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "" }}
 
@@ -167,19 +172,28 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 data:
   {{- include "control_plane_config" (list . $tpl_context) | nindent 2 }}
+---
+{{- range $profile := $profiles }}
+{{- $dsMode := ternary "d8-control-plane-manager" "d8-control-plane-manager-etcd-only" (eq $profile "main") }}
+{{- $profileImages := $images }}
+{{- $profileImageHolders := $imageHolders }}
+{{- if eq $profile "etcd-only" }}
+  {{- $profileImages = pick $images "etcd" }}
+  {{- $profileImageHolders = pick $imageHolders "etcd" }}
+{{- end }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: d8-control-plane-manager
+  name: {{ $dsMode }}
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: d8-control-plane-manager
+    name: {{ $dsMode }}
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -190,66 +204,41 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 80Mi
-    {{- range $name, $imageDigest := $images }}
-    - containerName: {{ index $imageHolders $name }}
+    {{- range $name, $imageDigest := $profileImages }}
+    - containerName: {{ index $profileImageHolders $name }}
       minAllowed:
         {{- include "image_holder_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 10m
         memory: 10Mi
     {{- end }}
-{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: d8-control-plane-manager-etcd-only
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager-etcd-only")) | nindent 2 }}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: DaemonSet
-    name: d8-control-plane-manager-etcd-only
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: control-plane-manager
-      minAllowed:
-        {{- include "control_plane_manager_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 50m
-        memory: 80Mi
-    - containerName: {{ index $imageHolders "etcd" }}
-      minAllowed:
-        {{- include "image_holder_resources" $ | nindent 8 }}
-      maxAllowed:
-        cpu: 10m
-        memory: 10Mi
-{{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: d8-control-plane-manager
+  name: {{ $dsMode }}
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      app: d8-control-plane-manager
+      app: {{ $dsMode }}
   template:
     metadata:
       labels:
-        app: d8-control-plane-manager
+        app: {{ $dsMode }}
       annotations:
         checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
         checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
-      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- if eq $profile "main" }}
+        {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- else }}
+        {{- include "helm_lib_node_selector" (tuple . "etcd-only") | nindent 6 }}
+      {{- end }}
+      {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
@@ -272,8 +261,10 @@ spec:
           readOnly: true
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
+        {{- if eq $profile "main" }}
         - mountPath: /root/.kube/
           name: root-kube
+        {{- end }}
         - mountPath: /var/lib/kubelet/pki
           name: var-lib-kubelet-pki
         - mountPath: /tmp
@@ -291,6 +282,10 @@ spec:
           value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        {{- if eq $profile "etcd-only" }}
+        - name: ETCD_ONLY
+          value: "true"
+        {{- end }}
         livenessProbe:
           httpGet:
             host: 127.0.0.1
@@ -308,8 +303,8 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
             {{- include "control_plane_manager_resources" . | nindent 12 }}
-{{- range $name, $imageDigest := $images }}
-      - name: {{ index $imageHolders $name }}
+{{- range $name, $imageDigest := $profileImages }}
+      - name: {{ index $profileImageHolders $name }}
         {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
@@ -332,10 +327,12 @@ spec:
         hostPath:
           path: /etc/kubernetes/
           type: DirectoryOrCreate
+      {{- if eq $profile "main" }}
       - name: root-kube
         hostPath:
           path: /root/.kube/
           type: DirectoryOrCreate
+      {{- end }}
       - name: etcd
         hostPath:
           path: /var/lib/etcd
@@ -346,123 +343,3 @@ spec:
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
-{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: d8-control-plane-manager-etcd-only
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager-etcd-only")) | nindent 2 }}
-spec:
-  selector:
-    matchLabels:
-      app: d8-control-plane-manager-etcd-only
-  template:
-    metadata:
-      labels:
-        app: d8-control-plane-manager-etcd-only
-      annotations:
-        checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
-        checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
-    spec:
-      nodeSelector:
-        node-role.deckhouse.io/etcd-only: ""
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
-      imagePullSecrets:
-      - name: deckhouse-registry
-      automountServiceAccountToken: true
-      serviceAccountName: d8-control-plane-manager
-      containers:
-      - name: control-plane-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . (printf "controlPlaneManager%s" $kubeImageTagSuffix)) }}
-        volumeMounts:
-        - mountPath: /var/lib/etcd
-          name: etcd
-          readOnly: true
-        - mountPath: /pki
-          name: pki
-          readOnly: true
-        - mountPath: /config
-          name: config
-          readOnly: true
-        - mountPath: /etc/kubernetes
-          name: etc-kubernetes
-        - mountPath: /root/.kube/
-          name: root-kube
-        - mountPath: /var/lib/kubelet/pki
-          name: var-lib-kubelet-pki
-        - mountPath: /tmp
-          name: tmp
-        env:
-        - name: MY_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
-        - name: MY_POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
-        - name: ALLOWED_KUBERNETES_VERSIONS
-          value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
-        - name: ETCD_ONLY
-          value: "true"
-        livenessProbe:
-          httpGet:
-            host: 127.0.0.1
-            path: /healthz
-            port: 8095
-        readinessProbe:
-          httpGet:
-            host: 127.0.0.1
-            path: /readyz
-            port: 8095
-          initialDelaySeconds: 10
-          periodSeconds: 3
-          timeoutSeconds: 8
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
-            {{- include "control_plane_manager_resources" . | nindent 12 }}
-      - name: {{ index $imageHolders "etcd" }}
-        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry.base }}@{{ index $images "etcd" }}"
-        command:
-        - /pause
-        resources:
-          requests:
-            {{- include "image_holder_resources" $ | nindent 12 }}
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      priorityClassName: system-cluster-critical
-      volumes:
-      - secret:
-          secretName: d8-pki
-        name: pki
-      - secret:
-          secretName: d8-control-plane-manager-config
-        name: config
-      - name: etc-kubernetes
-        hostPath:
-          path: /etc/kubernetes/
-          type: DirectoryOrCreate
-      - name: root-kube
-        hostPath:
-          path: /root/.kube/
-          type: DirectoryOrCreate
-      - name: etcd
-        hostPath:
-          path: /var/lib/etcd
-          type: DirectoryOrCreate
-      - name: var-lib-kubelet-pki
-        hostPath:
-          path: /var/lib/kubelet/pki/
-          type: DirectoryOrCreate
-      - name: tmp
-        emptyDir: {}
-{{- end }}
