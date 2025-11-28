@@ -69,10 +69,12 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
 	var settings map[string]any
-	err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
-	if err != nil {
-		return ValidationResult{
-			Error: fmt.Sprintf("spec.settings is not a valid JSON: %v", err),
+	if config.Spec.Settings != nil && len(config.Spec.Settings.Raw) > 0 {
+		err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
+		if err != nil {
+			return ValidationResult{
+				Error: fmt.Sprintf("spec.settings is not a valid JSON: %v", err),
+			}
 		}
 	}
 

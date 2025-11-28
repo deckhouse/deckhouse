@@ -74,19 +74,44 @@ type ModuleConfig struct {
 // +kubebuilder:pruning:XPreserveUnknownFields
 type SettingsValues runtime.RawExtension // map[string]any
 
-func (v *SettingsValues) DeepCopy() *SettingsValues {
-	newSlice := make([]byte, len(v.Raw))
-	copy(newSlice, v.Raw)
-
-	return &SettingsValues{Raw: newSlice}
+// MarshalJSON implements json.Marshaler
+func (v SettingsValues) MarshalJSON() ([]byte, error) {
+	if v.Raw != nil {
+		return v.Raw, nil
+	}
+	return []byte("{}"), nil
 }
 
-func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
-	{
-		v := &v
-		clone := v.DeepCopy()
-		*out = *clone
-		return
+// UnmarshalJSON implements json.Unmarshaler
+func (v *SettingsValues) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+	v.Raw = make([]byte, len(data))
+	copy(v.Raw, data)
+	return nil
+}
+
+func (v *SettingsValues) DeepCopy() *SettingsValues {
+	if v == nil {
+		return nil
+	}
+	out := new(SettingsValues)
+	v.DeepCopyInto(out)
+	return out
+}
+
+func (v *SettingsValues) DeepCopyInto(out *SettingsValues) {
+	if v.Raw != nil {
+		out.Raw = make([]byte, len(v.Raw))
+		copy(out.Raw, v.Raw)
+	} else {
+		out.Raw = nil
+	}
+	if v.Object != nil {
+		out.Object = v.Object.DeepCopyObject()
+	} else {
+		out.Object = nil
 	}
 }
 

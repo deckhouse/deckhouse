@@ -56,6 +56,10 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}
 
 	var settings map[string]any
+	if mc.Spec.Settings == nil || len(mc.Spec.Settings.Raw) == 0 {
+		return nil, nil
+	}
+
 	err = json.Unmarshal(mc.Spec.Settings.Raw, &settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal virtualization moduleconfig settings: %v", err)

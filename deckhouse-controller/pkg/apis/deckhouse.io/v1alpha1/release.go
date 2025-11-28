@@ -50,6 +50,49 @@ type Release interface {
 // +kubebuilder:pruning:XPreserveUnknownFields
 type Changelog runtime.RawExtension // map[string]any
 
+// MarshalJSON implements json.Marshaler
+func (v Changelog) MarshalJSON() ([]byte, error) {
+	if v.Raw != nil {
+		return v.Raw, nil
+	}
+	return []byte("{}"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *Changelog) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+	v.Raw = make([]byte, len(data))
+	copy(v.Raw, data)
+	return nil
+}
+
+func (v *Changelog) DeepCopy() *Changelog {
+	if v == nil {
+		return nil
+	}
+
+	out := new(Changelog)
+	v.DeepCopyInto(out)
+
+	return out
+}
+
+func (v *Changelog) DeepCopyInto(out *Changelog) {
+	if v.Raw != nil {
+		out.Raw = make([]byte, len(v.Raw))
+		copy(out.Raw, v.Raw)
+	} else {
+		out.Raw = nil
+	}
+	if v.Object != nil {
+		out.Object = v.Object.DeepCopyObject()
+	} else {
+		out.Object = nil
+	}
+}
+
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {
 	case *DeckhouseRelease:

@@ -358,13 +358,15 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 				return err
 			}
 		} else {
-			var settings map[string]any
-			err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", mpo.GetModuleName(), err)
-			}
+			if config.Spec.Settings != nil && len(config.Spec.Settings.Raw) > 0 {
+				var settings map[string]any
+				err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
+				if err != nil {
+					return fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", mpo.GetModuleName(), err)
+				}
 
-			values = addonutils.Values(settings)
+				values = addonutils.Values(settings)
+			}
 		}
 	}
 	if err = def.Validate(values, r.log); err != nil {

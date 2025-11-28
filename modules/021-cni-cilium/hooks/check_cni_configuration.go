@@ -213,7 +213,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		Spec: v1alpha1.ModuleConfigSpec{
 			Enabled:  ptr.To(true),
 			Version:  1,
-			Settings: &v1alpha1.SettingsValues{},
+			Settings: nil,
 		},
 	}
 	// If the MC exists, use its Settings to generate the desired MC.
@@ -222,10 +222,12 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
-	var settings map[string]any
-	err = json.Unmarshal(desiredCNIModuleConfig.Spec.Settings.Raw, &settings)
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
+	settings := make(map[string]any)
+	if desiredCNIModuleConfig.Spec.Settings != nil && len(desiredCNIModuleConfig.Spec.Settings.Raw) > 0 {
+		err = json.Unmarshal(desiredCNIModuleConfig.Spec.Settings.Raw, &settings)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
+		}
 	}
 
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
@@ -275,6 +277,15 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			}
 		default:
 			input.Logger.Warn("An unknown cilium masqueradeMode was specified in the d8-cni-configuration secret, so the default cni masqueradeMode will be used instead.", slog.String("specified masqueradeMode", cniSecret.Cilium.Mode))
+		}
+
+		// Marshal the modified settings back to desiredCNIModuleConfig.Spec.Settings
+		if len(settings) > 0 {
+			settingsRaw, err := json.Marshal(settings)
+			if err != nil {
+				return fmt.Errorf("cannot marshal settings for ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
+			}
+			desiredCNIModuleConfig.Spec.Settings = &v1alpha1.SettingsValues{Raw: settingsRaw}
 		}
 	}
 

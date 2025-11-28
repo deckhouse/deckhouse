@@ -155,9 +155,11 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 	}
 
 	var settings map[string]any
-	err := json.Unmarshal(moduleConfig.Spec.Settings.Raw, &settings)
-	if err != nil {
-		return utils.Values{}, fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
+	if moduleConfig.Spec.Settings != nil && len(moduleConfig.Spec.Settings.Raw) > 0 {
+		err := json.Unmarshal(moduleConfig.Spec.Settings.Raw, &settings)
+		if err != nil {
+			return utils.Values{}, fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
+		}
 	}
 
 	if moduleConfig.Spec.Version == 0 {

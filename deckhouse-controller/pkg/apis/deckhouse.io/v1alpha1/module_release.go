@@ -256,22 +256,6 @@ func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
 	return mr.Spec.UpdateSpec
 }
 
-func (v *Changelog) DeepCopy() *Changelog {
-	newSlice := make([]byte, len(v.Raw))
-	copy(newSlice, v.Raw)
-
-	return &Changelog{Raw: newSlice}
-}
-
-func (v Changelog) DeepCopyInto(out *Changelog) {
-	{
-		v := &v
-		clone := v.DeepCopy()
-		*out = *clone
-		return
-	}
-}
-
 type ModuleReleaseRequirements struct {
 	ModuleReleasePlatformRequirements `json:",inline"`
 	ParentModules                     map[string]string `json:"modules,omitempty"`

@@ -489,9 +489,15 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			return fmt.Errorf("get the module release: %w", err)
 		}
 
-		rawSettings, err := json.Marshal(meta.Changelog)
-		if err != nil {
-			return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+		var changelog *v1alpha1.Changelog
+
+		if meta.Changelog != nil {
+			rawChangelog, err := json.Marshal(meta.Changelog)
+			if err != nil {
+				return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+			}
+
+			changelog = &v1alpha1.Changelog{Raw: rawChangelog}
 		}
 
 		release = &v1alpha1.ModuleRelease{
@@ -525,7 +531,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  &v1alpha1.Changelog{Raw: rawSettings},
+				Changelog:  changelog,
 			},
 		}
 
@@ -568,9 +574,15 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		return nil
 	}
 
-	rawSettings, err := json.Marshal(meta.Changelog)
-	if err != nil {
-		return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+	var changelog *v1alpha1.Changelog
+
+	if meta.Changelog != nil {
+		rawChangelog, err := json.Marshal(meta.Changelog)
+		if err != nil {
+			return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+		}
+
+		changelog = &v1alpha1.Changelog{Raw: rawChangelog}
 	}
 
 	// seems weird to update already deployed/suspended release
@@ -588,7 +600,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
 		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  &v1alpha1.Changelog{Raw: rawSettings},
+		Changelog:  changelog,
 	}
 
 	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
