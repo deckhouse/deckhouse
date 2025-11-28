@@ -78,8 +78,15 @@ func main() {
 	runPhase(installBasePKIfiles())
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
-	runPhase(renewKubeconfigs())
-	runPhase(updateRootKubeconfig())
+	
+	if !config.EtcdOnly {
+		runPhase(renewKubeconfigs())
+		runPhase(updateRootKubeconfig())
+	} else {
+		log.Info("ETCD_ONLY mode: creating only admin.conf for kubeadm")
+		runPhase(renewAdminKubeconfig())
+	}
+	
 	runPhase(syncExtraFiles())
 	runPhase(convergeComponents())
 	runPhase(config.writeLastAppliedConfigurationChecksum())

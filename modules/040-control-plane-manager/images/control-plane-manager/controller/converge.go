@@ -99,7 +99,16 @@ func syncExtraFiles() error {
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+	
+	var components []string
+	if config.EtcdOnly {
+		components = []string{"etcd"}
+		log.Info("ETCD_ONLY mode: skipping control-plane components")
+	} else {
+		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+	}
+	
+	for _, v := range components {
 		if err := convergeComponent(v); err != nil {
 			return err
 		}
@@ -145,6 +154,9 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
+			if config.EtcdOnly {
+				log.Info("etcd-only mode: joining etcd cluster using kubeadm")
+			}
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
