@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -130,7 +131,47 @@ func EtcdOnlyJoinConverge() error {
 
 	log.Infof("[d8][etcd] member added successfully: %s, %d", config.NodeName, addResp.Member.ID)
 
+	// for generating initial-cluster patch for kubeadm	
+	resp, err = etcdClient.client.MemberList(ctx)
+	if err != nil {
+		return fmt.Errorf("[d8][etcd] failed to get updated member list: %v", err)
+	}
+
+	initialCluster := []string{}
+	for _, member := range resp.Members {
+		if len(member.PeerURLs) > 0 {
+			memberEntry := fmt.Sprintf("%s=%s", member.Name, member.PeerURLs[0])
+			initialCluster = append(initialCluster, memberEntry)
+		}
+	}
+	initialClusterStr := strings.Join(initialCluster, ",")
+
+	if err := generateEtcdInitialClusterPatch(initialClusterStr); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func generateEtcdInitialClusterPatch(initialCluster string) error {
+	const patch = `apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+  - name: etcd
+    command:
+    - etcd
+    - --initial-cluster=%s
+    - --initial-cluster-state=existing`
+
+	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", "etcd998initial-cluster.yaml")
+	content := fmt.Sprintf(patch, initialCluster)
+
+	log.Infof("[d8][etcd] writing initial-cluster patch to %s: %s", patchFile, initialCluster)
+	return os.WriteFile(patchFile, []byte(content), 0600)
 }
 
 func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
