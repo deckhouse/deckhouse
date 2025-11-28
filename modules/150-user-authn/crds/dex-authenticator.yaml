@@ -33,6 +33,8 @@ spec:
             * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
             * Secrets, needed to access Dex.
 
+            **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
+
             **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
