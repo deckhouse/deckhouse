@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
@@ -33,21 +34,28 @@ type ApiServerOptions struct {
 }
 
 func CreateKubeClient(ctx context.Context, apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, func() error, error) {
-	kubeConfig, cleanup, err := GenerateTempKubeConfig(apiServerUrl, opts)
-	if err != nil {
-		return nil, nil, fmt.Errorf("generating kube config: %w", err)
-	}
+	// kubeConfig, cleanup, err := GenerateTempKubeConfig(apiServerUrl, opts)
+	// if err != nil {
+	//	return nil, nil, fmt.Errorf("generating kube config: %w", err)
+	// }
 
 	kubeCl := client.NewKubernetesClient()
 
 	if err := kubeCl.InitContext(ctx, &client.KubernetesInitParams{
-		KubeConfig: kubeConfig,
+		RestConfig: &rest.Config{
+			BearerToken: opts.Token,
+			Host:        apiServerUrl,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData:   opts.CertificateAuthorityData,
+				Insecure: opts.InsecureSkipTLSVerify,
+			},
+		},
 	}); err != nil {
-		cleanup()
+		// cleanup()
 		return nil, nil, fmt.Errorf("open kubernetes connection: %w", err)
 	}
 
-	return kubeCl, cleanup, nil
+	return kubeCl, func() error { return nil }, nil
 }
 
 func GenerateTempKubeConfig(apiServerURL string, opts ApiServerOptions) (string, func() error, error) {
