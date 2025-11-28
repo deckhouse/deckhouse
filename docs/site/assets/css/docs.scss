@@ -15,9 +15,10 @@
   z-index: 50;
   height: 69px;
   background-color: #fff;
-  transition: max-height .15s ease-in-out, opacity .15s ease-in-out;
+  transition: max-height .15s ease-in-out, opacity .15s ease-in-out, top .15s ease-in-out;
 
   &.hidden {
+    top: 0 !important;
     opacity: 0;
     max-height: 0;
     padding-top: 0;
