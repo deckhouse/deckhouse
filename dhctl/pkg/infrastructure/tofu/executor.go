@@ -91,7 +91,6 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	} else {
 		args = append(args,
 			fmt.Sprintf("-var-file=%s", opts.VariablesPath),
-			e.params.WorkingDir,
 		)
 	}
 
