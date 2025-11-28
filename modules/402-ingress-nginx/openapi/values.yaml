@@ -215,12 +215,18 @@ properties:
                 geoIP2:
                   type: object
                   properties:
+                    maxmindMirror:
+                      type: string
+                    maxmindMirrorSkipTLSVerify:
+                      type: boolean
                     maxmindLicenseKey:
                       type: string
                     maxmindEditionIDs:
                       type: array
                       items:
                         type: string
+                    maxmindAccountID:
+                      type: integer
                 legacySSL:
                   type: boolean
                 disableHTTP2:
@@ -340,3 +346,8 @@ properties:
             default: []
             items:
               type: string
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
