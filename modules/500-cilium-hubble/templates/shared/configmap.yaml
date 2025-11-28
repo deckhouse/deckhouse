@@ -1,0 +1,38 @@
+{{- $collectorsMap := dict
+      "DNS" "dns"
+      "Drop" "drop"
+      "Flow" "flow"
+      "FlowsToWorld" "flows-to-world"
+      "HTTP" "http"
+      "HTTPv2" "httpV2"
+      "ICMP" "icmp"
+      "Kafka" "kafka"
+      "TCP" "tcp"
+-}}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-agent-hubble-settings
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble")) | nindent 2 }}
+data:
+  config.yaml: |
+    {{- if .Values.ciliumHubble.extendedMetrics.enabled }}
+    hubble-metrics-server: ":4243"
+    enable-hubble-open-metrics: "true"
+    {{- if .Values.ciliumHubble.extendedMetrics.collectors }}
+    hubble-metrics: |
+{{- range .Values.ciliumHubble.extendedMetrics.collectors }}
+      {{- $mapped := default .name (index $collectorsMap .name) -}}
+      {{ $mapped }}{{ if .contextOptions }}:{{ .contextOptions }}{{ end }}
+{{- end }}
+    {{- end }}
+    {{- end }}
+
+    {{- if .Values.ciliumHubble.eventLogs.enabled }}
+    hubble-export-file-path: /var/run/cilium/hubble/events.log
+    hubble-export-allowlist: {{ .Values.ciliumHubble.eventLogs.allowlist | join "," | quote }}
+    hubble-export-denylist: {{ .Values.ciliumHubble.eventLogs.denylist | join "," | quote }}
+    {{- end }}
