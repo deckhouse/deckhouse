@@ -17,13 +17,10 @@ package helper
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 )
 
 type ApiServerOptions struct {
@@ -32,50 +29,21 @@ type ApiServerOptions struct {
 	CertificateAuthorityData []byte
 }
 
-func CreateKubeClient(ctx context.Context, apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, func() error, error) {
-	kubeConfig, cleanup, err := GenerateTempKubeConfig(apiServerUrl, opts)
-	if err != nil {
-		return nil, nil, fmt.Errorf("generating kube config: %w", err)
-	}
-
+func CreateKubeClient(ctx context.Context, apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, error) {
 	kubeCl := client.NewKubernetesClient()
 
 	if err := kubeCl.InitContext(ctx, &client.KubernetesInitParams{
-		KubeConfig: kubeConfig,
+		RestConfig: &rest.Config{
+			BearerToken: opts.Token,
+			Host:        apiServerUrl,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData:   opts.CertificateAuthorityData,
+				Insecure: opts.InsecureSkipTLSVerify,
+			},
+		},
 	}); err != nil {
-		cleanup()
-		return nil, nil, fmt.Errorf("open kubernetes connection: %w", err)
+		return nil, fmt.Errorf("open kubernetes connection: %w", err)
 	}
 
-	return kubeCl, cleanup, nil
-}
-
-func GenerateTempKubeConfig(apiServerURL string, opts ApiServerOptions) (string, func() error, error) {
-	cfg := api.NewConfig()
-
-	cluster := api.NewCluster()
-	cluster.Server = apiServerURL
-	cluster.InsecureSkipTLSVerify = opts.InsecureSkipTLSVerify
-	cluster.CertificateAuthorityData = opts.CertificateAuthorityData
-
-	context := api.NewContext()
-	context.Cluster = "cluster"
-
-	if opts.Token != "" {
-		context.AuthInfo = "user"
-		authInfo := api.NewAuthInfo()
-		authInfo.Token = opts.Token
-		cfg.AuthInfos["user"] = authInfo
-	}
-
-	cfg.Clusters["cluster"] = cluster
-	cfg.Contexts["default"] = context
-	cfg.CurrentContext = "default"
-
-	return util.WriteTempFile("", "kubeconfig-", func(f *os.File) error {
-		if err := clientcmd.WriteToFile(*cfg, f.Name()); err != nil {
-			return fmt.Errorf("error writing kubeconfig temp file %s: %w", f.Name(), err)
-		}
-		return nil
-	})
+	return kubeCl, nil
 }
