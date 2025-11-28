@@ -1,5 +1,5 @@
 allowed_values: допустимые значения
-additional_property_name: имя дополнительного свойства
+additional_property_name: имя параметра
 search_placeholder_text: Поиск...
 search_context_dkpdocs_and_modules: Поиск выполняется по всей документации DKP и модулям.
 search_context_modules: Поиск выполняется по всем модулям, не включая документацию DKP.

@@ -133,7 +133,7 @@
       {{- $additionalPropsRequired := $additionalPropsData.required }}
       
       {{- /* Prepare the description with special text for additionalProperties object */}}
-      {{- $additionalPropertyName := "<ADDITIONAL_PROPERTY_NAME>" }}
+      {{- $additionalPropertyName := "<KEY_NAME>" }}
       {{- $additionalPropertyNameQuoted := printf "`%s`" $additionalPropertyName }}
       {{- $mapKeyName := index $additionalPropsData "x-doc-map-key-name" }}
       {{- $specialDescriptionText := "" }}
@@ -145,9 +145,9 @@
         {{- end }}
       {{- else }}
         {{- if eq site.Language.Lang "ru" }}
-          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted (T "additional_property_name") }}
+          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
         {{- else }}
-          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted (T "additional_property_name") }}
+          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
         {{- end }}
       {{- end }}
       
