@@ -99,7 +99,7 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 {% alert level="warning" %}
 DexAuthenticator only works with HTTPS. It does not support Ingress resources configured for HTTP only.
 
-Authentication cookies are set with the `Secure` attribute, which means they are only sent over encrypted HTTPS connections. If you try to use DexAuthenticator with an HTTP Ingress (without TLS configuration), you will experience infinite redirect loops after login because the browser will not send the authentication cookies back to the server.
+Authentication cookies are set with the `Secure` attribute, which means they are only sent over encrypted HTTPS connections.
 
 Make sure your application Ingress has TLS configured before integrating with DexAuthenticator.
 {% endalert %}
