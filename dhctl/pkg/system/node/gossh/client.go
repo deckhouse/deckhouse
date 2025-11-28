@@ -17,6 +17,7 @@ package gossh
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"slices"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -262,7 +264,12 @@ func (s *Client) Start() error {
 		if err != nil {
 			return err
 		}
-		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
+		if app.IsDebug {
+			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConnWithDebug(targetConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
+		} else {
+			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
+		}
+
 		return err
 	})
 	if err != nil {
@@ -366,7 +373,17 @@ func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientCo
 		return nil, err
 	}
 
-	c, chans, reqs, err := ssh.NewClientConn(tcpConn, addr, config)
+	var (
+		c     ssh.Conn
+		chans <-chan ssh.NewChannel
+		reqs  <-chan *ssh.Request
+	)
+
+	if app.IsDebug {
+		c, chans, reqs, err = ssh.NewClientConnWithDebug(tcpConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
+	} else {
+		c, chans, reqs, err = ssh.NewClientConn(tcpConn, addr, config)
+	}
 	if err != nil {
 		return nil, err
 	}

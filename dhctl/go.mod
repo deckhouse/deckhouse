@@ -16,7 +16,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
-	github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8
+	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51
 	github.com/deckhouse/module-sdk v0.2.0
 	github.com/flant/kube-client v1.4.0
 	github.com/fsnotify/fsnotify v1.7.0
