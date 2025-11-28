@@ -124,29 +124,22 @@ webhooks:
   {{- include "validating.webhook.config" . | nindent 2 }}
 {{- end }}
 
-{{/* Webhook for deny-exec on heritage: deckhouse pods - uses objectSelector to filter pods */}}
+{{/* Webhook for deny-exec in system namespaces (heritage: deckhouse) - the main webhook excludes these */}}
 {{/* TODO: restore condition: if and (ne .Values.global.deckhouseVersion "dev") ... */}}
 - name: deny-exec-heritage.admission-policy-engine.deckhouse.io
-  objectSelector:
-    matchLabels:
-      heritage: deckhouse
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: In
+      values:
+        - deckhouse
   rules:
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods/exec", "pods/attach"]
     operations: ["CONNECT"]
   timeoutSeconds: 15
-  admissionReviewVersions:
-    - v1
-  clientConfig:
-    caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
-    service:
-      name: gatekeeper-webhook-service
-      namespace: d8-admission-policy-engine
-      path: /v1/admit
-  failurePolicy: Fail
-  matchPolicy: Exact
-  sideEffects: None
+  {{- include "validating.webhook.config" . | nindent 2 }}
 
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}

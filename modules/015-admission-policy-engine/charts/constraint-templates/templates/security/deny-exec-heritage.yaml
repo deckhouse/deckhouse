@@ -34,13 +34,12 @@ spec:
           input.review.resource.resource == "pods/attach"
         }
 
-        # Check if the target pod has heritage: deckhouse label
-        # For CONNECT requests, object contains the PodExecOptions/PodAttachOptions,
-        # but we need to check the pod being accessed. The pod name is in input.review.name
-        # and we rely on the webhook's objectSelector to only send heritage pods.
+        # Check if the target pod has heritage: deckhouse label via inventory
         is_heritage_pod {
-          # The webhook objectSelector ensures only heritage: deckhouse pods reach this policy
-          true
+          namespace := input.review.namespace
+          podName := input.review.name
+          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
+          pod.metadata.labels["heritage"] == "deckhouse"
         }
 
         # allow-list
@@ -66,4 +65,3 @@ spec:
           user := input.review.userInfo.username
           msg  := sprintf("Exec/attach to Pod %q in namespace %q with label 'heritage: deckhouse' is forbidden for user %q", [pod, ns, user])
         }
-
