@@ -63,9 +63,31 @@ func NewPackageServiceManager(logger *log.Logger) *PackageServiceManager {
 	}
 }
 
+// SetPackagesService sets a pre-configured PackagesService for a given registry URL.
+// This is primarily used for testing to inject mock services.
+func (m *PackageServiceManager) SetPackagesService(registryURL string, svc *PackagesService) {
+	if m.services == nil {
+		m.services = make(map[packageCredentials]*PackagesService)
+	}
+
+	creds := packageCredentials{
+		registryURL: registryURL,
+	}
+
+	m.services[creds] = svc
+}
+
 func (m *PackageServiceManager) PackagesService(registryURL, dockerCFG, ca, userAgent, scheme string) (*PackagesService, error) {
 	if m.services == nil {
 		m.services = make(map[packageCredentials]*PackagesService)
+	}
+
+	// Check for service injected via SetPackagesService (testing) with only registryURL
+	testCreds := packageCredentials{
+		registryURL: registryURL,
+	}
+	if svc, exists := m.services[testCreds]; exists {
+		return svc, nil
 	}
 
 	creds := packageCredentials{

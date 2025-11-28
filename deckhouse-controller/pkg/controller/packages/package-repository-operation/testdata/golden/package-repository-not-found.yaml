@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "21"
+  resourceVersion: "6"
 spec:
   packageRepository: deckhouse
   type: Update
@@ -42,8 +42,6 @@ metadata:
   resourceVersion: "1"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: registry.example.com/test
 status:
   syncTime: null

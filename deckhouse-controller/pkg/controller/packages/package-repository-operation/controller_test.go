@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -37,11 +36,64 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
 )
+
+// mockRegistryClient is a mock implementation of registry.Client for testing
+type mockRegistryClient struct {
+	listTagsFunc       func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error)
+	getImageConfigFunc func(ctx context.Context, tag string) (*crv1.ConfigFile, error)
+}
+
+func (m *mockRegistryClient) WithSegment(segments ...string) registry.Client {
+	return m
+}
+
+func (m *mockRegistryClient) GetRegistry() string {
+	return "mock-registry"
+}
+
+func (m *mockRegistryClient) GetDigest(ctx context.Context, tag string) (*crv1.Hash, error) {
+	return nil, nil
+}
+
+func (m *mockRegistryClient) GetManifest(ctx context.Context, tag string) (registry.ManifestResult, error) {
+	return nil, nil
+}
+
+func (m *mockRegistryClient) GetImageConfig(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+	if m.getImageConfigFunc != nil {
+		return m.getImageConfigFunc(ctx, tag)
+	}
+	return nil, nil
+}
+
+func (m *mockRegistryClient) CheckImageExists(ctx context.Context, tag string) error {
+	return nil
+}
+
+func (m *mockRegistryClient) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
+	return nil, nil
+}
+
+func (m *mockRegistryClient) PushImage(ctx context.Context, tag string, img crv1.Image, opts ...registry.ImagePushOption) error {
+	return nil
+}
+
+func (m *mockRegistryClient) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+	if m.listTagsFunc != nil {
+		return m.listTagsFunc(ctx, opts...)
+	}
+	return nil, nil
+}
+
+func (m *mockRegistryClient) ListRepositories(ctx context.Context, opts ...registry.ListRepositoriesOption) ([]string, error) {
+	return nil, nil
+}
 
 var (
 	golden     bool
@@ -106,6 +158,20 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dc = dc
 	}
+}
+
+func withPackageServiceManager(psm *registryService.PackageServiceManager) reconcilerOption {
+	return func(r *reconciler) {
+		r.psm = psm
+	}
+}
+
+// createMockPSM creates a PackageServiceManager with a mock PackagesService for the given registry URL
+func createMockPSM(registryURL string, mockClient registry.Client) *registryService.PackageServiceManager {
+	psm := registryService.NewPackageServiceManager(log.NewNop())
+	svc := registryService.NewPackagesService(mockClient, log.NewNop())
+	psm.SetPackagesService(registryURL, svc)
+	return psm
 }
 
 func (suite *ControllerTestSuite) setupController(filename string, options ...reconcilerOption) {
@@ -273,11 +339,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("registry client creation failed", func() {
-		dc := dependency.NewMockedContainer()
-		// Set CRClient to nil to simulate GetRegistryClient failure
-		dc.CRClient = nil
+		// Use an empty PSM (no pre-configured services) - PackagesService will fail
+		// because there's no service for the registry URL and it can't create one dynamically
+		emptyPSM := registryService.NewPackageServiceManager(log.NewNop())
 
-		suite.setupController("registry-client-failed.yaml", withDependencyContainer(dc))
+		suite.setupController("registry-client-failed.yaml", withPackageServiceManager(emptyPSM))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -292,10 +358,15 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("package listing failed", func() {
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ListTagsMock.Return(nil, assert.AnError)
+		// Create a mock PSM with a mock client that returns an error for ListTags
+		mockClient := &mockRegistryClient{
+			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return nil, assert.AnError
+			},
+		}
+		psm := createMockPSM("registry.example.com/test", mockClient)
 
-		suite.setupController("package-listing-failed.yaml", withDependencyContainer(dc))
+		suite.setupController("package-listing-failed.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -310,17 +381,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("successful package discovery", func() {
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: func() (*crv1.Manifest, error) {
-				return &crv1.Manifest{
-					Layers: []crv1.Descriptor{},
-				}, nil
+		// Create a mock PSM with a mock client that returns packages
+		mockClient := &mockRegistryClient{
+			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"test-package"}, nil
 			},
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
-			ConfigFileStub: func() (*crv1.ConfigFile, error) {
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
 				return &crv1.ConfigFile{
 					Config: crv1.Config{
 						Labels: map[string]string{
@@ -329,10 +395,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
-		}, nil)
-		dc.CRClient.ListTagsMock.Return([]string{"test-package"}, nil)
+		}
+		psm := createMockPSM("registry.example.com/test", mockClient)
 
-		suite.setupController("successful-discovery.yaml", withDependencyContainer(dc))
+		suite.setupController("successful-discovery.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {
@@ -347,17 +413,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	})
 
 	suite.Run("successful completion", func() {
-		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: func() (*crv1.Manifest, error) {
-				return &crv1.Manifest{
-					Layers: []crv1.Descriptor{},
-				}, nil
+		// Create a mock PSM with a mock client that returns packages
+		mockClient := &mockRegistryClient{
+			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0"}, nil
 			},
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
-			ConfigFileStub: func() (*crv1.ConfigFile, error) {
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
 				return &crv1.ConfigFile{
 					Config: crv1.Config{
 						Labels: map[string]string{
@@ -366,10 +427,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					},
 				}, nil
 			},
-		}, nil)
-		dc.CRClient.ListTagsMock.Return([]string{"v1.0.0"}, nil)
+		}
+		psm := createMockPSM("registry.example.com/test", mockClient)
 
-		suite.setupController("successful-completion.yaml", withDependencyContainer(dc))
+		suite.setupController("successful-completion.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

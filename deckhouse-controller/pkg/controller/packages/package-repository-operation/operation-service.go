@@ -107,6 +107,30 @@ func (s *OperationService) DiscoverPackage(ctx context.Context) (*discoverResult
 	return res, nil
 }
 
+// UpdateRepositoryStatus updates the PackageRepository status with the processed packages
+func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
+	original := s.repo.DeepCopy()
+
+	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
+
+	for _, pkg := range packages {
+		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
+			Name: pkg.Name,
+			Type: packageTypeApplication, // Default to Application type
+		})
+	}
+
+	s.repo.Status.PackagesCount = len(packages)
+	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	s.repo.Status.SyncTime = metav1.NewTime(time.Now())
+
+	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update repository status: %w", err)
+	}
+
+	return nil
+}
+
 func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) ([]string, error) {
 	var foundTags []string
 	var err error
@@ -359,46 +383,44 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 		return fmt.Errorf("get application package: %w", err)
 	}
 
-	// resource already exists
-	if err == nil {
-		// Check if repository is already listed
-		if slices.Contains(pkg.Status.AvailableRepositories, s.repo.Name) {
-			return nil
+	// err - apierrors.IsNotFound
+	if err != nil {
+		// Create new ApplicationPackage
+		pkg = &v1alpha1.ApplicationPackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ApplicationPackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+				},
+			},
 		}
 
-		// Update existing package to add repository to available repositories
-		original := pkg.DeepCopy()
+		// Add owner reference to PackageRepository
+		s.setOwnerReference(pkg)
 
-		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, s.repo.Name)
-
-		err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
+		err = s.client.Create(ctx, pkg)
 		if err != nil {
-			return fmt.Errorf("update application package status: %w", err)
+			return fmt.Errorf("create application package: %w", err)
 		}
+	}
 
+	// Check if repository is already listed
+	if slices.Contains(pkg.Status.AvailableRepositories, s.repo.Name) {
 		return nil
 	}
 
-	// Create new ApplicationPackage
-	pkg = &v1alpha1.ApplicationPackage{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
-			Kind:       v1alpha1.ApplicationPackageKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: packageName,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
-		},
-	}
+	// Update existing package to add repository to available repositories
+	original := pkg.DeepCopy()
 
-	// Add owner reference to PackageRepository
-	s.setOwnerReference(pkg)
+	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, s.repo.Name)
 
-	err = s.client.Create(ctx, pkg)
+	err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
 	if err != nil {
-		return fmt.Errorf("create application package: %w", err)
+		return fmt.Errorf("update application package status: %w", err)
 	}
 
 	return nil

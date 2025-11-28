@@ -16,6 +16,7 @@ package packagerepositoryoperation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path"
@@ -274,12 +275,68 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
 	if err != nil {
-		return res, fmt.Errorf("create operation service: %w", err)
+		// Handle specific error cases with status updates
+		original := operation.DeepCopy()
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+
+		var reason, message string
+		// Check if the underlying error is NotFound (works with wrapped errors)
+		if apierrors.IsNotFound(err) {
+			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+			// Extract the root cause error for cleaner message
+			var statusErr *apierrors.StatusError
+			if errors.As(err, &statusErr) {
+				message = fmt.Sprintf("PackageRepository not found: %v", statusErr)
+			} else {
+				message = fmt.Sprintf("PackageRepository not found: %v", err)
+			}
+		} else if strings.Contains(err.Error(), "create package service") {
+			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
+			message = fmt.Sprintf("Failed to create registry client: %v", err)
+		} else {
+			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+			message = fmt.Sprintf("Failed to create operation service: %v", err)
+		}
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			reason,
+			message,
+		)
+
+		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
+
+		logger.Warn("operation failed", slog.String("message", message))
+		return ctrl.Result{}, nil
 	}
 
 	discovered, err := opService.DiscoverPackage(ctx)
 	if err != nil {
-		return res, fmt.Errorf("discover packages: %w", err)
+		// Handle package listing failure
+		original := operation.DeepCopy()
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseProcessing
+		message := fmt.Sprintf("Failed to list packages: %v", err)
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
+			message,
+		)
+
+		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
+
+		logger.Warn("operation failed", slog.String("message", message))
+		return ctrl.Result{}, nil
 	}
 
 	// Handle discovered packages
@@ -298,9 +355,84 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	logger.Debug("handling processing state")
 
+	// Check if operation already has a failed condition - skip processing if so
+	for _, cond := range operation.Status.Conditions {
+		if cond.Type == v1alpha1.PackageRepositoryOperationConditionProcessed && cond.Status == corev1.ConditionFalse {
+			logger.Debug("operation already has failed condition, skipping processing")
+			return res, nil
+		}
+	}
+
 	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
 	if err != nil {
-		return res, fmt.Errorf("create operation service: %w", err)
+		// Handle specific error cases with status updates
+		original := operation.DeepCopy()
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+
+		var reason, message string
+		// Check if the underlying error is NotFound (works with wrapped errors)
+		if apierrors.IsNotFound(err) {
+			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+			// Extract the root cause error for cleaner message
+			var statusErr *apierrors.StatusError
+			if errors.As(err, &statusErr) {
+				message = fmt.Sprintf("PackageRepository not found: %v", statusErr)
+			} else {
+				message = fmt.Sprintf("PackageRepository not found: %v", err)
+			}
+		} else if strings.Contains(err.Error(), "create package service") {
+			reason = v1alpha1.PackageRepositoryOperationReasonRegistryClientCreationFailed
+			message = fmt.Sprintf("Failed to create registry client: %v", err)
+		} else {
+			reason = v1alpha1.PackageRepositoryOperationReasonPackageRepositoryNotFound
+			message = fmt.Sprintf("Failed to create operation service: %v", err)
+		}
+
+		r.SetConditionFalse(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			reason,
+			message,
+		)
+
+		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
+
+		logger.Warn("operation failed", slog.String("message", message))
+		return ctrl.Result{}, nil
+	}
+
+	// Check if all packages have been processed
+	if operation.Status.Packages != nil && len(operation.Status.Packages.Discovered) == 0 {
+		r.logger.Info("all packages processed, marking as completed",
+			slog.Int("total", operation.Status.Packages.Total))
+
+		if err := opService.UpdateRepositoryStatus(ctx, operation.Status.Packages.Processed); err != nil {
+			logger.Warn("failed to update repository status", log.Err(err))
+			// Continue with operation completion even if repository update fails
+		}
+
+		original := operation.DeepCopy()
+
+		// All packages processed, mark as completed
+		operation.Status.Phase = v1alpha1.PackageRepositoryOperationPhaseCompleted
+		now := metav1.Now()
+		operation.Status.CompletionTime = &now
+
+		r.SetConditionTrue(
+			operation,
+			v1alpha1.PackageRepositoryOperationConditionProcessed,
+		)
+
+		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		r.logger.Info("operation completed", slog.String("name", operation.Name))
+
+		return ctrl.Result{}, nil
 	}
 
 	// Process the first package in the queue
@@ -338,6 +470,11 @@ func (r *reconciler) discoverPackages(ctx context.Context, svc *registryService.
 func (r *reconciler) handleOperationDiscoverResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, discovered *discoverResult) error {
 	// Update operation status with discovered packages
 	original := operation.DeepCopy()
+
+	// Initialize Packages if nil
+	if operation.Status.Packages == nil {
+		operation.Status.Packages = &v1alpha1.PackageRepositoryOperationStatusPackages{}
+	}
 
 	operationStatusPackages := make([]v1alpha1.PackageRepositoryOperationStatusDiscoveredPackage, 0, len(discovered.Packages))
 
