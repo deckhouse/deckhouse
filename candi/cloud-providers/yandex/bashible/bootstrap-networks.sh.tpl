@@ -91,6 +91,10 @@ network:
         use-routes: false
       match:
         macaddress: $mac
+      routing-policy:
+        - from: "$ip"
+          table: 0
+          priority: 100
       $route_settings
 BOOTSTRAP_NETWORK_EOF
 
@@ -104,5 +108,4 @@ if which netplan 2>/dev/null 1>&2; then
 fi
 
 shopt -u extglob
-
 
