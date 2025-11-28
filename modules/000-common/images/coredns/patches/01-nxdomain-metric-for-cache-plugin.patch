@@ -51,7 +51,7 @@ index 77edb0286..cd29dfa44 100644
 +	cacheNXDomainByClientDomain = promauto.NewCounterVec(prometheus.CounterOpts{
 +		Namespace: plugin.Namespace,
 +		Subsystem: "cache",
-+		Name:      "nxdomain_by_client_domain_total",
++		Name:      "nxdomain_by_client_total",
 +		Help:      "NXDOMAIN responses served by cache, grouped by client IP and normalized domain.",
 +	}, []string{"src_ip", "qname"})
  )
