@@ -13,7 +13,7 @@ By default, audit results are written to the `/var/log/kube-audit/audit.log` fil
 
 ## Built-in audit policies
 
-Deckhouse Virtualization Platform (DKP) configures a default audit policy that logs the following:
+Deckhouse Virtualization Platform (DVP) configures a default audit policy that logs the following:
 
 General events:
 
