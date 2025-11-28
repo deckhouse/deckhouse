@@ -21,12 +21,6 @@ Upstream <https://github.com/cilium/cilium/pull/24100>
 
 It needs to be changed to <https://docs.cilium.io/en/latest/network/pod-mac-address/#pod-mac-address>
 
-## 003-mtu.patch
-
-Set correct MTU value for veth interfaces
-
-Upstream issue <https://github.com/cilium/cilium/issues/23711>
-
 ## 005-ebpf-dhcp-server.patch
 
 Added DHCP server for pods (ebpf implementation).
