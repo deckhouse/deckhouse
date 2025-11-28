@@ -366,6 +366,7 @@ function main() {
     done
     if [[ "$is_user_id_found" == "false" ]]; then
       if [ "$local_user_id" -gt "1000" ]; then
+        user_name="$(getent passwd "$local_user_id" | cut -d ":" -f1)"
         while true
         do
           # Emulate pkill -U $local_user_id
