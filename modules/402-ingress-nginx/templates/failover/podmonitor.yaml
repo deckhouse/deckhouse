@@ -15,6 +15,7 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
     - regex: endpoint|container
       action: labeldrop

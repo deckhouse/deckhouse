@@ -16,6 +16,7 @@ spec:
     - kube-{{ .Chart.Name }}
   endpoints:
   - port: http-metrics
+    honorLabels: true
     relabelings:
     - regex: pod|service|endpoint
       action: labeldrop

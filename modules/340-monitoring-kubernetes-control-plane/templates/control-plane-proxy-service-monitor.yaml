@@ -59,6 +59,7 @@ spec:
     bearerTokenSecret:
       name: "prometheus-token"
       key: "token"
+    honorLabels: true
     relabelings:
     - regex: endpoint|pod|container
       action: labeldrop

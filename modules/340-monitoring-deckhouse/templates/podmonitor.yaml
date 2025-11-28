@@ -28,6 +28,7 @@ spec:
       action: drop
   - port: self
     path: "/metrics/hooks"
+    honorLabels: true
     relabelings:
     - regex: endpoint|container
       action: labeldrop
