@@ -1,5 +1,5 @@
 allowed_values: allowed values
-additional_property_name: property name
+additional_property_name: item (key) name
 search_placeholder_text: Search...
 search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
 search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
