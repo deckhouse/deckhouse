@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -196,7 +197,8 @@ func CreateDeckhouseManifests(
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				return nil
+				_, err := kubeCl.CoreV1().Namespaces().Update(ctx, manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
@@ -288,10 +290,44 @@ func CreateDeckhouseManifests(
 		},
 	}
 
-	if cfg.IsRegistryAccessRequired() {
+	// Registry secrets
+	registryManifest := cfg.Registry.Manifest()
+	registryPKI := registry.NewClusterPKIManager(kubeCl)
+	deckhouseRegistrySecretData, err := registryManifest.DeckhouseRegistrySecretData(
+		func() (registry.PKI, error) { return registryPKI.Get(ctx) })
+	if err != nil {
+		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
+	}
+	tasks = append(tasks, actions.ManifestTask{
+		Name:     `Secret "deckhouse-registry"`,
+		Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(deckhouseRegistrySecretData) },
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				}
+			} else {
+				log.InfoLn("Already exists. Skip!")
+			}
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			return err
+		},
+	})
+
+	isExist, registryBashibleConfigSecretData, err := registryManifest.RegistryBashibleConfigSecretData()
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible config secret data: %w", err)
+	}
+	if isExist {
 		tasks = append(tasks, actions.ManifestTask{
-			Name:     `Secret "deckhouse-registry"`,
-			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
+			Name: `Secret "registry-bashible-config"`,
+			Manifest: func() interface{} {
+				return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData)
+			},
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
 				if err != nil {
@@ -497,7 +533,7 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	err := beforeDeckhouseTask()
+	err = beforeDeckhouseTask()
 	if err != nil {
 		return nil, err
 	}
@@ -587,10 +623,9 @@ func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetImage(true),
+		Registry:           cfg.GetInclusteImage(true),
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
-		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
 	}

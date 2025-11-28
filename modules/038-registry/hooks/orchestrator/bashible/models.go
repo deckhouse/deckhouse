@@ -22,8 +22,10 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -202,35 +204,74 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 		return successResult, nil
 	}
 
-	// Init actual params from secret, if empty
-	if s.ActualParams == nil || s.ActualParams.isEmpty() {
-		s.ActualParams = &ModeParams{}
-		if err := s.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
-			return failedResult, fmt.Errorf("failed to initialize actual params from secret: %w", err)
+	// Transition stage + nodes have final version -> skip (transition stage not needed)
+	// This check is required to handle cases when the cluster is already configured in its final state, for example:
+	// * State was lost and restored — if the cluster is already in final state, there's no need to repeat the transition stage.
+	// * Cluster bootstrap — the initial state already matches the final one, so the transition stage can be skipped.
+	if isTransitionStage && s.Config == nil {
+		config, err := s.finalConfig(params, inputs)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		isFinalVersionApplied := true
+		for _, node := range inputs.NodeStatus {
+			if config.Version != node.Version {
+				isFinalVersionApplied = false
+				break
+			}
+		}
+		if isFinalVersionApplied {
+			return successResult, nil
 		}
 	}
 
+	if isTransitionStage {
+		// Initialize actual params from secret if not set or empty
+		if s.ActualParams == nil || s.ActualParams.isEmpty() {
+			s.ActualParams = &ModeParams{}
+			if err := s.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
+				return failedResult, fmt.Errorf("cannot load actual params from registry secret: %w", err)
+			}
+		}
+
+		// Build transition config using actual params
+		config, err := s.transitionConfig(params, inputs, *s.ActualParams)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		s.Config = config
+	} else {
+		// Build final config (no actual params needed at this point)
+		config, err := s.finalConfig(params, inputs)
+		if err != nil {
+			return failedResult, fmt.Errorf("failed to build config: %w", err)
+		}
+		s.Config = config
+
+		// Store current params:
+		// - for potential future transition stage
+		// - to check if the transition stage has already been applied
+		s.ActualParams = &params.ModeParams
+	}
+
+	return buildResult(inputs, false, s.Config.Version), nil
+}
+
+func (s *State) transitionConfig(params Params, inputs Inputs, actualParams ModeParams) (*Config, error) {
+	builder := ConfigBuilder{
+		ModeParams:     params.ModeParams,
+		MasterNodesIPs: inputs.MasterNodesIPs,
+		ActualParams:   []ModeParams{actualParams},
+	}
+	return builder.build()
+}
+
+func (s *State) finalConfig(params Params, inputs Inputs) (*Config, error) {
 	builder := ConfigBuilder{
 		ModeParams:     params.ModeParams,
 		MasterNodesIPs: inputs.MasterNodesIPs,
 	}
-	actualParams := &params.ModeParams
-
-	// In transition stage, use actual params
-	if isTransitionStage {
-		builder.ActualParams = []ModeParams{*s.ActualParams}
-		actualParams = s.ActualParams
-	}
-
-	config, err := builder.build()
-	if err != nil {
-		return failedResult, fmt.Errorf("failed to build config: %w", err)
-	}
-
-	s.ActualParams = actualParams
-	s.Config = config
-
-	return buildResult(inputs, false, config.Version), nil
+	return builder.build()
 }
 
 func (b *ConfigBuilder) build() (*Config, error) {
@@ -251,7 +292,7 @@ func (b *ConfigBuilder) build() (*Config, error) {
 		Hosts:          b.hosts(),
 	}
 
-	version, err := helpers.ComputeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
@@ -304,7 +345,7 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
-	username, password, err := helpers.CredsFromDockerCfg(
+	username, password, err := registry_docker.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,
 	)

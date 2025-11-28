@@ -89,20 +89,17 @@ proxy:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if or .imagesRepo .dockerCfg }}
+{{- with .initConfiguration }}
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
-{{- if .imagesRepo }}
-  imagesRepo: {{ .imagesRepo }}
-{{- end }}
-
-{{- if .dockerCfg }}
-  # a special string with parameters to access Docker registry
-  registryDockerCfg: {{ .dockerCfg | b64enc }}
-{{- end }}
+	{{- with .imagesRepo }}
+  imagesRepo: {{ . }}
+	{{- end }}
+	{{- with .registryDockerCfg }}
+  registryDockerCfg: {{ . | b64enc }}
+	{{- end }}
 {{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -153,7 +150,12 @@ provider:
        "public_key": "publicKey",
        "private_key": "privateKey"
     }
+{{- with .manifests }}
+	{{- range . }}
 ---
+		{{- . }}
+	{{- end }}
+{{- end }}
 `
 
 func renderTestConfig(data map[string]interface{}, config string) string {
@@ -229,44 +231,64 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
+// Registry
 func TestPrepareRegistry(t *testing.T) {
-	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
-			"imagesRepo": "r.example.com/deckhouse/ce/",
-		})
-
-		t.Run("Trim right slash for imagesRepo", func(t *testing.T) {
-			require.Equal(t, cfg.DeckhouseConfig.ImagesRepo, "r.example.com/deckhouse/ce")
-		})
-
-		t.Run("Correct prepare registry object", func(t *testing.T) {
-			expectedData := RegistryData{
-				Address:   "r.example.com",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
-			}
-
-			require.Equal(t, cfg.Registry, expectedData)
-		})
+	t.Run("Registry from default (CE edition config)", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
+		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Password, "")
+		require.Equal(t, registry.Username, "")
+		require.Equal(t, registry.CA, "")
 	})
 
-	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-
-		t.Run("Registry object for CE edition", func(t *testing.T) {
-			expectedData := RegistryData{
-				Address:   "registry.deckhouse.io",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
-			}
-
-			require.Equal(t, cfg.Registry, expectedData)
+	t.Run("Registry from init configuration", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"initConfiguration": map[string]interface{}{
+				"imagesRepo":        "r.example.com/test/",
+				"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
+			},
 		})
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
+		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Username, "a")
+		require.Equal(t, registry.Password, "b")
+		require.Equal(t, registry.CA, "")
+	})
+
+	t.Run("Registry from deckhouse moduleConfig", func(t *testing.T) {
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			"manifests": []string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test/
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`,
+			},
+		})
+		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+		registry := cfg.Registry.Settings.Remote
+		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
+		require.Equal(t, registry.Scheme, "HTTPS")
+		require.Equal(t, registry.Username, "test-user")
+		require.Equal(t, registry.Password, "test-password")
+		require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
 	})
 }
 
