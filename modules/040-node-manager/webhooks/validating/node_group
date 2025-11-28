@@ -160,11 +160,11 @@ EOF
     if [[ -z "$prefix" || "$prefix" == "null" ]]; then
       prefix=24
     fi
+    availableIPs=$((2**(32 - prefix) - 3))
     # every pod can use two IP (one in terminating phase + one in starting phase)
-    availableIPs=$((2**(32 - prefix - 1) - 3))
-    if [[ "$maxPods" -gt "$availableIPs" ]]; then
+    if (( 2 * maxPods > availableIPs )); then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to set .spec.kubelet.maxPods ($maxPods) greater than available IPs ($availableIPs) in podSubnetNodeCIDRPrefix /$prefix"}
+{"allowed":false, "message":".spec.kubelet.maxPods ($maxPods) is too high: each pod may need 2 IPs (one terminating + one starting), but only $availableIPs IPs available in podSubnetNodeCIDRPrefix /$prefix"}
 EOF
       return 0
     fi
