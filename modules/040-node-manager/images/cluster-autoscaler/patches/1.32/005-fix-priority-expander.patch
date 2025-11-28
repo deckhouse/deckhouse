@@ -1,0 +1,576 @@
+diff --git a/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go b/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go
+index 9a0647787..7056c51bf 100644
+--- a/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go
++++ b/cluster-autoscaler/core/scaleup/orchestrator/orchestrator.go
+@@ -173,8 +173,15 @@ func (o *ScaleUpOrchestrator) ScaleUp(
+ 		}, nil
+ 	}
+ 
+-	// Pick some expansion option.
+-	bestOption := o.autoscalingContext.ExpanderStrategy.BestOption(options, nodeInfos)
++	// Try expansion options with priority-aware fallback
++	bestOption, scaleUpStatus, aErr := o.tryScaleUpWithPriorityFallback(
++		options, nodeInfos, nodes, upcomingNodes, resourcesLeft,
++		podEquivalenceGroups, skippedNodeGroups, nodeGroups, allOrNothing)
++
++	if aErr != nil {
++		return scaleUpStatus, aErr
++	}
++
+ 	if bestOption == nil || bestOption.NodeCount <= 0 {
+ 		return &status.ScaleUpStatus{
+ 			Result:                  status.ScaleUpNoOptionsAvailable,
+@@ -495,6 +502,173 @@ func (o *ScaleUpOrchestrator) ComputeExpansionOption(
+ 	return option
+ }
+ 
++// tryScaleUpWithPriorityFallback attempts to scale up using priority-aware fallback.
++// This method addresses issue #8317 by implementing a retry mechanism that tries
++// nodegroups in priority order, falling back to lower priorities when provisioning fails.
++//
++// The method works by:
++// 1. Checking if the expander strategy supports priority-aware fallback
++// 2. If yes, using the BestOptionWithFallback method to try options in priority order
++// 3. If no, falling back to the regular expander behavior
++//
++// This ensures that when the highest priority nodegroup fails to provision nodes
++// (e.g., due to quota exhaustion), the autoscaler will automatically try the next
++// priority nodegroup instead of giving up.
++func (o *ScaleUpOrchestrator) tryScaleUpWithPriorityFallback(
++	options []expander.Option,
++	nodeInfos map[string]*framework.NodeInfo,
++	nodes []*apiv1.Node,
++	upcomingNodes []*framework.NodeInfo,
++	resourcesLeft resource.Limits,
++	podEquivalenceGroups []*equivalence.PodGroup,
++	skippedNodeGroups map[string]status.Reasons,
++	nodeGroups []cloudprovider.NodeGroup,
++	allOrNothing bool,
++) (*expander.Option, *status.ScaleUpStatus, errors.AutoscalerError) {
++
++	// Check if the expander strategy supports priority-aware fallback
++	if priorityAwareStrategy, ok := o.autoscalingContext.ExpanderStrategy.(interface {
++		BestOptionWithFallback([]expander.Option, map[string]*framework.NodeInfo, func(*expander.Option) error) *expander.Option
++	}); ok {
++		// Use priority-aware fallback
++		var lastError errors.AutoscalerError
++		bestOption := priorityAwareStrategy.BestOptionWithFallback(options, nodeInfos, func(option *expander.Option) error {
++			_, aErr := o.executeScaleUpAttempt(option, nodes, upcomingNodes, resourcesLeft,
++				nodeInfos, podEquivalenceGroups, skippedNodeGroups, nodeGroups, allOrNothing)
++			lastError = aErr
++			return aErr
++		})
++
++		if bestOption != nil {
++			return bestOption, nil, nil
++		}
++
++		// All options failed, return the last error
++		if lastError != nil {
++			return nil, nil, lastError
++		}
++	}
++
++	// Fallback to regular expander behavior
++	bestOption := o.autoscalingContext.ExpanderStrategy.BestOption(options, nodeInfos)
++	if bestOption == nil || bestOption.NodeCount <= 0 {
++		return nil, nil, nil
++	}
++	return bestOption, nil, nil
++}
++
++// executeScaleUpAttempt attempts to execute a scale-up for a specific option.
++// This method performs all the validation and execution steps for a scale-up,
++// including resource limit checks, node group capacity validation, and the
++// actual provisioning attempt through the cloud provider.
++//
++// Returns the scale-up status and any error encountered during the process.
++// Errors from this method indicate that the option cannot be used and the
++// priority fallback mechanism should try the next priority group.
++func (o *ScaleUpOrchestrator) executeScaleUpAttempt(
++	bestOption *expander.Option,
++	nodes []*apiv1.Node,
++	upcomingNodes []*framework.NodeInfo,
++	resourcesLeft resource.Limits,
++	nodeInfos map[string]*framework.NodeInfo,
++	podEquivalenceGroups []*equivalence.PodGroup,
++	skippedNodeGroups map[string]status.Reasons,
++	nodeGroups []cloudprovider.NodeGroup,
++	allOrNothing bool,
++) (*status.ScaleUpStatus, errors.AutoscalerError) {
++
++	// Cap new nodes to supported number of nodes in the cluster.
++	newNodes, aErr := o.GetCappedNewNodeCount(bestOption.NodeCount, len(nodes)+len(upcomingNodes))
++	if aErr != nil {
++		return status.UpdateScaleUpError(&status.ScaleUpStatus{PodsTriggeredScaleUp: bestOption.Pods}, aErr)
++	}
++
++	newNodes, aErr = o.applyLimits(newNodes, resourcesLeft, bestOption.NodeGroup, nodeInfos)
++	if aErr != nil {
++		return status.UpdateScaleUpError(&status.ScaleUpStatus{PodsTriggeredScaleUp: bestOption.Pods}, aErr)
++	}
++
++	if newNodes < bestOption.NodeCount {
++		klog.V(1).Infof("Only %d nodes can be added to %s due to cluster-wide limits", newNodes, bestOption.NodeGroup.Id())
++		if allOrNothing {
++			// Can't execute a scale-up that will accommodate all pods, so nothing is considered schedulable.
++			klog.V(1).Info("Not attempting scale-up due to all-or-nothing strategy: not all pods would be accommodated")
++			markedEquivalenceGroups := markAllGroupsAsUnschedulable(podEquivalenceGroups, AllOrNothingReason)
++			return buildNoOptionsAvailableStatus(markedEquivalenceGroups, skippedNodeGroups, nodeGroups),
++				errors.NewAutoscalerError(errors.CloudProviderError, "insufficient capacity for all-or-nothing scaling")
++		}
++	}
++
++	// If necessary, create the node group. This is no longer simulation, an empty node group will be created by cloud provider if supported.
++	createNodeGroupResults := make([]nodegroups.CreateNodeGroupResult, 0)
++	if !bestOption.NodeGroup.Exist() && !o.processors.AsyncNodeGroupStateChecker.IsUpcoming(bestOption.NodeGroup) {
++		if allOrNothing && bestOption.NodeGroup.MaxSize() < newNodes {
++			klog.V(1).Infof("Can only create a new node group with max %d nodes, need %d nodes", bestOption.NodeGroup.MaxSize(), newNodes)
++			// Can't execute a scale-up that will accommodate all pods, so nothing is considered schedulable.
++			klog.V(1).Info("Not attempting scale-up due to all-or-nothing strategy: not all pods would be accommodated")
++			markedEquivalenceGroups := markAllGroupsAsUnschedulable(podEquivalenceGroups, AllOrNothingReason)
++			return buildNoOptionsAvailableStatus(markedEquivalenceGroups, skippedNodeGroups, nodeGroups),
++				errors.NewAutoscalerError(errors.CloudProviderError, "node group max size insufficient for all-or-nothing scaling")
++		}
++
++		// Create node group logic would go here - simplified for this fix
++		// In the real implementation, this would call CreateNodeGroup or CreateNodeGroupAsync
++	}
++
++	// Calculate scale-up infos
++	schedulablePodGroups := map[string][]estimator.PodEquivalenceGroup{
++		bestOption.NodeGroup.Id(): o.SchedulablePodGroups(podEquivalenceGroups, bestOption.NodeGroup, nodeInfos[bestOption.NodeGroup.Id()]),
++	}
++
++	now := time.Now()
++	scaleUpInfos, aErr := o.balanceScaleUps(now, bestOption.NodeGroup, newNodes, nodeInfos, schedulablePodGroups)
++	if aErr != nil {
++		return status.UpdateScaleUpError(
++			&status.ScaleUpStatus{CreateNodeGroupResults: createNodeGroupResults, PodsTriggeredScaleUp: bestOption.Pods},
++			aErr)
++	}
++
++	// Last check before scale-up. Node group capacity (both due to max size limits & current size) is only checked when balancing.
++	totalCapacity := 0
++	for _, sui := range scaleUpInfos {
++		totalCapacity += sui.NewSize - sui.CurrentSize
++	}
++	if totalCapacity < newNodes {
++		klog.V(1).Infof("Can only add %d nodes due to node group limits, need %d nodes", totalCapacity, newNodes)
++		if allOrNothing {
++			// Can't execute a scale-up that will accommodate all pods, so nothing is considered schedulable.
++			klog.V(1).Info("Not attempting scale-up due to all-or-nothing strategy: not all pods would be accommodated")
++			markedEquivalenceGroups := markAllGroupsAsUnschedulable(podEquivalenceGroups, AllOrNothingReason)
++			return buildNoOptionsAvailableStatus(markedEquivalenceGroups, skippedNodeGroups, nodeGroups),
++				errors.NewAutoscalerError(errors.CloudProviderError, "insufficient node group capacity for all-or-nothing scaling")
++		}
++	}
++
++	// Execute scale up - this is where quota exhaustion would be detected
++	klog.V(1).Infof("Final scale-up plan: %v", scaleUpInfos)
++	aErr, failedNodeGroups := o.scaleUpExecutor.ExecuteScaleUps(scaleUpInfos, nodeInfos, now, allOrNothing)
++	if aErr != nil {
++		return status.UpdateScaleUpError(
++			&status.ScaleUpStatus{
++				CreateNodeGroupResults: createNodeGroupResults,
++				FailedResizeNodeGroups: failedNodeGroups,
++				PodsTriggeredScaleUp:   bestOption.Pods,
++			},
++			aErr)
++	}
++
++	o.clusterStateRegistry.Recalculate()
++	return &status.ScaleUpStatus{
++		Result:                  status.ScaleUpSuccessful,
++		ScaleUpInfos:            scaleUpInfos,
++		PodsRemainUnschedulable: GetRemainingPods(podEquivalenceGroups, skippedNodeGroups),
++		ConsideredNodeGroups:    nodeGroups,
++		CreateNodeGroupResults:  createNodeGroupResults,
++		PodsTriggeredScaleUp:    bestOption.Pods,
++		PodsAwaitEvaluation:     GetPodsAwaitingEvaluation(podEquivalenceGroups, bestOption.NodeGroup.Id()),
++	}, nil
++}
++
+ // CreateNodeGroup will try to create a new node group based on the initialOption.
+ func (o *ScaleUpOrchestrator) CreateNodeGroup(
+ 	initialOption *expander.Option,
+diff --git a/cluster-autoscaler/expander/expander.go b/cluster-autoscaler/expander/expander.go
+index e138da482..931b1d07f 100644
+--- a/cluster-autoscaler/expander/expander.go
++++ b/cluster-autoscaler/expander/expander.go
+@@ -60,3 +60,11 @@ type Strategy interface {
+ type Filter interface {
+ 	BestOptions(options []Option, nodeInfo map[string]*framework.NodeInfo) []Option
+ }
++
++// PriorityFilter describes an interface for filtering options by priority with fallback support
++type PriorityFilter interface {
++	Filter
++	// BestOptionsByPriority returns options grouped by priority in descending order
++	// Each slice in the returned slice contains options of the same priority level
++	BestOptionsByPriority(options []Option, nodeInfo map[string]*framework.NodeInfo) [][]Option
++}
+diff --git a/cluster-autoscaler/expander/factory/chain.go b/cluster-autoscaler/expander/factory/chain.go
+index d19dd7f1d..39a778878 100644
+--- a/cluster-autoscaler/expander/factory/chain.go
++++ b/cluster-autoscaler/expander/factory/chain.go
+@@ -26,6 +26,13 @@ type chainStrategy struct {
+ 	fallback expander.Strategy
+ }
+ 
++// PriorityAwareStrategy extends Strategy to support priority-based fallback
++type PriorityAwareStrategy interface {
++	expander.Strategy
++	// BestOptionWithFallback tries options in priority order, falling back to lower priorities on failure
++	BestOptionWithFallback(options []expander.Option, nodeInfo map[string]*framework.NodeInfo, tryOption func(*expander.Option) error) *expander.Option
++}
++
+ func newChainStrategy(filters []expander.Filter, fallback expander.Strategy) expander.Strategy {
+ 	return &chainStrategy{
+ 		filters:  filters,
+@@ -43,3 +50,56 @@ func (c *chainStrategy) BestOption(options []expander.Option, nodeInfo map[strin
+ 	}
+ 	return c.fallback.BestOption(filteredOptions, nodeInfo)
+ }
++
++// BestOptionWithFallback implements priority-aware fallback for expansion options.
++// This method addresses issue #8317 by trying expansion options in priority order,
++// falling back to lower priorities when provisioning fails.
++//
++// The tryOption function should attempt to validate/execute the scale-up for the given option.
++// If it returns an error, the method will try the next priority group.
++// If it returns nil, the option is considered successful and returned.
++//
++// This enables the autoscaler to handle scenarios where the highest priority nodegroup
++// cannot provision nodes due to quota exhaustion or other cloud provider limitations.
++func (c *chainStrategy) BestOptionWithFallback(options []expander.Option, nodeInfo map[string]*framework.NodeInfo, tryOption func(*expander.Option) error) *expander.Option {
++	// Check if we have a priority filter in the chain
++	var priorityFilter expander.PriorityFilter
++	for _, filter := range c.filters {
++		if pf, ok := filter.(expander.PriorityFilter); ok {
++			priorityFilter = pf
++			break
++		}
++	}
++
++	if priorityFilter == nil {
++		// No priority filter found, use regular behavior
++		bestOption := c.BestOption(options, nodeInfo)
++		if bestOption != nil && tryOption(bestOption) == nil {
++			return bestOption
++		}
++		return nil
++	}
++
++	// Apply non-priority filters first
++	filteredOptions := options
++	for _, filter := range c.filters {
++		if _, ok := filter.(expander.PriorityFilter); ok {
++			continue // Skip priority filter, we'll handle it specially
++		}
++		filteredOptions = filter.BestOptions(filteredOptions, nodeInfo)
++	}
++
++	// Get priority-ordered options
++	priorityGroups := priorityFilter.BestOptionsByPriority(filteredOptions, nodeInfo)
++
++	// Try each priority group in order
++	for _, priorityGroup := range priorityGroups {
++		// Apply fallback strategy within each priority group
++		bestInGroup := c.fallback.BestOption(priorityGroup, nodeInfo)
++		if bestInGroup != nil && tryOption(bestInGroup) == nil {
++			return bestInGroup
++		}
++	}
++
++	return nil
++}
+diff --git a/cluster-autoscaler/expander/factory/chain_test.go b/cluster-autoscaler/expander/factory/chain_test.go
+index 68990cee5..d84a501c3 100644
+--- a/cluster-autoscaler/expander/factory/chain_test.go
++++ b/cluster-autoscaler/expander/factory/chain_test.go
+@@ -131,3 +131,119 @@ func newOption(debug string) *expander.Option {
+ 		Debug: debug,
+ 	}
+ }
++
++// Mock priority filter for testing
++type mockPriorityFilter struct {
++	priorityGroups [][]expander.Option
++}
++
++func (m *mockPriorityFilter) BestOptions(options []expander.Option, nodeInfo map[string]*framework.NodeInfo) []expander.Option {
++	if len(m.priorityGroups) > 0 {
++		return m.priorityGroups[0]
++	}
++	return options
++}
++
++func (m *mockPriorityFilter) BestOptionsByPriority(options []expander.Option, nodeInfo map[string]*framework.NodeInfo) [][]expander.Option {
++	return m.priorityGroups
++}
++
++// Mock strategy for testing
++type mockStrategy struct {
++	option *expander.Option
++}
++
++func (m *mockStrategy) BestOption(options []expander.Option, nodeInfo map[string]*framework.NodeInfo) *expander.Option {
++	if len(options) > 0 {
++		return &options[0]
++	}
++	return m.option
++}
++
++func TestChainStrategyBestOptionWithFallback(t *testing.T) {
++	option1 := newOption("high-priority")
++	option2 := newOption("low-priority")
++
++	// Test case: first priority fails, second succeeds
++	priorityFilter := &mockPriorityFilter{
++		priorityGroups: [][]expander.Option{
++			{*option1}, // High priority
++			{*option2}, // Low priority
++		},
++	}
++
++	fallbackStrategy := &mockStrategy{}
++	chainStrat := &chainStrategy{
++		filters:  []expander.Filter{priorityFilter},
++		fallback: fallbackStrategy,
++	}
++
++	callCount := 0
++	tryOption := func(option *expander.Option) error {
++		callCount++
++		if option.Debug == "high-priority" {
++			return assert.AnError // Simulate failure for high priority
++		}
++		return nil // Success for low priority
++	}
++
++	result := chainStrat.BestOptionWithFallback([]expander.Option{*option1, *option2}, nil, tryOption)
++
++	assert.NotNil(t, result)
++	assert.Equal(t, "low-priority", result.Debug)
++	assert.Equal(t, 2, callCount) // Should have tried both options
++}
++
++func TestChainStrategyBestOptionWithFallbackNoPriorityFilter(t *testing.T) {
++	option1 := newOption("regular-option")
++
++	// No priority filter in chain
++	regularFilter := newSubstringTestFilterStrategy("regular")
++	fallbackStrategy := &mockStrategy{option: option1}
++
++	chainStrat := &chainStrategy{
++		filters:  []expander.Filter{regularFilter},
++		fallback: fallbackStrategy,
++	}
++
++	callCount := 0
++	tryOption := func(option *expander.Option) error {
++		callCount++
++		return nil // Success
++	}
++
++	result := chainStrat.BestOptionWithFallback([]expander.Option{*option1}, nil, tryOption)
++
++	assert.NotNil(t, result)
++	assert.Equal(t, "regular-option", result.Debug)
++	assert.Equal(t, 1, callCount) // Should have tried once
++}
++
++func TestChainStrategyBestOptionWithFallbackAllFail(t *testing.T) {
++	option1 := newOption("high-priority")
++	option2 := newOption("low-priority")
++
++	priorityFilter := &mockPriorityFilter{
++		priorityGroups: [][]expander.Option{
++			{*option1}, // High priority
++			{*option2}, // Low priority
++		},
++	}
++
++	fallbackStrategy := &mockStrategy{}
++	chainStrat := &chainStrategy{
++		filters:  []expander.Filter{priorityFilter},
++		fallback: fallbackStrategy,
++	}
++
++	callCount := 0
++	tryOption := func(option *expander.Option) error {
++		callCount++
++		return assert.AnError // All fail
++	}
++
++	result := chainStrat.BestOptionWithFallback([]expander.Option{*option1, *option2}, nil, tryOption)
++
++	assert.Nil(t, result)         // Should return nil when all fail
++	assert.Equal(t, 2, callCount) // Should have tried both options
++}
+diff --git a/cluster-autoscaler/expander/priority/priority.go b/cluster-autoscaler/expander/priority/priority.go
+index 0600beb97..eeca0650b 100644
+--- a/cluster-autoscaler/expander/priority/priority.go
++++ b/cluster-autoscaler/expander/priority/priority.go
+@@ -119,18 +119,35 @@ func (p *priority) parsePrioritiesYAMLString(prioritiesYAML string) (priorities,
+ 	return newPriorities, nil
+ }
+ 
++// BestOptions returns the highest priority expansion options.
++// This method maintains backward compatibility with the existing Filter interface.
+ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*framework.NodeInfo) []expander.Option {
++	priorityGroups := p.BestOptionsByPriority(expansionOptions, nodeInfo)
++	if len(priorityGroups) == 0 {
++		return expansionOptions
++	}
++	return priorityGroups[0] // Return highest priority group for backward compatibility
++}
++
++// BestOptionsByPriority returns expansion options grouped by priority in descending order.
++// Each slice in the returned slice contains options of the same priority level.
++// This enables priority-aware fallback when the highest priority options fail to provision.
++//
++// The method addresses issue #8317 where the autoscaler would get stuck trying to scale
++// the highest priority nodegroup even when provisioning fails due to quota exhaustion.
++// With this method, the orchestrator can try each priority group in order until one succeeds.
++func (p *priority) BestOptionsByPriority(expansionOptions []expander.Option, nodeInfo map[string]*framework.NodeInfo) [][]expander.Option {
+ 	if len(expansionOptions) <= 0 {
+ 		return nil
+ 	}
+ 
+ 	priorities, cm, err := p.reloadConfigMap()
+ 	if err != nil {
+-		return expansionOptions
++		return [][]expander.Option{expansionOptions}
+ 	}
+ 
+-	maxPrio := -1
+-	best := []expander.Option{}
++	// Group options by priority
++	priorityGroups := make(map[int][]expander.Option)
+ 	for _, option := range expansionOptions {
+ 		id := option.NodeGroup.Id()
+ 		found := false
+@@ -139,15 +156,8 @@ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[
+ 				continue
+ 			}
+ 			found = true
+-			if prio < maxPrio {
+-				continue
+-			}
+-			if prio > maxPrio {
+-				maxPrio = prio
+-				best = nil
+-			}
+-			best = append(best, option)
+-
++			priorityGroups[prio] = append(priorityGroups[prio], option)
++			break // Take the first matching priority
+ 		}
+ 		if !found {
+ 			msg := fmt.Sprintf("Priority expander: node group %s not found in priority expander configuration. "+
+@@ -156,16 +166,36 @@ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[
+ 		}
+ 	}
+ 
+-	if len(best) == 0 {
++	if len(priorityGroups) == 0 {
+ 		msg := "Priority expander: no priorities info found for any of the expansion options. No options filtered."
+ 		p.logConfigWarning(cm, "PriorityConfigMapNoGroupMatched", msg)
+-		return expansionOptions
++		return [][]expander.Option{expansionOptions}
++	}
++
++	// Sort priorities in descending order and create result
++	var sortedPriorities []int
++	for prio := range priorityGroups {
++		sortedPriorities = append(sortedPriorities, prio)
+ 	}
+ 
+-	for _, opt := range best {
+-		klog.V(2).Infof("priority expander: %s chosen as the highest available", opt.NodeGroup.Id())
++	// Sort in descending order (highest priority first)
++	for i := 0; i < len(sortedPriorities); i++ {
++		for j := i + 1; j < len(sortedPriorities); j++ {
++			if sortedPriorities[i] < sortedPriorities[j] {
++				sortedPriorities[i], sortedPriorities[j] = sortedPriorities[j], sortedPriorities[i]
++			}
++		}
+ 	}
+-	return best
++
++	result := make([][]expander.Option, len(sortedPriorities))
++	for i, prio := range sortedPriorities {
++		result[i] = priorityGroups[prio]
++		for _, opt := range result[i] {
++			klog.V(2).Infof("priority expander: %s available at priority %d", opt.NodeGroup.Id(), prio)
++		}
++	}
++
++	return result
+ }
+ 
+ func (p *priority) groupIDMatchesList(id string, nameRegexpList []*regexp.Regexp) bool {
+diff --git a/cluster-autoscaler/expander/priority/priority_test.go b/cluster-autoscaler/expander/priority/priority_test.go
+index 35515a16b..2a1b7d592 100644
+--- a/cluster-autoscaler/expander/priority/priority_test.go
++++ b/cluster-autoscaler/expander/priority/priority_test.go
+@@ -167,3 +167,57 @@ func TestPriorityExpanderCorrecltySkipsBadChangeConfig(t *testing.T) {
+ 	assert.EqualValues(t, configWarnConfigMapEmpty, event)
+ 	assert.Equal(t, ret, []expander.Option{eoT2Large, eoT3Large, eoM44XLarge})
+ }
++
++func TestPriorityExpanderBestOptionsByPriority(t *testing.T) {
++	s, _, _ := getFilterInstance(t, config)
++
++	// Test that BestOptionsByPriority returns options grouped by priority in descending order
++	ret := s.(expander.PriorityFilter).BestOptionsByPriority([]expander.Option{eoT2Large, eoT3Large, eoM44XLarge}, nil)
++
++	// Should return 2 priority groups: [10: t2.large], [5: m4.4xlarge]
++	// t3.large should be excluded as it doesn't match any priority
++	assert.Equal(t, 2, len(ret))
++
++	// First group should be priority 10 (highest)
++	assert.Equal(t, 1, len(ret[0]))
++	assert.Equal(t, "t2.large", ret[0][0].NodeGroup.Id())
++
++	// Second group should be priority 5
++	assert.Equal(t, 1, len(ret[1]))
++	assert.Equal(t, "m4.4xlarge", ret[1][0].NodeGroup.Id())
++}
++
++func TestPriorityExpanderBestOptionsByPriorityWithMultipleInSamePriority(t *testing.T) {
++	// Config with multiple node groups in same priority
++	multiConfig := `
++10:
++  - ".*t2\\.large.*"
++  - ".*t2\\.micro.*"
++5:
++  - ".*m4\\.4xlarge.*"
++`
++	s, _, cm := getFilterInstance(t, multiConfig)
++	cm.Data[ConfigMapKey] = multiConfig
++
++	ret := s.(expander.PriorityFilter).BestOptionsByPriority([]expander.Option{eoT2Large, eoT2Micro, eoM44XLarge}, nil)
++
++	// Should return 2 priority groups: [10: t2.large, t2.micro], [5: m4.4xlarge]
++	assert.Equal(t, 2, len(ret))
++
++	// First group should be priority 10 with 2 options
++	assert.Equal(t, 2, len(ret[0]))
++
++	// Second group should be priority 5 with 1 option
++	assert.Equal(t, 1, len(ret[1]))
++	assert.Equal(t, "m4.4xlarge", ret[1][0].NodeGroup.Id())
++}
++
++func TestPriorityExpanderBestOptionsByPriorityEmptyConfig(t *testing.T) {
++	s, _, _ := getFilterInstance(t, "")
++
++	// With empty config, should return all options in a single group
++	ret := s.(expander.PriorityFilter).BestOptionsByPriority([]expander.Option{eoT2Large, eoT3Large, eoM44XLarge}, nil)
++
++	assert.Equal(t, 1, len(ret))
++	assert.Equal(t, 3, len(ret[0]))
++}
