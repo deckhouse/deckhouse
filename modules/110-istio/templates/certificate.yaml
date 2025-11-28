@@ -6,7 +6,7 @@ metadata:
   name: istio
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    # Dont work readyness probe with NELM
+    # Don't work readyness probe with NELM
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
   {{- include "helm_lib_module_labels" (list . (dict "app" "istio")) | nindent 2 }}
