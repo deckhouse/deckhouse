@@ -17,6 +17,7 @@ package source
 import (
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -488,6 +489,17 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			return fmt.Errorf("get the module release: %w", err)
 		}
 
+		var changelog *v1alpha1.Changelog
+
+		if meta.Changelog != nil {
+			rawChangelog, err := json.Marshal(meta.Changelog)
+			if err != nil {
+				return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+			}
+
+			changelog = &v1alpha1.Changelog{Raw: rawChangelog}
+		}
+
 		release = &v1alpha1.ModuleRelease{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleReleaseGVK.Kind,
@@ -519,7 +531,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  meta.Changelog,
+				Changelog:  changelog,
 			},
 		}
 
@@ -562,6 +574,17 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		return nil
 	}
 
+	var changelog *v1alpha1.Changelog
+
+	if meta.Changelog != nil {
+		rawChangelog, err := json.Marshal(meta.Changelog)
+		if err != nil {
+			return fmt.Errorf("marshal the '%s' module changelog: %w", release.GetModuleName(), err)
+		}
+
+		changelog = &v1alpha1.Changelog{Raw: rawChangelog}
+	}
+
 	// seems weird to update already deployed/suspended release
 	if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
 		return nil
@@ -577,7 +600,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
 		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  meta.Changelog,
+		Changelog:  changelog,
 	}
 
 	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {

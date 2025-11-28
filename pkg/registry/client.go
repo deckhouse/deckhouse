@@ -30,13 +30,39 @@ type ImageGetOptions struct {
 	Platform *v1.Platform
 }
 
-// ImagePutOption is some configuration that modifies options for a put request.
-type ImagePutOption interface {
-	// ApplyToImagePut applies this configuration to the given image put options.
-	ApplyToImagePut(*ImagePutOptions)
+// ImagePushOption is some configuration that modifies options for a put request.
+type ImagePushOption interface {
+	// ApplyToImagePush applies this configuration to the given image put options.
+	ApplyToImagePush(*ImagePushOptions)
 }
 
-type ImagePutOptions struct {
+type ImagePushOptions struct {
+}
+
+// ListTagsOption is some configuration that modifies options for a list tags request.
+type ListTagsOption interface {
+	// ApplyToListTags applies this configuration to the given list tags options.
+	ApplyToListTags(*ListTagsOptions)
+}
+
+type ListTagsOptions struct {
+	// Last tag for pagination continuation
+	Last string
+	// Maximum number of results to return (0 means no limit)
+	N int
+}
+
+// ListRepositoriesOption is some configuration that modifies options for a list repositories request.
+type ListRepositoriesOption interface {
+	// ApplyToListRepositories applies this configuration to the given list repositories options.
+	ApplyToListRepositories(*ListRepositoriesOptions)
+}
+
+type ListRepositoriesOptions struct {
+	// Last repository name for pagination continuation
+	Last string
+	// Maximum number of results to return (0 means no limit)
+	N int
 }
 
 // Client defines the contract for interacting with container registries
@@ -73,13 +99,13 @@ type Client interface {
 
 	// PushImage pushes an image to the registry at the specified tag
 	// The repository is determined by the chained WithSegment() calls
-	PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePutOption) error
+	PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
 
-	// ListTags retrieves all available tags for the current scope
+	// ListTags retrieves tags for the current scope with pagination
 	// The repository is determined by the chained WithSegment() calls
-	ListTags(ctx context.Context) ([]string, error)
+	ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error)
 
-	// ListRepositories retrieves all sub-repositories under the current scope
+	// ListRepositories retrieves sub-repositories under the current scope with pagination
 	// The scope is determined by the chained WithSegment() calls
-	ListRepositories(ctx context.Context) ([]string, error)
+	ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
 }

@@ -71,55 +71,58 @@ type ModuleConfig struct {
 }
 
 // SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
-type SettingsValues map[string]any
+// +kubebuilder:pruning:XPreserveUnknownFields
+type SettingsValues runtime.RawExtension // map[string]any
+
+// MarshalJSON implements json.Marshaler
+func (v SettingsValues) MarshalJSON() ([]byte, error) {
+	if v.Raw != nil {
+		return v.Raw, nil
+	}
+	return []byte("{}"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *SettingsValues) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+	v.Raw = make([]byte, len(data))
+	copy(v.Raw, data)
+	return nil
+}
 
 func (v *SettingsValues) DeepCopy() *SettingsValues {
-	nmap := make(map[string]any, len(*v))
-
-	for key, value := range *v {
-		nmap[key] = deepCopyValue(value)
+	if v == nil {
+		return nil
 	}
-
-	vv := SettingsValues(nmap)
-
-	return &vv
+	out := new(SettingsValues)
+	v.DeepCopyInto(out)
+	return out
 }
 
-func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
-	{
-		v := &v
-		clone := v.DeepCopy()
-		*out = *clone
-		return
+func (v *SettingsValues) DeepCopyInto(out *SettingsValues) {
+	if v.Raw != nil {
+		out.Raw = make([]byte, len(v.Raw))
+		copy(out.Raw, v.Raw)
+	} else {
+		out.Raw = nil
 	}
-}
-
-func deepCopyValue(val any) any {
-	switch v := val.(type) {
-	case map[string]any:
-		newMap := make(map[string]any, len(v))
-		for k, vv := range v {
-			newMap[k] = deepCopyValue(vv)
-		}
-		return newMap
-	case []any:
-		newSlice := make([]any, len(v))
-		for i, vv := range v {
-			newSlice[i] = deepCopyValue(vv)
-		}
-		return newSlice
-	default:
-		return v
+	if v.Object != nil {
+		out.Object = v.Object.DeepCopyObject()
+	} else {
+		out.Object = nil
 	}
 }
 
 type ModuleConfigSpec struct {
-	Version      int            `json:"version,omitempty"`
-	Settings     SettingsValues `json:"settings,omitempty"`
-	Enabled      *bool          `json:"enabled,omitempty"`
-	UpdatePolicy string         `json:"updatePolicy,omitempty"`
-	Source       string         `json:"source,omitempty"`
-	Maintenance  string         `json:"maintenance,omitempty"`
+	Version      int    `json:"version,omitempty"`
+	Enabled      *bool  `json:"enabled,omitempty"`
+	UpdatePolicy string `json:"updatePolicy,omitempty"`
+	Source       string `json:"source,omitempty"`
+	Maintenance  string `json:"maintenance,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Settings *SettingsValues `json:"settings,omitempty"`
 }
 
 type ModuleConfigStatus struct {

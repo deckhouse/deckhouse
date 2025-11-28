@@ -75,8 +75,8 @@ type PackageRepositorySpec struct {
 type PackageRepositorySpecRegistry struct {
 	Scheme    string `json:"scheme,omitempty"`
 	Repo      string `json:"repo"`
-	DockerCFG string `json:"dockerCfg"`
-	CA        string `json:"ca"`
+	DockerCFG string `json:"dockerCfg,omitempty"`
+	CA        string `json:"ca,omitempty"`
 }
 
 type PackageRepositoryStatus struct {

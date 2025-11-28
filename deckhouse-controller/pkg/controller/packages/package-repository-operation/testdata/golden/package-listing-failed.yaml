@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "21"
+  resourceVersion: "6"
 spec:
   packageRepository: deckhouse
   type: Update
@@ -26,7 +26,8 @@ status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Failed to list packages: assert.AnError general error for testing'
+    message: 'Failed to list packages: failed to list packages: failed to list tags:
+      assert.AnError general error for testing'
     reason: PackageListingFailed
     status: "False"
     type: Processed
@@ -41,8 +42,6 @@ metadata:
   resourceVersion: "1"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: registry.example.com/test
 status:
   syncTime: null

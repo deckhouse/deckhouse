@@ -213,7 +213,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		Spec: v1alpha1.ModuleConfigSpec{
 			Enabled:  ptr.To(true),
 			Version:  1,
-			Settings: v1alpha1.SettingsValues{},
+			Settings: &v1alpha1.SettingsValues{},
 		},
 	}
 	// If the MC exists, use its Settings to generate the desired MC.
@@ -225,27 +225,44 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	// Skip if in the secret key "flannel" does not exist or empty.
 	secretMatchesMC := true
 	if cniSecret.Flannel != (flannelConfigStruct{}) {
+		var settings = make(map[string]any)
+		if desiredCNIModuleConfig.Spec.Settings != nil && len(desiredCNIModuleConfig.Spec.Settings.Raw) > 0 {
+			err := json.Unmarshal(desiredCNIModuleConfig.Spec.Settings.Raw, &settings)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal cni moduleconfig settings: %v", err)
+			}
+		}
+
 		switch cniSecret.Flannel.PodNetworkMode {
 		case "host-gw":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				settings["podNetworkMode"] = "HostGW"
 				secretMatchesMC = false
 			}
 		case "vxlan":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "VXLAN" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
+				settings["podNetworkMode"] = "VXLAN"
 				secretMatchesMC = false
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				settings["podNetworkMode"] = "HostGW"
 				secretMatchesMC = false
 			}
 		default:
 			input.Logger.Warn("An unknown flannel podNetworkMode was specified in the d8-cni-configuration secret, so the default cni podNetworkMode will be used instead.", slog.String("specified podNetworkMode", cniSecret.Flannel.PodNetworkMode))
+		}
+
+		// Marshal the modified settings back to desiredCNIModuleConfig.Spec.Settings
+		if len(settings) > 0 {
+			settingsRaw, err := json.Marshal(settings)
+			if err != nil {
+				return fmt.Errorf("cannot marshal settings for ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
+			}
+			desiredCNIModuleConfig.Spec.Settings = &v1alpha1.SettingsValues{Raw: settingsRaw}
 		}
 	}
 
