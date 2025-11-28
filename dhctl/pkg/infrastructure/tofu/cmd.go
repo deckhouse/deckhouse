@@ -55,7 +55,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
 
 	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
+	cmd.Env = append(cmd.Env, "TF_LOG=INFO")
 
 	cmd.Env = append(
 		cmd.Env,
