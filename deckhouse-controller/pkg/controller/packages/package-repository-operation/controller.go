@@ -514,6 +514,9 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 	// Only add to Failed list if there were actual failures
 	if len(failedList) > 0 {
+		if operation.Status.Packages.Failed == nil {
+			operation.Status.Packages.Failed = make(map[string]v1alpha1.PackageRepositoryOperationStatusFailedPackage)
+		}
 		operation.Status.Packages.Failed[currentPackage.Name] = v1alpha1.PackageRepositoryOperationStatusFailedPackage{
 			Errors: failedList,
 		}

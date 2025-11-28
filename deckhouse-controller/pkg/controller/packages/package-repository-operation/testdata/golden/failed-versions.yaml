@@ -30,14 +30,14 @@ status:
     type: Processed
   packages:
     failed:
-    - errors:
-      - error: 'ensure application package version: create application package version:
-          simulated create error for v1.1.0'
-        name: v1.1.0
-      - error: 'ensure application package version: create application package version:
-          simulated create error for v1.2.0'
-        name: v1.2.0
-      name: test-package
+      test-package:
+        errors:
+        - error: 'ensure application package version: create application package version:
+            simulated create error for v1.1.0'
+          name: v1.1.0
+        - error: 'ensure application package version: create application package version:
+            simulated create error for v1.2.0'
+          name: v1.2.0
     processed:
     - name: test-package
       type: Application
