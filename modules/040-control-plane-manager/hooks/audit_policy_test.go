@@ -195,6 +195,7 @@ rules:
 
 			appendBasicPolicyRules(&expectPolicy, extraData)
 			appendVirtualizationPolicyRules(&expectPolicy)
+			appendUnauthenticatedRules(&expectPolicy)
 
 			for i, actualRule := range policy.Rules {
 				// Note: Equal() is not working here as Rule contains array fields with "omitempty" directive and an empty array is not equal to nil.

@@ -494,16 +494,6 @@ func TestSkipIncorrectAndDebug(t *testing.T) {
 	doTest(params)
 }
 
-func TestDefaultLoggerProvider(t *testing.T) {
-	logger := safeLoggerProvider(nil)
-	require.False(t, govalue.IsNil(logger))
-
-	logger = safeLoggerProvider(func() log.Logger {
-		return nil
-	})
-	require.False(t, govalue.IsNil(logger))
-}
-
 func TestGlobalCleanerProvider(t *testing.T) {
 	cleaner := GetGlobalTmpCleaner()
 	require.False(t, govalue.IsNil(cleaner))
@@ -666,9 +656,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 		TmpDir:          tmpDir,
 		RemoveTombStone: params.removeTombstones,
 		DefaultTmpDir:   defaultTmpDir,
-		LoggerProvider: func() log.Logger {
-			return logger
-		},
+		LoggerProvider:  log.SimpleLoggerProvider(logger),
 	}
 
 	if params.rewriteTmpDirTo != nil {

@@ -16,15 +16,14 @@
 package v1alpha1
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // ModuleReleasesGetter has a method to return a ModuleReleaseInterface.
@@ -35,147 +34,34 @@ type ModuleReleasesGetter interface {
 
 // ModuleReleaseInterface has methods to work with ModuleRelease resources.
 type ModuleReleaseInterface interface {
-	Create(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.CreateOptions) (*v1alpha1.ModuleRelease, error)
-	Update(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.UpdateOptions) (*v1alpha1.ModuleRelease, error)
-	UpdateStatus(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.UpdateOptions) (*v1alpha1.ModuleRelease, error)
+	Create(ctx context.Context, moduleRelease *deckhouseiov1alpha1.ModuleRelease, opts v1.CreateOptions) (*deckhouseiov1alpha1.ModuleRelease, error)
+	Update(ctx context.Context, moduleRelease *deckhouseiov1alpha1.ModuleRelease, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ModuleRelease, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+	UpdateStatus(ctx context.Context, moduleRelease *deckhouseiov1alpha1.ModuleRelease, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ModuleRelease, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ModuleRelease, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ModuleReleaseList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*deckhouseiov1alpha1.ModuleRelease, error)
+	List(ctx context.Context, opts v1.ListOptions) (*deckhouseiov1alpha1.ModuleReleaseList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleRelease, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *deckhouseiov1alpha1.ModuleRelease, err error)
 	ModuleReleaseExpansion
 }
 
 // moduleReleases implements ModuleReleaseInterface
 type moduleReleases struct {
-	client rest.Interface
+	*gentype.ClientWithList[*deckhouseiov1alpha1.ModuleRelease, *deckhouseiov1alpha1.ModuleReleaseList]
 }
 
 // newModuleReleases returns a ModuleReleases
 func newModuleReleases(c *DeckhouseV1alpha1Client) *moduleReleases {
 	return &moduleReleases{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*deckhouseiov1alpha1.ModuleRelease, *deckhouseiov1alpha1.ModuleReleaseList](
+			"modulereleases",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *deckhouseiov1alpha1.ModuleRelease { return &deckhouseiov1alpha1.ModuleRelease{} },
+			func() *deckhouseiov1alpha1.ModuleReleaseList { return &deckhouseiov1alpha1.ModuleReleaseList{} },
+		),
 	}
-}
-
-// Get takes name of the moduleRelease, and returns the corresponding moduleRelease object, and an error if there is any.
-func (c *moduleReleases) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleRelease, err error) {
-	result = &v1alpha1.ModuleRelease{}
-	err = c.client.Get().
-		Resource("modulereleases").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of ModuleReleases that match those selectors.
-func (c *moduleReleases) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleReleaseList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1alpha1.ModuleReleaseList{}
-	err = c.client.Get().
-		Resource("modulereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested moduleReleases.
-func (c *moduleReleases) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("modulereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a moduleRelease and creates it.  Returns the server's representation of the moduleRelease, and an error, if there is any.
-func (c *moduleReleases) Create(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.CreateOptions) (result *v1alpha1.ModuleRelease, err error) {
-	result = &v1alpha1.ModuleRelease{}
-	err = c.client.Post().
-		Resource("modulereleases").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a moduleRelease and updates it. Returns the server's representation of the moduleRelease, and an error, if there is any.
-func (c *moduleReleases) Update(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.UpdateOptions) (result *v1alpha1.ModuleRelease, err error) {
-	result = &v1alpha1.ModuleRelease{}
-	err = c.client.Put().
-		Resource("modulereleases").
-		Name(moduleRelease.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *moduleReleases) UpdateStatus(ctx context.Context, moduleRelease *v1alpha1.ModuleRelease, opts v1.UpdateOptions) (result *v1alpha1.ModuleRelease, err error) {
-	result = &v1alpha1.ModuleRelease{}
-	err = c.client.Put().
-		Resource("modulereleases").
-		Name(moduleRelease.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleRelease).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the moduleRelease and deletes it. Returns an error if one occurs.
-func (c *moduleReleases) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("modulereleases").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *moduleReleases) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("modulereleases").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched moduleRelease.
-func (c *moduleReleases) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleRelease, err error) {
-	result = &v1alpha1.ModuleRelease{}
-	err = c.client.Patch(pt).
-		Resource("modulereleases").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

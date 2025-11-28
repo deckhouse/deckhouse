@@ -31,18 +31,6 @@ type ApplicationPackageListerExpansion interface{}
 // ApplicationPackageVersionLister.
 type ApplicationPackageVersionListerExpansion interface{}
 
-// ClusterApplicationListerExpansion allows custom methods to be added to
-// ClusterApplicationLister.
-type ClusterApplicationListerExpansion interface{}
-
-// ClusterApplicationPackageListerExpansion allows custom methods to be added to
-// ClusterApplicationPackageLister.
-type ClusterApplicationPackageListerExpansion interface{}
-
-// ClusterApplicationPackageVersionListerExpansion allows custom methods to be added to
-// ClusterApplicationPackageVersionLister.
-type ClusterApplicationPackageVersionListerExpansion interface{}
-
 // DeckhouseReleaseListerExpansion allows custom methods to be added to
 // DeckhouseReleaseLister.
 type DeckhouseReleaseListerExpansion interface{}

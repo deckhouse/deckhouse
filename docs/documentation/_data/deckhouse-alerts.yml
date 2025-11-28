@@ -630,7 +630,14 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: ""
+      description: |-
+        The {{$labels.pod}} Pod is {{$labels.phase}}.
+
+        To check the Pod's status, run the following command:
+
+        ```shell
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        ```
       summary: |
         The {{$labels.pod}} Pod is NOT Ready.
       severity: "8"
@@ -1689,6 +1696,7 @@ alerts:
         - The remote API endpoint is not reachable.
         - The remote ServiceAccount token is invalid or expired.
         - There is a TLS or certificate issue between the clusters.
+        - Remote and local Istio versions mismatch.
       summary: |
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
       severity: "4"

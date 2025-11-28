@@ -362,54 +362,22 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    > - "Auto"
    > ```
 
-1. Remove the following labels from the master nodes you plan to delete:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Command to remove the labels:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Make sure the nodes to be removed are no longer part of the etcd cluster:
-
-   ```bash
-   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-     if [ $? -eq 0 ]; then
-       break
-     fi
-   done
-   ```
-
-1. Drain the nodes to be removed:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Power off the corresponding VMs, delete their instances from the cloud, and detach any associated disks (e.g., `kubernetes-data-master-<N>`).
-
-1. Delete any remaining pods on the removed nodes:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Delete the `Node` objects for the removed nodes:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
 1. **In the installer container**, run the following command to trigger the scaling operation:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+   >
+   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   >
+   > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+
+1. Check the Deckhouse queue and make sure that there are no errors with the command:
+
+   ```shell
+   d8 system queue list
    ```
 
 ### Accessing the DKP controller in a multi-master cluster

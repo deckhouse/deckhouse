@@ -410,9 +410,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 
 	assertProvidersCacheHasCountOfKeys(t, defaultProvidersCache, 2)
 
-	loggerProvider := func() log.Logger {
-		return params.Logger
-	}
+	loggerProvider := log.SimpleLoggerProvider(params.Logger)
 
 	CleanupProvidersFromDefaultCache(loggerProvider)
 

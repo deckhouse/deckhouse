@@ -30,12 +30,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 type UploadScript struct {
 	Session *session.Session
+
+	uploadDir string
 
 	ScriptPath string
 	Args       []string
@@ -88,26 +91,33 @@ func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) {
 	u.cleanupAfterExec = doCleanup
 }
 
+func (u *UploadScript) WithExecuteUploadDir(dir string) {
+	u.uploadDir = dir
+}
+
+func (u *UploadScript) IsSudo() bool {
+	return u.sudo
+}
+
+func (u *UploadScript) UploadDir() string {
+	return u.uploadDir
+}
+
 func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
-	remotePath := "."
-	if u.sudo {
-		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
-	}
+	remotePath := genssh.ExecuteRemoteScriptPath(u, scriptName, false)
 	err = NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
 
 	var cmd *Command
-	var scriptFullPath string
+	scriptFullPath := u.pathWithEnv(genssh.ExecuteRemoteScriptPath(u, scriptName, true))
 	if u.sudo {
-		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
 		cmd.Sudo(ctx)
 	} else {
-		scriptFullPath = u.pathWithEnv("./" + scriptName)
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
 		cmd.Cmd(ctx)
 	}

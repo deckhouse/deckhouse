@@ -16,15 +16,14 @@
 package v1alpha1
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // ModuleDocumentationsGetter has a method to return a ModuleDocumentationInterface.
@@ -35,147 +34,36 @@ type ModuleDocumentationsGetter interface {
 
 // ModuleDocumentationInterface has methods to work with ModuleDocumentation resources.
 type ModuleDocumentationInterface interface {
-	Create(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.CreateOptions) (*v1alpha1.ModuleDocumentation, error)
-	Update(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (*v1alpha1.ModuleDocumentation, error)
-	UpdateStatus(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (*v1alpha1.ModuleDocumentation, error)
+	Create(ctx context.Context, moduleDocumentation *deckhouseiov1alpha1.ModuleDocumentation, opts v1.CreateOptions) (*deckhouseiov1alpha1.ModuleDocumentation, error)
+	Update(ctx context.Context, moduleDocumentation *deckhouseiov1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ModuleDocumentation, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+	UpdateStatus(ctx context.Context, moduleDocumentation *deckhouseiov1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ModuleDocumentation, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ModuleDocumentation, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ModuleDocumentationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*deckhouseiov1alpha1.ModuleDocumentation, error)
+	List(ctx context.Context, opts v1.ListOptions) (*deckhouseiov1alpha1.ModuleDocumentationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleDocumentation, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *deckhouseiov1alpha1.ModuleDocumentation, err error)
 	ModuleDocumentationExpansion
 }
 
 // moduleDocumentations implements ModuleDocumentationInterface
 type moduleDocumentations struct {
-	client rest.Interface
+	*gentype.ClientWithList[*deckhouseiov1alpha1.ModuleDocumentation, *deckhouseiov1alpha1.ModuleDocumentationList]
 }
 
 // newModuleDocumentations returns a ModuleDocumentations
 func newModuleDocumentations(c *DeckhouseV1alpha1Client) *moduleDocumentations {
 	return &moduleDocumentations{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*deckhouseiov1alpha1.ModuleDocumentation, *deckhouseiov1alpha1.ModuleDocumentationList](
+			"moduledocumentations",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *deckhouseiov1alpha1.ModuleDocumentation { return &deckhouseiov1alpha1.ModuleDocumentation{} },
+			func() *deckhouseiov1alpha1.ModuleDocumentationList {
+				return &deckhouseiov1alpha1.ModuleDocumentationList{}
+			},
+		),
 	}
-}
-
-// Get takes name of the moduleDocumentation, and returns the corresponding moduleDocumentation object, and an error if there is any.
-func (c *moduleDocumentations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	result = &v1alpha1.ModuleDocumentation{}
-	err = c.client.Get().
-		Resource("moduledocumentations").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of ModuleDocumentations that match those selectors.
-func (c *moduleDocumentations) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleDocumentationList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1alpha1.ModuleDocumentationList{}
-	err = c.client.Get().
-		Resource("moduledocumentations").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested moduleDocumentations.
-func (c *moduleDocumentations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("moduledocumentations").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a moduleDocumentation and creates it.  Returns the server's representation of the moduleDocumentation, and an error, if there is any.
-func (c *moduleDocumentations) Create(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.CreateOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	result = &v1alpha1.ModuleDocumentation{}
-	err = c.client.Post().
-		Resource("moduledocumentations").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleDocumentation).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a moduleDocumentation and updates it. Returns the server's representation of the moduleDocumentation, and an error, if there is any.
-func (c *moduleDocumentations) Update(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	result = &v1alpha1.ModuleDocumentation{}
-	err = c.client.Put().
-		Resource("moduledocumentations").
-		Name(moduleDocumentation.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleDocumentation).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *moduleDocumentations) UpdateStatus(ctx context.Context, moduleDocumentation *v1alpha1.ModuleDocumentation, opts v1.UpdateOptions) (result *v1alpha1.ModuleDocumentation, err error) {
-	result = &v1alpha1.ModuleDocumentation{}
-	err = c.client.Put().
-		Resource("moduledocumentations").
-		Name(moduleDocumentation.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleDocumentation).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the moduleDocumentation and deletes it. Returns an error if one occurs.
-func (c *moduleDocumentations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("moduledocumentations").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *moduleDocumentations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("moduledocumentations").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched moduleDocumentation.
-func (c *moduleDocumentations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleDocumentation, err error) {
-	result = &v1alpha1.ModuleDocumentation{}
-	err = c.client.Patch(pt).
-		Resource("moduledocumentations").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

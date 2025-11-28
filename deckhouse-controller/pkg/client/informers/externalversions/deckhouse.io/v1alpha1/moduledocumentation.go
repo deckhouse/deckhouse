@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ModuleDocumentations.
 type ModuleDocumentationInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModuleDocumentationLister
+	Lister() deckhouseiov1alpha1.ModuleDocumentationLister
 }
 
 type moduleDocumentationInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredModuleDocumentationInformer(client versioned.Interface, resyncPe
 				return client.DeckhouseV1alpha1().ModuleDocumentations().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModuleDocumentation{},
+		&apisdeckhouseiov1alpha1.ModuleDocumentation{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *moduleDocumentationInformer) defaultInformer(client versioned.Interface
 }
 
 func (f *moduleDocumentationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleDocumentation{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ModuleDocumentation{}, f.defaultInformer)
 }
 
-func (f *moduleDocumentationInformer) Lister() v1alpha1.ModuleDocumentationLister {
-	return v1alpha1.NewModuleDocumentationLister(f.Informer().GetIndexer())
+func (f *moduleDocumentationInformer) Lister() deckhouseiov1alpha1.ModuleDocumentationLister {
+	return deckhouseiov1alpha1.NewModuleDocumentationLister(f.Informer().GetIndexer())
 }

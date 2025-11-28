@@ -73,16 +73,11 @@ featureSections:
           en: Centralized management of DVP clusters using <a target='_blank' href='/products/commander/'>Commander</a>
         editions:
           dkp-ce: partly
-          dvp-ee: partly
+          dvp-ee: supported
           dkp-se-plus: supported
           dkp-ee: supported
         restriction_message:
           dkp-ce:
-            en: |
-              A separate license is required
-            ru: |
-              Требуется отдельная <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>лицензия</a>
-          dvp-ee:
             en: |
               A separate license is required
             ru: |

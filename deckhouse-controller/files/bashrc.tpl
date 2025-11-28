@@ -37,7 +37,10 @@ fi
 if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
- kubernetes_version="{{ index (index . 0) "kubectl" }}"
+{{- /* 
+# if the controller is not running, we select the first acceptable version 
+*/}}
+ kubectl_version="{{ index (index . 0) "kubectl" }}"
 fi
 
 case "$kubernetes_version" in
