@@ -33,3 +33,31 @@ systemctl poweroff --check-inhibitors=yes
 systemctl reboot --check-inhibitors=yes
   Use these commands to shutdown/reboot the Node.
 ```
+
+## Tests
+
+### simulate power button device removal
+
+```shell
+ls /sys/bus/acpi/drivers/button
+echo PNP0C0C:00 > /sys/bus/acpi/drivers/button/unbind
+```
+
+### simulate power button press
+
+```shell
+python3 - <<'PY'  
+import libevdev, os
+dev = libevdev.Device()
+dev.name = "d8-shutdown-inhibitor-test"
+dev.enable(libevdev.EV_KEY.KEY_POWER)
+uinput = dev.create_uinput_device()
+uinput.send_events([
+    libevdev.InputEvent(libevdev.EV_KEY.KEY_POWER, 1),
+    libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT, 0)])
+uinput.send_events([
+    libevdev.InputEvent(libevdev.EV_KEY.KEY_POWER, 0),
+    libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT, 0)])
+PY
+```
+
