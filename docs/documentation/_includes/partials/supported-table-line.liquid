@@ -8,9 +8,16 @@
 
 {%- for versionItem in osVersions %}
   {%- assign versionNum = versionItem.version %}
-  {%- assign hasCE = versionItem.ce_support %}
-  {%- assign hasCSE = versionItem.cse_support %}
-  {%- assign hasBEPlus = versionItem.be_plus_support %}
+  {%- assign editions = versionItem.editions %}
+  {%- assign hasCE = false %}
+  {%- assign hasCSE = false %}
+  {%- assign hasBEPlus = false %}
+  
+  {%- for edition in editions %}
+    {%- if edition == 'ce' %}{% assign hasCE = true %}{% endif %}
+    {%- if edition == 'cse' %}{% assign hasCSE = true %}{% endif %}
+    {%- if edition == 'be' or edition == 'se' or edition == 'se-plus' or edition == 'ee' %}{% assign hasBEPlus = true %}{% endif %}
+  {%- endfor %}
   
   {%- if hasCE == true and hasCSE == true %}
     {%- assign ceVersions = ceVersions | push: versionNum %}
