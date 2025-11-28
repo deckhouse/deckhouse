@@ -120,6 +120,10 @@ func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
+	// remove initial-cluster patch for etcd-only, if it was left from previous run
+	if componentName == "etcd" && config.EtcdOnly {
+		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", "etcd998initial-cluster.yaml"))
+	}
 
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
@@ -171,6 +175,9 @@ func convergeComponent(componentName string) error {
 		}
 
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
+		if componentName == "etcd" && config.EtcdOnly {
+			_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", "etcd998initial-cluster.yaml"))
+		}
 
 	} else {
 		log.Info("skip manifest generation for component because checksum in manifest is up to date", slog.String("component", componentName))
