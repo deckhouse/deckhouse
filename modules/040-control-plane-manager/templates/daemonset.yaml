@@ -181,14 +181,14 @@ data:
   {{- $profileImages = pick $images "etcd" }}
   {{- $profileImageHolders = pick $imageHolders "etcd" }}
 {{- end }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $dsMode }}
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -200,7 +200,7 @@ spec:
     containerPolicies:
     - containerName: control-plane-manager
       minAllowed:
-        {{- include "control_plane_manager_resources" . | nindent 8 }}
+        {{- include "control_plane_manager_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 80Mi
@@ -219,7 +219,7 @@ kind: DaemonSet
 metadata:
   name: {{ $dsMode }}
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -229,25 +229,25 @@ spec:
       labels:
         app: {{ $dsMode }}
       annotations:
-        checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
-        checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
+        checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
+        checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}
+        rollout-epoch: {{ $.Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
       {{- if eq $profile "main" }}
-      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       {{- else }}
-      {{- include "helm_lib_node_selector" (tuple . "etcd-only") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "etcd-only") | nindent 6 }}
       {{- end }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . (printf "controlPlaneManager%s" $kubeImageTagSuffix)) }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list $ (list "SYS_CHROOT")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ (printf "controlPlaneManager%s" $kubeImageTagSuffix)) }}
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd
@@ -278,7 +278,7 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: KUBERNETES_VERSION
-          value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
+          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         {{- if eq $profile "etcd-only" }}
@@ -301,7 +301,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
-            {{- include "control_plane_manager_resources" . | nindent 12 }}
+            {{- include "control_plane_manager_resources" $ | nindent 12 }}
 {{- range $name, $imageDigest := $profileImages }}
       - name: {{ index $profileImageHolders $name }}
         {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
