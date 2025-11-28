@@ -83,7 +83,8 @@ func main() {
 		runPhase(renewKubeconfigs())
 		runPhase(updateRootKubeconfig())
 	} else {
-		log.Info("ETCD_ONLY mode: skipping kubeconfig phases")
+		log.Info("ETCD_ONLY mode: creating only admin.conf for kubeadm")
+		runPhase(renewAdminKubeconfig())
 	}
 	
 	runPhase(syncExtraFiles())

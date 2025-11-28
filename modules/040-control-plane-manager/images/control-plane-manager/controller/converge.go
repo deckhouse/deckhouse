@@ -159,14 +159,10 @@ func convergeComponent(componentName string) error {
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
 			if config.EtcdOnly {
-				log.Info("etcd-only mode: adding member to existing cluster")
-				if err := EtcdOnlyJoinConverge(); err != nil {
-					return err
-				}
-			} else {
-				if err := EtcdJoinConverge(); err != nil {
-					return err
-				}
+				log.Info("etcd-only mode: joining etcd cluster using kubeadm")
+			}
+			if err := EtcdJoinConverge(); err != nil {
+				return err
 			}
 		}
 		
