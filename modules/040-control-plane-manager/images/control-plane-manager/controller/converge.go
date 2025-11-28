@@ -164,10 +164,10 @@ func convergeComponent(componentName string) error {
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
-		}
-		
-		if err := prepareConverge(componentName, false); err != nil {
-			return err
+		} else {
+			if err := prepareConverge(componentName, false); err != nil {
+				return err
+			}
 		}
 
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
