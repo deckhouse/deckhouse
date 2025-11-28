@@ -472,6 +472,6 @@ spec:
 
 Ключевые моменты для валидации CONNECT:
 - Используйте `input.review.operation == "CONNECT"` для проверки операций CONNECT.
-- Используйте `input.review.resource.resource` для проверки субресурсов `pods/exec` или `pods/attach`.
+- Используйте `input.review.resource.resource` для проверки дополнительных ресурсов `pods/exec` или `pods/attach`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Пространство имён доступно в `input.review.namespace`.
