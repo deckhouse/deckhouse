@@ -40,7 +40,7 @@ Kubernetes поддерживает настройку аудита через �
 
 - Операции с объектами типов `Endpoints`, `EndpointSlice` и `Event`;
 - Операции с объектами Lease (выбор лидера raft в компонентах платформы);
-- Действия с ConfigMap, используемыми для выбора лидера raft (`cert-manager-cainjector-leader-election`, `cert-manager-controller`, `ingress-nginx` и др.);
+- Действия с `ConfigMap`, используемыми для выбора лидера raft (`cert-manager-cainjector-leader-election`, `cert-manager-controller`, `ingress-nginx` и др.);
 - Операции с объектами `VerticalPodAutoscalerCheckpoints`;
 - Операции `PATCH` для объектов `VerticalPodAutoscaler`, выполняемые сервисным аккаунтом `d8-vertical-pod-autoscaler-recommender`;
 - Операции с объектами `UpmeterHookProbes`;
