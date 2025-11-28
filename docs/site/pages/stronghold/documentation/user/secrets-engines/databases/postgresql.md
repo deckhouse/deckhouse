@@ -8,6 +8,8 @@ description: |-
   roles for the PostgreSQL database.
 ---
 
+{% raw %}
+
 ## PostgreSQL database secrets engine
 
 PostgreSQL is one of the supported plugins for the database secrets engine. This
@@ -76,3 +78,5 @@ the proper permission, it can generate credentials.
     password           SsnoaA-8Tv4t34f41baD
     username           v-strongholduse-my-role-x
     ```
+
+{% endraw %}
