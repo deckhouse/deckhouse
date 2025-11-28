@@ -396,3 +396,82 @@ spec:
     requiredLabelKey: "admission.deckhouse.io/allow-delete"
     requiredLabelValue: "true"
 ```
+
+## Как запретить exec/attach в определённые поды
+
+> Примечание. Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper. Это позволяет создавать пользовательские политики для валидации или запрета операций `kubectl exec` / `kubectl attach`.
+
+### Встроенная политика для подов с heritage: deckhouse
+
+Модуль включает встроенную политику `D8DenyExecHeritage`, которая запрещает exec/attach во все поды с меткой `heritage: deckhouse`. Это защищает системные компоненты, управляемые Deckhouse.
+
+Исключения (эти пользователи могут выполнять exec в heritage-поды):
+- `system:sudouser`
+- Сервисные аккаунты из пространств имён `d8-*` (`system:serviceaccount:d8-*`)
+- Сервисные аккаунты из пространств имён `kube-*` (`system:serviceaccount:kube-*`)
+
+### Пример пользовательской политики
+
+Можно создать собственную политику Gatekeeper для запрета exec/attach в определённых пространствах имён. Пример ниже использует `input.review.operation` и `input.review.resource.resource` для проверки операций CONNECT:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customdenyexec
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomDenyExec
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            forbiddenNamespaces:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_connect { input.review.operation == "CONNECT" }
+        is_exec_or_attach { input.review.resource.resource == "pods/exec" }
+        is_exec_or_attach { input.review.resource.resource == "pods/attach" }
+
+        is_forbidden_namespace {
+          ns := input.review.namespace
+          ns == input.parameters.forbiddenNamespaces[_]
+        }
+
+        violation[{"msg": msg}] {
+          is_connect
+          is_exec_or_attach
+          is_forbidden_namespace
+          msg := sprintf("Exec/attach запрещён в пространстве имён %q", [input.review.namespace])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomDenyExec
+metadata:
+  name: deny-exec-in-namespaces
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["*"]
+        kinds: ["*"]
+    scope: Namespaced
+  parameters:
+    forbiddenNamespaces:
+      - production
+      - staging
+```
+
+Ключевые моменты для валидации CONNECT:
+- Используйте `input.review.operation == "CONNECT"` для проверки операций CONNECT.
+- Используйте `input.review.resource.resource` для проверки субресурсов `pods/exec` или `pods/attach`.
+- Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
+- Пространство имён доступно в `input.review.namespace`.
