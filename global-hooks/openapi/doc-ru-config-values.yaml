@@ -90,7 +90,7 @@ properties:
         properties:
           controlPlane:
             description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов control plane, работающих на каждом master-узле кластера. Не работает для not-managed-облаков (например, GKE).
+              Объём ресурсов (CPU и памяти), выделяемых для компонентов control plane на каждом master-узле кластера. Настройки не применяются, если control plane кластера управляется облачным провайдером (например, Google Kubernetes Engine или Azure Kubernetes Service).
             properties:
               cpu:
                 description: |
