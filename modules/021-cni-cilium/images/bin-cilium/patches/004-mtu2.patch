@@ -1,0 +1,27 @@
+diff --git a/pkg/mtu/endpoint_updater.go b/pkg/mtu/endpoint_updater.go
+index 6ade3c8888..3defa82a96 100644
+--- a/pkg/mtu/endpoint_updater.go
++++ b/pkg/mtu/endpoint_updater.go
+@@ -205,11 +205,11 @@ func (emu *endpointUpdater) updateHostNSDevices(rx statedb.ReadTxn, routeMtus []
+ 			continue
+ 		}
+
+-		if err := netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU); err != nil {
++		if err := netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU); err != nil {
+ 			emu.logger.Error("Error setting MTU for link",
+ 				"link", link.Attrs().Name,
+ 				"index", link.Attrs().Index,
+-				"mtu", defaultRouteMTU.DeviceMTU,
++				"mtu", defaultRouteMTU.RouteMTU,
+ 				logfields.Error, err,
+ 			)
+ 			errs = append(errs, err)
+@@ -298,7 +298,7 @@ func defaultRouteHook(routeMTUs []RouteMTU) error {
+ 			continue
+ 		}
+
+-		netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU)
++		netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU)
+
+ 		routes, err := safenetlink.RouteList(link, netlink.FAMILY_ALL)
+ 		if err != nil {

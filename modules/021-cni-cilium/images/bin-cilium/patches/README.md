@@ -27,6 +27,10 @@ Set correct MTU value for veth interfaces
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
 
+## 004-mtu2.patch
+
+yet another mtu patch
+
 ## 005-ebpf-dhcp-server.patch
 
 Added DHCP server for pods (ebpf implementation).
