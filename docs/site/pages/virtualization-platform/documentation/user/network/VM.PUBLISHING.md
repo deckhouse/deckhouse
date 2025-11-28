@@ -3,6 +3,8 @@ title: "VM Publishing"
 permalink: en/virtualization-platform/documentation/user/network/vm-publishing.html
 ---
 
+{% raw %}
+
 ## Providing public access using services
 
 It is often necessary to enable access to virtual machines from outside the cluster, for example, for remote administration or connecting to services hosted on the virtual machine. For these purposes, Kubernetes provides special services that route traffic from external networks to the internal resources of the cluster. Let's explore a few options.
@@ -311,3 +313,5 @@ DexAuthenticator does not have a built-in system for managing authentication per
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+{% endraw %}
