@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+cacheVersion: "2025-11-28.3"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/pilot-discovery
@@ -34,6 +35,7 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 fromImage: builder/golang-alpine
+cacheVersion: "2025-11-28.3"
 mount:
 {{ include "mount points for golang builds" . }}
 import:
