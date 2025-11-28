@@ -4491,7 +4491,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(30,\n  sum by(controller, namespace) (\n    label_replace(\n      kube_summary_pod_ephemeral_storage_used_bytes{},\n      \"controller\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"\n    )\n  )\n)",
+          "expr": "topk(30,\n  sum by(controller, namespace) (\n    label_replace(\n      kube_summary_pod_ephemeral_storage_used_bytes{namespace=~\"$namespace\", container!=\"POD\", node=~\"$node\"},\n      \"controller\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"\n    )\n  )\n)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{ namespace }} : {{ controller }}",
