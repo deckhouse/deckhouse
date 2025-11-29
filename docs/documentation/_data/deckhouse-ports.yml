@@ -252,6 +252,11 @@ groups:
     description:
       en: CNI Cilium operator metrics
       ru: Метрики оператора CNI Cilium
+  - ports: "4243"
+    protocol: TCP
+    description:
+      en: CNI Cilium extended agents metrics
+      ru: Расширенные метрики агентов CNI Cilium
   - ports: "4244"
     protocol: TCP
     description:

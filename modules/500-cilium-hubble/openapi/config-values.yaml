@@ -138,4 +138,81 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the Hubble web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
-
+  extendedMetrics:
+    type: object
+    default: {}
+    description: |
+      Configuration for exporting extended metrics from Cilium agents.
+      Extended metrics provide deeper insight into cluster network behavior.
+      For more details, see: https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables the export of extended metrics from Cilium agents.
+      collectors:
+        type: array
+        default: []
+        description: |
+          List of Hubble extended metrics to export. Each collector represents a specific metric type.
+          Available metrics include DNS, Drop, Flow, FlowsToWorld, HTTP, HTTPv2, ICMP, Kafka, and TCP.
+          More details: https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of the extended metric to export.
+              enum:
+                - "DNS"
+                - "Drop"
+                - "Flow"
+                - "FlowsToWorld"
+                - "HTTP"
+                - "HTTPv2"
+                - "ICMP"
+                - "Kafka"
+                - "TCP"
+            contextOptions:
+              type: string
+              description: |
+                Optional context options for Hubble metrics.
+                Context options allow customizing metric collection behavior.
+                Supported options: https://docs.cilium.io/en/v1.17/observability/metrics/#context-options
+  eventLogs:
+    type: object
+    default: {}
+    description: |
+      Configuration for exporting event logs from Cilium agents.
+      Event logs provide detailed visibility into Cilium's network events.
+      For more information, see: https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#configuring-hubble-exporter
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables event logging for Cilium agents.
+      allowlist:
+        type: array
+        description: |
+          List of allowed filters for event logging.
+          Only events matching these filters will be exported.
+          See: https://github.com/cilium/hubble#specifying-raw-flow-filters
+        items:
+          type: string
+        default: []
+        examples:
+          - '{"verdict":["DROPPED","ERROR"]}'
+      denylist:
+        type: array
+        description: |
+          List of denied filters for event logging.
+          Events matching these filters will be excluded from export.
+          See: https://github.com/cilium/hubble#specifying-raw-flow-filters
+        items:
+          type: string
+        default: []
+        examples:
+          - '{"source_pod":["kube-system/"]}'
+          - '{"destination_pod":["kube-system/"]}'
