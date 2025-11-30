@@ -1187,8 +1187,7 @@ class ModuleSearch {
       if (result._isModulePage) {
         const moduleName = result._moduleName;
         const moduleUrl = result._moduleUrl;
-        const highlightedName = this.highlightText(moduleName, query);
-        return `<a href="${this.buildTargetUrl(moduleUrl, null, moduleName)}" class="result-module">${highlightedName}</a>`;
+        return `<a href="${this.buildTargetUrl(moduleUrl, null, moduleName)}" class="result-module">${moduleName}</a>`;
       }
       return '';
     }).filter(badge => badge !== '');
