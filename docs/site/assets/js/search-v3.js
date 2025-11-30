@@ -75,7 +75,7 @@ class ModuleSearch {
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
         showMorePattern: 'Show {count} more',
-        modulesMore: '+{count} more'
+        modulesMore: '... and +{count} more'
       },
       ru: {
         api: 'API',
@@ -87,7 +87,7 @@ class ModuleSearch {
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
         showMorePattern: 'Показать еще {count}',
-        modulesMore: 'и ещё {count}'
+        modulesMore: '... и ещё {count}'
       }
     };
 
