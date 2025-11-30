@@ -28,9 +28,9 @@
   {% if page.searchBageEnabled %}
     <!--start search-->
     {%- if site.mode == 'module' %}
-      {%- assign cachingTime = '2' %}
+      {%- assign cachingTime = '180' %}
     {%- else -%}
-      {%- assign cachingTime = '60' %}
+      {%- assign cachingTime = '120' %}
     {%- endif -%}
     <div class="searchV3">
       <div class="container">
