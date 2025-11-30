@@ -220,7 +220,7 @@ class ModuleSearch {
             return;
           }
 
-          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 1000)}s of ${cacheExpirationMinutes} minutes)`);
+          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 60000)} minutes of ${cacheExpirationMinutes} minutes)`);
           resolve(result.data);
         };
 
