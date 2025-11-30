@@ -186,10 +186,13 @@ class ModuleSearch {
   }
 
   // Get cached search data for a single index file from IndexedDB
-  async getCachedSearchData(cacheKey) {
+  async getCachedSearchData(cacheKey, cacheExpirationMs = null) {
     if (!this.indexedDBAvailable || !this.db) {
       return null;
     }
+
+    // Use provided cache expiration or fall back to default (1 hour)
+    const expirationMs = cacheExpirationMs !== null ? cacheExpirationMs : this.cacheExpirationMs;
 
     try {
       return new Promise(async (resolve, reject) => {
@@ -204,11 +207,11 @@ class ModuleSearch {
             return;
           }
 
-          // Check if cache is expired (more than 1 hour old)
+          // Check if cache is expired using the provided expiration time
           const now = Date.now();
           const cacheAge = now - result.timestamp;
 
-          if (cacheAge > this.cacheExpirationMs) {
+          if (cacheAge > expirationMs) {
             console.log(`Cached search index expired for ${cacheKey}, will reload from network`);
             // Delete expired cache and wait for deletion to complete
             await this.deleteCachedSearchData(cacheKey);
@@ -289,26 +292,39 @@ class ModuleSearch {
     }
   }
 
-  // Parse search index paths with boost levels
+  // Parse search index paths with boost levels and optional cache time
+  // Format: "path:boost:cacheTime" or "path:boost" or "path"
+  // cacheTime is in minutes, defaults to 60 (1 hour) if not specified
   parseSearchIndexPaths(searchIndexPath) {
     const paths = searchIndexPath.split(',').map(path => path.trim());
 
     return paths.map(path => {
-      // Check if path contains boost level (format: "path:boost")
-      const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
+      // Check if path contains boost level and cache time (format: "path:boost:cacheTime")
+      const fullMatch = path.match(/^(.+):(\d+(?:\.\d+)?):(\d+)$/);
+      if (fullMatch) {
+        return {
+          path: fullMatch[1].trim(),
+          boost: parseFloat(fullMatch[2]),
+          cacheTimeMinutes: parseInt(fullMatch[3], 10)
+        };
+      }
 
+      // Check if path contains boost level only (format: "path:boost")
+      const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
       if (boostMatch) {
         return {
           path: boostMatch[1].trim(),
-          boost: parseFloat(boostMatch[2])
-        };
-      } else {
-        // Default boost level of 1.0 if not specified
-        return {
-          path: path,
-          boost: 1.0
+          boost: parseFloat(boostMatch[2]),
+          cacheTimeMinutes: 60 // Default 1 hour
         };
       }
+
+      // No boost or cache time specified - use defaults
+      return {
+        path: path,
+        boost: 1.0,
+        cacheTimeMinutes: 60 // Default 1 hour
+      };
     });
   }
 
@@ -531,8 +547,11 @@ class ModuleSearch {
           // Generate cache key for this specific index file
           const cacheKey = this.generateCacheKey(config.path);
 
+          // Convert cache time from minutes to milliseconds
+          const cacheExpirationMs = config.cacheTimeMinutes * 60 * 1000;
+
           // Try to load from cache first
-          let indexData = await this.getCachedSearchData(cacheKey);
+          let indexData = await this.getCachedSearchData(cacheKey, cacheExpirationMs);
 
           if (indexData) {
             // Use cached data, but ensure boost is set
