@@ -798,12 +798,17 @@ class ModuleSearch {
       if (moduleLower === queryLower || moduleLower.includes(queryLower)) {
         // Create a synthetic result for the module page
         // Use a special ID format to identify module page results
+        // Special case for "global" module
+        const moduleUrl = moduleName === 'global' 
+          ? '/products/kubernetes-platform/documentation/v1/reference/api/global.html'
+          : `/modules/${moduleName}/`;
+        
         const modulePageResult = {
           ref: `module_page_${moduleName}`,
           score: moduleLower === queryLower ? 1000 : 500, // Higher score for exact matches
           _isModulePage: true,
           _moduleName: moduleName,
-          _moduleUrl: `/modules/${moduleName}/`
+          _moduleUrl: moduleUrl
         };
         results.push(modulePageResult);
       }
