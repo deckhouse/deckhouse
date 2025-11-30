@@ -74,7 +74,8 @@ class ModuleSearch {
         ready: 'What are we looking for?',
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
-        showMorePattern: 'Show {count} more'
+        showMorePattern: 'Show {count} more',
+        modulesMore: '+{count} more'
       },
       ru: {
         api: 'API',
@@ -85,7 +86,8 @@ class ModuleSearch {
         ready: 'Что ищем?',
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
-        showMorePattern: 'Показать еще {count}'
+        showMorePattern: 'Показать еще {count}',
+        modulesMore: 'и ещё {count}'
       }
     };
 
@@ -1205,7 +1207,7 @@ class ModuleSearch {
       <span class="modules-label">${this.t('modules')}:</span> `;
     html += displayBadges.join('');
     if (hasMore) {
-      html += `<span class="modules-more">+${remainingCount} more</span>`;
+      html += `<span class="modules-more">${this.t('modulesMore', { count: remainingCount })}</span>`;
     }
     html += '</div>';
 

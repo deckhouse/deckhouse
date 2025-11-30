@@ -113,9 +113,20 @@
 }
 
 .searchV3 .modules-row .modules-more {
-  color: #6b7280;
-  font-weight: 500;
-  margin-left: 0.25rem;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #eff6ff;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+  letter-spacing: 0.025em;
+  border: 1px solid #bfdbfe;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  margin-left: 0;
+  font-style: italic;
 }
 
 .searchV3 .results-group {
