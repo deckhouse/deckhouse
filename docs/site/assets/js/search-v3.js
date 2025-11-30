@@ -42,6 +42,11 @@ class ModuleSearch {
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
     this.searchTimeout = null; // For debouncing search input
+    this.indexedDBAvailable = false; // Flag to track IndexedDB availability
+    this.dbName = 'ModuleSearchDB';
+    this.dbVersion = 1;
+    this.storeName = 'searchIndexes';
+    this.cacheExpirationMs = 3600000; // 1 hour in milliseconds
 
     // Configuration options
     this.options = {
@@ -55,7 +60,13 @@ class ModuleSearch {
     // Initialize i18n
     this.initI18n();
 
-    this.init();
+    // Initialize IndexedDB
+    this.initIndexedDB().then(() => {
+      this.init();
+    }).catch(() => {
+      // If IndexedDB fails, continue with fallback method
+      this.init();
+    });
   }
 
   initI18n() {
@@ -117,6 +128,156 @@ class ModuleSearch {
       this.currentLang = 'ru';
     } else if (htmlLang === 'en') {
       this.currentLang = 'en';
+    }
+  }
+
+  // Initialize IndexedDB
+  async initIndexedDB() {
+    if (!('indexedDB' in window)) {
+      console.log('IndexedDB not available, using fallback method');
+      this.indexedDBAvailable = false;
+      return;
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, this.dbVersion);
+
+        request.onerror = () => {
+          console.warn('IndexedDB initialization failed, using fallback method');
+          this.indexedDBAvailable = false;
+          reject(new Error('IndexedDB initialization failed'));
+        };
+
+        request.onsuccess = () => {
+          this.db = request.result;
+          this.indexedDBAvailable = true;
+          console.log('IndexedDB initialized successfully');
+          resolve();
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
+          }
+        };
+      });
+    } catch (error) {
+      console.warn('IndexedDB initialization error, using fallback method:', error);
+      this.indexedDBAvailable = false;
+      throw error;
+    }
+  }
+
+  // Generate cache key from a single search index path
+  generateCacheKey(indexPath) {
+    // Create a hash-like key from the index path
+    // This ensures different index paths get different cache entries
+    return `searchIndex_${btoa(indexPath).replace(/[+/=]/g, '').substring(0, 50)}`;
+  }
+
+  // Get cached search data for a single index file from IndexedDB
+  async getCachedSearchData(cacheKey) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return null;
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([this.storeName], 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.get(cacheKey);
+
+        request.onsuccess = () => {
+          const result = request.result;
+          if (!result) {
+            resolve(null);
+            return;
+          }
+
+          // Check if cache is expired (more than 1 hour old)
+          const now = Date.now();
+          const cacheAge = now - result.timestamp;
+
+          if (cacheAge > this.cacheExpirationMs) {
+            console.log(`Cached search index expired for ${cacheKey}, will reload from network`);
+            // Delete expired cache
+            this.deleteCachedSearchData(cacheKey);
+            resolve(null);
+            return;
+          }
+
+          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 1000)}s)`);
+          resolve(result.data);
+        };
+
+        request.onerror = () => {
+          console.warn('Error reading from IndexedDB cache');
+          resolve(null); // Fall back to network on error
+        };
+      });
+    } catch (error) {
+      console.warn('Error accessing IndexedDB cache:', error);
+      return null;
+    }
+  }
+
+  // Store search data for a single index file in IndexedDB
+  async storeCachedSearchData(cacheKey, searchData) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return;
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        const cacheEntry = {
+          cacheKey: cacheKey,
+          data: searchData,
+          timestamp: Date.now()
+        };
+        const request = store.put(cacheEntry);
+
+        request.onsuccess = () => {
+          console.log(`Search index cached successfully for ${cacheKey}`);
+          resolve();
+        };
+
+        request.onerror = () => {
+          console.warn('Error storing search index in cache');
+          resolve(); // Don't fail the whole operation if caching fails
+        };
+      });
+    } catch (error) {
+      console.warn('Error storing in IndexedDB cache:', error);
+      // Don't throw - caching failure shouldn't break the app
+    }
+  }
+
+  // Delete cached search data
+  async deleteCachedSearchData(cacheKey) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return;
+    }
+
+    try {
+      return new Promise((resolve) => {
+        const transaction = this.db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.delete(cacheKey);
+
+        request.onsuccess = () => {
+          resolve();
+        };
+
+        request.onerror = () => {
+          resolve(); // Don't fail if deletion fails
+        };
+      });
+    } catch (error) {
+      console.warn('Error deleting from IndexedDB cache:', error);
     }
   }
 
@@ -356,71 +517,80 @@ class ModuleSearch {
       // Parse search index paths with boost levels
       const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
 
-      if (indexConfigs.length === 1) {
-        // Single index file
-        const config = indexConfigs[0];
-        const response = await fetch(config.path);
-        if (!response.ok) {
-          throw new Error(`Failed to load search index: ${response.status}`);
-        }
-        this.searchData = await response.json();
-        this.searchData.boostLevel = config.boost;
-      } else {
-        // Multiple index files - load and merge them
-        console.log(`Loading ${indexConfigs.length} search index files:`, indexConfigs.map(c => `${c.path} (boost: ${c.boost})`));
+      // Load each index file separately (from cache or network)
+      const loadedIndexes = await Promise.all(
+        indexConfigs.map(async (config) => {
+          // Generate cache key for this specific index file
+          const cacheKey = this.generateCacheKey(config.path);
 
-        const responses = await Promise.all(
-          indexConfigs.map(async (config) => {
-            try {
-              const response = await fetch(config.path);
-              if (!response.ok) {
-                console.warn(`Failed to load search index: ${config.path} (${response.status})`);
-                return { documents: [], parameters: [], boost: config.boost };
-              }
-              const data = await response.json();
-              data.boost = config.boost;
-              return data;
-            } catch (error) {
-              console.warn(`Error loading search index: ${config.path}`, error);
-              return { documents: [], parameters: [], boost: config.boost };
+          // Try to load from cache first
+          let indexData = await this.getCachedSearchData(cacheKey);
+
+          if (indexData) {
+            // Use cached data, but ensure boost is set
+            indexData.boost = config.boost;
+            return { data: indexData, config: config, fromCache: true };
+          }
+
+          // Cache miss or expired - load from network
+          try {
+            const response = await fetch(config.path);
+            if (!response.ok) {
+              console.warn(`Failed to load search index: ${config.path} (${response.status})`);
+              return { data: { documents: [], parameters: [], boost: config.boost }, config: config, fromCache: false };
             }
-          })
-        );
+            const data = await response.json();
+            data.boost = config.boost;
 
-        // Merge all search indexes with boost information
-        this.searchData = {
-          documents: [],
-          parameters: [],
-          indexBoosts: {} // Store boost levels for each index
-        };
+            // Cache the loaded data for this specific index file
+            await this.storeCachedSearchData(cacheKey, data);
 
-        responses.forEach((indexData, index) => {
-          if (indexData && indexData.documents) {
-            // Add boost information to each document
-            const boostedDocuments = indexData.documents.map(doc => ({
-              ...doc,
-              _indexBoost: indexData.boost,
-              _indexSource: indexConfigs[index].path
-            }));
-            this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
-            console.log(`Added ${indexData.documents.length} documents from ${indexConfigs[index].path}`);
+            return { data: data, config: config, fromCache: false };
+          } catch (error) {
+            console.warn(`Error loading search index: ${config.path}`, error);
+            return { data: { documents: [], parameters: [], boost: config.boost }, config: config, fromCache: false };
           }
-          if (indexData && indexData.parameters) {
-            // Add boost information to each parameter
-            const boostedParameters = indexData.parameters.map(param => ({
-              ...param,
-              _indexBoost: indexData.boost,
-              _indexSource: indexConfigs[index].path
-            }));
-            this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
-            console.log(`Added ${indexData.parameters.length} parameters from ${indexConfigs[index].path}`);
-          }
-          // Store boost level for this index
-          this.searchData.indexBoosts[indexConfigs[index].path] = indexData.boost;
-        });
+        })
+      );
 
-        console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
-      }
+      // Merge all search indexes with boost information
+      this.searchData = {
+        documents: [],
+        parameters: [],
+        indexBoosts: {} // Store boost levels for each index
+      };
+
+      loadedIndexes.forEach(({ data, config, fromCache }) => {
+        const indexData = data;
+        const indexPath = config.path;
+
+        if (indexData && indexData.documents) {
+          // Add boost information to each document
+          const boostedDocuments = indexData.documents.map(doc => ({
+            ...doc,
+            _indexBoost: indexData.boost,
+            _indexSource: indexPath
+          }));
+          this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
+          const source = fromCache ? 'cache' : 'network';
+          console.log(`Added ${indexData.documents.length} documents from ${indexPath} (${source})`);
+        }
+        if (indexData && indexData.parameters) {
+          // Add boost information to each parameter
+          const boostedParameters = indexData.parameters.map(param => ({
+            ...param,
+            _indexBoost: indexData.boost,
+            _indexSource: indexPath
+          }));
+          this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
+          const source = fromCache ? 'cache' : 'network';
+          console.log(`Added ${indexData.parameters.length} parameters from ${indexPath} (${source})`);
+        }
+        // Store boost level for this index
+        this.searchData.indexBoosts[indexPath] = indexData.boost;
+      });
+
+      console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
 
       // Refresh language detection before building index
       this.refreshLanguageDetection();
