@@ -799,10 +799,10 @@ class ModuleSearch {
         // Create a synthetic result for the module page
         // Use a special ID format to identify module page results
         // Special case for "global" module
-        const moduleUrl = moduleName === 'global' 
+        const moduleUrl = moduleName === 'global'
           ? '/products/kubernetes-platform/documentation/v1/reference/api/global.html'
           : `/modules/${moduleName}/`;
-        
+
         const modulePageResult = {
           ref: `module_page_${moduleName}`,
           score: moduleLower === queryLower ? 1000 : 500, // Higher score for exact matches
@@ -1202,7 +1202,7 @@ class ModuleSearch {
     }
 
     // Limit to 10 modules, add count badge if more
-    const maxModules = 10;
+    const maxModules = 14;
     const displayBadges = moduleBadges.slice(0, maxModules);
     const hasMore = moduleBadges.length > maxModules;
     const remainingCount = hasMore ? moduleBadges.length - maxModules : 0;
