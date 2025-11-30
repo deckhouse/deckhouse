@@ -33,7 +33,6 @@ class ModuleSearch {
       document: []
     };
     this.displayedCounts = {
-      modules: 10,
       isResourceNameMatch: 5,
       nameMatch: 5,
       isResourceOther: 5,
@@ -1201,7 +1200,7 @@ class ModuleSearch {
       return '';
     }
 
-    // Limit to 10 modules, add count badge if more
+    // Limit to 14 modules, add count badge if more
     const maxModules = 14;
     const displayBadges = moduleBadges.slice(0, maxModules);
     const hasMore = moduleBadges.length > maxModules;
@@ -1241,24 +1240,20 @@ class ModuleSearch {
 
       if (!doc) return;
 
-      let title, summary, module, description;
+      let title, module, description;
 
       if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
         // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', query);
-        // summary = this.highlightText(doc.resName || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
-        // description = this.highlightText(doc.content || '', query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       } else {
         // For other documentation
         title = this.highlightText(doc.title || '', query);
-        // summary = this.highlightText(doc.summary || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        // description = summary || this.getRelevantContentSnippet(doc.content || '', query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       }
 
@@ -1283,7 +1278,6 @@ class ModuleSearch {
 
   resetPagination() {
     this.displayedCounts = {
-      modules: 10,
       isResourceNameMatch: 5,
       nameMatch: 5,
       isResourceOther: 5,
