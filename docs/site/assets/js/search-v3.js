@@ -21,9 +21,11 @@ class ModuleSearch {
     this.lunrIndex = null;
     this.fuseIndex = null;
     this.searchDictionary = [];
+    this.availableModules = new Set(); // Store unique module names
     this.lastQuery = '';
     this.pendingQuery = ''; // For storing user input while index is loading
     this.currentResults = {
+      modules: [],
       isResourceNameMatch: [],
       nameMatch: [],
       isResourceOther: [],
@@ -31,6 +33,7 @@ class ModuleSearch {
       document: []
     };
     this.displayedCounts = {
+      modules: 10,
       isResourceNameMatch: 5,
       nameMatch: 5,
       isResourceOther: 5,
@@ -65,6 +68,7 @@ class ModuleSearch {
       en: {
         api: 'API',
         documentation: 'Documentation',
+        modules: 'Modules',
         showMore: 'Show more',
         loading: 'Loading search index... (you can formulate query, while index is loading)',
         ready: 'What are we looking for?',
@@ -75,6 +79,7 @@ class ModuleSearch {
       ru: {
         api: 'API',
         documentation: 'Документация',
+        modules: 'Модули',
         showMore: 'Показать еще',
         loading: 'Загрузка поискового индекса... (можно формулировать запрос, пока идет загрузка индекса)',
         ready: 'Что ищем?',
@@ -422,6 +427,7 @@ class ModuleSearch {
       this.buildLunrIndex();
       this.buildSearchDictionary();
       this.buildFuseIndex();
+      this.extractAvailableModules();
       this.isDataLoaded = true;
 
       // Only hide loading UI if not loading in background
@@ -652,6 +658,31 @@ class ModuleSearch {
     console.log('Built Fuse.js index for fuzzy search');
   }
 
+  extractAvailableModules() {
+    // Extract all unique module names from documents and parameters
+    this.availableModules.clear();
+
+    // Extract from documents
+    if (this.searchData.documents) {
+      this.searchData.documents.forEach(doc => {
+        if (doc.module && doc.module.trim()) {
+          this.availableModules.add(doc.module.trim());
+        }
+      });
+    }
+
+    // Extract from parameters
+    if (this.searchData.parameters) {
+      this.searchData.parameters.forEach(param => {
+        if (param.module && param.module.trim()) {
+          this.availableModules.add(param.module.trim());
+        }
+      });
+    }
+
+    console.log(`Extracted ${this.availableModules.size} unique modules`);
+  }
+
   getFuzzySuggestions(query) {
     if (!this.fuseIndex || !query.trim()) {
       return [];
@@ -751,6 +782,35 @@ class ModuleSearch {
     // Remove any existing fuzzy search messages and suggestions
     const existingMessages = this.searchResults.querySelectorAll('.fuzzy-search-message, .fuzzy-suggestions');
     existingMessages.forEach(message => message.remove());
+  }
+
+  getModulePageResults(query) {
+    const results = [];
+    const queryLower = query.toLowerCase().trim();
+
+    // Check if query matches any module name
+    this.availableModules.forEach(moduleName => {
+      const moduleLower = moduleName.toLowerCase();
+      
+      // Check for exact match or if module name contains the query
+      if (moduleLower === queryLower || moduleLower.includes(queryLower)) {
+        // Create a synthetic result for the module page
+        // Use a special ID format to identify module page results
+        const modulePageResult = {
+          ref: `module_page_${moduleName}`,
+          score: moduleLower === queryLower ? 1000 : 500, // Higher score for exact matches
+          _isModulePage: true,
+          _moduleName: moduleName,
+          _moduleUrl: `/modules/${moduleName}/`
+        };
+        results.push(modulePageResult);
+      }
+    });
+
+    // Sort by score (exact matches first)
+    results.sort((a, b) => b.score - a.score);
+
+    return results;
   }
 
   // Check if query looks like a URL and sanitize it for search
@@ -892,7 +952,7 @@ class ModuleSearch {
       }
 
       // Apply additional boosting for parameters, module name matches, and index boost levels
-      const boostedResults = results.map(result => {
+      let boostedResults = results.map(result => {
         const docId = result.ref;
         let doc;
 
@@ -993,6 +1053,13 @@ class ModuleSearch {
       // Sort by boosted score
       boostedResults.sort((a, b) => b.score - a.score);
 
+      // Check if query matches any module name and add module page results
+      const modulePageResults = this.getModulePageResults(sanitizedQuery);
+      if (modulePageResults.length > 0) {
+        // Add module page results with high priority (insert at the beginning)
+        boostedResults = modulePageResults.concat(boostedResults);
+      }
+
       // Store current results and display them
       this.currentResults = this.groupResults(boostedResults);
       this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
@@ -1005,6 +1072,7 @@ class ModuleSearch {
   }
 
   groupResults(results) {
+    const modulesResults = [];
     const isResourceNameMatchResults = [];
     const nameMatchResults = [];
     const isResourceOtherResults = [];
@@ -1013,6 +1081,14 @@ class ModuleSearch {
 
     results.forEach(result => {
       const docId = result.ref;
+      
+      // Handle module page results
+      if (result._isModulePage) {
+        // Module pages go to modules group
+        modulesResults.push(result);
+        return;
+      }
+
       let doc;
 
       // Determine which array the result comes from
@@ -1055,6 +1131,7 @@ class ModuleSearch {
     });
 
     return {
+      modules: modulesResults,
       isResourceNameMatch: isResourceNameMatchResults,
       nameMatch: nameMatchResults,
       isResourceOther: isResourceOtherResults,
@@ -1071,6 +1148,11 @@ class ModuleSearch {
     }
 
     let resultsHtml = '';
+
+    // Display Modules as a row at the top
+    if (this.currentResults.modules.length > 0) {
+      resultsHtml += this.renderModulesRow(this.currentResults.modules, this.currentHighlightQuery || this.lastQuery);
+    }
 
     // Display API results in priority order
     if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
@@ -1098,6 +1180,38 @@ class ModuleSearch {
     this.searchResults.innerHTML = resultsHtml;
   }
 
+  renderModulesRow(results, query) {
+    const moduleBadges = results.map(result => {
+      if (result._isModulePage) {
+        const moduleName = result._moduleName;
+        const moduleUrl = result._moduleUrl;
+        const highlightedName = this.highlightText(moduleName, query);
+        return `<a href="${this.buildTargetUrl(moduleUrl, null, moduleName)}" class="result-module">${highlightedName}</a>`;
+      }
+      return '';
+    }).filter(badge => badge !== '');
+
+    if (moduleBadges.length === 0) {
+      return '';
+    }
+
+    // Limit to 10 modules, add count badge if more
+    const maxModules = 10;
+    const displayBadges = moduleBadges.slice(0, maxModules);
+    const hasMore = moduleBadges.length > maxModules;
+    const remainingCount = hasMore ? moduleBadges.length - maxModules : 0;
+    
+    let html = `<div class="modules-row">
+      <span class="modules-label">${this.t('modules')}:</span> `;
+    html += displayBadges.join('');
+    if (hasMore) {
+      html += `<span class="modules-more">+${remainingCount} more</span>`;
+    }
+    html += '</div>';
+
+    return html;
+  }
+
   renderResultGroup(results, query, groupType) {
     const displayedCount = this.displayedCounts[groupType];
     const topResults = results.slice(0, displayedCount);
@@ -1106,6 +1220,7 @@ class ModuleSearch {
 
     // Render visible results
     topResults.forEach(result => {
+
       const docId = result.ref;
       let doc;
 
@@ -1162,6 +1277,7 @@ class ModuleSearch {
 
   resetPagination() {
     this.displayedCounts = {
+      modules: 10,
       isResourceNameMatch: 5,
       nameMatch: 5,
       isResourceOther: 5,
