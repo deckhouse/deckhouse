@@ -210,16 +210,17 @@ class ModuleSearch {
           // Check if cache is expired using the provided expiration time
           const now = Date.now();
           const cacheAge = now - result.timestamp;
+          const cacheExpirationMinutes = Math.round(expirationMs / 60000);
 
           if (cacheAge > expirationMs) {
-            console.log(`Cached search index expired for ${cacheKey}, will reload from network`);
+            console.log(`Cached search index expired for ${cacheKey} (age: ${Math.round(cacheAge / 60000)} minutes of ${cacheExpirationMinutes} minutes), will reload from network`);
             // Delete expired cache and wait for deletion to complete
             await this.deleteCachedSearchData(cacheKey);
             resolve(null);
             return;
           }
 
-          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 1000)}s)`);
+          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 1000)}s of ${cacheExpirationMinutes} minutes)`);
           resolve(result.data);
         };
 
