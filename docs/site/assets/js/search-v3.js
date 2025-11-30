@@ -793,7 +793,7 @@ class ModuleSearch {
     // Check if query matches any module name
     this.availableModules.forEach(moduleName => {
       const moduleLower = moduleName.toLowerCase();
-      
+
       // Check for exact match or if module name contains the query
       if (moduleLower === queryLower || moduleLower.includes(queryLower)) {
         // Create a synthetic result for the module page
@@ -1083,7 +1083,7 @@ class ModuleSearch {
 
     results.forEach(result => {
       const docId = result.ref;
-      
+
       // Handle module page results
       if (result._isModulePage) {
         // Module pages go to modules group
@@ -1187,7 +1187,7 @@ class ModuleSearch {
       if (result._isModulePage) {
         const moduleName = result._moduleName;
         const moduleUrl = result._moduleUrl;
-        return `<a href="${this.buildTargetUrl(moduleUrl, null, moduleName)}" class="result-module">${moduleName}</a>`;
+        return `<a href="${moduleUrl}" class="result-module">${moduleName}</a>`;
       }
       return '';
     }).filter(badge => badge !== '');
@@ -1201,7 +1201,7 @@ class ModuleSearch {
     const displayBadges = moduleBadges.slice(0, maxModules);
     const hasMore = moduleBadges.length > maxModules;
     const remainingCount = hasMore ? moduleBadges.length - maxModules : 0;
-    
+
     let html = `<div class="modules-row">
       <span class="modules-label">${this.t('modules')}:</span> `;
     html += displayBadges.join('');
