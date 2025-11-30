@@ -170,11 +170,19 @@ class ModuleSearch {
     }
   }
 
-  // Generate cache key from a single search index path
+  // Generate cache key from a single search index path using a hash function
   generateCacheKey(indexPath) {
-    // Create a hash-like key from the index path
-    // This ensures different index paths get different cache entries
-    return `searchIndex_${btoa(indexPath).replace(/[+/=]/g, '').substring(0, 50)}`;
+    // Use a hash function (djb2-like) to create a unique key from the path
+    // This ensures different index paths get different cache entries without collisions
+    let hash = 5381; // djb2 initial value
+    const str = indexPath;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+      hash = hash | 0; // Convert to 32-bit integer
+    }
+    // Use absolute value and convert to hex for a clean, collision-resistant key
+    const hashHex = Math.abs(hash).toString(16);
+    return `searchIndex_${hashHex}`;
   }
 
   // Get cached search data for a single index file from IndexedDB
@@ -184,12 +192,12 @@ class ModuleSearch {
     }
 
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const transaction = this.db.transaction([this.storeName], 'readonly');
         const store = transaction.objectStore(this.storeName);
         const request = store.get(cacheKey);
 
-        request.onsuccess = () => {
+        request.onsuccess = async () => {
           const result = request.result;
           if (!result) {
             resolve(null);
@@ -202,8 +210,8 @@ class ModuleSearch {
 
           if (cacheAge > this.cacheExpirationMs) {
             console.log(`Cached search index expired for ${cacheKey}, will reload from network`);
-            // Delete expired cache
-            this.deleteCachedSearchData(cacheKey);
+            // Delete expired cache and wait for deletion to complete
+            await this.deleteCachedSearchData(cacheKey);
             resolve(null);
             return;
           }
