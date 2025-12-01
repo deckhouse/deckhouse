@@ -127,7 +127,57 @@
 {{/* Render additionalProperties if they exist */}}
 {{- if and (reflect.IsMap $data) $data.additionalProperties }}
 
-    {{- if and (reflect.IsMap $data.additionalProperties) ($data.additionalProperties.properties) }} {{/* Only render if additionalProperties is a schema object AND has properties */}}
+    {{- if and (reflect.IsMap $data.additionalProperties) (not $data.properties) ($data.additionalProperties.properties) (or (not $data.additionalProperties.type) (eq $data.additionalProperties.type "object")) }} {{/* Render if additionalProperties is a schema object with properties (not primitive type) AND parent has no properties */}}
+      {{- $additionalPropsData := $data.additionalProperties }}
+      {{- $additionalPropsLangData := index $langData "additionalProperties" }}
+      {{- $additionalPropsRequired := $additionalPropsData.required }}
+      
+      {{- /* Prepare the description with special text for additionalProperties object */}}
+      {{- $additionalPropertyName := "<KEY_NAME>" }}
+      {{- $additionalPropertyNameQuoted := printf "`%s`" $additionalPropertyName }}
+      {{- $mapKeyName := index $additionalPropsData "x-doc-map-key-name" }}
+      {{- $specialDescriptionText := "" }}
+      {{- if $mapKeyName }}
+        {{- if eq site.Language.Lang "ru" }}
+          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+        {{- else }}
+          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+        {{- end }}
+      {{- else }}
+        {{- if eq site.Language.Lang "ru" }}
+          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
+        {{- else }}
+          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
+        {{- end }}
+      {{- end }}
+      
+      {{- /* Get existing description if any */}}
+      {{- $existingDescription := "" }}
+      {{- if $additionalPropsLangData.description }}
+        {{- $existingDescription = $additionalPropsLangData.description }}
+      {{- else if $additionalPropsData.description }}
+        {{- $existingDescription = $additionalPropsData.description }}
+      {{- end }}
+      
+      {{- /* Combine special text with existing description */}}
+      {{- $finalDescription := $specialDescriptionText }}
+      {{- if $existingDescription }}
+        {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
+      {{- end }}
+      
+      {{- /* Create modified data with updated description */}}
+      {{- $modifiedAdditionalPropsData := $additionalPropsData | merge (dict "description" $finalDescription) }}
+      {{- if $additionalPropsLangData }}
+        {{- $modifiedAdditionalPropsLangData := $additionalPropsLangData | merge (dict "description" $finalDescription) }}
+        {{- $additionalPropsLangData = $modifiedAdditionalPropsLangData }}
+      {{- else }}
+        {{- $additionalPropsLangData = dict "description" $finalDescription }}
+      {{- end }}
+      
+      <ul>
+        {{- partial "openapi/format-schema" ( dict "name" $additionalPropertyName "data" $modifiedAdditionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
+      </ul>
+    {{- else if and (reflect.IsMap $data.additionalProperties) ($data.additionalProperties.properties) }} {{/* Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties) */}}
       {{- $additionalPropsData := $data.additionalProperties }}
       {{- $additionalPropsLangData := index $langData "additionalProperties" }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
