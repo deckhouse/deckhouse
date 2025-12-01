@@ -392,7 +392,7 @@ spec:
     requiredLabelValue: "true"
 ```
 
-## How to deny kubectl exec и kubectl attach to specific Pods?
+## How to deny kubectl exec and kubectl attach to specific Pods?
 
 > The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
