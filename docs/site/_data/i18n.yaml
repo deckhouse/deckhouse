@@ -309,6 +309,9 @@ common:
   breadcrumbs_link_guides:
     en: All Guides
     ru: Все руководства
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
