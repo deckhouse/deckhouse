@@ -132,6 +132,18 @@ func getMetricValueByLabel(metrics []*dto.MetricFamily, metricName, labelName, l
 	return getMetricValueByLabels(metrics, metricName, map[string]string{labelName: labelValue})
 }
 
+// findNodeInGroups searches for a node by name in all groups and returns the node data and group name if found
+func findNodeInGroups(collector *NodeGroupCollector, nodeName string) (*NodeMetricsData, string) {
+	for groupName, nodes := range collector.nodesByGroup {
+		for _, node := range nodes {
+			if node.Name == nodeName {
+				return node, groupName
+			}
+		}
+	}
+	return nil, ""
+}
+
 // TestNodeGroupCollectorMetrics tests the metrics collection
 func TestNodeGroupCollectorMetrics(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
@@ -258,16 +270,19 @@ func TestEventHandler(t *testing.T) {
 	node := newTestNode("test-node", "", false)
 
 	collector.OnNodeAddOrUpdate(node)
-	assert.Contains(t, collector.nodes, "test-node")
+	// Node without group should not be in nodesByGroup
+	_, groupName := findNodeInGroups(collector, "test-node")
+	assert.Empty(t, groupName, "Node without group should not be in nodesByGroup")
 
 	updatedNode := newTestNode("test-node", "test-group", false)
 
 	collector.OnNodeAddOrUpdate(updatedNode)
 	// Verify that Node was updated
-	assert.Contains(t, collector.nodes, "test-node")
-	nodeData := collector.nodes["test-node"]
+	nodeData, groupName := findNodeInGroups(collector, "test-node")
+	assert.NotNil(t, nodeData, "Node should be found in nodesByGroup")
 	assert.Equal(t, "test-node", nodeData.Name)
-	assert.Equal(t, "test-group", nodeData.NodeGroup) // Should remain the same
+	assert.Equal(t, "test-group", nodeData.NodeGroup)
+	assert.Equal(t, "test-group", groupName)
 
 	notReadyNode := newTestNode("test-node-status", "test-group", false)
 
@@ -314,11 +329,13 @@ func TestEventHandler(t *testing.T) {
 	assert.Equal(t, 1.0, maxCount, "node_group_count_max_total should equal 1")
 
 	collector.OnNodeDelete(updatedNode)
-	assert.NotContains(t, collector.nodes, "test-node")
+	deletedNode, _ := findNodeInGroups(collector, "test-node")
+	assert.Nil(t, deletedNode, "Node should be removed from nodesByGroup")
 
 	// Delete the ready node as well to test complete cleanup
 	collector.OnNodeDelete(readyNode)
-	assert.NotContains(t, collector.nodes, "test-node-status")
+	deletedReadyNode, _ := findNodeInGroups(collector, "test-node-status")
+	assert.Nil(t, deletedReadyNode, "Node should be removed from nodesByGroup")
 
 	// Update NodeGroup status to reflect all nodes deleted
 	testGroup.Status.Nodes = 0
@@ -353,7 +370,9 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 
 	collector.OnNodeAddOrUpdate(orphanNode)
 
-	assert.Contains(t, collector.nodes, "orphan-node-1")
+	nodeData, groupName := findNodeInGroups(collector, "orphan-node-1")
+	assert.Equal(t, "nonexistent-group", nodeData.NodeGroup)
+	assert.Equal(t, "nonexistent-group", groupName)
 
 	assert.Contains(t, collector.nodesByGroup, "nonexistent-group")
 	assert.Len(t, collector.nodesByGroup["nonexistent-group"], 1)
@@ -385,7 +404,8 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	assert.Equal(t, 1.0, nodeMetricValueWithGroup, "node_group_node metric should be 1 for ready node with correct group")
 
 	collector.OnNodeDelete(orphanNode)
-	assert.NotContains(t, collector.nodes, "orphan-node-1")
+	deletedNodeData, _ := findNodeInGroups(collector, "orphan-node-1")
+	assert.Nil(t, deletedNodeData, "Node should be removed from nodesByGroup")
 	assert.NotContains(t, collector.nodesByGroup, "nonexistent-group") // Should be cleaned up
 
 	// Update NodeGroup status to reflect node deletion

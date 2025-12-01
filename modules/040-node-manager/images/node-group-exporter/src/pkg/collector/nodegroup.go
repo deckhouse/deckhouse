@@ -42,7 +42,6 @@ type NodeGroupCollector struct {
 	clientset    kubernetes.Interface
 	watcher      *k8s.Watcher
 	nodeGroups   map[string]*NodeGroupMetricsData
-	nodes        map[string]*NodeMetricsData
 	nodesByGroup map[string][]*NodeMetricsData // Cached index: nodeGroup -> nodes
 	mutex        sync.RWMutex
 	logger       *log.Logger
@@ -69,7 +68,6 @@ func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Conf
 	collector := &NodeGroupCollector{
 		clientset:    clientset,
 		nodeGroups:   make(map[string]*NodeGroupMetricsData),
-		nodes:        make(map[string]*NodeMetricsData),
 		nodesByGroup: make(map[string][]*NodeMetricsData),
 		logger:       logger,
 	}
@@ -257,8 +255,6 @@ func (c *NodeGroupCollector) syncResources(ctx context.Context) error {
 		c.logger.Error("Error syncing node groups: ", log.Err(err))
 	}
 
-	c.rebuildNodesByGroup()
-
 	c.updateMetrics()
 
 	return nil
@@ -273,9 +269,12 @@ func (c *NodeGroupCollector) syncNodes(ctx context.Context) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	c.nodesByGroup = make(map[string][]*NodeMetricsData)
 	for _, node := range nodes.Items {
 		nodeData := ToNodeMetricsData(&node)
-		c.nodes[node.Name] = &nodeData
+		if nodeData.NodeGroup != "" {
+			c.nodesByGroup[nodeData.NodeGroup] = append(c.nodesByGroup[nodeData.NodeGroup], &nodeData)
+		}
 	}
 
 	return nil
@@ -296,20 +295,6 @@ func (c *NodeGroupCollector) syncNodeGroups(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// rebuildNodesByGroup rebuilds the nodesByGroup index from scratch
-// Should only be called during initial sync
-func (c *NodeGroupCollector) rebuildNodesByGroup() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.nodesByGroup = make(map[string][]*NodeMetricsData)
-	for _, node := range c.nodes {
-		if node.NodeGroup != "" {
-			c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
-		}
-	}
 }
 
 func (c *NodeGroupCollector) removeNodeFromIndex(node *NodeMetricsData) {
@@ -378,10 +363,8 @@ func (c *NodeGroupCollector) updateMetrics() {
 
 		// Set per-node metrics (only metric that requires node iteration)
 		for _, indexedNode := range indexedNodes {
-			if freshNode, exists := c.nodes[indexedNode.Name]; exists {
-				nodeCount++
-				c.nodeGroupNode.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType, freshNode.Name).Set(freshNode.IsReady)
-			}
+			nodeCount++
+			c.nodeGroupNode.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType, indexedNode.Name).Set(indexedNode.IsReady)
 		}
 
 		// Fallback for totalNodes if status is not available
@@ -450,7 +433,6 @@ func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
 	defer c.mutex.Unlock()
 
 	nodeData := ToNodeMetricsData(node)
-	c.nodes[node.Name] = &nodeData
 	c.ensureNodeInIndex(&nodeData)
 	c.updateMetrics()
 	c.logger.Debug("Add or Updated Node",
@@ -464,7 +446,6 @@ func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
 	defer c.mutex.Unlock()
 
 	nodeData := ToNodeMetricsData(node)
-	delete(c.nodes, node.Name)
 	c.removeNodeFromIndex(&nodeData)
 	c.updateMetrics()
 	c.logger.Debug("Deleted ",
