@@ -249,7 +249,7 @@ index 0f2484788..25d57817a 100644
  		ctx,
  		defaultEvictorArgs,
 diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
-index cca10adc4..deb7b1751 100644
+index cca10adc4..39014c153 100644
 --- a/pkg/framework/plugins/defaultevictor/defaults.go
 +++ b/pkg/framework/plugins/defaultevictor/defaults.go
 @@ -24,4 +24,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -257,8 +257,8 @@ index cca10adc4..deb7b1751 100644
  // DefaultEvictorArgs configuration.
  func SetDefaults_DefaultEvictorArgs(obj runtime.Object) {
 +	args := obj.(*DefaultEvictorArgs)
-+	if args.NamespaceLabelSelector == nil {
-+		args.NamespaceLabelSelector = nil
++	if args.PodProtections.NamespaceLabelSelector == nil {
++		args.PodProtections.NamespaceLabelSelector = nil
 +	}
  }
 diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go

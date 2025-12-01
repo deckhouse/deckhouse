@@ -4,12 +4,12 @@ index 19ff3f64e..8f5e98eef 100644
 +++ b/go.mod
 @@ -1,6 +1,6 @@
  module sigs.k8s.io/descheduler
-
+ 
 -go 1.24.0
 +go 1.24.2
-
+ 
  toolchain go1.24.3
-
+ 
 @@ -67,7 +67,7 @@ require (
  	github.com/gogo/protobuf v1.3.2 // indirect
  	github.com/golang/glog v1.2.4 // indirect
