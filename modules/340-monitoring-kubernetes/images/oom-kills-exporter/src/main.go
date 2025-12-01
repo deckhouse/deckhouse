@@ -1,26 +1,45 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/containerd/containerd"
 	containerdEvents "github.com/containerd/containerd/api/events"
 	"github.com/containerd/containerd/events"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/typeurl/v2"
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sapcc/go-api-declarations/bininfo"
-	"github.com/containerd/typeurl/v2"
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/kmsg"
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/types"
+)
+
+var (
+	isReady       atomic.Bool
+	containerdOK  atomic.Bool
+	lastEventHB   atomic.Int64
+	lastKmsgHB    atomic.Int64
 )
 
 var (
@@ -34,23 +53,16 @@ var (
 		"io.kubernetes.pod.name":       "pod_name",
 	}
 	metricsAddr string
-	versionFlag bool
 	newPattern  string
 )
 
 func init() {
-	flag.StringVar(&metricsAddr, "listen-address", ":9102", "The address to listen on for HTTP requests.")
+	flag.StringVar(&metricsAddr, "listen-address", ":4205", "The address to listen on for HTTP requests.")
 	flag.StringVar(&newPattern, "regexp-pattern", defaultPattern, "Overwrites the default regexp pattern to match and extract Pod UID and Container ID.")
-	flag.BoolVar(&versionFlag, "version", false, "Print version info")
 }
 
 func main() {
 	flag.Parse()
-
-	if versionFlag {
-		fmt.Printf("Version: %s\n", bininfo.Version())
-		os.Exit(0)
-	}
 
 	if newPattern != "" {
 		kmesgRE = regexp.MustCompile(newPattern)
@@ -75,17 +87,36 @@ func main() {
 
 	go func() {
 		glog.Info("Starting prometheus metrics")
+
 		mux := http.NewServeMux()
+
 		mux.Handle("/metrics", promhttp.Handler())
+
 		mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
+			if !isReady.Load() {
+				http.Error(w, "not ready", http.StatusServiceUnavailable)
+				return
+			}
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ready"))
 		})
+
+		mux.HandleFunc("/live", func(w http.ResponseWriter, _ *http.Request) {
+			if !containerdOK.Load() {
+				http.Error(w, "containerd not reachable", http.StatusServiceUnavailable)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("alive"))
+		})
+
 		server := &http.Server{
 			Addr:              metricsAddr,
 			ReadHeaderTimeout: 3 * time.Second,
 			Handler:           mux,
 		}
+
 		glog.Warning(server.ListenAndServe())
 	}()
 
@@ -97,6 +128,22 @@ func main() {
 
 	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg"})
 	logCh, err := kmsgWatcher.Watch()
+
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			lastKmsgHB.Store(time.Now().Unix())
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			lastEventHB.Store(time.Now().Unix())
+		}
+	}()
 
 	if err != nil {
 		glog.Fatal("Could not create log watcher")
@@ -133,6 +180,8 @@ func watchContainerd(ctx context.Context, cli *containerd.Client) {
 }
 
 func handleContainerdEvent(ctx context.Context, cli *containerd.Client, e *events.Envelope) {
+	containerdOK.Store(true)
+
 	switch e.Topic {
 	case "/containers/create":
 		obj, err := typeurl.UnmarshalAny(e.Event)
@@ -210,7 +259,7 @@ func initialResync(ctx context.Context, cli *containerd.Client) {
 		return
 	}
 
-	glog.Infof("Initial resync: found %d containers", len(containers))
+	glog.V(4).Infof("Initial resync: found %d containers", len(containers))
 
 	for _, c := range containers {
 		if c.Labels == nil {
@@ -219,4 +268,5 @@ func initialResync(ctx context.Context, cli *containerd.Client) {
 
 		prometheusEnsureSeries(c.Labels)
 	}
+	isReady.Store(true)
 }

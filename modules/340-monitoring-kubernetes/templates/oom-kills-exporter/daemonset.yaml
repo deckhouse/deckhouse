@@ -2,7 +2,7 @@
 cpu: 1m
 memory: 20Mi
 {{- end }}
-{{- $port := "9102" -}}
+{{- $port := "4205" -}}
 
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -63,14 +63,24 @@ spec:
         name: oom-kills-exporter
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         args:
-          - -listen-address=127.0.0.1:9102
           - -logtostderr
-          - -v=5
+          - -v=2
         readinessProbe:
           httpGet:
             path: /ready
             port: {{ $port }}
             scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: {{ $port }}
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 3 
         volumeMounts:
           - name: kmsg
             mountPath: /dev/kmsg
@@ -118,12 +128,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /livez
-            port: 9102
+            port: 4205
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 9102
+            port: 4205
             scheme: HTTPS
         resources:
           requests:
