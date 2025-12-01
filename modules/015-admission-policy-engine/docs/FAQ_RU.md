@@ -397,22 +397,23 @@ spec:
     requiredLabelValue: "true"
 ```
 
-## Как запретить exec/attach в определённые поды
+## Как запретить операции kubectl exec и kubectl attach в определённые поды?
 
-> Примечание. Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper. Это позволяет создавать пользовательские политики для валидации или запрета операций `kubectl exec` / `kubectl attach`.
+Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper. Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
 
 ### Встроенная политика для подов с heritage: deckhouse
 
-Модуль включает встроенную политику `D8DenyExecHeritage`, которая запрещает exec/attach во все поды с меткой `heritage: deckhouse`. Это защищает системные компоненты, управляемые Deckhouse.
+Для защиты системных компонентов под управлением Deckhouse в модуле `admission-policy-engine` предусмотрена встроенная политика `D8DenyExecHeritage`, которая запрещает выполнение операций `kubectl exec` и `kubectl attach` во все поды с лейблом `heritage: deckhouse`.
 
-Исключения (эти пользователи могут выполнять exec в heritage-поды):
-- `system:sudouser`
-- Сервисные аккаунты из пространств имён `d8-*` (`system:serviceaccount:d8-*`)
-- Сервисные аккаунты из пространств имён `kube-*` (`system:serviceaccount:kube-*`)
+Политика не распространяется на следующих пользователей, которым разрешены операции `kubectl exec` и `kubectl attach` в поды с лейблом `heritage: deckhouse`:
+
+- `system:sudouser`;
+- сервисные аккаунты из пространств имён `d8-*` (`system:serviceaccount:d8-*`);
+- сервисные аккаунты из пространств имён `kube-*` (`system:serviceaccount:kube-*`).
 
 ### Пример пользовательской политики
 
-Можно создать собственную политику Gatekeeper для запрета exec/attach в определённых пространствах имён. Пример ниже использует `input.review.operation` и `input.review.resource.resource` для проверки операций CONNECT:
+Вы можете создать собственную политику Gatekeeper для запрета операций `kubectl exec` и `kubectl attach` в определённых пространствах имён. В примере ниже используются `input.review.operation` и `input.review.resource.resource` для проверки операций `CONNECT`:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -470,8 +471,9 @@ spec:
       - staging
 ```
 
-Ключевые моменты для валидации CONNECT:
-- Используйте `input.review.operation == "CONNECT"` для проверки операций CONNECT.
+Ключевые данные и проверки, доступные при валидации операций `CONNECT`:
+
+- Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
 - Используйте `input.review.resource.resource` для проверки дополнительных ресурсов `pods/exec` или `pods/attach`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Пространство имён доступно в `input.review.namespace`.

@@ -392,22 +392,23 @@ spec:
     requiredLabelValue: "true"
 ```
 
-## How to deny exec/attach to specific Pods
+## How to deny kubectl exec и kubectl attach to specific Pods?
 
-> Note. The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows custom policies to validate or deny `kubectl exec` / `kubectl attach` operations.
+> The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
 ### Built-in policy for heritage: deckhouse Pods
 
-The module includes a built-in policy `D8DenyExecHeritage` that forbids exec/attach to all Pods with the `heritage: deckhouse` label. This protects system components managed by Deckhouse.
+To protect system components managed by Deckhouse, the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage` that forbids running `kubectl exec` and `kubectl attach` operations to all Pods with the `heritage: deckhouse` label.
 
-Exceptions (these users can still exec into heritage pods):
-- `system:sudouser`
-- Service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`)
-- Service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`)
+This policy doesn't apply to the following users who are allowed to run `kubectl exec` and `kubectl attach` operations to Pods labeled with `heritage: deckhouse`:
+
+- `system:sudouser`;
+- service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
+- service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
 
 ### Custom policy example
 
-You can create your own Gatekeeper policy to deny exec/attach in specific namespaces. The example below uses `input.review.operation` and `input.review.resource.resource` to check for CONNECT operations:
+You can create your own Gatekeeper policy to deny `kubectl exec` and `kubectl attach` operations in specific namespaces. In the following example,  `input.review.operation` and `input.review.resource.resource` are used to check for `CONNECT` operations:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -465,8 +466,9 @@ spec:
       - staging
 ```
 
-Key points for CONNECT validation:
-- Use `input.review.operation == "CONNECT"` to check for CONNECT operations.
+Key data and checks for CONNECT validation:
+
+- Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
 - Use `input.review.resource.resource` to check for `pods/exec` or `pods/attach` subresources.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
 - The namespace is available in `input.review.namespace`.
