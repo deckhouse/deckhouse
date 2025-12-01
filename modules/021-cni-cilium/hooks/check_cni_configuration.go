@@ -222,13 +222,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
-	settings := make(map[string]any)
-	if desiredCNIModuleConfig.Spec.Settings != nil && len(desiredCNIModuleConfig.Spec.Settings.Raw) > 0 {
-		err = json.Unmarshal(desiredCNIModuleConfig.Spec.Settings.Raw, &settings)
-		if err != nil {
-			return fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
-		}
-	}
+	settings := desiredCNIModuleConfig.Spec.Settings.GetMap()
 
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
 	// Skip if in the secret key "cilium" does not exist or empty.
