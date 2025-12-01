@@ -430,19 +430,33 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeUser string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on %s", nodeUser, nodeName), 30, 5*time.Second).
+func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeUser string) error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", nodeUser), 30, 5*time.Second).
 		RunContext(ctx, func() error {
-			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+			present := make(map[string]bool)
+
+			nodesForClient, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{
+				LabelSelector: "node.deckhouse.io/group=master",
+			})
 			if err != nil {
 				return err
 			}
 
-			value, ok := node.Annotations[global.NodeUserAnnotation]
-			if ok && value == nodeUser {
-				return nil
+			for _, node := range nodesForClient.Items {
+				present[node.Name] = false
+
+				value, ok := node.Annotations[global.NodeUserAnnotation]
+				if ok && value == nodeUser {
+					present[node.Name] = true
+				}
 			}
 
-			return fmt.Errorf("NodeUser %s is not present on %s yet", nodeUser, nodeName)
+			for node, ok := range present {
+				if !ok {
+					return fmt.Errorf("NodeUser %s is not present on %s yet", nodeUser, node)
+				}
+			}
+
+			return nil
 		})
 }

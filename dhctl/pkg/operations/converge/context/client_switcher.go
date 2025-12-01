@@ -95,11 +95,10 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		if sshCl == nil {
 			return fmt.Errorf("Node interface is not ssh")
 		}
-		currentHost := sshCl.Session().Host()
 
-		err = entity.WaitForNodeUserPresentOnNode(ctx, s.ctx.KubeClient(), currentHost, global.ConvergeNodeUserName)
+		err = entity.WaitForNodeUserPresentOnNode(ctx, s.ctx.KubeClient(), global.ConvergeNodeUserName)
 		if err != nil {
-			return fmt.Errorf("could not ensure %s is presented on %s: %w", global.ConvergeNodeUserName, currentHost, err)
+			return fmt.Errorf("could not ensure %s is presented on control plane hosts: %w", global.ConvergeNodeUserName, err)
 		}
 
 		convergeState.NodeUserCredentials = nodeUserCredentials
