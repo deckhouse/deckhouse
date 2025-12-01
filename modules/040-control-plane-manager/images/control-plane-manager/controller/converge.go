@@ -99,7 +99,7 @@ func syncExtraFiles() error {
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	
+
 	var components []string
 	if config.EtcdOnly {
 		components = []string{"etcd"}
@@ -107,7 +107,7 @@ func convergeComponents() error {
 	} else {
 		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	}
-	
+
 	for _, v := range components {
 		if err := convergeComponent(v); err != nil {
 			return err
@@ -120,6 +120,13 @@ func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
+
+	if componentName == "etcd" {
+		params := GetEtcdPerformanceParams()
+		if err := GenerateEtcdPerformancePatch(params); err != nil {
+			return fmt.Errorf("failed to generate etcd performance patch: %w", err)
+		}
+	}
 
 	if err := prepareConverge(componentName, true); err != nil {
 		return err

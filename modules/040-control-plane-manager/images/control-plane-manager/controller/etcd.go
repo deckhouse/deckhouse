@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,54 @@ var defaultETCDendpoints = []string{"https://127.0.0.1:2379"}
 type Etcd struct {
 	client *clientv3.Client
 	wb     wait.Backoff
+}
+
+type EtcdPerformanceParams struct {
+	HeartbeatInterval int
+	ElectionTimeout   int
+}
+
+func GetEtcdPerformanceParams() EtcdPerformanceParams {
+	defaultParams := EtcdPerformanceParams{
+		HeartbeatInterval: 100,
+		ElectionTimeout:   1000,
+	}
+
+	etcdOnlyParams := EtcdPerformanceParams{
+		HeartbeatInterval: 500,
+		ElectionTimeout:   5000,
+	}
+
+	if config.EtcdOnly {
+		log.Infof("using increased etcd timeouts for EtcdOnly mode: heartbeat=%dms, election=%dms", etcdOnlyParams.HeartbeatInterval, etcdOnlyParams.ElectionTimeout)
+		return etcdOnlyParams
+	}
+
+	return defaultParams
+}
+
+// We can use this patch to tune etcd performance depending on the disk performance in future
+func GenerateEtcdPerformancePatch(params EtcdPerformanceParams) error {
+	const patchTemplate = `apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+    - name: etcd
+      env:
+        - name: ETCD_HEARTBEAT_INTERVAL
+          value: "%d"
+        - name: ETCD_ELECTION_TIMEOUT
+          value: "%d"`
+
+	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", "etcd800performance.yaml")
+	content := fmt.Sprintf(patchTemplate, params.HeartbeatInterval, params.ElectionTimeout)
+
+	log.Infof("generating etcd performance patch: file=%s, heartbeat_interval_ms=%d, election_timeout_ms=%d", patchFile, params.HeartbeatInterval, params.ElectionTimeout)
+
+	return os.WriteFile(patchFile, []byte(content), 0o600)
 }
 
 func EtcdJoinConverge() error {
