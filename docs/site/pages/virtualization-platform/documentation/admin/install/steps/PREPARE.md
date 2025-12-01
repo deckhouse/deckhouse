@@ -14,13 +14,13 @@ Before installing the virtualization platform, you need to plan its parameters:
 1. Determine IP subnets:
 
    - Subnet used by the nodes to communicate with each other.  
-     This is the only subnet that actually exists in the organization network and is routed in your infrastructure.
+     This is the only subnet that actually exists in the organization's network and is routable within your infrastructure.
 
-   - Pod subnet (`podSubnetCIDR`);
-   - Service subnet (`serviceSubnetCIDR`);
+   - Pod subnet (`podSubnetCIDR`).
+   - Service subnet (`serviceSubnetCIDR`).
    - Subnets for virtual machine addresses (`virtualMachineCIDRs`).
 
-   The node subnet must be a real network in your datacenter. The other subnets are virtual networks inside the cluster, must not be routable outside the cluster, and must not be advertised to either the public network or the organization network. You do not need to allocate separate VLANs or physical segments for them; it is enough to choose free private address ranges that do not overlap with existing networks.
+   The node subnet must be a real network in your datacenter. The other subnets are virtual networks inside the cluster. They must not be routable outside the cluster and must not be advertised to either the public network or the organization’s network. You do not need to allocate separate VLANs or physical segments for them; it is enough to choose free private address ranges that do not overlap with existing networks.
 
    Example of choosing such subnets:
 
