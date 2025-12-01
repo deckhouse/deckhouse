@@ -60,6 +60,10 @@ func (pc *Checker) CheckDhctlEdition(ctx context.Context) error {
 		log.DebugLn("dhctl version check is skipped for local builds")
 		return nil
 	}
+	if app.AppEdition == "local" {
+		log.DebugLn("dhctl edition check is skipped for local installer")
+		return nil
+	}
 	if app.PreflightSkipDeckhouseEditionCheck {
 		log.WarnLn("Dhctl compatibility check is skipped")
 		return nil

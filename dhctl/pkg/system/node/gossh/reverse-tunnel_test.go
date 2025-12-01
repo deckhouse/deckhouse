@@ -60,7 +60,7 @@ func TestReverseTunnel(t *testing.T) {
 		User:           "user",
 		Port:           "20031"})
 	keys := []session.AgentPrivateKey{{Key: path}}
-	sshClient := NewClient(settings, keys)
+	sshClient := NewClient(context.Background(), settings, keys)
 	err = sshClient.Start()
 	// expecting no error on client start
 	require.NoError(t, err)

@@ -63,21 +63,27 @@ func (s *registryscanner) processRegistries(ctx context.Context) []backends.Docu
 			s.logger.Error("registry is unavailable",
 				slog.String("registry", registry.Name()),
 				log.Err(err))
-			continue
+			return nil
 		}
 
 		s.logger.Debug("found modules",
 			slog.Any("modules", modules),
 			slog.String("registry", registry.Name()))
 
-		vers := s.processModules(ctx, registry, modules)
+		vers, err := s.processModules(ctx, registry, modules)
+		if err != nil {
+			s.logger.Error("failed to process modules",
+				slog.String("registry", registry.Name()),
+				log.Err(err))
+			return nil
+		}
 		versions = append(versions, vers...)
 	}
 
 	return s.cache.SyncWithRegistryVersions(versions)
 }
 
-func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
+func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) ([]internal.VersionData, error) {
 	versions := make([]internal.VersionData, 0, len(modules))
 
 	for _, module := range modules {
@@ -89,7 +95,7 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 				slog.String("module", module),
 				slog.String("registry", registry.Name()),
 				log.Err(err))
-			continue
+			return nil, err
 		}
 
 		releaseChannels := getReleaseChannelsFromTags(tags)
@@ -97,7 +103,7 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 		versions = append(versions, vers...)
 	}
 
-	return versions
+	return versions, nil
 }
 
 func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {

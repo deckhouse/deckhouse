@@ -289,7 +289,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return ctrl.Result{}, err
 		}
 
-		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		err := utils.Update(ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 				return true
@@ -299,6 +299,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		if err != nil {
 			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
 			return ctrl.Result{}, err
+		}
+
+		// Reset deprecated and experimental metrics when module is disabled
+		if module.IsDeprecated() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+		}
+		if module.IsExperimental() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 		}
 
 		// skip disabled modules

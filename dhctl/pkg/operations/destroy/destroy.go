@@ -169,7 +169,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		},
 	)
 
-	staticDestroyer := NewStaticMastersDestroyer(sshClientProvider, []NodeIP{})
+	staticDestroyer := NewStaticMastersDestroyer(sshClientProvider, []NodeIP{}, state)
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -338,15 +338,17 @@ type NodeIP struct {
 }
 
 type StaticMastersDestroyer struct {
+	state             *State
 	sshClientProvider SSHProvider
 	IPs               []NodeIP
 	userCredentials   *convergectx.NodeUserCredentials
 }
 
-func NewStaticMastersDestroyer(sshClientProvider SSHProvider, ips []NodeIP) *StaticMastersDestroyer {
+func NewStaticMastersDestroyer(sshClientProvider SSHProvider, ips []NodeIP, state *State) *StaticMastersDestroyer {
 	return &StaticMastersDestroyer{
 		sshClientProvider: sshClientProvider,
 		IPs:               ips,
+		state:             state,
 	}
 }
 
@@ -414,7 +416,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 		for _, host := range additionalMastersHosts {
 			settings.SetAvailableHosts([]session.Host{host})
-			sshClient, err = d.switchToNodeUser(sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
 			if err != nil {
 				return err
 			}
@@ -440,7 +442,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 			settings.SetAvailableHosts([]session.Host{host})
 
-			sshClient, err = d.switchToNodeUser(sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
 			if err != nil {
 				return err
 			}
@@ -525,10 +527,10 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 	return nodeIPs, nil
 }
 
-func (d *StaticMastersDestroyer) switchToNodeUser(oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
+func (d *StaticMastersDestroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
 	log.DebugLn("Starting replacing SSH client")
 
-	tmpDir := filepath.Join(app.CacheDir, "destroy")
+	tmpDir := filepath.Join(d.state.StateDir(), "destroy")
 
 	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
@@ -571,7 +573,7 @@ func (d *StaticMastersDestroyer) switchToNodeUser(oldSSHClient node.SSHClient, s
 		BecomePass:     d.userCredentials.Password,
 	})
 
-	newSSHClient := sshclient.NewClient(sess, []session.AgentPrivateKey{privateKey})
+	newSSHClient := sshclient.NewClient(ctx, sess, []session.AgentPrivateKey{privateKey})
 
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()

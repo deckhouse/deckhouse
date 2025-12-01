@@ -29,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 	ssh "github.com/deckhouse/lib-gossh"
@@ -36,6 +37,8 @@ import (
 
 type SSHUploadScript struct {
 	sshClient *Client
+
+	uploadDir string
 
 	ScriptPath string
 	Args       []string
@@ -82,19 +85,28 @@ func (u *SSHUploadScript) WithCommanderMode(enabled bool) {
 	u.commanderMode = enabled
 }
 
+func (u *SSHUploadScript) IsSudo() bool {
+	return u.sudo
+}
+
+func (u *SSHUploadScript) UploadDir() string {
+	return u.uploadDir
+}
+
 // WithCleanupAfterExec option tells if ssh executor should delete uploaded script after execution was attempted or not.
 // It does not care if script was executed successfully of failed.
 func (u *SSHUploadScript) WithCleanupAfterExec(doCleanup bool) {
 	u.cleanupAfterExec = doCleanup
 }
 
+func (u *SSHUploadScript) WithExecuteUploadDir(dir string) {
+	u.uploadDir = dir
+}
+
 func (u *SSHUploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
-	remotePath := "."
-	if u.sudo {
-		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
-	}
+	remotePath := genssh.ExecuteRemoteScriptPath(u, scriptName, false)
 	log.DebugF("Uploading script %s to %s\n", u.ScriptPath, remotePath)
 	err = NewSSHFile(u.sshClient.sshClient).Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
@@ -102,13 +114,11 @@ func (u *SSHUploadScript) Execute(ctx context.Context) (stdout []byte, err error
 	}
 
 	var cmd *SSHCommand
-	var scriptFullPath string
+	scriptFullPath := u.pathWithEnv(genssh.ExecuteRemoteScriptPath(u, scriptName, true))
 	if u.sudo {
-		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
 		cmd = NewSSHCommand(u.sshClient, scriptFullPath, u.Args...)
 		cmd.Sudo(ctx)
 	} else {
-		scriptFullPath = u.pathWithEnv("./" + scriptName)
 		cmd = NewSSHCommand(u.sshClient, scriptFullPath, u.Args...)
 		cmd.Cmd(ctx)
 	}

@@ -4,7 +4,7 @@ kind: Secret
 metadata:
   name: registry-packages-proxy-token
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "log-shipper")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   annotations:
     kubernetes.io/service-account.name: registry-packages-proxy
 type: kubernetes.io/service-account-token

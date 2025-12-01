@@ -8,6 +8,7 @@ description: |-
   for the MySQL database.
 ---
 
+{% raw %}
 MySQL - один из поддерживаемых плагинов для механизма секретов баз данных.
 Этот плагин генерирует учетные данные базы данных динамически на основе
 настроенных ролей для базы данных MySQL, а также поддерживает статические роли.
@@ -149,3 +150,5 @@ $ d8 stronghold write database/config/my-mysql-database \
     username="root" \
     password="mysql"
 ```
+
+{% endraw %}

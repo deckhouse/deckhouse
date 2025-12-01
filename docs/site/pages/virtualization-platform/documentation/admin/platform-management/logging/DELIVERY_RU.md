@@ -4,6 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/lo
 lang: ru
 ---
 
+{% raw %}
 В Deckhouse предусмотрен сбор и доставка логов из узлов и подов кластера во внутреннюю или внешние системы хранения.
 
 DVP позволяет:
@@ -193,6 +194,7 @@ spec:
       verifyHostname: false
 ```
 
+{% endraw %}
 {% alert level="info" %}
 `destination` не поддерживает метки пода для индексирования.
 Чтобы добавить нужные метки, используйте опцию `extraLabels`:
@@ -203,6 +205,7 @@ extraLabels:
 ```
 
 {% endalert %}
+{% raw %}
 
 ### Logstash
 
@@ -337,10 +340,12 @@ extraLabels:
 Трансформация [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage) позволяет преобразовать строку в поле `message` в структурированный JSON-объект
 на основе одного или нескольких заданных форматов (String, Klog, SysLog и другие).
 
+{% endraw %}
 {% alert level="warning" %}
 При использовании нескольких трансформаций `ParseMessage`
 преобразование строки (`sourceFormat: String`) должно выполняться в последнюю очередь.
 {%- endalert %}
+{% raw %}
 
 Пример настройки преобразования записей смешанных форматов:
 
@@ -400,10 +405,12 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 Трансформация [`ReplaceKeys`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-replacekeys) позволяет рекурсивно заменить все совпадения шаблона `source` на значение `target` в указанных ключах лейблов.
 
+{% endraw %}
 {% alert level="warning" %}
 Перед применением трансформации `ReplaceKeys` к полю `message` или его вложенным полям
 преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
+{% raw %}
 
 Пример настройки замены точек на нижние подчеркивания в лейблах:
 
@@ -445,10 +452,12 @@ spec:
 
 Трансформация [`DropLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-droplabels) позволяет удалить указанные лейблы из структурированного JSON-сообщения.
 
+{% endraw %}
 {% alert level="warning" %}
 Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
 преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
+{% raw %}
 
 Пример конфигурации с удалением лейбла и предварительной трансформацией `ParseMessage`:
 
@@ -592,11 +601,13 @@ spec:
   - loki-storage
 ```
 
+{% endraw %}
 {% alert level="info" %}
 Если вам нужны логи только одного пода или небольшой группы подов,
 используйте [`kubernetesPods`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods), чтобы ограничить область сбора.
 Фильтры следует применять только для тонкой настройки.
 {%- endalert %}
+{% raw %}
 
 ## Буферизация логов
 
@@ -837,3 +848,5 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
+{% endraw %}

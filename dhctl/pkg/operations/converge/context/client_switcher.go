@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 	}
 }
 
-func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) error {
+func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Switch to node user skipped. In commander mode")
 		return nil
@@ -99,14 +100,14 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 		}
 	}
 
-	return s.replaceKubeClient(convergeState, nodesState)
+	return s.replaceKubeClient(ctx, convergeState, nodesState)
 }
 
 func (s *KubeClientSwitcher) tmpDirForConverger() string {
 	return filepath.Join(s.params.TmpDir, "converger")
 }
 
-func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[string][]byte) (err error) {
+func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) (err error) {
 	s.logger.LogDebugLn("Starting replacing kube client")
 
 	tmpDir := s.tmpDirForConverger()
@@ -216,7 +217,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	} else {
 		pkeys = append(sshCl.PrivateKeys(), privateKey)
 	}
-	newSSHClient := sshclient.NewClient(sess, pkeys)
+	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
 
 	err = newSSHClient.Start()
 	if err != nil {

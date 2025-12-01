@@ -28,14 +28,12 @@ import (
 
 var defaultProvidersCache = newCloudProvidersMapCache()
 
-type LoggerProviderForCleanup func() log.Logger
-
 // CleanupProvidersFromDefaultCache - warning! is not tread-safe to avoid deadlock
-func CleanupProvidersFromDefaultCache(loggerProvider LoggerProviderForCleanup) {
+func CleanupProvidersFromDefaultCache(loggerProvider log.LoggerProvider) {
 	defaultProvidersCache.finalizedMutex.Lock()
 	defer defaultProvidersCache.finalizedMutex.Unlock()
 
-	logger := loggerProvider()
+	logger := log.SafeProvideLogger(loggerProvider)
 
 	for _, provider := range defaultProvidersCache.cloudProvidersCache {
 		logDebugF(logger, "CleanupProvidersFromDefaultCache called. Cleanup provider %s from default cache\n", provider.String())
