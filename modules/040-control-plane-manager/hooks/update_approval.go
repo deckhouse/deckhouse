@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "nodes",
+			Name:                   "control_plane_nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			WaitForSynchronization: ptr.To(false),
@@ -44,6 +44,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
 						Key:      "node-role.kubernetes.io/control-plane",
+						Operator: v1.LabelSelectorOpExists,
+					},
+				},
+			},
+			FilterFunc: updateApprovalFilterNode,
+		},
+		{
+			Name:                   "etcd_only_nodes",
+			ApiVersion:             "v1",
+			Kind:                   "Node",
+			WaitForSynchronization: ptr.To(false),
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "node-role.deckhouse.io/etcd-only",
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
@@ -66,6 +81,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      "app",
 						Operator: v1.LabelSelectorOpIn,
 						Values:   []string{"d8-control-plane-manager"},
+					},
+				},
+			},
+			FilterFunc: updateApprovalFilterPod,
+		},
+		{
+			Name:                   "control_plane_manager_etcd_only",
+			ApiVersion:             "v1",
+			Kind:                   "Pod",
+			WaitForSynchronization: ptr.To(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "app",
+						Operator: v1.LabelSelectorOpIn,
+						Values:   []string{"d8-control-plane-manager-etcd-only"},
 					},
 				},
 			},
@@ -152,10 +188,20 @@ type approvedPod struct {
 
 func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snaps := input.Snapshots.Get("nodes")
+
+	snaps := input.Snapshots.Get("control_plane_nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+
+		nodeMap[node.Name] = node
+	}
+
+	snaps = input.Snapshots.Get("etcd_only_nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'etcd_only_nodes' snapshots: %v", err)
 		}
 
 		nodeMap[node.Name] = node
@@ -166,6 +212,27 @@ func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)
+		}
+
+		if !pod.IsReady {
+			continue
+		}
+
+		node, ok := nodeMap[pod.NodeName]
+		if !ok {
+			input.Logger.Warn("Node not found", slog.String("name", pod.NodeName))
+			continue
+		}
+		if node.IsApproved {
+			input.PatchCollector.PatchWithMerge(removeApprovedPatch, "v1", "Node", "", node.Name)
+			return nil
+		}
+	}
+
+	snaps = input.Snapshots.Get("control_plane_manager_etcd_only")
+	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'control_plane_manager_etcd_only' snapshots: %v", err)
 		}
 
 		if !pod.IsReady {

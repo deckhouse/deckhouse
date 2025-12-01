@@ -47,6 +47,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
+{{- $_ := set $tpl_context "etcdOnlyNode" .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
 
 {{- $allowedKubernetesVersions := list }}
 {{- range $key, $_ := $tpl_context.k8s }}
