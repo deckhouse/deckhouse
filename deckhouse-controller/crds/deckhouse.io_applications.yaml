@@ -46,8 +46,7 @@ spec:
               releaseChannel:
                 type: string
               settings:
-                description: SettingsValues empty interface in needed to handle DeepCopy
-                  generation. DeepCopy does not work with unnamed empty interfaces
+                description: MappedFields handles arbitrary JSON settings as a map[string]any.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               version:
