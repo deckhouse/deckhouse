@@ -27,15 +27,20 @@
   </div>
   {% if page.searchBageEnabled %}
     <!--start search-->
+    {%- if site.mode == 'module' %}
+      {%- assign cachingTime = '180' %}
+    {%- else -%}
+      {%- assign cachingTime = '120' %}
+    {%- endif -%}
     <div class="searchV3">
       <div class="container">
         <div class="input-wrapper">
           <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
           {%- if page.sidebar == 'embedded-modules' %}
-          data-search-index-path="/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
+          data-search-index-path="/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-external-modules-index.json:1.0:{{ cachingTime }}"
           data-search-context="{{ site.data.i18n.common.search_context_modules[page.lang] }}"
           {%- else %}
-          data-search-index-path="{{ '/search.json' | true_relative_url }}:2.0,/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+          data-search-index-path="{{ '/search.json' | true_relative_url }}:2.0:{{ cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-external-modules-index.json:1.0:{{ cachingTime }}"
           data-search-context="{{ site.data.i18n.common.search_context_dkpdocs_and_modules[page.lang] }}"
           {%- endif -%}
           >
