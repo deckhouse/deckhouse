@@ -41,7 +41,7 @@ type OperationService struct {
 	logger *log.Logger
 }
 
-func NewOperationService(ctx context.Context, client client.Client, repoName string, psm *registryService.PackageServiceManager, logger *log.Logger) (*OperationService, error) {
+func NewOperationService(ctx context.Context, client client.Client, repoName string, psm registryService.ServiceManagerInterface[registryService.PackagesService], logger *log.Logger) (*OperationService, error) {
 	repo := &v1alpha1.PackageRepository{}
 	err := client.Get(ctx, types.NamespacedName{Name: repoName}, repo)
 	if err != nil {
@@ -49,7 +49,7 @@ func NewOperationService(ctx context.Context, client client.Client, repoName str
 	}
 
 	// Create registry service for the packages path
-	svc, err := psm.PackagesService(
+	svc, err := psm.Service(
 		repo.Spec.Registry.Repo,
 		repo.Spec.Registry.DockerCFG,
 		repo.Spec.Registry.CA,

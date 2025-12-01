@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 
 	"github.com/goccy/go-yaml"
 
@@ -40,10 +41,14 @@ const (
 	packageVersionServiceName = "package_version"
 )
 
-type PackageServiceManager struct {
+type ServiceManagerInterface[T any] interface {
+	Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error)
+}
+
+type ServiceManager[T any] struct {
 	cachedCredentials map[string]*packageCredentials
 
-	services map[packageCredentials]*PackagesService
+	services map[packageCredentials]*T
 
 	logger *log.Logger
 }
@@ -55,31 +60,17 @@ type packageCredentials struct {
 	userAgent   string
 }
 
-func NewPackageServiceManager(logger *log.Logger) *PackageServiceManager {
-	return &PackageServiceManager{
+func NewPackageServiceManager(logger *log.Logger) *ServiceManager[PackagesService] {
+	return &ServiceManager[PackagesService]{
 		cachedCredentials: make(map[string]*packageCredentials),
 		services:          make(map[packageCredentials]*PackagesService),
 		logger:            logger,
 	}
 }
 
-// SetPackagesService sets a pre-configured PackagesService for a given registry URL.
-// This is primarily used for testing to inject mock services.
-func (m *PackageServiceManager) SetPackagesService(registryURL string, svc *PackagesService) {
+func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error) {
 	if m.services == nil {
-		m.services = make(map[packageCredentials]*PackagesService)
-	}
-
-	creds := packageCredentials{
-		registryURL: registryURL,
-	}
-
-	m.services[creds] = svc
-}
-
-func (m *PackageServiceManager) PackagesService(registryURL, dockerCFG, ca, userAgent, scheme string) (*PackagesService, error) {
-	if m.services == nil {
-		m.services = make(map[packageCredentials]*PackagesService)
+		m.services = make(map[packageCredentials]*T)
 	}
 
 	// Check for service injected via SetPackagesService (testing) with only registryURL
@@ -123,7 +114,13 @@ func (m *PackageServiceManager) PackagesService(registryURL, dockerCFG, ca, user
 		Logger:    m.logger,
 	})
 
-	m.services[creds] = NewPackagesService(c, m.logger)
+	// Type switch using reflection to create the appropriate service based on the generic type T
+	switch reflect.TypeOf(*new(T)) {
+	case reflect.TypeOf(PackagesService{}):
+		m.services[creds] = any(NewPackagesService(c, m.logger)).(*T)
+	default:
+		return nil, fmt.Errorf("unsupported service type: %s", reflect.TypeOf(*new(T)).String())
+	}
 
 	return m.services[creds], nil
 }

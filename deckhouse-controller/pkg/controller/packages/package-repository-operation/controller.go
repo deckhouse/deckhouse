@@ -54,7 +54,7 @@ const (
 type reconciler struct {
 	client client.Client
 	dc     dependency.Container
-	psm    *registryService.PackageServiceManager
+	psm    registryService.ServiceManagerInterface[registryService.PackagesService]
 	logger *log.Logger
 }
 

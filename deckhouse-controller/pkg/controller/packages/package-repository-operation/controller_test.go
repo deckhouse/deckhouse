@@ -39,6 +39,7 @@ import (
 	k8sfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/mock"
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -292,7 +293,7 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	}
 }
 
-func withPackageServiceManager(psm *registryService.PackageServiceManager) reconcilerOption {
+func withPackageServiceManager(psm registryService.ServiceManagerInterface[registryService.PackagesService]) reconcilerOption {
 	return func(r *reconciler) {
 		r.psm = psm
 	}
@@ -305,10 +306,8 @@ func withClient(c client.Client) reconcilerOption {
 }
 
 // createMockPSM creates a PackageServiceManager with a mock PackagesService for the given registry URL
-func createMockPSM(registryURL string, mockClient registry.Client) *registryService.PackageServiceManager {
-	psm := registryService.NewPackageServiceManager(log.NewNop())
-	svc := registryService.NewPackagesService(mockClient, log.NewNop())
-	psm.SetPackagesService(registryURL, svc)
+func createMockPSM(registryURL string, mockClient registry.Client) registryService.ServiceManagerInterface[registryService.PackagesService] {
+	psm := mock.NewServiceManagerMock[registryService.PackagesService](&testing.T{})
 	return psm
 }
 

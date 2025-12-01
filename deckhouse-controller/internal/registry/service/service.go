@@ -26,7 +26,7 @@ type Service struct {
 	client registry.Client
 
 	// modulesService   *BasicService
-	packagesManager  *PackageServiceManager
+	packagesManager  *ServiceManager[PackagesService]
 	deckhouseService *DeckhouseService
 
 	logger *log.Logger
@@ -58,7 +58,7 @@ func (s *Service) GetRoot() string {
 
 // PackagesService returns the packages service
 func (s *Service) PackagesService(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) (*PackagesService, error) {
-	return s.packagesManager.PackagesService(registryURL, dockerCFG, ca, userAgent, scheme)
+	return s.packagesManager.Service(registryURL, dockerCFG, ca, userAgent, scheme)
 }
 
 // DeckhouseService returns the deckhouse service
