@@ -15,6 +15,7 @@
 package destroy
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ import (
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
 	sshProvider := func() (node.SSHClient, error) {
-		return gossh.NewClientFromFlags()
+		return gossh.NewClientFromFlags(context.Background())
 	}
 
 	state := NewDestroyState(&cache.DummyCache{})

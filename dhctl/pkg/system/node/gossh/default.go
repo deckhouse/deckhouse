@@ -15,6 +15,7 @@
 package gossh
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -23,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func NewClientFromFlags() (*Client, error) {
+func NewClientFromFlags(ctx context.Context) (*Client, error) {
 	settings := session.NewSession(session.Input{
 		AvailableHosts:  app.SSHHosts,
 		User:            app.SSHUser,
@@ -35,27 +36,27 @@ func NewClientFromFlags() (*Client, error) {
 		ExtraArgs:       app.SSHExtraArgs,
 	})
 
-	return NewClient(settings, genssh.CollectDHCTLPrivateKeysFromFlags()), nil
+	return NewClient(ctx, settings, genssh.CollectDHCTLPrivateKeysFromFlags()), nil
 }
 
-func NewClientFromFlagsWithHosts() (*Client, error) {
+func NewClientFromFlagsWithHosts(ctx context.Context) (*Client, error) {
 	if len(app.SSHHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
-	sshCl, err := NewClientFromFlags()
+	sshCl, err := NewClientFromFlags(ctx)
 	return sshCl, err
 }
 
-func NewInitClientFromFlagsWithHosts(askPassword bool) (*Client, error) {
+func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (*Client, error) {
 	if len(app.SSHHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
-	return NewInitClientFromFlags(askPassword)
+	return NewInitClientFromFlags(ctx, askPassword)
 }
 
-func NewInitClientFromFlags(askPassword bool) (*Client, error) {
+func NewInitClientFromFlags(ctx context.Context, askPassword bool) (*Client, error) {
 	if len(app.SSHHosts) == 0 {
 		return nil, nil
 	}
@@ -63,7 +64,7 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	var sshClient *Client
 	var err error
 
-	sshClient, err = NewClientFromFlags()
+	sshClient, err = NewClientFromFlags(ctx)
 	if err != nil {
 		return nil, err
 	}

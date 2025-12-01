@@ -69,7 +69,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	sshClient := wrapper.Client()
 
 	if len(sshClient.Session().AvailableHosts()) == 0 {
-		mastersIPs, err := GetMasterHostsIPs()
+		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err

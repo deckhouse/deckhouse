@@ -41,6 +41,8 @@ jobs:
     name: Run
     needs:
     - skip_tests_repos
+    permissions:
+      id-token: write
     runs-on: [self-hosted, regular]
     steps:
 
@@ -100,6 +102,8 @@ jobs:
     name: Run
     needs:
     - skip_tests_repos
+    permissions:
+      id-token: write
     runs-on: [ self-hosted, regular ]
     steps:
 

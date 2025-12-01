@@ -17,8 +17,11 @@ package gossh
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
+	"slices"
+	"sync"
 	"time"
 
 	ssh "github.com/deckhouse/lib-gossh"
@@ -26,18 +29,20 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
+func NewClient(ctx context.Context, session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
 		privateKeys: privKeys,
 		live:        false,
 		sessionList: make([]*ssh.Session, 5),
+		ctx:         ctx,
 	}
 }
 
@@ -59,6 +64,9 @@ type Client struct {
 	sessionList []*ssh.Session
 
 	signers []ssh.Signer
+
+	ctx          context.Context
+	sessionMutex sync.Mutex
 }
 
 func (s *Client) initSigners() error {
@@ -89,6 +97,13 @@ func (s *Client) OnlyPreparePrivateKeys() error {
 }
 
 func (s *Client) Start() error {
+	if s.ctx != nil {
+		select {
+		case <-s.ctx.Done():
+			return s.ctx.Err()
+		default:
+		}
+	}
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
@@ -148,9 +163,9 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
 			log.InfoF("Connect to %s\n", fullHost)
-			bastionClient, err = DialTimeout("tcp", bastionAddr, bastionConfig)
+			bastionClient, err = DialTimeout(s.ctx, "tcp", bastionAddr, bastionConfig)
 			return err
 		})
 		if err != nil {
@@ -203,14 +218,14 @@ func (s *Client) Start() error {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = DialTimeout("tcp", addr, config)
+			client, err = DialTimeout(s.ctx, "tcp", addr, config)
 			return err
 		})
 		if err != nil {
@@ -239,17 +254,22 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).RunContext(s.ctx, func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		log.InfoF("Connect to target host '%s' with user '%s' through bastion host\n", addr, s.Settings.User)
-		targetConn, err = bastionClient.Dial("tcp", addr)
+		targetConn, err = bastionClient.DialContext(s.ctx, "tcp", addr)
 		if err != nil {
 			return err
 		}
-		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
+		if app.IsDebug {
+			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConnWithDebug(targetConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
+		} else {
+			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
+		}
+
 		return err
 	})
 	if err != nil {
@@ -297,13 +317,24 @@ func (s *Client) keepAlive() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
+			if _, err := session.SendRequest("keepalive@openssh.com", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v\n", err)
 				if errorsCount > 3 {
 					s.restart()
 					return
 				}
 				errorsCount++
+			}
+			session.Close()
+			for _, sess := range s.sessionList {
+				if sess != nil {
+					if _, err := sess.SendRequest("keepalive@openssh.com", false, nil); err != nil {
+						log.DebugF("Keep-alive for session failed: %v\n", err)
+					}
+				} else {
+					s.UnregisterSession(sess)
+				}
+
 			}
 			time.Sleep(5 * time.Second)
 		}
@@ -317,27 +348,49 @@ func (s *Client) restart() {
 	s.sessionList = nil
 }
 
-func DialTimeout(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	conn, err := net.DialTimeout(network, addr, config.Timeout)
+func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	d := net.Dialer{Timeout: config.Timeout}
+	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
+		return nil, err
+	}
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		conn.Close()
+		return nil, err
+	}
+
+	err = tcpConn.SetKeepAlive(true)
+	if err != nil {
+		tcpConn.Close()
 		return nil, err
 	}
 
 	timeFactor := time.Duration(3)
-	err = conn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
+	err = tcpConn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
 	if err != nil {
-		conn.Close()
+		tcpConn.Close()
 		return nil, err
 	}
 
-	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	var (
+		c     ssh.Conn
+		chans <-chan ssh.NewChannel
+		reqs  <-chan *ssh.Request
+	)
+
+	if app.IsDebug {
+		c, chans, reqs, err = ssh.NewClientConnWithDebug(tcpConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
+	} else {
+		c, chans, reqs, err = ssh.NewClientConn(tcpConn, addr, config)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	err = conn.SetDeadline(time.Time{})
+	err = tcpConn.SetDeadline(time.Time{})
 	if err != nil {
-		conn.Close()
+		tcpConn.Close()
 		return nil, err
 	}
 
@@ -473,7 +526,24 @@ func (s *Client) Live() bool {
 }
 
 func (s *Client) RegisterSession(sess *ssh.Session) {
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
 	s.sessionList = append(s.sessionList, sess)
+}
+
+func (s *Client) UnregisterSession(sess *ssh.Session) {
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
+	num := len(s.sessionList)
+	for i, s := range s.sessionList {
+		if s == sess {
+			num = i
+			break
+		}
+	}
+	if num < len(s.sessionList) {
+		s.sessionList = slices.Delete(s.sessionList, num, num+1)
+	}
 }
 
 func (s *Client) stopKubeproxy() {
