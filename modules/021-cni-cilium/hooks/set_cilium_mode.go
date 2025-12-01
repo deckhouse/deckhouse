@@ -166,13 +166,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 	case "SecretExistsAndMCHasPriority":
 		// Secret and MC exist, and MC has priority (new logic); merging priority: MC > Secret > Default
 
-		var settings = make(map[string]any)
-		if cniModuleConfigs[0].Spec.Settings != nil && len(cniModuleConfigs[0].Spec.Settings.Raw) > 0 {
-			err := json.Unmarshal(cniModuleConfigs[0].Spec.Settings.Raw, &settings)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal cni moduleconfig settings: %v", err)
-			}
-		}
+		settings := cniModuleConfigs[0].Spec.Settings.GetMap()
 
 		// masqueradeMode
 		if value, ok := settings["masqueradeMode"]; ok && value != nil {

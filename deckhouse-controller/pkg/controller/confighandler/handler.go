@@ -16,9 +16,7 @@ package confighandler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
@@ -154,13 +152,7 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values{}, nil
 	}
 
-	var settings map[string]any
-	if moduleConfig.Spec.Settings != nil && len(moduleConfig.Spec.Settings.Raw) > 0 {
-		err := json.Unmarshal(moduleConfig.Spec.Settings.Raw, &settings)
-		if err != nil {
-			return utils.Values{}, fmt.Errorf("cannot unmarshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
-		}
-	}
+	settings := moduleConfig.Spec.Settings.GetMap()
 
 	if moduleConfig.Spec.Version == 0 {
 		return utils.Values(settings), nil

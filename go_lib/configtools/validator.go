@@ -17,7 +17,6 @@ limitations under the License.
 package configtools
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -68,15 +67,7 @@ func (v ValidationResult) HasError() bool {
 func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
-	var settings map[string]any
-	if config.Spec.Settings != nil && len(config.Spec.Settings.Raw) > 0 {
-		err := json.Unmarshal(config.Spec.Settings.Raw, &settings)
-		if err != nil {
-			return ValidationResult{
-				Error: fmt.Sprintf("spec.settings is not a valid JSON: %v", err),
-			}
-		}
-	}
+	settings := config.Spec.Settings.GetMap()
 
 	if config.Spec.Version == 0 {
 		// Resource is not valid when spec.settings are specified without version.

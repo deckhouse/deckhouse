@@ -1320,13 +1320,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 	}
 
-	var settings map[string]any
-	if config.Spec.Settings != nil && len(config.Spec.Settings.Raw) > 0 {
-		err = json.Unmarshal(config.Spec.Settings.Raw, &settings)
-		if err != nil {
-			return fmt.Errorf("unmarshal the '%s' module config settings: %w", release.GetModuleName(), err)
-		}
-	}
+	settings := config.Spec.Settings.GetMap()
 
 	values := make(addonutils.Values)
 	if err == nil {
