@@ -253,16 +253,16 @@ func (k Kubelet) IsEmpty() bool {
 // KubeletMemorySwap configures swap memory settings for kubelet
 type KubeletMemorySwap struct {
 	// SwapBehavior defines how swap is handled: NoSwap or LimitedSwap
-	SwapBehavior string `json:"swapBehavior" yaml:"swapBehavior"`
+	SwapBehavior string `json:"swapBehavior"`
 
 	// LimitedSwap contains configuration for limited swap mode
-	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty" yaml:"limitedSwap,omitempty"`
+	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
 }
 
 // KubeletLimitedSwap contains settings for limited swap mode
 type KubeletLimitedSwap struct {
 	// Size of the swap file (e.g., "1Gi", "2Gi")
-	Size string `json:"size" yaml:"size"`
+	Size string `json:"size"`
 }
 
 type NodeGroupStatus struct {
