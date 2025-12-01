@@ -79,7 +79,7 @@ func main() {
 		labels = append(labels, strings.ReplaceAll(label, ".", "_"))
 	}
 	kubernetesCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "klog_pod_oomkill_total",
+		Name: "klog_pod_oomkill",
 		Help: "Extract metrics for OOMKilled pods from kernel log",
 	}, labels)
 
