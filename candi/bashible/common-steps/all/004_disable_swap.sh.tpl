@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $swapBehavior := dig "kubelet" "memorySwap" "swapBehavior" "" .nodeGroup }}
+
+{{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
+
 for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
   systemctl stop "$swapunit"
   systemctl mask "$swapunit"
@@ -28,3 +32,5 @@ swapoff -a
 if grep -q "swap" /etc/fstab; then
   sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
 fi
+
+{{- end }}
