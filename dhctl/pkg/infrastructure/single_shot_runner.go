@@ -47,9 +47,9 @@ func (r *SingleShotRunner) Apply(ctx context.Context) (err error) {
 	return
 }
 
-func (r *SingleShotRunner) Plan(ctx context.Context, destroy bool) (err error) {
+func (r *SingleShotRunner) Plan(ctx context.Context, destroy, noout bool) (err error) {
 	r.plan.Do(func() {
-		err = r.Runner.Plan(ctx, destroy)
+		err = r.Runner.Plan(ctx, destroy, noout)
 	})
 	return
 }

@@ -23,9 +23,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
@@ -61,7 +62,7 @@ func CreateSSHClient(ctx context.Context, config *config.ConnectionConfig) (node
 			sshHosts = append(sshHosts, session.Host{Host: h.Host, Name: h.Host})
 		}
 	} else {
-		mastersIPs, err := bootstrap.GetMasterHostsIPs()
+		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 		if err != nil {
 			return nil, cleanuper.AsFunc(), err
 		}

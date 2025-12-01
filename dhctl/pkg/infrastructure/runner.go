@@ -488,7 +488,7 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 	return rawPlan, nil
 }
 
-func (r *Runner) Plan(ctx context.Context, destroy bool) error {
+func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -506,21 +506,32 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 				VariablesPath:    r.variablesPath,
 				OutPath:          tmpFile.Name(),
 				DetailedExitCode: true,
+				NoOutput:         noout,
 			})
 		})
 
 		// todo need refactor
 		if exitCode == infraexec.HasChangesExitCode {
 			r.changesInPlan = plan.HasChanges
-			report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
-			destructiveChanges := report.changes
-			if err != nil {
-				return err
-			}
-			if destructiveChanges != nil {
-				r.changesInPlan = plan.HasDestructiveChanges
-				r.planDestructiveChanges = destructiveChanges
-				r.hasVMDestruction = report.hasVMChanges
+			if noout {
+				destructiveChanged, err := r.planHasDestructiveChanges(ctx, tmpFile.Name())
+				if err != nil {
+					return err
+				}
+				if destructiveChanged {
+					r.changesInPlan = plan.HasDestructiveChanges
+				}
+			} else {
+				report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
+				destructiveChanges := report.changes
+				if err != nil {
+					return err
+				}
+				if destructiveChanges != nil {
+					r.changesInPlan = plan.HasDestructiveChanges
+					r.planDestructiveChanges = destructiveChanges
+					r.hasVMDestruction = report.hasVMChanges
+				}
 			}
 		} else if err != nil {
 			return err
@@ -775,4 +786,34 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		changes:      destructiveChanges,
 		hasVMChanges: hasVMChange,
 	}, nil
+}
+
+func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string) (bool, error) {
+	var result []string
+
+	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+		res, err := r.infraExecutor.GetActions(ctx, planFile)
+		if err != nil {
+			return 0, err
+		}
+
+		result = res
+		return 0, nil
+	})
+
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
+	}
+
+	for _, action := range result {
+		if action == "delete" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
