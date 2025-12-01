@@ -256,14 +256,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			input.Logger.Warn("An unknown flannel podNetworkMode was specified in the d8-cni-configuration secret, so the default cni podNetworkMode will be used instead.", slog.String("specified podNetworkMode", cniSecret.Flannel.PodNetworkMode))
 		}
 
-		// Marshal the modified settings back to desiredCNIModuleConfig.Spec.Settings
-		if len(settings) > 0 {
-			settingsRaw, err := json.Marshal(settings)
-			if err != nil {
-				return fmt.Errorf("cannot marshal settings for ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
-			}
-			desiredCNIModuleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: settingsRaw}
-		}
+		desiredCNIModuleConfig.Spec.Settings = v1alpha1.MakeMappedFields(settings)
 	}
 
 	// If MC does not exist, then we should

@@ -172,13 +172,8 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values{}, err
 	}
 
-	rawSettings, err := json.Marshal(newSettings)
-	if err != nil {
-		return utils.Values{}, fmt.Errorf("cannot marshal settings of ModuleConfig %q: %w", moduleConfig.Name, err)
-	}
-
 	moduleConfig.Spec.Version = newVersion
-	moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: rawSettings}
+	moduleConfig.Spec.Settings = v1alpha1.MakeMappedFields(newSettings)
 
 	return utils.Values(newSettings), nil
 }

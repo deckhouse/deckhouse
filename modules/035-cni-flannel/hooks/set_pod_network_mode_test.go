@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -67,8 +66,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		return string(marshaled)
 	}
 	cniMCYAML := func(cniName string, enabled *bool, settings map[string]any, creationTime *time.Time) string {
-		rawSettings, _ := json.Marshal(settings)
-
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -81,7 +78,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: &v1alpha1.MappedFields{Raw: rawSettings},
+				Settings: v1alpha1.MakeMappedFields(settings),
 				Enabled:  enabled,
 			},
 		}
