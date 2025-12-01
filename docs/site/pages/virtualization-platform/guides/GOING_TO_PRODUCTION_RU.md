@@ -36,7 +36,7 @@ lang: ru
 
 Если указан автоматический выбор версии Kubernetes, платформа может обновить версию Kubernetes в кластере при обновлении релиза платформы (при обновлении минорной версии). Когда версия Kubernetes явно прописана в параметре [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), очередное обновление платформы может завершиться неудачей, если окажется, что используемая в кластере версия Kubernetes более не поддерживается.
 
-Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/virtualization-platform/documentation/about/requirements.html), и [установите ее явно](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-обновить-версию-kubernetes-в-кластере).
+Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/virtualization-platform/documentation/about/requirements.html), и [установите ее явно](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Требования к ресурсам
 
