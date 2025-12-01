@@ -91,6 +91,8 @@ func main() {
 
 	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
 
+	initialResync(ctx, containerdClient)
+
 	go watchContainerd(ctx, containerdClient)
 
 	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg"})
@@ -199,4 +201,22 @@ func getContainerLabels(containerID string, cli *containerd.Client) (map[string]
 	}
 
 	return container.Labels, nil
+}
+
+func initialResync(ctx context.Context, cli *containerd.Client) {
+	containers, err := cli.ContainerService().List(ctx)
+	if err != nil {
+		glog.Errorf("Initial resync failed: %v", err)
+		return
+	}
+
+	glog.Infof("Initial resync: found %d containers", len(containers))
+
+	for _, c := range containers {
+		if c.Labels == nil {
+			continue
+		}
+
+		prometheusEnsureSeries(c.Labels)
+	}
 }
