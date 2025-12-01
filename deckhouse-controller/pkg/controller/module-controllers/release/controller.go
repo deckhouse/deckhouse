@@ -1338,12 +1338,12 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		values = addonutils.Values(config.Spec.Settings)
 	}
 
-	// if module config not found, skip conversions
-	if !isModuleConfigNotFound {
+	// if module config not found or default values (version is 0), skip conversions
+	if !isModuleConfigNotFound && config.Spec.Version != 0 {
 		// check conversions
 		conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
 		_, err = os.Stat(conversionsDir)
-		if err == nil && !isModuleConfigNotFound {
+		if err == nil {
 			logger.Debug("conversions for the module found")
 			values, err = r.applyValuesConversions(def, conversionsDir, config.Spec.Version, values)
 			if err != nil {
