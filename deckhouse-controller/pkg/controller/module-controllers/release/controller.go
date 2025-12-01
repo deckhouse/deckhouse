@@ -1317,18 +1317,16 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 	config := new(v1alpha1.ModuleConfig)
 	values := make(addonutils.Values)
-	var ValuesVersion int
-	var isModuleConfigNotFound bool
+	var valuesVersion int
+	var isModuleConfigFound bool
 
 	err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
 	}
 	// if module config not found, try to get values from module manager
-	if err != nil && apierrors.IsNotFound(err) {
+	if err != nil {
 		logger.Debug("module config not found, try to get values from module manager")
-
-		isModuleConfigNotFound = true
 
 		module := r.moduleManager.GetModule(release.GetModuleName())
 		if module != nil {
@@ -1336,56 +1334,22 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 	if err == nil {
+		isModuleConfigFound = true
+
 		values = addonutils.Values(config.Spec.Settings)
 
-		// if version in module config not specified, try to get the version from status
-		if config.Spec.Version != 0 {
-			ValuesVersion = config.Spec.Version
-		}
-		if config.Spec.Version == 0 {
-			version, err2 := strconv.Atoi(config.Status.Version)
-			if err2 == nil {
-				ValuesVersion = version
-			}
+		// try to get the values version from status
+		valuesVersion, err = strconv.Atoi(config.Status.Version)
+		if err != nil {
+			logger.Warn("failed to parse values version from status", slog.String("version", config.Status.Version), log.Err(err))
 		}
 	}
 
-	// if module config not found or default values (version is 0), skip conversions
-	if !isModuleConfigNotFound && ValuesVersion != 0 {
-		// check conversions
-		conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
-		_, err = os.Stat(conversionsDir)
-		if err == nil {
-			logger.Debug("conversions for the module found")
-			values, err = r.applyValuesConversions(def, conversionsDir, config.Spec.Version, values)
-			if err != nil {
-				status := &v1alpha1.ModuleReleaseStatus{
-					Phase:   v1alpha1.ModuleReleasePhaseSuspended,
-					Message: "apply conversions failed: " + err.Error(),
-				}
-
-				if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
-					r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
-						map[string]string{
-							"version": release.GetVersion().String(),
-							"module":  release.GetModuleName(),
-							"error":   err.Error(),
-						},
-					)
-
-					status.Phase = v1alpha1.ModuleReleasePhasePending
-				}
-
-				if err = r.updateReleaseStatus(ctx, release, status); err != nil {
-					return fmt.Errorf("update status: the '%s:v%s' module conversion: %w", release.GetModuleName(), release.GetVersion().String(), err)
-				}
-
-				logger.Debug("successfully updated module conditions")
-				return fmt.Errorf("apply conversions: %w", err)
-			}
-		}
-		if err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	// if module config not found or default values (version is greater than 0), skip conversions
+	if isModuleConfigFound && valuesVersion > 0 {
+		values, err = r.handleConversions(ctx, def, values, valuesVersion, release)
+		if err != nil {
+			return fmt.Errorf("handle conversions: %w", err)
 		}
 	}
 
@@ -1444,6 +1408,48 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	}
 
 	return nil
+}
+
+func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Definition, values addonutils.Values, valuesVersion int, release *v1alpha1.ModuleRelease) (addonutils.Values, error) { // check conversions
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	_, err := os.Stat(conversionsDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+	if err != nil {
+		return values, nil // no conversions found
+	}
+
+	r.log.Debug("conversions for the module found")
+
+	newValues, err := r.applyValuesConversions(def, conversionsDir, valuesVersion, values)
+	if err != nil {
+		status := &v1alpha1.ModuleReleaseStatus{
+			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
+			Message: "apply conversions failed: " + err.Error(),
+		}
+
+		if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
+			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
+				map[string]string{
+					"version": release.GetVersion().String(),
+					"module":  release.GetModuleName(),
+					"error":   err.Error(),
+				},
+			)
+
+			status.Phase = v1alpha1.ModuleReleasePhasePending
+		}
+
+		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+			return nil, fmt.Errorf("update status: the '%s:v%s' module conversion: %w", release.GetModuleName(), release.GetVersion().String(), err)
+		}
+
+		r.log.Debug("successfully updated module conditions")
+		return nil, fmt.Errorf("apply conversions: %w", err)
+	}
+
+	return newValues, nil
 }
 
 func (r *reconciler) applyValuesConversions(def *moduletypes.Definition, pathToConversions string, fromVersion int, values addonutils.Values) (addonutils.Values, error) {
