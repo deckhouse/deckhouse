@@ -299,8 +299,6 @@ evictionMinimumReclaim: null
 failSwapOn: true
 {{- else }}
 failSwapOn: false
-{{- end }}
-{{- if ne $swapBehavior "" }}
 memorySwap:
   swapBehavior: {{ $swapBehavior }}
 {{- end }}
