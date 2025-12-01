@@ -197,7 +197,13 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        For details, refer to the logs of the agent:
+        For details, query Cilium health status API:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} exec {{ $labels.pod }} -- cilium-health status
+        ```
+
+        You can also refer to the agent logs:
 
         ```bash
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
