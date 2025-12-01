@@ -39,6 +39,7 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleUpdatePoliciesGetter
 	PackageRepositoriesGetter
 	PackageRepositoryOperationsGetter
+	RetainersGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
@@ -100,6 +101,10 @@ func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterfa
 
 func (c *DeckhouseV1alpha1Client) PackageRepositoryOperations() PackageRepositoryOperationInterface {
 	return newPackageRepositoryOperations(c)
+}
+
+func (c *DeckhouseV1alpha1Client) Retainers() RetainerInterface {
+	return newRetainers(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.

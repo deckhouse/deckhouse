@@ -42,3 +42,5 @@ type ModuleUpdatePolicyExpansion interface{}
 type PackageRepositoryExpansion interface{}
 
 type PackageRepositoryOperationExpansion interface{}
+
+type RetainerExpansion interface{}

@@ -64,6 +64,7 @@ import (
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
+	retain "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/retain-controller"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -322,6 +323,11 @@ func NewDeckhouseController(
 	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
+	}
+
+	err = retain.RegisterController(runtimeManager, dc, logger.Named("retain-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register retain controller: %w", err)
 	}
 
 	// Package system controllers (feature flag)

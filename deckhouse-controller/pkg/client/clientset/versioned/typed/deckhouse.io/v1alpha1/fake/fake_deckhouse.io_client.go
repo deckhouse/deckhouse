@@ -81,6 +81,10 @@ func (c *FakeDeckhouseV1alpha1) PackageRepositoryOperations() v1alpha1.PackageRe
 	return newFakePackageRepositoryOperations(c)
 }
 
+func (c *FakeDeckhouseV1alpha1) Retainers() v1alpha1.RetainerInterface {
+	return newFakeRetainers(c)
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeDeckhouseV1alpha1) RESTClient() rest.Interface {

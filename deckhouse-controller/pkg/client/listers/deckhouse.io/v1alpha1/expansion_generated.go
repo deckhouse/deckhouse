@@ -74,3 +74,7 @@ type PackageRepositoryListerExpansion interface{}
 // PackageRepositoryOperationListerExpansion allows custom methods to be added to
 // PackageRepositoryOperationLister.
 type PackageRepositoryOperationListerExpansion interface{}
+
+// RetainerListerExpansion allows custom methods to be added to
+// RetainerLister.
+type RetainerListerExpansion interface{}

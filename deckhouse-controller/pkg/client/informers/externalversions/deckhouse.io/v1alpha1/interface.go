@@ -49,6 +49,8 @@ type Interface interface {
 	PackageRepositories() PackageRepositoryInformer
 	// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
 	PackageRepositoryOperations() PackageRepositoryOperationInformer
+	// Retainers returns a RetainerInformer.
+	Retainers() RetainerInformer
 }
 
 type version struct {
@@ -130,4 +132,9 @@ func (v *version) PackageRepositories() PackageRepositoryInformer {
 // PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
 func (v *version) PackageRepositoryOperations() PackageRepositoryOperationInformer {
 	return &packageRepositoryOperationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Retainers returns a RetainerInformer.
+func (v *version) Retainers() RetainerInformer {
+	return &retainerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
