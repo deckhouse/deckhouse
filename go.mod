@@ -98,7 +98,7 @@ require (
 	cel.dev/expr v0.19.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
-	github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8 // indirect
+	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
 	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
