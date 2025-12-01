@@ -172,7 +172,7 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 }
 
 func extractOnlySemverTags(rawTags []string) []*semver.Version {
-	var allTags []*semver.Version
+	allTags := make([]*semver.Version, len(rawTags))
 	for _, tag := range rawTags {
 		// filter all non semver tags here
 		tagVer, err := semver.NewVersion(tag)
