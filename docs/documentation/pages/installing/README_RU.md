@@ -471,7 +471,7 @@ dhctl bootstrap \
 ### Установка Deckhouse Kubernetes Platform из стороннего registry
 
 {% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
 {% alert level="warning" %}
