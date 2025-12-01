@@ -1,21 +1,21 @@
 diff --git a/README.md b/README.md
-index db668965a..c550fefbf 100644
+index db668965a..f57e0c6f4 100644
 --- a/README.md
 +++ b/README.md
-@@ -159,6 +159,7 @@ The Default Evictor Plugin is used by default for filtering pods before processi
+@@ -158,6 +158,7 @@ The Default Evictor Plugin is used by default for filtering pods before processi
+ | `ignorePvcPods`           | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"PodsWithPVC"` instead]**<br>Sets whether PVC pods should be evicted or ignored.                                                                                          |
  | `evictFailedBarePods`     | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"FailedBarePods"` instead]**<br>Allows eviction of pods without owner references and in a failed phase.                                                                   |
  | `ignorePodsWithoutPDB`    | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"PodsWithoutPDB"` instead]**<br>Sets whether pods without PodDisruptionBudget should be evicted or ignored.                                                               |
- | `labelSelector`           | `metav1.LabelSelector` |               | (See [label filtering](#label-filtering))                                                                                                                                                                           |
 +| `namespaceLabelSelector`  | `metav1.LabelSelector` |               | limiting the pods which are processed by namespace (see [label filtering](#label-filtering))                                                                                                                        |
+ | `labelSelector`           | `metav1.LabelSelector` |               | (See [label filtering](#label-filtering))                                                                                                                                                                           |
  | `priorityThreshold`       | `priorityThreshold`    |               | (See [priority filtering](#priority-filtering))                                                                                                                                                                     |
  | `nodeFit`                 | `bool`                 | `false`       | (See [node fit filtering](#node-fit-filtering))                                                                                                                                                                     |
- | `minReplicas`             | `uint`                 | `0`           | Ignores eviction of pods where the owner (e.g., `ReplicaSet`) replicas are below this threshold.                                                                                                                    |
 diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
-index 909473f2f..e190b3cd0 100644
+index f505886ea..a0cc614b7 100644
 --- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
 +++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
-@@ -20,12 +20,12 @@ import (
- 	"slices"
+@@ -21,12 +21,15 @@ import (
+ 	"strings"
  
  	v1 "k8s.io/api/core/v1"
 +	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,12 +24,13 @@ index 909473f2f..e190b3cd0 100644
  	utilerrors "k8s.io/apimachinery/pkg/util/errors"
  	"k8s.io/client-go/tools/cache"
  	"k8s.io/klog/v2"
--
--	evictionutils "sigs.k8s.io/descheduler/pkg/descheduler/evictions/utils"
+ 
+ 	evictionutils "sigs.k8s.io/descheduler/pkg/descheduler/evictions/utils"
++
  	nodeutil "sigs.k8s.io/descheduler/pkg/descheduler/node"
  	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
  	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
-@@ -317,8 +317,28 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+@@ -325,8 +328,28 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
  			logger.Info("pod does not fit on any other node because of nodeSelector(s), Taint(s), or nodes marked as unschedulable", "pod", klog.KObj(pod))
  			return false
  		}
@@ -58,21 +59,12 @@ index 909473f2f..e190b3cd0 100644
  	return true
  }
  
-@@ -330,10 +350,6 @@ func (d *DefaultEvictor) Filter(pod *v1.Pod) bool {
- 		return true
+@@ -391,6 +414,41 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	}); err != nil {
+ 		return nil, err
  	}
- 
--	if d.args.NoEvictionPolicy == MandatoryNoEvictionPolicy && evictionutils.HaveNoEvictionAnnotation(pod) {
--		return false
--	}
--
- 	if utils.IsMirrorPod(pod) {
- 		checkErrs = append(checkErrs, fmt.Errorf("pod is a mirror pod"))
- 	}
-@@ -386,3 +402,39 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
- 
- 	return indexer, nil
- }
++	return indexer, nil
++}
 +
 +func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
 +	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
@@ -106,11 +98,11 @@ index 909473f2f..e190b3cd0 100644
 +	}); err != nil {
 +		return nil, err
 +	}
-+
-+	return indexer, nil
-+}
+ 
+ 	return indexer, nil
+ }
 diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
-index 0f2484788..c7a234792 100644
+index 0f2484788..25d57817a 100644
 --- a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
 +++ b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
 @@ -42,6 +42,7 @@ type testCase struct {
@@ -215,50 +207,6 @@ index 0f2484788..c7a234792 100644
  	}
  
  	for _, test := range testCases {
-@@ -769,8 +843,8 @@ func TestDefaultEvictorFilter(t *testing.T) {
- 					pod.Spec.Volumes = []v1.Volume{
- 						{
- 							Name: "pvc", VolumeSource: v1.VolumeSource{
--								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
--							},
-+							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
-+						},
- 						},
- 					}
- 				}),
-@@ -785,8 +859,8 @@ func TestDefaultEvictorFilter(t *testing.T) {
- 					pod.Spec.Volumes = []v1.Volume{
- 						{
- 							Name: "pvc", VolumeSource: v1.VolumeSource{
--								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
--							},
-+							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
-+						},
- 						},
- 					}
- 				}),
-@@ -801,8 +875,8 @@ func TestDefaultEvictorFilter(t *testing.T) {
- 					pod.Spec.Volumes = []v1.Volume{
- 						{
- 							Name: "local-storage", VolumeSource: v1.VolumeSource{
--								EmptyDir: &v1.EmptyDirVolumeSource{},
--							},
-+							EmptyDir: &v1.EmptyDirVolumeSource{},
-+						},
- 						},
- 					}
- 				}),
-@@ -838,8 +912,8 @@ func TestDefaultEvictorFilter(t *testing.T) {
- 					pod.Spec.Volumes = []v1.Volume{
- 						{
- 							Name: "pvc", VolumeSource: v1.VolumeSource{
--								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
--							},
-+							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: "foo"},
-+						},
- 						},
- 					}
- 				}),
 @@ -944,9 +1018,11 @@ func TestReinitialization(t *testing.T) {
  
  func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin, error) {
@@ -294,14 +242,14 @@ index 0f2484788..c7a234792 100644
  	}
  
 +	if test.useNamespaceSelector {
-+		defaultEvictorArgs.PodProtections.NamespaceLabelSelector = namespaceSelector
++		defaultEvictorArgs.NamespaceLabelSelector = namespaceSelector
 +	}
 +
  	evictorPlugin, err := New(
  		ctx,
  		defaultEvictorArgs,
 diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
-index cca10adc4..39014c153 100644
+index cca10adc4..deb7b1751 100644
 --- a/pkg/framework/plugins/defaultevictor/defaults.go
 +++ b/pkg/framework/plugins/defaultevictor/defaults.go
 @@ -24,4 +24,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -309,25 +257,30 @@ index cca10adc4..39014c153 100644
  // DefaultEvictorArgs configuration.
  func SetDefaults_DefaultEvictorArgs(obj runtime.Object) {
 +	args := obj.(*DefaultEvictorArgs)
-+	if args.PodProtections.NamespaceLabelSelector == nil {
-+		args.PodProtections.NamespaceLabelSelector = nil
++	if args.NamespaceLabelSelector == nil {
++		args.NamespaceLabelSelector = nil
 +	}
  }
 diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go
-index 7c6600d47..4892f2a1f 100644
+index 7c6600d47..844db0924 100644
 --- a/pkg/framework/plugins/defaultevictor/types.go
 +++ b/pkg/framework/plugins/defaultevictor/types.go
-@@ -70,8 +70,8 @@ const (
+@@ -15,6 +15,7 @@ package defaultevictor
+ 
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++
+ 	"sigs.k8s.io/descheduler/pkg/api"
+ )
+ 
+@@ -68,6 +69,7 @@ const (
+ // NOTE: The list of default enabled pod protection policies is subject to change in future versions.
+ // +k8s:deepcopy-gen=true
  type PodProtections struct {
++	NamespaceLabelSelector *metav1.LabelSelector `json:"namespaceLabelSelector,omitempty"`
  	// ExtraEnabled specifies additional protection policies that should be enabled.
  	// Supports: PodsWithPVC, PodsWithoutPDB
--	ExtraEnabled []PodProtection `json:"extraEnabled,omitempty"`
--
-+	ExtraEnabled           []PodProtection       `json:"extraEnabled,omitempty"`
-+	NamespaceLabelSelector *metav1.LabelSelector `json:"namespaceLabelSelector,omitempty"`
- 	// DefaultDisabled specifies which default protection policies should be disabled.
- 	// Supports: PodsWithLocalStorage, DaemonSetPods, SystemCriticalPods, FailedBarePods
- 	DefaultDisabled []PodProtection `json:"defaultDisabled,omitempty"`
+ 	ExtraEnabled []PodProtection `json:"extraEnabled,omitempty"`
 diff --git a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
 index 9faf7c10e..0fbb4d8d1 100644
 --- a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
