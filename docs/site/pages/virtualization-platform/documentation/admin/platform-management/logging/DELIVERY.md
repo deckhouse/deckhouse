@@ -3,6 +3,7 @@ title: Log collection and delivery
 permalink: en/virtualization-platform/documentation/admin/platform-management/logging/delivery.html
 ---
 
+{% raw %}
 Deckhouse provides log collection and delivery from cluster nodes and pods to internal or external storage systems.
 
 DVP allows you to:
@@ -188,6 +189,7 @@ spec:
       verifyHostname: false
 ```
 
+{% endraw %}
 {% alert level="info" %}
 `destination` does not support pod labels for indexing.
 To add the required labels, use the `extraLabels` option:
@@ -198,6 +200,7 @@ extraLabels:
 ```
 
 {% endalert %}
+{% raw %}
 
 ### Logstash
 
@@ -332,10 +335,12 @@ You can configure one or more types of transformations that will be applied to l
 The [`ParseMessage` transformation](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage) allows you to convert a string in the `message` field to a structured JSON object
 based on one or more specified formats (String, Klog, SysLog, and others).
 
+{% endraw %}
 {% alert level="warning" %}
 When using multiple `ParseMessage` transformations,
 string conversion (`sourceFormat: String`) should be performed last.
 {%- endalert %}
+{% raw %}
 
 Example configuration for converting mixed format records:
 
@@ -395,10 +400,12 @@ Transformation result:
 
 The [`ReplaceKeys` transformation](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-replacekeys) allows you to recursively replace all matches of the `source` pattern with the `target` value in the specified label keys.
 
+{% endraw %}
 {% alert level="warning" %}
 Before applying the `ReplaceKeys` transformation to the `message` field or its nested fields,
 convert the log record to a structured object using the [`ParseMessage` transformation](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
+{% raw %}
 
 Example configuration for replacing dots with underscores in labels:
 
@@ -440,10 +447,12 @@ Transformation result:
 
 The [`DropLabels` transformation](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-droplabels) allows you to remove specified labels from the structured JSON message.
 
+{% endraw %}
 {% alert level="warning" %}
 Before applying the `DropLabels` transformation to the `message` field or its nested fields,
 convert the log record to a structured object using the [`ParseMessage` transformation](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
+{% raw %}
 
 Example configuration with label removal and preliminary `ParseMessage` transformation:
 
@@ -587,11 +596,13 @@ spec:
   - loki-storage
 ```
 
+{% endraw %}
 {% alert level="info" %}
 If you need logs from only one pod or a small group of pods,
 use [`kubernetesPods`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods) to limit the collection scope.
 Filters should be applied only for fine-tuning.
 {%- endalert %}
+{% raw %}
 
 ## Log Buffering
 
@@ -832,3 +843,5 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
+{% endraw %}

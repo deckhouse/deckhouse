@@ -4,6 +4,8 @@ permalink: ru/stronghold/documentation/admin/platform-management/node-management
 lang: ru
 ---
 
+{% raw %}
+
 ## Восстановление master-узла, если kubelet не может загрузить компоненты control plane
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
@@ -437,3 +439,5 @@ metadata:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
 ```
+
+{% endraw %}

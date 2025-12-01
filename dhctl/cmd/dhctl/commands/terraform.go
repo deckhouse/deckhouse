@@ -69,9 +69,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		ctx := context.Background()
 		logger.LogInfoLn("Check started ...\n")
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
+		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
 		if err := terminal.AskBastionPassword(); err != nil {
 			return err
 		}
@@ -119,7 +117,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		statistic, needMigrationToTofu, err := check.CheckState(
-			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{},
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{}, false,
 		)
 		if err != nil {
 			return err
