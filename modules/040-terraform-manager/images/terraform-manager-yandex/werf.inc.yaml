@@ -50,7 +50,8 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build
+#  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
   - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
   - chmod -R 755 /terraform-provider-yandex
   - chown 64535:64535 /terraform-provider-yandex
