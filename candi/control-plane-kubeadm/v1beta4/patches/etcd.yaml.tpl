@@ -84,21 +84,3 @@ spec:
         readOnlyRootFilesystem: true
         seccompProfile:
           type: RuntimeDefault
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: etcd
-  namespace: kube-system
-spec:
-  containers:
-  - name: etcd
-    env:
-{{- if hasKey $ "etcdOnlyNode" }}
-{{- if $.etcdOnlyNode }}
-    - name: ETCD_HEARTBEAT_INTERVAL
-      value: "200"
-    - name: ETCD_ELECTION_TIMEOUT
-      value: "4000"
-{{- end }}
-{{- end }}
