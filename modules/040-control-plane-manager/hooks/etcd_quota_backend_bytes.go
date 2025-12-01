@@ -41,10 +41,12 @@ import (
 
 type etcdNode struct {
 	Memory int64
-	// isDedicated - indicate that node has taint
-	//   - effect: NoSchedule
-	//    key: node-role.kubernetes.io/control-plane
-	// it means that on node can be scheduled only control-plane components
+	// IsDedicated indicates that node is dedicated for control-plane or etcd workload.
+	// Node is considered dedicated if it has taint with effect NoSchedule and key:
+	//   - node-role.kubernetes.io/control-plane, or
+	//   - node-role.kubernetes.io/etcd-only
+	// For dedicated nodes, etcd quota is calculated based on available memory.
+	// For non-dedicated nodes, quota calculation is skipped to avoid resource constraints.
 	IsDedicated bool
 }
 
@@ -67,6 +69,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"node-role.kubernetes.io/control-plane": "",
+				},
+			},
+			FilterFunc: etcdQuotaFilterNode,
+		},
+		{
+			Name:       "etcd_only_node",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node-role.deckhouse.io/etcd-only": "",
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
@@ -112,7 +125,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == "node-role.kubernetes.io/control-plane" && taint.Effect == corev1.TaintEffectNoSchedule {
+		if (taint.Key == "node-role.kubernetes.io/control-plane" || taint.Key == "node-role.kubernetes.io/etcd-only") && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
 		}
@@ -179,12 +192,15 @@ func getCurrentEtcdQuotaBytes(_ context.Context, input *go_hook.HookInput) (int6
 	return currentQuotaBytes, nodeWithMaxQuota, nil
 }
 
-func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
-	if len(snapshots) == 0 {
-		return nil, fmt.Errorf("'master_nodes' snapshot is empty")
+func getNodeWithMinimalMemory(masterSnapshots, etcdOnlySnapshots []pkg.Snapshot) (*etcdNode, error) {
+	if len(masterSnapshots) == 0 && len(etcdOnlySnapshots) == 0 {
+		return nil, fmt.Errorf("both 'master_nodes' and 'etcd_only_node' snapshots are empty")
 	}
+
 	var nodeWithMinimalMemory *etcdNode
-	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](snapshots) {
+
+	// Process master nodes
+	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](masterSnapshots) {
 		if err != nil {
 			return nil, fmt.Errorf("cannot iterate over 'master_nodes' snapshot: %w", err)
 		}
@@ -194,6 +210,25 @@ func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
 		}
 
 		// for not dedicated nodes we will not set new quota
+		if !node.IsDedicated {
+			return &node, nil
+		}
+
+		if node.Memory < nodeWithMinimalMemory.Memory {
+			*nodeWithMinimalMemory = node
+		}
+	}
+
+	// Process etcd-only nodes
+	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](etcdOnlySnapshots) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iterate over 'etcd_only_node' snapshot: %w", err)
+		}
+
+		if nodeWithMinimalMemory == nil {
+			nodeWithMinimalMemory = &node
+		}
+
 		if !node.IsDedicated {
 			return &node, nil
 		}
@@ -242,7 +277,8 @@ func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) in
 	input.Logger.Debug("Current etcd quota. Getting from node with max quota", slog.Int64("quota", currentQuotaBytes), slog.String("from", nodeWithMaxQuota))
 
 	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
-	node, err := getNodeWithMinimalMemory(masterNodeSnapshots)
+	etcdOnlyNodeSnapshots := input.Snapshots.Get("etcd_only_node")
+	node, err := getNodeWithMinimalMemory(masterNodeSnapshots, etcdOnlyNodeSnapshots)
 
 	if err != nil {
 		input.Logger.Warn("Cannot get node with minimal memory", log.Err(err))
