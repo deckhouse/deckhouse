@@ -1,0 +1,33 @@
+<div markdown="0">
+    <div class="oss">
+        {%- for item in site.data.modules.metadata.oss %}
+          {%- if item[1].link.size > 0 and item[1].description.size > 0 and item[1].license.size > 0 %}
+            <div class="oss__item">
+                <div class="oss__item-logo">
+                    {% if item[1].logo %}
+                        <a href="{{ item[1].link }}" target="_blank">
+                            <img src="{{ item[1].logo }}" class="oss__item-logo" />
+                        </a>
+                    {% endif %}
+                </div>
+                <a href="{{ item[1].link }}" target="_blank" class="oss__item-title">
+                    {{ item[0] }}
+                </a>
+                <div class="oss__item-description">
+                    {{ item[1].description }}
+                </div>
+                <div class="oss__item-license">
+                    {{ item[1].license }}
+                </div>
+                {% for module in item[1].modules %}
+                  <div class="oss__item-module">
+                    <a href="/modules/{{ module }}/" target="_blank">
+                      {{ module }}
+                    </a>
+                  </div>
+                {%- endfor %}
+            </div>
+          {%- endif %}
+        {%- endfor %}
+    </div>
+</div>
