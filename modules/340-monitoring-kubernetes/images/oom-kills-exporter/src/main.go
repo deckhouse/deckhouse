@@ -77,6 +77,10 @@ func main() {
 		glog.Info("Starting prometheus metrics")
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.Handler())
+		mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		})
 		server := &http.Server{
 			Addr:              metricsAddr,
 			ReadHeaderTimeout: 3 * time.Second,
