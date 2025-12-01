@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/module-sdk/pkg"
 	"log/slog"
 	"time"
 
@@ -109,7 +110,9 @@ type recicleEtcdNode struct {
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	snapsM := input.Snapshots.Get("master_nodes")
 	snapsEO := input.Snapshots.Get("etcd_only_node")
-	snaps := append(snapsM, snapsEO...)
+	snaps := make([]pkg.Snapshot, 0, len(snapsM)+len(snapsEO))
+	snaps = append(snaps, snapsM...)
+	snaps = append(snaps, snapsEO...)
 
 	if len(snaps) == 0 {
 		input.Logger.Debug("No ETCD Nodes found in snapshot, skipping iteration")
