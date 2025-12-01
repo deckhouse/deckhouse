@@ -52,7 +52,7 @@ If the Kubernetes version in the [kubernetesVersion](/products/kubernetes-platfo
 Deckhouse may refuse to upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 If your application uses outdated resource versions or depends on a particular version of Kubernetes for some other reason,
-check whether it's [supported](/products/virtualization-platform/documentation/about/requirements.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
+check whether it's [supported](/products/virtualization-platform/documentation/about/requirements.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Resource requirements
 
