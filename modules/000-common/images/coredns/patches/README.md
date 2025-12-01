@@ -4,4 +4,4 @@
 
 ### 01-nxdomain-metric-for-cache-plugin.patch
 
-Added metric `nxdomain_by_client_domain_total` for coredns cache plugin.
+Added metric `nxdomain_by_client_total` for coredns cache plugin.

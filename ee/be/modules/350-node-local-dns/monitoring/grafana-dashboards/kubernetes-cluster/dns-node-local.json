@@ -2982,7 +2982,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "topk(5, sum by (src_ip, qname) (60 * rate(coredns_cache_nxdomain_by_client_domain_total{job=\"node-local-dns\", node=~\"$node\"}[5m])))",
+              "expr": "topk(5, sum by (src_ip, qname) (60 * rate(coredns_cache_nxdomain_by_client_total{job=\"node-local-dns\", node=~\"$node\"}[5m])))",
               "format": "table",
               "instant": true,
               "legendFormat": "",
