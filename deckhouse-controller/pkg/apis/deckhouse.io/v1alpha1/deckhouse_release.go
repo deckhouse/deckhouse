@@ -192,8 +192,8 @@ type DeckhouseReleaseSpec struct {
 	Requirements map[string]string `json:"requirements,omitempty"`
 	Disruptions  []string          `json:"disruptions,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Changelog     *Changelog `json:"changelog,omitempty"`
-	ChangelogLink string     `json:"changelogLink,omitempty"`
+	Changelog     *MappedFields `json:"changelog,omitempty"`
+	ChangelogLink string        `json:"changelogLink,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {

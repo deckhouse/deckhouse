@@ -119,7 +119,7 @@ data:
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: &v1alpha1.SettingsValues{Raw: rawSettings},
+				Settings: &v1alpha1.MappedFields{Raw: rawSettings},
 				Enabled:  enabled,
 			},
 		}

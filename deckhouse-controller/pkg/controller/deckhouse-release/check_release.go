@@ -573,14 +573,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	}
 
 	enabledModulesChangelog := f.generateChangelogForEnabledModules(releaseMetadata)
-	var changelog *v1alpha1.Changelog
-	if len(enabledModulesChangelog) > 0 {
-		rawChangelog, err := json.Marshal(enabledModulesChangelog)
-		if err != nil {
-			return fmt.Errorf("cannot marshal enabled modules changelog: %w", err)
-		}
-		changelog = &v1alpha1.Changelog{Raw: rawChangelog}
-	}
 
 	changeCause := "check release"
 	if createProcess != "" {
@@ -605,7 +597,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 			ApplyAfter:    applyAfter,
 			Requirements:  releaseMetadata.Requirements,
 			Disruptions:   disruptions,
-			Changelog:     changelog,
+			Changelog:     v1alpha1.MakeMappedFields(enabledModulesChangelog),
 			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version),
 		},
 		Approved: false,

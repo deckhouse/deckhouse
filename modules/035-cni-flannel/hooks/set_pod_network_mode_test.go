@@ -81,7 +81,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: &v1alpha1.SettingsValues{Raw: rawSettings},
+				Settings: &v1alpha1.MappedFields{Raw: rawSettings},
 				Enabled:  enabled,
 			},
 		}

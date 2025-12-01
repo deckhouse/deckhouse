@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -70,51 +72,6 @@ type ModuleConfig struct {
 	Status ModuleConfigStatus `json:"status,omitempty"`
 }
 
-// SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
-// +kubebuilder:pruning:XPreserveUnknownFields
-type SettingsValues runtime.RawExtension // map[string]any
-
-// MarshalJSON implements json.Marshaler
-func (v SettingsValues) MarshalJSON() ([]byte, error) {
-	if v.Raw != nil {
-		return v.Raw, nil
-	}
-	return []byte("{}"), nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler
-func (v *SettingsValues) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 || string(data) == "null" {
-		return nil
-	}
-	v.Raw = make([]byte, len(data))
-	copy(v.Raw, data)
-	return nil
-}
-
-func (v *SettingsValues) DeepCopy() *SettingsValues {
-	if v == nil {
-		return nil
-	}
-	out := new(SettingsValues)
-	v.DeepCopyInto(out)
-	return out
-}
-
-func (v *SettingsValues) DeepCopyInto(out *SettingsValues) {
-	if v.Raw != nil {
-		out.Raw = make([]byte, len(v.Raw))
-		copy(out.Raw, v.Raw)
-	} else {
-		out.Raw = nil
-	}
-	if v.Object != nil {
-		out.Object = v.Object.DeepCopyObject()
-	} else {
-		out.Object = nil
-	}
-}
-
 type ModuleConfigSpec struct {
 	Version      int    `json:"version,omitempty"`
 	Enabled      *bool  `json:"enabled,omitempty"`
@@ -122,7 +79,7 @@ type ModuleConfigSpec struct {
 	Source       string `json:"source,omitempty"`
 	Maintenance  string `json:"maintenance,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Settings *SettingsValues `json:"settings,omitempty"`
+	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ModuleConfigStatus struct {
@@ -145,4 +102,80 @@ type ModuleConfigList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ModuleConfig `json:"items"`
+}
+
+// MappedFields handles arbitrary JSON settings as a map[string]any.
+// +kubebuilder:pruning:XPreserveUnknownFields
+type MappedFields runtime.RawExtension // map[string]any
+
+// MarshalJSON implements json.Marshaler
+func (v MappedFields) MarshalJSON() ([]byte, error) {
+	if v.Raw != nil {
+		return v.Raw, nil
+	}
+	return []byte("{}"), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (v *MappedFields) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		return nil
+	}
+	v.Raw = make([]byte, len(data))
+	copy(v.Raw, data)
+	return nil
+}
+
+func (v *MappedFields) DeepCopy() *MappedFields {
+	if v == nil {
+		return nil
+	}
+	out := new(MappedFields)
+	v.DeepCopyInto(out)
+	return out
+}
+
+func (v *MappedFields) DeepCopyInto(out *MappedFields) {
+	if v.Raw != nil {
+		out.Raw = make([]byte, len(v.Raw))
+		copy(out.Raw, v.Raw)
+	} else {
+		out.Raw = nil
+	}
+	if v.Object != nil {
+		out.Object = v.Object.DeepCopyObject()
+	} else {
+		out.Object = nil
+	}
+}
+
+func (v *MappedFields) IsEmpty() bool {
+	return v == nil || (len(v.Raw) == 0)
+}
+
+func (v *MappedFields) GetMap() map[string]any {
+	if v.IsEmpty() {
+		return map[string]any{}
+	}
+
+	var result map[string]any
+	err := json.Unmarshal(v.Raw, &result)
+	if err != nil {
+		return map[string]any{}
+	}
+
+	return result
+}
+
+func MakeMappedFields(settings map[string]any) *MappedFields {
+	if len(settings) == 0 {
+		return nil
+	}
+
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return &MappedFields{Raw: []byte("{\"error\": \"failed to marshal settings\"}")}
+	}
+
+	return &MappedFields{Raw: raw}
 }

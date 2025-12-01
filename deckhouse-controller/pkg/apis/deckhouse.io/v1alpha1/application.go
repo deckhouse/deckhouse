@@ -105,7 +105,7 @@ type ApplicationSpec struct {
 	Version           string `json:"version"`
 	ReleaseChannel    string `json:"releaseChannel,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Settings *SettingsValues `json:"settings,omitempty"`
+	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {

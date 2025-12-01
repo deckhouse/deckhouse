@@ -178,7 +178,7 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 	}
 
 	moduleConfig.Spec.Version = newVersion
-	moduleConfig.Spec.Settings = &v1alpha1.SettingsValues{Raw: rawSettings}
+	moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: rawSettings}
 
 	return utils.Values(newSettings), nil
 }

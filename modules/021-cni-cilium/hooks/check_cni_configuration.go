@@ -285,7 +285,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			if err != nil {
 				return fmt.Errorf("cannot marshal settings for ModuleConfig %q: %w", desiredCNIModuleConfig.Name, err)
 			}
-			desiredCNIModuleConfig.Spec.Settings = &v1alpha1.SettingsValues{Raw: settingsRaw}
+			desiredCNIModuleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: settingsRaw}
 		}
 	}
 
