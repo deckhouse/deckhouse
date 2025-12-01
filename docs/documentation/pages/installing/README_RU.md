@@ -14,11 +14,11 @@ relatedLinks:
 ---
 
 {% alert level="warning" %}
-Страница находится в стадии активной разработки и может содержать неполные данные. Ниже представлена обзорная информация о процессе установки Deckhouse. Для более детального ознакомления рекомендуем перейти в раздел [Быстрый старт](/products/kubernetes-platform/gs/), где доступны пошаговые инструкции.
+Страница находится в стадии активной разработки и может содержать неполные данные. Ниже представлена обзорная информация о процессе установки Deckhouse. Для более детального ознакомления рекомендуем перейти в раздел {% if site.mode == 'module' %}[Быстрый старт]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %}, где доступны пошаговые инструкции.
 {% endalert %}
 
 {% alert %}
-Попробуйте [графический установщик Deckhouse Kubernetes Platform](/products/kubernetes-platform/gs/#gui-install)! <span class="beta-badge">Beta</span>
+Попробуйте {% if site.mode == 'module' %}[графический установщик Deckhouse Kubernetes Platform]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/#gui-install){% else %}[графический установщик Deckhouse Kubernetes Platform](/products/kubernetes-platform/gs/#gui-install){% endif %}! <span class="beta-badge">Beta</span>
 {% endalert %}
 
 Инсталлятор Deckhouse доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
