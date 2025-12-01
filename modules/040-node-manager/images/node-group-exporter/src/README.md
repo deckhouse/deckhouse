@@ -50,7 +50,7 @@ node_group_node{node_group="worker", node_type="Cloud", node="worker-1"} 1
 ./node-group-exporter -server.exporter-address=:8080
 
 # Run with debug logging
-./node-group-exporter -server.log-level=debug
+./node-group-exporter -server.debug=true
 ```
 
 ## Development

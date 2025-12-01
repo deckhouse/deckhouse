@@ -18,27 +18,34 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	ngv1 "node-group-exporter/internal/v1"
 	k8s "node-group-exporter/pkg/kubernetes"
-	"node-group-exporter/pkg/logger"
+)
+
+const (
+	// NodeGroupLabelKey is the label key used by Deckhouse to identify node groups
+	NodeGroupLabelKey = "node.deckhouse.io/group"
 )
 
 // NodeGroupCollector implements prometheus.Collector interface
 type NodeGroupCollector struct {
 	clientset    kubernetes.Interface
 	watcher      *k8s.Watcher
-	nodeGroups   map[string]*k8s.NodeGroupWrapper
-	nodes        map[string]*k8s.Node
-	nodesByGroup map[string][]*k8s.Node // Cached index: nodeGroup -> nodes
+	nodeGroups   map[string]*NodeGroupMetricsData
+	nodes        map[string]*NodeMetricsData
+	nodesByGroup map[string][]*NodeMetricsData // Cached index: nodeGroup -> nodes
 	mutex        sync.RWMutex
+	logger       *log.Logger
 
 	// Metrics (existing)
 	nodeGroupCountNodesTotal *prometheus.GaugeVec
@@ -58,12 +65,13 @@ type NodeGroupCollector struct {
 	d8NodeGroupHasErrors *prometheus.GaugeVec
 }
 
-func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config) (*NodeGroupCollector, error) {
+func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config, logger *log.Logger) (*NodeGroupCollector, error) {
 	collector := &NodeGroupCollector{
 		clientset:    clientset,
-		nodeGroups:   make(map[string]*k8s.NodeGroupWrapper),
-		nodes:        make(map[string]*k8s.Node),
-		nodesByGroup: make(map[string][]*k8s.Node),
+		nodeGroups:   make(map[string]*NodeGroupMetricsData),
+		nodes:        make(map[string]*NodeMetricsData),
+		nodesByGroup: make(map[string][]*NodeMetricsData),
+		logger:       logger,
 	}
 
 	// Initialize metrics
@@ -169,7 +177,7 @@ func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Conf
 		[]string{"node_group_name"},
 	)
 
-	watcher, err := k8s.NewWatcher(clientset, restConfig, collector)
+	watcher, err := k8s.NewWatcher(clientset, restConfig, collector, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -179,21 +187,21 @@ func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Conf
 }
 
 func (c *NodeGroupCollector) Start(ctx context.Context) error {
-	logger.Info("Starting NodeGroupCollector...")
+	c.logger.Info("Starting NodeGroupCollector...")
 
 	if err := c.watcher.Start(ctx); err != nil {
 		return err
 	}
 
 	if err := c.syncResources(ctx); err != nil {
-		logger.Errorf("Error during initial sync: %v", err)
+		c.logger.Error("Error during initial sync: ", log.Err(err))
 	}
 
 	return nil
 }
 
 func (c *NodeGroupCollector) Stop() {
-	logger.Info("Stopping NodeGroupCollector...")
+	c.logger.Info("Stopping NodeGroupCollector...")
 	c.watcher.Stop()
 }
 
@@ -239,14 +247,14 @@ func (c *NodeGroupCollector) Collect(ch chan<- prometheus.Metric) {
 
 // syncResources performs initial sync of resources
 func (c *NodeGroupCollector) syncResources(ctx context.Context) error {
-	logger.Debug("Performing initial sync of resources...")
+	c.logger.Debug("Performing initial sync of resources...")
 
 	if err := c.syncNodes(ctx); err != nil {
-		logger.Errorf("Error syncing nodes: %v", err)
+		c.logger.Error("Error syncing nodes: ", log.Err(err))
 	}
 
 	if err := c.syncNodeGroups(ctx); err != nil {
-		logger.Errorf("Error syncing node groups: %v", err)
+		c.logger.Error("Error syncing node groups: ", log.Err(err))
 	}
 
 	c.rebuildNodesByGroup()
@@ -266,10 +274,8 @@ func (c *NodeGroupCollector) syncNodes(ctx context.Context) error {
 	defer c.mutex.Unlock()
 
 	for _, node := range nodes.Items {
-		convertedNode := c.watcher.ConvertToNode(&node)
-		if convertedNode != nil {
-			c.nodes[node.Name] = convertedNode
-		}
+		nodeData := ToNodeMetricsData(&node)
+		c.nodes[node.Name] = &nodeData
 	}
 
 	return nil
@@ -285,7 +291,8 @@ func (c *NodeGroupCollector) syncNodeGroups(ctx context.Context) error {
 	defer c.mutex.Unlock()
 
 	for _, nodeGroup := range nodeGroupList {
-		c.nodeGroups[nodeGroup.Name] = nodeGroup
+		nodeGroupData := ToNodeGroupMetricsData(nodeGroup)
+		c.nodeGroups[nodeGroup.Name] = &nodeGroupData
 	}
 
 	return nil
@@ -294,7 +301,10 @@ func (c *NodeGroupCollector) syncNodeGroups(ctx context.Context) error {
 // rebuildNodesByGroup rebuilds the nodesByGroup index from scratch
 // Should only be called during initial sync
 func (c *NodeGroupCollector) rebuildNodesByGroup() {
-	c.nodesByGroup = make(map[string][]*k8s.Node)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.nodesByGroup = make(map[string][]*NodeMetricsData)
 	for _, node := range c.nodes {
 		if node.NodeGroup != "" {
 			c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
@@ -302,13 +312,7 @@ func (c *NodeGroupCollector) rebuildNodesByGroup() {
 	}
 }
 
-func (c *NodeGroupCollector) addNodeToIndex(node *k8s.Node) {
-	if node.NodeGroup != "" {
-		c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
-	}
-}
-
-func (c *NodeGroupCollector) removeNodeFromIndex(node *k8s.Node) {
+func (c *NodeGroupCollector) removeNodeFromIndex(node *NodeMetricsData) {
 	if node.NodeGroup == "" {
 		return
 	}
@@ -327,7 +331,7 @@ func (c *NodeGroupCollector) removeNodeFromIndex(node *k8s.Node) {
 	}
 }
 
-func (c *NodeGroupCollector) ensureNodeInIndex(node *k8s.Node) {
+func (c *NodeGroupCollector) ensureNodeInIndex(node *NodeMetricsData) {
 	if node.NodeGroup == "" {
 		return
 	}
@@ -363,16 +367,10 @@ func (c *NodeGroupCollector) updateMetrics() {
 	c.d8NodeGroupHasErrors.Reset()
 
 	for _, nodeGroup := range c.nodeGroups {
-		nodeType := nodeGroup.Spec.NodeType
-
-		// Use values from NodeGroup status (primary source)
-		totalNodes := int(nodeGroup.Status.Nodes)
-		readyNodes := int(nodeGroup.Status.Ready)
-		maxNodes := int(nodeGroup.Status.Max)
-
-		if maxNodes == 0 {
-			maxNodes = totalNodes
-		}
+		// Use values from NodeGroupMetricsData
+		totalNodes := int(nodeGroup.Nodes)
+		readyNodes := int(nodeGroup.Ready)
+		maxNodes := int(nodeGroup.Max)
 
 		// Get nodes from index for node_group_node metric only
 		indexedNodes := c.nodesByGroup[nodeGroup.Name]
@@ -382,113 +380,94 @@ func (c *NodeGroupCollector) updateMetrics() {
 		for _, indexedNode := range indexedNodes {
 			if freshNode, exists := c.nodes[indexedNode.Name]; exists {
 				nodeCount++
-				nodeStatus := 0.0
-				if c.isNodeReady(freshNode.Node) {
-					nodeStatus = 1.0
-				}
-				c.nodeGroupNode.WithLabelValues(nodeGroup.Name, nodeType, freshNode.Name).Set(nodeStatus)
+				c.nodeGroupNode.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType, freshNode.Name).Set(freshNode.IsReady)
 			}
 		}
 
 		// Fallback for totalNodes if status is not available
 		if totalNodes == 0 && nodeCount > 0 {
 			totalNodes = nodeCount
-			logger.Warnf("NodeGroup '%s' status.nodes is 0, using index count %d", nodeGroup.Name, nodeCount)
+			c.logger.Warn("NodeGroup status.nodes is 0, using index count ",
+				slog.String("NodeGroup", nodeGroup.Name),
+				slog.Int("Count", nodeCount))
+		}
+
+		if maxNodes == 0 {
+			maxNodes = totalNodes
 		}
 
 		// Set aggregated metrics from status (existing metrics)
-		c.nodeGroupCountNodesTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(totalNodes))
-		c.nodeGroupCountReadyTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(readyNodes))
-		c.nodeGroupCountMaxTotal.WithLabelValues(nodeGroup.Name, nodeType).Set(float64(maxNodes))
+		c.nodeGroupCountNodesTotal.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType).Set(float64(totalNodes))
+		c.nodeGroupCountReadyTotal.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType).Set(float64(readyNodes))
+		c.nodeGroupCountMaxTotal.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType).Set(float64(maxNodes))
 
 		// Set hook-compatible metrics (same as in hook/node_group_metrics.go)
-		c.d8NodeGroupReady.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Ready))
-		c.d8NodeGroupNodes.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Nodes))
-		c.d8NodeGroupInstances.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Instances))
-		c.d8NodeGroupDesired.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Desired))
-		c.d8NodeGroupMin.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Min))
-		c.d8NodeGroupMax.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Max))
-		c.d8NodeGroupUpToDate.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.UpToDate))
-		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Status.Standby))
+		c.d8NodeGroupReady.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Ready))
+		c.d8NodeGroupNodes.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Nodes))
+		c.d8NodeGroupInstances.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Instances))
+		c.d8NodeGroupDesired.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Desired))
+		c.d8NodeGroupMin.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Min))
+		c.d8NodeGroupMax.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Max))
+		c.d8NodeGroupUpToDate.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.UpToDate))
+		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Standby))
+		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(nodeGroup.HasErrors)
 
-		// Check for errors in conditions (same logic as in hook)
-		hasErrors := 0.0
-		for _, condition := range nodeGroup.Status.Conditions {
-			if condition.Type == "Error" && condition.Status == "True" {
-				hasErrors = 1.0
-				break
-			}
-		}
-		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(hasErrors)
-
-		logger.Debugf("Metrics set for '%s': total=%d, ready=%d, max=%d, node_metrics=%d", nodeGroup.Name, totalNodes, readyNodes, maxNodes, nodeCount)
+		c.logger.Debug("Metrics set for ",
+			slog.String("NodeGroup", nodeGroup.Name),
+			slog.Int("TotalNodes", totalNodes),
+			slog.Int("ReadyNodes", readyNodes),
+			slog.Int("maxNodes", maxNodes),
+			slog.Int("CountNodes", nodeCount))
 	}
-}
-
-func (c *NodeGroupCollector) isNodeReady(node *v1.Node) bool {
-	for _, condition := range node.Status.Conditions {
-		if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }
 
 // EventHandler implementation
 
-func (c *NodeGroupCollector) OnNodeGroupAdd(nodegroup *k8s.NodeGroupWrapper) {
+func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.nodeGroups[nodegroup.Name] = nodegroup
-	logger.Debugf("Added NodeGroup: %s (type: %s), total nodegroups: %d", nodegroup.Name, nodegroup.Spec.NodeType, len(c.nodeGroups))
+	nodeGroupData := ToNodeGroupMetricsData(nodegroup)
+	c.nodeGroups[nodegroup.Name] = &nodeGroupData
+	c.logger.Debug("Added or Update",
+		slog.String("NodeGroup", nodegroup.Name),
+		slog.String("Type", nodeGroupData.NodeType),
+		slog.Int("Nodes", len(c.nodeGroups)))
 	c.updateMetrics()
 }
 
-func (c *NodeGroupCollector) OnNodeGroupUpdate(_, new *k8s.NodeGroupWrapper) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.nodeGroups[new.Name] = new
-	c.updateMetrics()
-	logger.Debugf("Updated NodeGroup: %s", new.Name)
-}
-
-func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *k8s.NodeGroupWrapper) {
+func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	delete(c.nodeGroups, nodegroup.Name)
 	c.updateMetrics()
-	logger.Debugf("Deleted NodeGroup: %s", nodegroup.Name)
+	c.logger.Debug("Deleted ", slog.String("NodeGroup", nodegroup.Name))
 }
 
-func (c *NodeGroupCollector) OnNodeAdd(node *k8s.Node) {
+func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.nodes[node.Name] = node
-	c.addNodeToIndex(node)
-	logger.Debugf("Added Node: %s (NodeGroup: %s), total nodes: %d, nodeGroups: %d", node.Name, node.NodeGroup, len(c.nodes), len(c.nodeGroups))
+	nodeData := ToNodeMetricsData(node)
+	c.nodes[node.Name] = &nodeData
+	c.ensureNodeInIndex(&nodeData)
 	c.updateMetrics()
+	c.logger.Debug("Add or Updated Node",
+		slog.String("node", node.Name),
+		slog.String("nodeGroup", nodeData.NodeGroup),
+		slog.Float64("ready", nodeData.IsReady))
 }
 
-func (c *NodeGroupCollector) OnNodeUpdate(old, new *k8s.Node) {
+func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.nodes[new.Name] = new
-	c.ensureNodeInIndex(new)
-	c.updateMetrics()
-	logger.Debug("Updated Node", zap.String("node", new.Name), zap.String("nodeGroup", new.NodeGroup), zap.Bool("ready", c.isNodeReady(new.Node)))
-}
-
-func (c *NodeGroupCollector) OnNodeDelete(node *k8s.Node) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
+	nodeData := ToNodeMetricsData(node)
 	delete(c.nodes, node.Name)
-	c.removeNodeFromIndex(node)
+	c.removeNodeFromIndex(&nodeData)
 	c.updateMetrics()
-	logger.Debugf("Deleted Node: %s (NodeGroup: %s)", node.Name, node.NodeGroup)
+	c.logger.Debug("Deleted ",
+		slog.String("Node", node.Name),
+		slog.String("NodeGroup", nodeData.NodeGroup))
 }

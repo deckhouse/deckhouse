@@ -25,9 +25,6 @@ import (
 )
 
 const (
-	// NodeGroupLabelKey is the label key used by Deckhouse to identify node groups
-	NodeGroupLabelKey = "node.deckhouse.io/group"
-
 	// InformerResyncPeriod is the resync period for Kubernetes informers
 	InformerResyncPeriod = 10 * time.Minute
 )

@@ -17,622 +17,389 @@ limitations under the License.
 package collector
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
+	"github.com/aws/smithy-go/ptr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
-	k8s "node-group-exporter/pkg/kubernetes"
+	ngv1 "node-group-exporter/internal/v1"
+
+	dto "github.com/prometheus/client_model/go"
 )
 
-// MockWatcher is a mock implementation of the watcher
-type MockWatcher struct {
-	mock.Mock
+func newTestNode(name, nodeGroup string, ready bool) *v1.Node {
+	status := v1.ConditionFalse
+	if ready {
+		status = v1.ConditionTrue
+	}
+
+	labels := make(map[string]string)
+	if nodeGroup != "" {
+		labels["node.deckhouse.io/group"] = nodeGroup
+	}
+
+	return &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "default",
+			Labels:    labels,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{
+				{
+					Type:   v1.NodeReady,
+					Status: status,
+				},
+			},
+		},
+	}
 }
 
-func (m *MockWatcher) Start(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
+func newTestNodeGroup(name string, nodeType ngv1.NodeType, status ngv1.NodeGroupStatus) *ngv1.NodeGroup {
+	nodeGroup := &ngv1.NodeGroup{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "default",
+		},
+		Spec: ngv1.NodeGroupSpec{
+			NodeType: nodeType,
+		},
+		Status: status,
+	}
+
+	// Add CloudInstances for Cloud node types
+	if nodeType == "Cloud" {
+		nodeGroup.Spec.CloudInstances = ngv1.CloudInstances{
+			MaxPerZone: ptr.Int32(5),
+			MinPerZone: ptr.Int32(1),
+			Zones:      []string{"zone-a", "zone-b"},
+		}
+	}
+
+	return nodeGroup
 }
 
-func (m *MockWatcher) Stop() {
-	m.Called()
+// labelsMatch checks if all labels in the map match the metric labels
+func labelsMatch(metricLabels []*dto.LabelPair, expectedLabels map[string]string) bool {
+	if len(expectedLabels) == 0 {
+		return true
+	}
+	labelMap := make(map[string]string, len(metricLabels))
+	for _, l := range metricLabels {
+		labelMap[l.GetName()] = l.GetValue()
+	}
+	for name, value := range expectedLabels {
+		if labelMap[name] != value {
+			return false
+		}
+	}
+	return true
 }
 
-func (m *MockWatcher) ConvertToNode(obj interface{}) *k8s.Node {
-	args := m.Called(obj)
-	return args.Get(0).(*k8s.Node)
+// getMetricValueByLabels returns the value of a metric by its name and multiple label values from the collected metrics.
+func getMetricValueByLabels(metrics []*dto.MetricFamily, metricName string, labels map[string]string) (float64, bool) {
+	for _, mf := range metrics {
+		if mf.GetName() == metricName {
+			for _, m := range mf.GetMetric() {
+				if labelsMatch(m.GetLabel(), labels) {
+					return m.GetGauge().GetValue(), true
+				}
+			}
+		}
+	}
+	return 0.0, false
 }
 
-func (m *MockWatcher) ConvertToNodeGroup(obj interface{}) *k8s.NodeGroupWrapper {
-	args := m.Called(obj)
-	return args.Get(0).(*k8s.NodeGroupWrapper)
+// getMetricValue returns the value of a metric by its name from the collected metrics.
+func getMetricValue(metrics []*dto.MetricFamily, metricName string) (float64, bool) {
+	return getMetricValueByLabels(metrics, metricName, nil)
 }
 
-// TestNodeGroupCollector tests the NodeGroupCollector
-func TestNodeGroupCollector(t *testing.T) {
-	// Create fake Kubernetes client
-	clientset := fake.NewSimpleClientset()
-
-	// Create collector
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
-	assert.NoError(t, err)
-
-	// Test that collector implements prometheus.Collector
-	var _ prometheus.Collector = collector
-
-	// Test initial state
-	assert.NotNil(t, collector.nodeGroupCountNodesTotal)
-	assert.NotNil(t, collector.nodeGroupCountReadyTotal)
-	assert.NotNil(t, collector.nodeGroupCountMaxTotal)
-	assert.NotNil(t, collector.nodeGroupNode)
+// getMetricValueByLabel returns the value of a metric by its name and label value from the collected metrics.
+func getMetricValueByLabel(metrics []*dto.MetricFamily, metricName, labelName, labelValue string) (float64, bool) {
+	return getMetricValueByLabels(metrics, metricName, map[string]string{labelName: labelValue})
 }
 
 // TestNodeGroupCollectorMetrics tests the metrics collection
 func TestNodeGroupCollectorMetrics(t *testing.T) {
-	// Create fake Kubernetes client
 	clientset := fake.NewSimpleClientset()
-
-	// Create collector
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	// Add test node group
-	testNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "deckhouse.io/v1",
-				Kind:       "NodeGroup",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-worker",
-				Namespace: "default",
-				Labels:    map[string]string{"env": "test"},
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-				CloudInstances: &k8s.CloudInstancesSpec{
-					MaxPerZone: 5,
-					MinPerZone: 1,
-					Zones:      []string{"zone-a", "zone-b"},
-				},
-			},
-			Status: k8s.NodeGroupStatus{
-				Desired: 3,
-				Ready:   1,  // One ready node (test expects 1)
-				Nodes:   1,  // One node total (test expects 1)
-				Max:     10, // 5 * 2 zones (test expects 10)
-			},
-		},
-	}
+	testNodeGroup := newTestNodeGroup("test-worker", "Cloud", ngv1.NodeGroupStatus{
+		Desired: 3,
+		Ready:   1,
+		Nodes:   2,
+		Max:     10,
+	})
+	testNodeGroup.Labels = map[string]string{"env": "test"}
 
-	// Add test node
-	testNode := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-node-1",
-				Namespace: "default",
-				Labels: map[string]string{
-					"node.deckhouse.io/group": "test-worker",
-				},
-			},
-			Status: v1.NodeStatus{
-				Conditions: []v1.NodeCondition{
-					{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					},
-				},
-			},
-		},
-		NodeGroup: "test-worker",
-	}
+	testNode := newTestNode("test-node-1", "test-worker", true)
 
-	// Add test data to collector
-	collector.nodeGroups["test-worker"] = testNodeGroup
-	collector.nodes["test-node-1"] = testNode
+	collector.OnNodeGroupAddOrUpdate(testNodeGroup)
+	collector.OnNodeAddOrUpdate(testNode)
 
-	// Rebuild index after manually adding test data
-	collector.rebuildNodesByGroup()
-
-	// Update metrics
-	collector.updateMetrics()
-
-	// Test node_group_count_nodes_total metric
 	count := testutil.ToFloat64(collector.nodeGroupCountNodesTotal.WithLabelValues("test-worker", "Cloud"))
-	assert.Equal(t, float64(1), count)
+	assert.Equal(t, float64(2), count)
 
-	// Test node_group_count_ready_total metric
 	ready := testutil.ToFloat64(collector.nodeGroupCountReadyTotal.WithLabelValues("test-worker", "Cloud"))
 	assert.Equal(t, float64(1), ready)
 
-	// Test node_group_count_max_total metric
 	max := testutil.ToFloat64(collector.nodeGroupCountMaxTotal.WithLabelValues("test-worker", "Cloud"))
 	assert.Equal(t, float64(10), max) // 5 * 2 zones
 
-	// Test node_group_node metric - should be 1 for ready node
 	nodeMetric := testutil.ToFloat64(collector.nodeGroupNode.WithLabelValues("test-worker", "Cloud", "test-node-1"))
 	assert.Equal(t, float64(1), nodeMetric)
 }
 
 // TestStaticNodeGroup tests Static node group behavior
 func TestStaticNodeGroup(t *testing.T) {
-	// Create fake Kubernetes client
 	clientset := fake.NewSimpleClientset()
-
-	// Create collector
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	// Add Static node group
-	staticNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "deckhouse.io/v1",
-				Kind:       "NodeGroup",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "static-master",
-				Namespace: "default",
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Static",
-			},
-			Status: k8s.NodeGroupStatus{
-				Desired: 3,
-				Ready:   3, // All 3 nodes ready
-				Nodes:   3, // All 3 nodes
-				Max:     3, // Max is 3 for static
-			},
-		},
-	}
+	staticNodeGroup := newTestNodeGroup("static-master", "Static", ngv1.NodeGroupStatus{
+		Ready: 3,
+		Nodes: 5,
+	})
 
-	// Add static nodes
+	collector.OnNodeGroupAddOrUpdate(staticNodeGroup)
+
 	for i := 1; i <= 3; i++ {
-		node := &k8s.Node{
-			Node: &v1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("static-master-%d", i),
-					Namespace: "default",
-					Labels: map[string]string{
-						"node.deckhouse.io/group": "static-master",
-					},
-				},
-				Status: v1.NodeStatus{
-					Conditions: []v1.NodeCondition{
-						{
-							Type:   v1.NodeReady,
-							Status: v1.ConditionTrue,
-						},
-					},
-				},
-			},
-			NodeGroup: "static-master",
-		}
-		collector.nodes[fmt.Sprintf("static-master-%d", i)] = node
+		node := newTestNode(fmt.Sprintf("static-master-%d", i), "static-master", true)
+		collector.OnNodeAddOrUpdate(node)
 	}
 
-	collector.nodeGroups["static-master"] = staticNodeGroup
-
-	// Rebuild index after manually adding test data
-	collector.rebuildNodesByGroup()
-
-	collector.updateMetrics()
-
-	// Test Static node group max (should equal current node count)
 	max := testutil.ToFloat64(collector.nodeGroupCountMaxTotal.WithLabelValues("static-master", "Static"))
-	assert.Equal(t, float64(3), max)
+	assert.Equal(t, float64(5), max)
 
-	// Test Static node group total nodes
 	count := testutil.ToFloat64(collector.nodeGroupCountNodesTotal.WithLabelValues("static-master", "Static"))
-	assert.Equal(t, float64(3), count)
-}
+	assert.Equal(t, float64(5), count)
 
-// TestNodeTypeExtraction tests direct node type extraction
-func TestNodeTypeExtraction(t *testing.T) {
-	// Test Cloud node type
-	cloudNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-			},
-		},
+	// Verify ready nodes metric equals 3
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collector)
+	metrics, err := registry.Gather()
+	assert.NoError(t, err)
+
+	readyCount, found := getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found")
+	assert.Equal(t, 3.0, readyCount, "node_group_count_ready_total should equal 3 ready nodes")
+
+	// Verify that node metrics contain correct node_group label
+	for i := 1; i <= 3; i++ {
+		nodeName := fmt.Sprintf("static-master-%d", i)
+		nodeMetricValue, found := getMetricValueByLabels(metrics, "node_group_node", map[string]string{
+			"node":       nodeName,
+			"node_group": "static-master",
+		})
+		assert.True(t, found, "node_group_node metric should be found for %s with correct node_group label", nodeName)
+		assert.Equal(t, 1.0, nodeMetricValue, "node_group_node metric should be 1 for ready node %s", nodeName)
 	}
-
-	assert.Equal(t, "Cloud", cloudNodeGroup.Spec.NodeType)
-
-	// Test Static node type
-	staticNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Static",
-			},
-		},
-	}
-
-	assert.Equal(t, "Static", staticNodeGroup.Spec.NodeType)
 }
 
 // TestIsNodeReady tests the isNodeReady function
 func TestIsNodeReady(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
-	assert.NoError(t, err)
+	readyNode := newTestNode("ready-node", "", true)
+	nodeData := ToNodeMetricsData(readyNode)
+	assert.Equal(t, 1.0, nodeData.IsReady, "ready node should have IsReady=1.0")
 
-	// Test ready node
-	readyNode := &v1.Node{
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{
-				{
-					Type:   v1.NodeReady,
-					Status: v1.ConditionTrue,
-				},
-			},
-		},
-	}
+	notReadyNode := newTestNode("not-ready-node", "", false)
+	nodeData = ToNodeMetricsData(notReadyNode)
+	assert.Equal(t, 0.0, nodeData.IsReady, "not ready node should have IsReady=0.0")
 
-	assert.True(t, collector.isNodeReady(readyNode))
-
-	// Test not ready node
-	notReadyNode := &v1.Node{
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{
-				{
-					Type:   v1.NodeReady,
-					Status: v1.ConditionFalse,
-				},
-			},
-		},
-	}
-
-	assert.False(t, collector.isNodeReady(notReadyNode))
-
-	// Test node without ready condition
 	noConditionNode := &v1.Node{
 		Status: v1.NodeStatus{
 			Conditions: []v1.NodeCondition{},
 		},
 	}
 
-	assert.False(t, collector.isNodeReady(noConditionNode))
+	nodeData = ToNodeMetricsData(noConditionNode)
+	assert.Equal(t, 0.0, nodeData.IsReady, "node without condition should have IsReady=0.0")
 }
 
 // TestEventHandler tests the EventHandler implementation
 func TestEventHandler(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	// Test OnNodeGroupAdd
-	nodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-group",
-				Namespace: "default",
-			},
-		},
-	}
+	nodeGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{})
 
-	collector.OnNodeGroupAdd(nodeGroup)
+	collector.OnNodeGroupAddOrUpdate(nodeGroup)
 	assert.Contains(t, collector.nodeGroups, "test-group")
 
-	// Test OnNodeGroupUpdate
-	updatedNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-group",
-				Namespace: "default",
-			},
-			Status: k8s.NodeGroupStatus{
-				Desired: 5,
-			},
-		},
-	}
+	updatedNodeGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{
+		Desired: 5,
+	})
 
-	collector.OnNodeGroupUpdate(nodeGroup, updatedNodeGroup)
-	assert.Equal(t, updatedNodeGroup, collector.nodeGroups["test-group"])
+	collector.OnNodeGroupAddOrUpdate(updatedNodeGroup)
+	// Verify that NodeGroup was updated
+	assert.Contains(t, collector.nodeGroups, "test-group")
+	nodeGroupData := collector.nodeGroups["test-group"]
+	assert.Equal(t, "test-group", nodeGroupData.Name)
+	assert.Equal(t, int32(5), nodeGroupData.Desired)
 
-	// Test OnNodeGroupDelete
 	collector.OnNodeGroupDelete(nodeGroup)
 	assert.NotContains(t, collector.nodeGroups, "test-group")
 
-	// Test OnNodeAdd
-	node := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-node",
-			},
-		},
-		NodeGroup: "test-group",
-	}
+	node := newTestNode("test-node", "", false)
 
-	collector.OnNodeAdd(node)
+	collector.OnNodeAddOrUpdate(node)
 	assert.Contains(t, collector.nodes, "test-node")
 
-	// Test OnNodeUpdate with same NodeGroup (nodes cannot change NodeGroup)
-	updatedNode := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-node",
-			},
-		},
-		NodeGroup: "test-group", // Same NodeGroup
-	}
+	updatedNode := newTestNode("test-node", "test-group", false)
 
-	collector.OnNodeUpdate(node, updatedNode)
-	assert.Equal(t, updatedNode, collector.nodes["test-node"])
-	assert.Equal(t, "test-group", updatedNode.NodeGroup) // Should remain the same
+	collector.OnNodeAddOrUpdate(updatedNode)
+	// Verify that Node was updated
+	assert.Contains(t, collector.nodes, "test-node")
+	nodeData := collector.nodes["test-node"]
+	assert.Equal(t, "test-node", nodeData.Name)
+	assert.Equal(t, "test-group", nodeData.NodeGroup) // Should remain the same
 
-	// Test OnNodeUpdate with status change (Ready status) - critical test
-	notReadyNode := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-node-status",
-			},
-			Status: v1.NodeStatus{
-				Conditions: []v1.NodeCondition{
-					{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionFalse,
-					},
-				},
-			},
-		},
-		NodeGroup: "test-group",
-	}
+	notReadyNode := newTestNode("test-node-status", "test-group", false)
 
-	// Add NodeGroup first with status showing 0 ready
-	testGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-group",
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-			},
-			Status: k8s.NodeGroupStatus{
-				Nodes: 1,
-				Ready: 0, // Initially not ready
-				Max:   10,
-			},
-		},
-	}
-	collector.OnNodeGroupAdd(testGroup)
-	collector.OnNodeAdd(notReadyNode)
+	testGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{
+		Nodes: 1,
+		Ready: 0,
+	})
+	collector.OnNodeGroupAddOrUpdate(testGroup)
+	collector.OnNodeAddOrUpdate(notReadyNode)
 
-	// Check initial metrics - should show 0 ready from status
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
 	metrics, _ := registry.Gather()
 
-	var readyCount float64
-	for _, mf := range metrics {
-		if mf.GetName() == "node_group_count_ready_total" {
-			for _, m := range mf.GetMetric() {
-				readyCount = m.GetGauge().GetValue()
-			}
-		}
-	}
+	readyCount, found := getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found")
 	assert.Equal(t, 0.0, readyCount, "Status should show 0 ready initially")
 
-	// Update node to Ready - this is the critical test
-	readyNode := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-node-status",
-			},
-			Status: v1.NodeStatus{
-				Conditions: []v1.NodeCondition{
-					{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					},
-				},
-			},
-		},
-		NodeGroup: "test-group",
-	}
+	readyNode := newTestNode("test-node-status", "test-group", true)
 
-	// Update NodeGroup status to reflect ready state
 	testGroup.Status.Ready = 1
-	collector.OnNodeGroupUpdate(testGroup, testGroup)
-	collector.OnNodeUpdate(notReadyNode, readyNode)
+	collector.OnNodeGroupAddOrUpdate(testGroup)
+	collector.OnNodeAddOrUpdate(readyNode)
 
-	// Check metrics again - should show 1 ready from updated status
 	metrics, _ = registry.Gather()
-	readyCount = 0
-	for _, mf := range metrics {
-		if mf.GetName() == "node_group_count_ready_total" {
-			for _, m := range mf.GetMetric() {
-				readyCount = m.GetGauge().GetValue()
-			}
-		}
-	}
+	readyCount, found = getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found")
 	assert.Equal(t, 1.0, readyCount, "Status should show 1 ready after NodeGroup update")
 
-	// Check node_group_node metric
-	var nodeMetricValue float64
-	for _, mf := range metrics {
-		if mf.GetName() == "node_group_node" {
-			for _, m := range mf.GetMetric() {
-				for _, l := range m.GetLabel() {
-					if l.GetName() == "node" && l.GetValue() == "test-node-status" {
-						nodeMetricValue = m.GetGauge().GetValue()
-						break
-					}
-				}
-			}
-		}
-	}
-	assert.Equal(t, 1.0, nodeMetricValue, "node_group_node metric should be 1 for ready node")
+	nodeMetricValueWithGroup, found := getMetricValueByLabels(metrics, "node_group_node", map[string]string{
+		"node":       "test-node-status",
+		"node_group": "test-group",
+	})
+	assert.True(t, found, "node_group_node metric should have correct node_group label")
+	assert.Equal(t, 1.0, nodeMetricValueWithGroup, "node_group_node metric should be 1 for ready node with correct group")
 
-	// Test OnNodeDelete
+	// Verify that ready metric equals one node
+	readyCount, found = getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found")
+	assert.Equal(t, 1.0, readyCount, "node_group_count_ready_total should equal one ready node")
+
+	maxCount, found := getMetricValue(metrics, "node_group_count_max_total")
+	assert.True(t, found, "node_group_count_max_total metric should be found")
+	assert.Equal(t, 1.0, maxCount, "node_group_count_max_total should equal 1")
+
 	collector.OnNodeDelete(updatedNode)
 	assert.NotContains(t, collector.nodes, "test-node")
+
+	// Delete the ready node as well to test complete cleanup
+	collector.OnNodeDelete(readyNode)
+	assert.NotContains(t, collector.nodes, "test-node-status")
+
+	// Update NodeGroup status to reflect all nodes deleted
+	testGroup.Status.Nodes = 0
+	testGroup.Status.Ready = 0
+	collector.OnNodeGroupAddOrUpdate(testGroup)
+
+	// Verify that metrics are reset after node deletion
+	metrics, _ = registry.Gather()
+	readyCountAfterDelete, found := getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found after deletion")
+	assert.Equal(t, 0.0, readyCountAfterDelete, "node_group_count_ready_total should be 0 after all nodes deletion")
+
+	_, found = getMetricValueByLabel(metrics, "node_group_node", "node", "test-node")
+	assert.False(t, found, "node_group_node metric should not be present after node deletion")
+
+	_, found = getMetricValueByLabel(metrics, "node_group_node", "node", "test-node-status")
+	assert.False(t, found, "node_group_node metric should not be present after node deletion")
+
+	maxCountAfterDelete, found := getMetricValue(metrics, "node_group_count_max_total")
+	assert.True(t, found, "node_group_count_max_total metric should be found")
+	assert.Equal(t, 0.0, maxCountAfterDelete, "node_group_count_max_total should equal 0")
 }
 
 // TestNodeWithoutNodeGroup tests that nodes without existing NodeGroup are handled correctly
 func TestNodeWithoutNodeGroup(t *testing.T) {
-	// Create fake Kubernetes client
 	clientset := fake.NewSimpleClientset()
 
-	// Create collector
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
+	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	// Add node WITHOUT creating corresponding NodeGroup first
-	orphanNode := &k8s.Node{
-		Node: &v1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "orphan-node-1",
-				Labels: map[string]string{
-					"node.deckhouse.io/group": "nonexistent-group",
-				},
-			},
-			Status: v1.NodeStatus{
-				Conditions: []v1.NodeCondition{
-					{
-						Type:   v1.NodeReady,
-						Status: v1.ConditionTrue,
-					},
-				},
-			},
-		},
-		NodeGroup: "nonexistent-group",
-	}
+	orphanNode := newTestNode("orphan-node-1", "nonexistent-group", true)
 
-	// Add orphan node through event handler
-	collector.OnNodeAdd(orphanNode)
+	collector.OnNodeAddOrUpdate(orphanNode)
 
-	// Verify node is in nodes map
 	assert.Contains(t, collector.nodes, "orphan-node-1")
 
-	// Verify node is in nodesByGroup index
 	assert.Contains(t, collector.nodesByGroup, "nonexistent-group")
 	assert.Len(t, collector.nodesByGroup["nonexistent-group"], 1)
 
-	// Collect metrics - should work without errors
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
+	_, err = registry.Gather()
+	assert.NoError(t, err)
+
+	nodeGroup := newTestNodeGroup("nonexistent-group", "Cloud", ngv1.NodeGroupStatus{
+		Desired: 1,
+		Ready:   1,
+	})
+	collector.OnNodeGroupAddOrUpdate(nodeGroup)
 	metrics, err := registry.Gather()
-	assert.NoError(t, err)
-	_ = metrics // Verify metrics can be collected without errors
 
-	// Since NodeGroup doesn't exist, no node_group_node metric for this node
-	// This is expected behavior - orphan nodes don't generate metrics until NodeGroup appears
-
-	// Now add the NodeGroup
-	nodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "nonexistent-group",
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-			},
-			Status: k8s.NodeGroupStatus{
-				Desired: 1,
-				Ready:   1,
-			},
-		},
-	}
-	collector.OnNodeGroupAdd(nodeGroup)
-
-	// Now metrics should be generated
-	metrics, err = registry.Gather()
 	assert.NoError(t, err)
 
-	// Find node_group_node metric
-	foundNodeMetric := false
-	for _, mf := range metrics {
-		if mf.GetName() == "node_group_node" {
-			for _, m := range mf.GetMetric() {
-				labels := m.GetLabel()
-				for _, l := range labels {
-					if l.GetName() == "node" && l.GetValue() == "orphan-node-1" {
-						foundNodeMetric = true
-						// Node is ready, so value should be 1
-						assert.Equal(t, 1.0, m.GetGauge().GetValue())
-						break
-					}
-				}
-			}
-		}
-	}
+	nodeMetricValue, foundNodeMetric := getMetricValueByLabel(metrics, "node_group_node", "node", "orphan-node-1")
 	assert.True(t, foundNodeMetric, "node_group_node metric should be present after NodeGroup is added")
+	assert.Equal(t, 1.0, nodeMetricValue, "node_group_node metric should be 1 for ready node")
 
-	// Test removing node when NodeGroup exists
+	// Verify that nodeMetricValue contains correct node_group label
+	nodeMetricValueWithGroup, found := getMetricValueByLabels(metrics, "node_group_node", map[string]string{
+		"node":       "orphan-node-1",
+		"node_group": "nonexistent-group",
+	})
+	assert.True(t, found, "node_group_node metric should have correct node_group label")
+	assert.Equal(t, 1.0, nodeMetricValueWithGroup, "node_group_node metric should be 1 for ready node with correct group")
+
 	collector.OnNodeDelete(orphanNode)
 	assert.NotContains(t, collector.nodes, "orphan-node-1")
 	assert.NotContains(t, collector.nodesByGroup, "nonexistent-group") // Should be cleaned up
-}
 
-func TestCollectorIntegration(t *testing.T) {
-	// Create fake Kubernetes client with test data
-	clientset := fake.NewSimpleClientset()
+	// Update NodeGroup status to reflect node deletion
+	nodeGroup.Status.Nodes = 0
+	nodeGroup.Status.Ready = 0
+	collector.OnNodeGroupAddOrUpdate(nodeGroup)
 
-	// Create collector
-	collector, err := NewNodeGroupCollector(clientset, &rest.Config{})
+	// Verify that metrics are reset after node deletion
+	metrics, err = registry.Gather()
 	assert.NoError(t, err)
+	readyCount, found := getMetricValue(metrics, "node_group_count_ready_total")
+	assert.True(t, found, "node_group_count_ready_total metric should be found")
+	assert.Equal(t, 0.0, readyCount, "node_group_count_ready_total should be 0 after node deletion")
 
-	// Add test data directly using event handlers
-	testNodeGroup := &k8s.NodeGroupWrapper{
-		NodeGroup: &k8s.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-integration",
-				Namespace: "default",
-			},
-			Spec: k8s.NodeGroupSpec{
-				NodeType: "Cloud",
-				CloudInstances: &k8s.CloudInstancesSpec{
-					MaxPerZone: 3,
-					MinPerZone: 1,
-					Zones:      []string{"zone-a"},
-				},
-			},
-			Status: k8s.NodeGroupStatus{
-				Desired: 2,
-				Ready:   2,
-			},
-		},
-	}
-	collector.nodeGroups["test-integration"] = testNodeGroup
-
-	// Rebuild index since we added data directly
-	collector.rebuildNodesByGroup()
-
-	// Update metrics
-	collector.updateMetrics()
-
-	// Test that metrics are registered
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(collector)
-
-	// Collect metrics
-	metrics, err := registry.Gather()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, metrics)
-
-	// Verify we have the expected metrics
-	// Note: node_group_node metric will only have values if there are nodes in the group
-	metricNames := make(map[string]bool)
-	for _, m := range metrics {
-		metricNames[m.GetName()] = true
-	}
-
-	// Check that the main 3 metrics are present (node_group_node only appears with actual nodes)
-	assert.Contains(t, metricNames, "node_group_count_nodes_total")
-	assert.Contains(t, metricNames, "node_group_count_ready_total")
-	assert.Contains(t, metricNames, "node_group_count_max_total")
-
-	// Verify that at least 3 metrics are registered
-	assert.GreaterOrEqual(t, len(metricNames), 3)
+	_, found = getMetricValueByLabel(metrics, "node_group_node", "node", "orphan-node-1")
+	assert.False(t, found, "node_group_node metric should not be present after node deletion")
 }

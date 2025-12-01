@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,27 +33,29 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"node-group-exporter/pkg/collector"
-	"node-group-exporter/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
 	serverAddress = flag.String("server.exporter-address", ":9000", "Address to export prometheus metrics")
-	logLevel      = flag.String("server.log-level", "info", "Log level")
 	kubeConfig    = flag.String("kube.config", "", "Path to kubeconfig (optional)")
+	debug         = flag.Bool("server.debug", false, "Turn On debug")
 )
 
 func main() {
 	flag.Parse()
 
-	// Initialize logger
-	if err := logger.Init(*logLevel); err != nil {
-		panic(err)
-	}
-	defer logger.Sync()
-
 	// Create Kubernetes client
 	var config *rest.Config
 	var err error
+
+	log.SetDefaultLevel(log.LevelInfo)
+	if *debug {
+		log.SetDefaultLevel(log.LevelDebug)
+	}
+
+	logger := log.Default()
 
 	if *kubeConfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", *kubeConfig)
@@ -61,30 +64,29 @@ func main() {
 	}
 
 	if err != nil {
-		logger.Fatalf("Failed to create kubernetes config: %v", err)
+		logger.Fatal("Failed to create kubernetes config:", log.Err(err))
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logger.Fatalf("Failed to create kubernetes client: %v", err)
+		logger.Fatal("Failed to create kubernetes client:", log.Err(err))
 	}
 
 	// Create nodegroup collector
-	nodegroupCollector, err := collector.NewNodeGroupCollector(clientset, config)
+	nodegroupCollector, err := collector.NewNodeGroupCollector(clientset, config, logger)
 	if err != nil {
-		logger.Fatalf("Failed to create nodegroup collector: %v", err)
+		logger.Fatal("Failed to create nodegroup collector:", log.Err(err))
 	}
 
 	// Start collector
 	ctx := context.Background()
 	if err := nodegroupCollector.Start(ctx); err != nil {
-		logger.Fatalf("Failed to start collector: %v", err)
+		logger.Fatal("Failed to start collector:", log.Err(err))
 	}
 
 	// Register collector with Prometheus
 	prometheus.MustRegister(nodegroupCollector)
 
-	// Create HTTP server
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -101,19 +103,17 @@ func main() {
 		Handler: mux,
 	}
 
-	// Start server in goroutine
 	go func() {
-		logger.Infof("Starting HTTP server on %s", *serverAddress)
+		logger.Info("Starting HTTP server on ", slog.String("Address", *serverAddress))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatalf("HTTP server failed: %v", err)
+			logger.Fatal("HTTP server failed: ", log.Err(err))
 		}
 		logger.Info("HTTP server stopped")
 	}()
 
 	logger.Info("Node group exporter is ready")
-	logger.Infof("Metrics available at %s", *serverAddress)
+	logger.Info("Metrics available at ", slog.String("Address", *serverAddress))
 
-	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -130,7 +130,7 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Fatalf("Server forced to shutdown: %v", err)
+		logger.Fatal("Server forced to shutdown: ", log.Err(err))
 	}
 
 	logger.Info("Server exited")
