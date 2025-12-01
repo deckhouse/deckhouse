@@ -40,12 +40,10 @@ func newTestNode(name, nodeGroup string, ready bool) *v1.Node {
 	if ready {
 		status = v1.ConditionTrue
 	}
-
 	labels := make(map[string]string)
 	if nodeGroup != "" {
 		labels["node.deckhouse.io/group"] = nodeGroup
 	}
-
 	return &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -78,8 +76,6 @@ func newTestNodeGroup(name string, nodeType ngv1.NodeType, status ngv1.NodeGroup
 		},
 		Status: status,
 	}
-
-	// Add CloudInstances for Cloud node types
 	if nodeType == "Cloud" {
 		nodeGroup.Spec.CloudInstances = ngv1.CloudInstances{
 			MaxPerZone: ptr.Int32(5),
@@ -87,7 +83,6 @@ func newTestNodeGroup(name string, nodeType ngv1.NodeType, status ngv1.NodeGroup
 			Zones:      []string{"zone-a", "zone-b"},
 		}
 	}
-
 	return nodeGroup
 }
 
@@ -200,7 +195,6 @@ func TestStaticNodeGroup(t *testing.T) {
 	count := testutil.ToFloat64(collector.nodeGroupCountNodesTotal.WithLabelValues("static-master", "Static"))
 	assert.Equal(t, float64(5), count)
 
-	// Verify ready nodes metric equals 3
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
 	metrics, err := registry.Gather()
@@ -258,7 +252,6 @@ func TestEventHandler(t *testing.T) {
 	})
 
 	collector.OnNodeGroupAddOrUpdate(updatedNodeGroup)
-	// Verify that NodeGroup was updated
 	assert.Contains(t, collector.nodeGroups, "test-group")
 	nodeGroupData := collector.nodeGroups["test-group"]
 	assert.Equal(t, "test-group", nodeGroupData.Name)
@@ -277,7 +270,6 @@ func TestEventHandler(t *testing.T) {
 	updatedNode := newTestNode("test-node", "test-group", false)
 
 	collector.OnNodeAddOrUpdate(updatedNode)
-	// Verify that Node was updated
 	nodeData, groupName := findNodeInGroups(collector, "test-node")
 	assert.NotNil(t, nodeData, "Node should be found in nodesByGroup")
 	assert.Equal(t, "test-node", nodeData.Name)
@@ -319,7 +311,6 @@ func TestEventHandler(t *testing.T) {
 	assert.True(t, found, "node_group_node metric should have correct node_group label")
 	assert.Equal(t, 1.0, nodeMetricValueWithGroup, "node_group_node metric should be 1 for ready node with correct group")
 
-	// Verify that ready metric equals one node
 	readyCount, found = getMetricValue(metrics, "node_group_count_ready_total")
 	assert.True(t, found, "node_group_count_ready_total metric should be found")
 	assert.Equal(t, 1.0, readyCount, "node_group_count_ready_total should equal one ready node")
@@ -342,7 +333,6 @@ func TestEventHandler(t *testing.T) {
 	testGroup.Status.Ready = 0
 	collector.OnNodeGroupAddOrUpdate(testGroup)
 
-	// Verify that metrics are reset after node deletion
 	metrics, _ = registry.Gather()
 	readyCountAfterDelete, found := getMetricValue(metrics, "node_group_count_ready_total")
 	assert.True(t, found, "node_group_count_ready_total metric should be found after deletion")
@@ -395,7 +385,6 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	assert.True(t, foundNodeMetric, "node_group_node metric should be present after NodeGroup is added")
 	assert.Equal(t, 1.0, nodeMetricValue, "node_group_node metric should be 1 for ready node")
 
-	// Verify that nodeMetricValue contains correct node_group label
 	nodeMetricValueWithGroup, found := getMetricValueByLabels(metrics, "node_group_node", map[string]string{
 		"node":       "orphan-node-1",
 		"node_group": "nonexistent-group",
@@ -413,7 +402,6 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	nodeGroup.Status.Ready = 0
 	collector.OnNodeGroupAddOrUpdate(nodeGroup)
 
-	// Verify that metrics are reset after node deletion
 	metrics, err = registry.Gather()
 	assert.NoError(t, err)
 	readyCount, found := getMetricValue(metrics, "node_group_count_ready_total")

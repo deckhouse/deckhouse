@@ -22,6 +22,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	NodeGroupLabelKey = "node.deckhouse.io/group"
+)
+
 type NodeMetricsData struct {
 	Name      string
 	NodeGroup string

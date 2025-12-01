@@ -32,17 +32,12 @@ import (
 	k8s "node-group-exporter/pkg/kubernetes"
 )
 
-const (
-	// NodeGroupLabelKey is the label key used by Deckhouse to identify node groups
-	NodeGroupLabelKey = "node.deckhouse.io/group"
-)
-
 // NodeGroupCollector implements prometheus.Collector interface
 type NodeGroupCollector struct {
 	clientset    kubernetes.Interface
 	watcher      *k8s.Watcher
 	nodeGroups   map[string]*NodeGroupMetricsData
-	nodesByGroup map[string][]*NodeMetricsData // Cached index: nodeGroup -> nodes
+	nodesByGroup map[string][]*NodeMetricsData
 	mutex        sync.RWMutex
 	logger       *log.Logger
 
@@ -359,20 +354,18 @@ func (c *NodeGroupCollector) updateMetrics() {
 
 		// Get nodes from index for node_group_node metric only
 		indexedNodes := c.nodesByGroup[nodeGroup.Name]
-		var nodeCount int
 
 		// Set per-node metrics (only metric that requires node iteration)
 		for _, indexedNode := range indexedNodes {
-			nodeCount++
 			c.nodeGroupNode.WithLabelValues(nodeGroup.Name, nodeGroup.NodeType, indexedNode.Name).Set(indexedNode.IsReady)
 		}
-
+		countNodes := len(indexedNodes)
 		// Fallback for totalNodes if status is not available
-		if totalNodes == 0 && nodeCount > 0 {
-			totalNodes = nodeCount
+		if totalNodes == 0 && countNodes > 0 {
+			totalNodes = countNodes
 			c.logger.Warn("NodeGroup status.nodes is 0, using index count ",
 				slog.String("NodeGroup", nodeGroup.Name),
-				slog.Int("Count", nodeCount))
+				slog.Int("Count", countNodes))
 		}
 
 		if maxNodes == 0 {
@@ -400,7 +393,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 			slog.Int("TotalNodes", totalNodes),
 			slog.Int("ReadyNodes", readyNodes),
 			slog.Int("maxNodes", maxNodes),
-			slog.Int("CountNodes", nodeCount))
+			slog.Int("CountNodes", countNodes))
 	}
 }
 
@@ -412,7 +405,7 @@ func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) {
 
 	nodeGroupData := ToNodeGroupMetricsData(nodegroup)
 	c.nodeGroups[nodegroup.Name] = &nodeGroupData
-	c.logger.Debug("Added or Update",
+	c.logger.Debug("Add or Update",
 		slog.String("NodeGroup", nodegroup.Name),
 		slog.String("Type", nodeGroupData.NodeType),
 		slog.Int("Nodes", len(c.nodeGroups)))
