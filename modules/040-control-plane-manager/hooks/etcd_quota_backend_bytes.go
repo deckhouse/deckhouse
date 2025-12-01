@@ -192,17 +192,14 @@ func getCurrentEtcdQuotaBytes(_ context.Context, input *go_hook.HookInput) (int6
 	return currentQuotaBytes, nodeWithMaxQuota, nil
 }
 
-func getNodeWithMinimalMemory(masterSnapshots, etcdOnlySnapshots []pkg.Snapshot) (*etcdNode, error) {
-	if len(masterSnapshots) == 0 && len(etcdOnlySnapshots) == 0 {
-		return nil, fmt.Errorf("both 'master_nodes' and 'etcd_only_node' snapshots are empty")
+func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
+	if len(snapshots) == 0 {
+		return nil, fmt.Errorf("'master_nodes' and 'etcd_only_node' snapshots are empty")
 	}
-
 	var nodeWithMinimalMemory *etcdNode
-
-	// Process master nodes
-	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](masterSnapshots) {
+	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](snapshots) {
 		if err != nil {
-			return nil, fmt.Errorf("cannot iterate over 'master_nodes' snapshot: %w", err)
+			return nil, fmt.Errorf("cannot iterate over 'master_nodes' and 'etcd_only_node' snapshots: %w", err)
 		}
 
 		if nodeWithMinimalMemory == nil {
@@ -210,25 +207,6 @@ func getNodeWithMinimalMemory(masterSnapshots, etcdOnlySnapshots []pkg.Snapshot)
 		}
 
 		// for not dedicated nodes we will not set new quota
-		if !node.IsDedicated {
-			return &node, nil
-		}
-
-		if node.Memory < nodeWithMinimalMemory.Memory {
-			*nodeWithMinimalMemory = node
-		}
-	}
-
-	// Process etcd-only nodes
-	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](etcdOnlySnapshots) {
-		if err != nil {
-			return nil, fmt.Errorf("cannot iterate over 'etcd_only_node' snapshot: %w", err)
-		}
-
-		if nodeWithMinimalMemory == nil {
-			nodeWithMinimalMemory = &node
-		}
-
 		if !node.IsDedicated {
 			return &node, nil
 		}
@@ -278,7 +256,12 @@ func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) in
 
 	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
 	etcdOnlyNodeSnapshots := input.Snapshots.Get("etcd_only_node")
-	node, err := getNodeWithMinimalMemory(masterNodeSnapshots, etcdOnlyNodeSnapshots)
+	
+	allNodesSnapshots := make([]pkg.Snapshot, 0, len(masterNodeSnapshots)+len(etcdOnlyNodeSnapshots))
+	allNodesSnapshots = append(allNodesSnapshots, masterNodeSnapshots...)
+	allNodesSnapshots = append(allNodesSnapshots, etcdOnlyNodeSnapshots...)
+	
+	node, err := getNodeWithMinimalMemory(allNodesSnapshots)
 
 	if err != nil {
 		input.Logger.Warn("Cannot get node with minimal memory", log.Err(err))
