@@ -294,7 +294,7 @@ func withPackageServiceManager(psm registryService.ServiceManagerInterface[regis
 }
 
 // createMockPSM creates a PackageServiceManager with a mock PackagesService for the given registry URL
-func createMockPSM(registryURL string, mockClient registry.Client) registryService.ServiceManagerInterface[registryService.PackagesService] {
+func createMockPSM(mockClient registry.Client) registryService.ServiceManagerInterface[registryService.PackagesService] {
 	psm := mock.NewServiceManagerMock[registryService.PackagesService](&testing.T{})
 	// Create a PackagesService with the mock client
 	svc := registryService.NewPackagesService(mockClient, log.NewNop())
@@ -493,7 +493,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				return nil, assert.AnError
 			},
 		}
-		psm := createMockPSM("registry.example.com/test", mockClient)
+		psm := createMockPSM(mockClient)
 
 		suite.setupController("package-listing-failed.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
@@ -525,7 +525,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				}, nil
 			},
 		}
-		psm := createMockPSM("registry.example.com/test", mockClient)
+		psm := createMockPSM(mockClient)
 
 		suite.setupController("successful-discovery.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
@@ -557,7 +557,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				}, nil
 			},
 		}
-		psm := createMockPSM("registry.example.com/test", mockClient)
+		psm := createMockPSM(mockClient)
 
 		suite.setupController("successful-completion.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
@@ -594,7 +594,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				}, nil
 			},
 		}
-		psm := createMockPSM("registry.example.com/test", segmentAwareMock)
+		psm := createMockPSM(segmentAwareMock)
 
 		suite.setupController("failed-versions.yaml", withPackageServiceManager(psm))
 
