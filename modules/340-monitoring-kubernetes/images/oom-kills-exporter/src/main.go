@@ -57,7 +57,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&metricsAddr, "listen-address", ":4205", "The address to listen on for HTTP requests.")
+	flag.StringVar(&metricsAddr, "listen-address", "127.0.0.1:4205", "The address to listen on for HTTP requests.")
 	flag.StringVar(&newPattern, "regexp-pattern", defaultPattern, "Overwrites the default regexp pattern to match and extract Pod UID and Container ID.")
 }
 
