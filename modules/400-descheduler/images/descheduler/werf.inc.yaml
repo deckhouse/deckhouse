@@ -1,4 +1,4 @@
-{{- $version := "ef0c2c1c47c6aa6afb0d08f4a2488d7df004c2f7" }}
+{{- $version := "release-1.34" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
