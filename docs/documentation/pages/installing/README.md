@@ -461,7 +461,7 @@ The configuration file provided through the `--config` parameter when running th
 ### Installing Deckhouse Kubernetes Platform from an external registry
 
 {% alert level="warning" %}
-Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
 {% alert level="warning" %}
