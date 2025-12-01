@@ -66,6 +66,11 @@ spec:
           - -listen-address=127.0.0.1:9102
           - -logtostderr
           - -v=5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ $port }}
+            scheme: HTTPS
         volumeMounts:
           - name: kmsg
             mountPath: /dev/kmsg
