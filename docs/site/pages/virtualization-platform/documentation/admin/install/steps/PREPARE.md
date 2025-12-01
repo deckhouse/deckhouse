@@ -11,11 +11,22 @@ Before installing the virtualization platform, you need to plan its parameters:
    - [Platform Editions](../../../about/editions.html);
    - [Release Channels](../../../about/release-channels.html).
 
-1. Determine the IP address subnets:
-   - Subnet used by nodes for internal communication;
-   - Subnet for pods;
-   - Subnet for services (Service);
-   - Subnets for virtual machine addresses.
+1. Determine IP subnets:
+
+   - Subnet used by the nodes to communicate with each other.  
+     This is the only subnet that actually exists in the organization's network and is routable within your infrastructure.
+
+   - Pod subnet (`podSubnetCIDR`).
+   - Service subnet (`serviceSubnetCIDR`).
+   - Subnets for virtual machine addresses (`virtualMachineCIDRs`).
+
+   The node subnet must be a real network in your datacenter. The other subnets are virtual networks inside the cluster. They must not be routable outside the cluster and must not be advertised to either the public network or the organization’s network. You do not need to allocate separate VLANs or physical segments for them; it is enough to choose free private address ranges that do not overlap with existing networks.
+
+   Example of choosing such subnets:
+
+   - `podSubnetCIDR: 10.88.0.0/16`
+   - `serviceSubnetCIDR: 10.99.0.0/16`
+   - `virtualMachineCIDRs: 10.66.10.0/24`
 
 1. Decide on the nodes where the Ingress controller will be deployed.
 
