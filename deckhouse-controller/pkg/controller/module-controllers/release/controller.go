@@ -1411,16 +1411,19 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 }
 
 func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Definition, values addonutils.Values, valuesVersion int, release *v1alpha1.ModuleRelease) (addonutils.Values, error) { // check conversions
+	logger := r.log.With(slog.String("module", release.GetModuleName()), slog.String("release", release.GetName()))
+
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
 	_, err := os.Stat(conversionsDir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
+	// no conversions found
 	if err != nil {
-		return values, nil // no conversions found
+		return values, nil
 	}
 
-	r.log.Debug("conversions for the module found")
+	logger.Debug("conversions for the module found")
 
 	newValues, err := r.applyValuesConversions(def, conversionsDir, valuesVersion, values)
 	if err != nil {
@@ -1445,7 +1448,7 @@ func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Def
 			return nil, fmt.Errorf("update status: the '%s:v%s' module conversion: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
-		r.log.Debug("successfully updated module conditions")
+		logger.Debug("successfully updated module conditions")
 		return nil, fmt.Errorf("apply conversions: %w", err)
 	}
 
