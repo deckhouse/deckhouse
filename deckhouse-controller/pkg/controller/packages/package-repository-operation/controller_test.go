@@ -287,27 +287,19 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 
 type reconcilerOption func(*reconciler)
 
-func withDependencyContainer(dc dependency.Container) reconcilerOption {
-	return func(r *reconciler) {
-		r.dc = dc
-	}
-}
-
 func withPackageServiceManager(psm registryService.ServiceManagerInterface[registryService.PackagesService]) reconcilerOption {
 	return func(r *reconciler) {
 		r.psm = psm
 	}
 }
 
-func withClient(c client.Client) reconcilerOption {
-	return func(r *reconciler) {
-		r.client = c
-	}
-}
-
 // createMockPSM creates a PackageServiceManager with a mock PackagesService for the given registry URL
 func createMockPSM(registryURL string, mockClient registry.Client) registryService.ServiceManagerInterface[registryService.PackagesService] {
 	psm := mock.NewServiceManagerMock[registryService.PackagesService](&testing.T{})
+	// Create a PackagesService with the mock client
+	svc := registryService.NewPackagesService(mockClient, log.NewNop())
+	// Set up the mock to return the service for any call
+	psm.ServiceMock.Return(svc, nil)
 	return psm
 }
 
