@@ -664,6 +664,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/340-monitoring-kubernetes/images/oom-kills-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/340-monitoring-ping/images/monitoring-ping/src"
   labels:
   - "type/dependencies"
