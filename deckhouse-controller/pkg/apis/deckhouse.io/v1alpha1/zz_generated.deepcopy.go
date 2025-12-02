@@ -214,11 +214,6 @@ func (in *ApplicationPackageVersion) DeepCopyInto(out *ApplicationPackageVersion
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.DeployedApps != nil {
-		in, out := &in.DeployedApps, &out.DeployedApps
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	out.Spec = in.Spec
 	in.Status.DeepCopyInto(&out.Status)
 }

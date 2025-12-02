@@ -96,6 +96,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.handleDelete(ctx, apv)
 	}
 
+	// set default labels if they are not set
+	r.setLabelsIfNotSet(ctx, apv)
+
 	// skip handle for non drafted resources
 	if !apv.IsDraft() {
 		r.logger.Debug("package is not draft", slog.String("package_name", apv.Name))
@@ -112,6 +115,33 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return res, nil
+}
+
+func (r *reconciler) setLabelsIfNotSet(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) {
+	original := apv.DeepCopy()
+	isLabelsChanged := false
+
+	if _, ok := apv.Labels["package"]; !ok {
+		apv.Labels["package"] = apv.Spec.PackageName
+		isLabelsChanged = true
+	}
+	if _, ok := apv.Labels["repository"]; !ok {
+		apv.Labels["repository"] = apv.Spec.PackageRepository
+		isLabelsChanged = true
+	}
+	if _, ok := apv.Labels["packages.deckhouse.io/exist-in-registry"]; !ok {
+		apv.Labels["packages.deckhouse.io/exist-in-registry"] = "false"
+		isLabelsChanged = true
+	}
+
+	if isLabelsChanged {
+		r.logger.Debug("setting defaultlabels", slog.String("name", apv.Name))
+
+		err := r.client.Patch(ctx, apv, client.MergeFrom(original))
+		if err != nil {
+			r.logger.Warn("failed to patch application package version", slog.String("name", apv.Name), log.Err(err))
+		}
+	}
 }
 
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {

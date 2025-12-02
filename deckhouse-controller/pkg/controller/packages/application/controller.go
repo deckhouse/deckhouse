@@ -40,6 +40,9 @@ import (
 const (
 	controllerName = "d8-application-controller"
 
+	// Warning: Don't change this value, this controller do not do any hard work.
+	// This may affect concurrent access to deployedApps field in ApplicationPackageVersion
+	// If you need parallel processing, you need to implement new controller
 	maxConcurrentReconciles = 1
 
 	requeueTime = 30 * time.Second
