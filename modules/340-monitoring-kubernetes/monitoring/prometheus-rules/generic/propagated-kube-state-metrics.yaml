@@ -1,0 +1,12 @@
+- name: kube-state-metrics
+  rules:
+  - alert: DeploymentGenerationMismatch
+    expr: max(kube_deployment_status_observed_generation != kube_deployment_metadata_generation) by (namespace, deployment)
+    for: 15m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Deployment is outdated.
+      description: |
+        The observed deployment generation doesn't match the expected one for Deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
