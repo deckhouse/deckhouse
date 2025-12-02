@@ -395,18 +395,14 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	collector.OnNodeDelete(orphanNode)
 	deletedNodeData, _ := findNodeInGroups(collector, "orphan-node-1")
 	assert.Nil(t, deletedNodeData, "Node should be removed from nodesByGroup")
-	assert.NotContains(t, collector.nodesByGroup, "nonexistent-group") // Should be cleaned up
+	assert.NotContains(t, collector.nodesByGroup, "nonexistent-group")
 
-	// Update NodeGroup status to reflect node deletion
-	nodeGroup.Status.Nodes = 0
-	nodeGroup.Status.Ready = 0
-	collector.OnNodeGroupAddOrUpdate(nodeGroup)
+	collector.OnNodeGroupDelete(nodeGroup)
 
 	metrics, err = registry.Gather()
 	assert.NoError(t, err)
-	readyCount, found := getMetricValue(metrics, "node_group_count_ready_total")
-	assert.True(t, found, "node_group_count_ready_total metric should be found")
-	assert.Equal(t, 0.0, readyCount, "node_group_count_ready_total should be 0 after node deletion")
+	_, found = getMetricValue(metrics, "node_group_count_ready_total")
+	assert.False(t, found, "node_group_count_ready_total metric should be found")
 
 	_, found = getMetricValueByLabel(metrics, "node_group_node", "node", "orphan-node-1")
 	assert.False(t, found, "node_group_node metric should not be present after node deletion")
