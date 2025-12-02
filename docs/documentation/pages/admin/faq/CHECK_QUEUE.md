@@ -1,0 +1,41 @@
+---
+title: How to check the job queue in Deckhouse?
+permalink: en/faq-common/check-queue.html
+---
+
+## How to check the status of all Deckhouse task queues?
+
+To view the status of all Deckhouse job queues, run the following command:
+
+```shell
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+```
+
+Example of the output (queues are empty):
+
+```console
+Summary:
+- 'main' queue: empty.
+- 88 other queues (0 active, 88 empty): 0 tasks.
+- no tasks to handle.
+```
+
+## How to view the status of the main task queue?
+
+To view the status of the Deckhouse `main` task queue, run the following command:
+
+```shell
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+```
+
+Example of the output (38 tasks in the `main` queue):
+
+```console
+Queue 'main': length 38, status: 'run first task'
+```
+
+Example of the output (the `main` queue is empty):
+
+```console
+Queue 'main': length 0, status: 'waiting for task 0s'
+```

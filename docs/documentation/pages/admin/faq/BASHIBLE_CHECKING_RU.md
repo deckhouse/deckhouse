@@ -1,6 +1,6 @@
 ---
-title: Что делать при наличии проблем с обновлением компонентов Kubernetes на узлах кластера, с синхронизацией узлов, применением NodeGroup Configuration
-permalink:
+title: Что делать при наличии проблем с обновлением компонентов Kubernetes на узлах кластера, с синхронизацией узлов, применением NodeGroup Configuration?
+permalink: ru/faq-common/update-kubernetes-components-problems.html
 lang: ru
 ---
 
