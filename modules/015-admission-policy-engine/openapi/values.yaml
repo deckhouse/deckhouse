@@ -90,6 +90,40 @@ properties:
           # this spec is validated by CRD's openapi spec
           type: object
           additionalProperties: true
+      denyVulnerableImages:
+        type: object
+        default: {}
+        properties:
+          webhook:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              key:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              ca:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          dockerConfigJson:
+            type: object
+            default: {}
+            properties:
+              auths:
+                type: object
+                additionalProperties:
+                  auth:
+                    type: string
+                  username:
+                    type: string
+                  password:
+                    type: string
+                  identitytoken:
+                    type: string
+                  registrytoken:
+                    type: string
       trivyConfigData:
         type: object
         additionalProperties:
