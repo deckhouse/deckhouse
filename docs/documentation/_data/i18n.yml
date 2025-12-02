@@ -401,6 +401,9 @@ comparison:
     ru: "с ограничениями"
 
 features:
+  module_lifecycle_stage:
+    en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
+    ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"
