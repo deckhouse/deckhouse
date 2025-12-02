@@ -69,6 +69,7 @@ type ApplicationPackageVersion struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+	DeployedApps      []string `json:"metadata.deployedApps,omitempty"`
 
 	Spec ApplicationPackageVersionSpec `json:"spec,omitempty"`
 
