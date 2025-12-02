@@ -43,7 +43,7 @@ If the required resources do not appear after creating an object in the system (
    - no tasks to handle.
    ```
 
-   ЕIf there are many unprocessed or long-running tasks in the queue, this may indicate problems.
+   If there are many unprocessed or long-running tasks in the queue, this may indicate problems.
 
 1. Analyze DKP logs and events:
 
