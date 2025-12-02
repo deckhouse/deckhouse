@@ -116,7 +116,10 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 }
 
 func (b *ManifestBuilder) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
-	ctxMirrors, cfgMirrors := b.modeModel.BashibleMirrors()
+	ctxMirrors, cfgMirrors, err := b.modeModel.BashibleMirrors()
+	if err != nil {
+		return bashible.Context{}, bashible.Config{}, err
+	}
 
 	bashibleCtx := bashible.Context{
 		Mode:                 b.modeModel.Mode,

@@ -50,9 +50,10 @@ func (s ModeSettings) ToModel() ModeModel {
 	switch s.Mode {
 	case constant.ModeDirect:
 		return s.directModel()
-	default:
+	case constant.ModeUnmanaged:
 		return s.unmanagedModel()
 	}
+	panic(ErrUnknownMode)
 }
 
 func (s ModeSettings) directModel() ModeModel {
@@ -87,21 +88,26 @@ func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
 		return m.directInClusterData(getPKI)
-	default:
-		return m.unmanagedInClusterData()
+	case constant.ModeUnmanaged:
+		return m.RemoteData, nil
 	}
+	return Data{}, ErrUnknownMode
 }
 
 func (m ModeModel) BashibleMirrors() (
-	ctxHosts map[string]bashible.ContextHosts,
-	cfgHosts map[string]bashible.ConfigHosts,
+	map[string]bashible.ContextHosts,
+	map[string]bashible.ConfigHosts,
+	error,
 ) {
 	switch m.Mode {
 	case constant.ModeDirect:
-		return m.directBashibleMirrors()
-	default:
-		return m.unmanagedBashibleMirrors()
+		ctx, cfg := m.directBashibleMirrors()
+		return ctx, cfg, nil
+	case constant.ModeUnmanaged:
+		ctx, cfg := m.unmanagedBashibleMirrors()
+		return ctx, cfg, nil
 	}
+	return nil, nil, ErrUnknownMode
 }
 
 func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (Data, error) {
@@ -117,10 +123,6 @@ func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (Data, error)
 		Password:   m.RemoteData.Password,
 		CA:         pki.CA.Cert,
 	}, nil
-}
-
-func (m ModeModel) unmanagedInClusterData() (Data, error) {
-	return m.RemoteData, nil
 }
 
 func (m ModeModel) directBashibleMirrors() (
