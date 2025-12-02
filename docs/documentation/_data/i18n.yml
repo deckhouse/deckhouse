@@ -1,4 +1,7 @@
 common:
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
   of:
     en: of
     ru: ""
