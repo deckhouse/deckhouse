@@ -270,6 +270,33 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	original := app.DeepCopy()
 
+	ap := new(v1alpha1.ApplicationPackage)
+	if err := r.client.Get(ctx, types.NamespacedName{Name: app.Spec.PackageName}, ap); err != nil {
+		r.SetConditionFalse(
+			app,
+			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionReasonApplicationPackageNotFound,
+			fmt.Sprintf("get ApplicationPackage for %s not found: %s", app.Spec.PackageName, err.Error()),
+		)
+
+		patchErr := r.client.Status().Patch(ctx, app, client.MergeFrom(original))
+		if patchErr != nil {
+			return fmt.Errorf("patch status application %s: %w", app.Name, patchErr)
+		}
+
+		return fmt.Errorf("get ApplicationPackage for %s: %w", app.Spec.PackageName, err)
+	}
+
+	if !ap.Status.IsAppInstalled(app.Namespace, app.Name) {
+		original := ap.DeepCopy()
+
+		ap.Status = ap.Status.AddInstalledApp(app.Namespace, app.Name)
+
+		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
+		}
+	}
+
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
@@ -303,6 +330,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		}
 
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
+	}
+
+	if !apv.Status.IsAppInstalled(app.Namespace, app.Name) {
+		original := apv.DeepCopy()
+
+		apv.Status = apv.Status.AddInstalledApp(app.Namespace, app.Name)
+
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
+		}
 	}
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
