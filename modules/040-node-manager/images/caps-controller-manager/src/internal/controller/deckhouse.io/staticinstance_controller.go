@@ -63,9 +63,10 @@ type StaticInstanceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := ctrl.LoggerFrom(ctx).WithValues("staticInstance", req.NamespacedName.String())
+	ctx = ctrl.LoggerInto(ctx, logger)
 
-	logger.Info("Reconciling StaticInstance")
+	logger.V(1).Info("Reconciling StaticInstance")
 
 	staticInstance := &deckhousev1.StaticInstance{}
 	err := r.Get(ctx, req.NamespacedName, staticInstance)
@@ -74,6 +75,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get StaticInstance")
 		return ctrl.Result{}, err
 	}
 
@@ -96,6 +98,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
+		logger.Error(err, "failed to load SSHCredentials")
 		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
 		}
@@ -122,7 +125,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
 	}
 
-	instanceScope.MachineScope = machineScope
+	instanceScope.AttachMachineScope(machineScope)
 
 	if machineScope != nil {
 		// Return early if the object or Cluster is paused
@@ -145,7 +148,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	return r.reconcileNormal(ctx, instanceScope)
+	result, reconcileErr := r.reconcileNormal(ctx, instanceScope)
+	if reconcileErr != nil {
+		instanceScope.Logger.Error(reconcileErr, "failed to reconcile StaticInstance")
+	}
+
+	return result, reconcileErr
 }
 
 func (r *StaticInstanceReconciler) reconcileNormal(
@@ -224,9 +232,15 @@ func (r *StaticInstanceReconciler) getStaticMachine(
 	// Fetch the static machine.
 	err := r.Get(ctx, staticMachineNamespacedName, staticMachine)
 	if err != nil {
-		logger.Info("No StaticMachine is associated with StaticInstance")
+		if apierrors.IsNotFound(err) {
+			logger.V(1).Info("No StaticMachine is associated with StaticInstance")
 
-		return nil, nil
+			return nil, nil
+		}
+
+		logger.Error(err, "failed to get StaticMachine for StaticInstance")
+
+		return nil, errors.Wrap(err, "failed to get StaticMachine")
 	}
 
 	var ok bool
