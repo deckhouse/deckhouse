@@ -32,14 +32,17 @@ type DeckhouseSettings struct {
 	Unmanaged *RegistrySettings `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
 }
 
-type RegistrySettings struct {
-	ImagesRepo string                 `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     constant.SchemeType    `json:"scheme" yaml:"scheme"`
-	CA         string                 `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string                 `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string                 `json:"password,omitempty" yaml:"password,omitempty"`
-	License    string                 `json:"license,omitempty" yaml:"license,omitempty"`
-	CheckMode  constant.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
+func (settings DeckhouseSettings) ToMap() (map[string]interface{}, error) {
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deckhouse registry settings: %w", err)
+	}
+
+	var ret map[string]interface{}
+	if err := json.Unmarshal(data, &ret); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse registry settings: %w", err)
+	}
+	return ret, nil
 }
 
 func (settings *DeckhouseSettings) Correct() {
@@ -48,16 +51,6 @@ func (settings *DeckhouseSettings) Correct() {
 		settings.Direct.Correct()
 	case settings.Unmanaged != nil:
 		settings.Unmanaged.Correct()
-	}
-}
-
-func (settings *RegistrySettings) Correct() {
-	settings.ImagesRepo = strings.TrimRight(strings.TrimSpace(settings.ImagesRepo), "/")
-	if strings.TrimSpace(settings.ImagesRepo) == "" {
-		settings.ImagesRepo = constant.CEImagesRepo
-	}
-	if strings.TrimSpace(settings.Scheme) == "" {
-		settings.Scheme = constant.CEScheme
 	}
 }
 
@@ -86,6 +79,26 @@ func (settings DeckhouseSettings) Validate() error {
 			),
 		),
 	)
+}
+
+type RegistrySettings struct {
+	ImagesRepo string                 `json:"imagesRepo" yaml:"imagesRepo"`
+	Scheme     constant.SchemeType    `json:"scheme" yaml:"scheme"`
+	CA         string                 `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username   string                 `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string                 `json:"password,omitempty" yaml:"password,omitempty"`
+	License    string                 `json:"license,omitempty" yaml:"license,omitempty"`
+	CheckMode  constant.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
+}
+
+func (settings *RegistrySettings) Correct() {
+	settings.ImagesRepo = strings.TrimRight(strings.TrimSpace(settings.ImagesRepo), "/")
+	if strings.TrimSpace(settings.ImagesRepo) == "" {
+		settings.ImagesRepo = constant.CEImagesRepo
+	}
+	if strings.TrimSpace(settings.Scheme) == "" {
+		settings.Scheme = constant.CEScheme
+	}
 }
 
 func (settings RegistrySettings) Validate() error {
@@ -124,17 +137,4 @@ func (settings RegistrySettings) Validate() error {
 			),
 		),
 	)
-}
-
-func (settings DeckhouseSettings) ToMap() (map[string]interface{}, error) {
-	data, err := json.Marshal(settings)
-	if err != nil {
-		return nil, fmt.Errorf("marshal deckhouse registry settings: %w", err)
-	}
-
-	var ret map[string]interface{}
-	if err := json.Unmarshal(data, &ret); err != nil {
-		return nil, fmt.Errorf("unmarshal deckhouse registry settings: %w", err)
-	}
-	return ret, nil
 }

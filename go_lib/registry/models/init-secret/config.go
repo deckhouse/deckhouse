@@ -21,13 +21,13 @@ import (
 	"fmt"
 )
 
-type Config struct {
-	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
-}
-
 type CertKey struct {
 	Cert string `json:"cert" yaml:"cert"`
 	Key  string `json:"key" yaml:"key"`
+}
+
+type Config struct {
+	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
 }
 
 func (c Config) ToMap() (map[string]interface{}, error) {
