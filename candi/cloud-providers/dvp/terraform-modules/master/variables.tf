@@ -157,7 +157,7 @@ locals {
     },
     var.node_selector
   )
-
+#
   vm_destructive_params = merge(
     {
       "virtualMachine" = {
