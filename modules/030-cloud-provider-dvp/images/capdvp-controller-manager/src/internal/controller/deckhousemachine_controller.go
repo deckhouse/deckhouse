@@ -116,6 +116,15 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// Migrate old CR's to v1beta2 conditions
+	defer func() {
+		normalizeLegacyConditions(dvpMachine)
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
 	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
 	defer func() {
 		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
@@ -131,6 +140,22 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Handle other kinds of changes
 	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
+}
+
+func normalizeLegacyConditions(dvpMachine *infrastructurev1a1.DeckhouseMachine) {
+	for i := range dvpMachine.Status.Conditions {
+		c := &dvpMachine.Status.Conditions[i]
+
+		if c.Reason == "" {
+			c.Reason = "MigratedFromBeta1"
+		}
+		if c.Message == "" {
+			c.Message = "Condition restored during migration to v1beta2"
+		}
+		if c.LastTransitionTime.IsZero() {
+			c.LastTransitionTime = metav1.Now()
+		}
+	}
 }
 
 func patchDeckhouseMachine(
