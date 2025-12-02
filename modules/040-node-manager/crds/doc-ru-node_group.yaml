@@ -212,7 +212,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения `podSubnetNodeCIDRPrefix`:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -436,7 +440,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения `podSubnetNodeCIDRPrefix`:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -779,7 +787,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения `podSubnetNodeCIDRPrefix`:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
