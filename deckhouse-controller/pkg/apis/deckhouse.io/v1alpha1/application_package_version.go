@@ -137,6 +137,28 @@ func (a *ApplicationPackageVersion) IsDraft() bool {
 	return false
 }
 
+func (appStatus *ApplicationPackageVersionStatus) IsAppInstalled(namespace string, appName string) bool {
+	for _, v := range appStatus.UsedBy {
+		if v.Namespace == namespace && v.Name == appName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (appStatus *ApplicationPackageVersionStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
+	appStatusInstalledApp := ApplicationPackageVersionStatusInstance{Namespace: namespace, Name: appName}
+
+	usedBy := append(appStatus.UsedBy, appStatusInstalledApp)
+
+	appStatus.UsedBy = usedBy
+
+	appStatus.UsedByCount++
+
+	return *appStatus
+}
+
 // +kubebuilder:object:root=true
 
 // ApplicationPackageVersionList is a list of ApplicationPackageVersion resources
