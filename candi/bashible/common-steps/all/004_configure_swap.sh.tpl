@@ -36,6 +36,11 @@ if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L 
   ln -sf /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
 fi
 
+# If swap is active, we need to disable it (requires kubelet restart)
+if swapon --show | grep -q .; then
+  bb-flag-set kubelet-need-restart
+fi
+
 swapoff -a || true
 
 # Remove swapfile if present
@@ -119,6 +124,8 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
   bb-log-info "Swapfile formatted successfully"
+  # Swapfile changed, kubelet needs restart
+  bb-flag-set kubelet-need-restart
 else
   bb-log-info "Swapfile already exists with correct size: ${CURRENT_BYTES} bytes"
 fi
@@ -134,6 +141,8 @@ if swapon --show | grep -q "$SWAPFILE"; then
 else
   if swapon "$SWAPFILE"; then
     bb-log-info "Swap enabled successfully"
+    # Swap was just enabled, kubelet needs restart
+    bb-flag-set kubelet-need-restart
   else
     bb-log-error "Failed to enable swap"
     exit 1
@@ -156,7 +165,14 @@ exit 0
 
 # For unlimited swap, just ensure swap is enabled
 # but don't manage swapfile ourselves
-swapon -a || true
+if ! swapon --show | grep -q .; then
+  # No swap active, try to enable and check if successful
+  swapon -a || true
+  # If swap is now active, kubelet needs restart
+  if swapon --show | grep -q .; then
+    bb-flag-set kubelet-need-restart
+  fi
+fi
 
 # Configure swappiness
 SWAPPINESS="{{ $swappiness }}"
