@@ -1,6 +1,6 @@
 ---
 title: Как проверить очередь заданий в Deckhouse?
-permalink:
+permalink: ru/faq-common/check-queue.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Как проверить используемую версию Kubernetes?
-permalink:
+permalink: ru/faq-common/check-kubernetes-version.html
 lang: ru
 ---
 

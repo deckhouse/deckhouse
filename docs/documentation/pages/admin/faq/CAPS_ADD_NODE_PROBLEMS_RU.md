@@ -1,10 +1,10 @@
 ---
 title: Что делать в случае проблем с добавлением узла в кластер через Cluster API Provider Static?
-permalink:
+permalink: ru/faq-common/caps-adding-node-problems.html
 lang: ru
 ---
 
-Если при добавлении узла в кластер через Cluster API Provider Static (CAPS) он висит в статусе `Pending` или в `Bootstraping`, выполните следующие действия:
+Если при добавлении узла в кластер через Cluster API Provider Static (CAPS) он остается в статусе `Pending` или в `Bootstraping`, выполните следующие действия:
 
 1. Проверьте корректность ключей доступа, указанных в ресурсе SSHCredentials. Убедитесь, что имя пользователя и SSH-ключ, указанные в SSHCredentials, верны.
 
