@@ -277,22 +277,22 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    Carefully review the actions that converge plans to perform when it asks for confirmation.
 
-   When the command is executed, the nodes will be replaced with new ones with confirmation on each node. The replacement will be performed in reverse order (2,1,0).
+   When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-   Perform the following steps (P. 9-12) **sequentially on each** master node, starting with the node with the highest number (with the suffix 2) and ending with the node with the lowest number (with the suffix 0).
+   Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
 
-1. **On the created node**, open the log of the systemd unit `bashible.service`. Wait until the node configuration is complete — the log should display the message `nothing to do`:
+1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
 
    ```bash
    journalctl -fu bashible.service
    ```
 
-1. Verify that the etcd node appears in the list of cluster nodes:
+1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
    for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
@@ -305,7 +305,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    done
    ```
 
-1. Ensure that `control-plane-manager` is running on the node:
+1. Make sure `control-plane-manager` is running on the node:
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
