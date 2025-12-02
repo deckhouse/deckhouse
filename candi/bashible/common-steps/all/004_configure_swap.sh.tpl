@@ -36,11 +36,7 @@ if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L 
   ln -sf /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
 fi
 
-# If swap is active, we need to disable it (requires kubelet restart)
-if swapon --show | grep -q .; then
-  bb-flag-set kubelet-need-restart
-fi
-
+# Disable any active swap, no need to restart kubelet
 swapoff -a || true
 
 # Remove swapfile if present
