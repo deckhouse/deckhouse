@@ -90,14 +90,13 @@
     {{- $path := trimAll "/" $context.Chart.Name }}
     {{- $registryBase = join "/" (list $host $path) }}
     {{- $imageDigest = index $context.Values.global.modulesImages.digests $storageFoundationModuleName $containerName | default "" }}
+    {{- printf "%s@%s" $registryBase $imageDigest }}
   {{- end }}
   {{- /* Fallback to common module if not found in storage foundation */}}
   {{- if not $imageDigest }}
     {{- $registryBase = $context.Values.global.modulesImages.registry.base }}
     {{- $imageDigest = index $context.Values.global.modulesImages.digests "common" $containerName | default "" }}
-  {{- end }}
-  {{- if $imageDigest }}
-  {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- printf "%s@%s" $registryBase $imageDigest }}
   {{- end }}
 {{- end }}
 
