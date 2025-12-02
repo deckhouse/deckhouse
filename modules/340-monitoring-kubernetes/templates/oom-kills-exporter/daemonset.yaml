@@ -2,6 +2,7 @@
 cpu: 1m
 memory: 20Mi
 {{- end }}
+{{- if .Values.monitoringKubernetes.oomKillsExporterEnabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -153,3 +154,4 @@ spec:
       - name: containerd
         hostPath:
           path: /run/containerd/containerd.sock
+{{- end }}
