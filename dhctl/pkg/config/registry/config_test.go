@@ -29,7 +29,7 @@ func TestNewConfig(t *testing.T) {
 	type input struct {
 		deckhouse  *registry_types.DeckhouseSettings
 		initConfig *registry_types.InitConfig
-		cri        registry_types.CRIType
+		cri        registry_const.CRIType
 	}
 	type output struct {
 		err    bool
@@ -54,7 +54,7 @@ func TestNewConfig(t *testing.T) {
 					},
 				},
 				initConfig: nil,
-				cri:        registry_types.CRIContainerdV1,
+				cri:        registry_const.CRIContainerdV1,
 			},
 			output: output{
 				err: false,
@@ -73,7 +73,7 @@ func TestNewConfig(t *testing.T) {
 					},
 				},
 				initConfig: nil,
-				cri:        registry_types.CRIType("unknown"),
+				cri:        registry_const.CRIType("unknown"),
 			},
 			output: output{
 				err:    true,
@@ -91,7 +91,7 @@ func TestNewConfig(t *testing.T) {
 					},
 				},
 				initConfig: nil,
-				cri:        registry_types.CRIType("unknown"),
+				cri:        registry_const.CRIType("unknown"),
 			},
 			output: output{
 				err: false,
@@ -144,8 +144,8 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
 					Unmanaged: &registry_types.RegistrySettings{
-						ImagesRepo: registry_types.CEImagesRepo,
-						Scheme:     registry_types.CEScheme,
+						ImagesRepo: registry_const.CEImagesRepo,
+						Scheme:     registry_const.CEScheme,
 					},
 				},
 			},
@@ -164,8 +164,8 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
 					Direct: &registry_types.RegistrySettings{
-						ImagesRepo: registry_types.CEImagesRepo,
-						Scheme:     registry_types.CEScheme,
+						ImagesRepo: registry_const.CEImagesRepo,
+						Scheme:     registry_const.CEScheme,
 					},
 				},
 			},
@@ -181,8 +181,8 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
 					Unmanaged: &registry_types.RegistrySettings{
-						ImagesRepo: registry_types.CEImagesRepo,
-						Scheme:     registry_types.CEScheme,
+						ImagesRepo: registry_const.CEImagesRepo,
+						Scheme:     registry_const.CEScheme,
 					},
 				},
 			},

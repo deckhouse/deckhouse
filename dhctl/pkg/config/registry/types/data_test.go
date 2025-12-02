@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestData_FromRegistrySettings(t *testing.T) {
@@ -32,7 +34,7 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			name: "Without username and password",
 			input: RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     SchemeHTTPS,
+				Scheme:     registry_const.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -40,7 +42,7 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			},
 			output: Data{
 				ImagesRepo: "registry.example.com",
-				Scheme:     SchemeHTTPS,
+				Scheme:     registry_const.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -50,7 +52,7 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			name: "With license",
 			input: RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     SchemeHTTPS,
+				Scheme:     registry_const.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -58,9 +60,9 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			},
 			output: Data{
 				ImagesRepo: "registry.example.com",
-				Scheme:     SchemeHTTPS,
+				Scheme:     registry_const.SchemeHTTPS,
 				CA:         "ca-cert",
-				Username:   LicenseUsername,
+				Username:   registry_const.LicenseUsername,
 				Password:   "license-key",
 			},
 		},

@@ -27,7 +27,7 @@ type registrySettingsOption func(*RegistrySettings)
 func validRegistrySettings(opts ...registrySettingsOption) *RegistrySettings {
 	settings := RegistrySettings{
 		ImagesRepo: "test:80/a/b/c/d",
-		Scheme:     SchemeHTTPS,
+		Scheme:     registry_const.SchemeHTTPS,
 		CA:         "-----BEGIN CERTIFICATE-----",
 		Username:   "test-user",
 		Password:   "test-password",
@@ -107,8 +107,8 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 			expected: DeckhouseSettings{
 				Mode: registry_const.ModeDirect,
 				Direct: &RegistrySettings{
-					ImagesRepo: CEImagesRepo,
-					Scheme:     CEScheme,
+					ImagesRepo: registry_const.CEImagesRepo,
+					Scheme:     registry_const.CEScheme,
 				},
 			},
 		},
@@ -121,8 +121,8 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 			expected: DeckhouseSettings{
 				Mode: registry_const.ModeUnmanaged,
 				Unmanaged: &RegistrySettings{
-					ImagesRepo: CEImagesRepo,
-					Scheme:     CEScheme,
+					ImagesRepo: registry_const.CEImagesRepo,
+					Scheme:     registry_const.CEScheme,
 				},
 			},
 		},
@@ -161,7 +161,7 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 				Scheme:     "HTTPS",
 			},
 			expected: RegistrySettings{
-				ImagesRepo: CEImagesRepo,
+				ImagesRepo: registry_const.CEImagesRepo,
 				Scheme:     "HTTPS",
 			},
 		},
@@ -173,7 +173,7 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 			},
 			expected: RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     CEScheme,
+				Scheme:     registry_const.CEScheme,
 			},
 		},
 		{
@@ -183,8 +183,8 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 				Scheme:     "",
 			},
 			expected: RegistrySettings{
-				ImagesRepo: CEImagesRepo,
-				Scheme:     CEScheme,
+				ImagesRepo: registry_const.CEImagesRepo,
+				Scheme:     registry_const.CEScheme,
 			},
 		},
 		{
@@ -369,7 +369,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name: "valid settings with HTTP scheme and no CA",
 			input: validRegistrySettings(
-				func(s *RegistrySettings) { s.Scheme = SchemeHTTP },
+				func(s *RegistrySettings) { s.Scheme = registry_const.SchemeHTTP },
 				func(s *RegistrySettings) { s.CA = "" },
 			),
 			output: output{
@@ -502,7 +502,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name: "CA with HTTP scheme",
 			input: validRegistrySettings(
-				func(s *RegistrySettings) { s.Scheme = SchemeHTTP },
+				func(s *RegistrySettings) { s.Scheme = registry_const.SchemeHTTP },
 			),
 			output: output{
 				err:    true,

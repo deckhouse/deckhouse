@@ -26,8 +26,8 @@ type TestConfigUpdateMode func() registry_const.ModeType
 
 func NewTestConfig(opts ...interface{}) Config {
 	registrySettings := types.RegistrySettings{
-		ImagesRepo: types.CEImagesRepo,
-		Scheme:     types.CEScheme,
+		ImagesRepo: registry_const.CEImagesRepo,
+		Scheme:     registry_const.CEScheme,
 	}
 
 	mode := registry_const.ModeUnmanaged
@@ -82,13 +82,13 @@ func WithImagesRepo(repo string) TestConfigUpdateRegistrySettings {
 
 func WithSchemeHTTP() TestConfigUpdateRegistrySettings {
 	return func(rs *types.RegistrySettings) {
-		rs.Scheme = types.SchemeHTTP
+		rs.Scheme = registry_const.SchemeHTTP
 	}
 }
 
 func WithSchemeHTTPS() TestConfigUpdateRegistrySettings {
 	return func(rs *types.RegistrySettings) {
-		rs.Scheme = types.SchemeHTTPS
+		rs.Scheme = registry_const.SchemeHTTPS
 	}
 }
 

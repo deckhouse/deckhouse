@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func stringPtr(s string) *string {
@@ -92,7 +93,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "-----BEGIN CERTIFICATE-----",
 					Username:   "test-user",
 					Password:   "test-password",
@@ -111,7 +112,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com:8080/path",
-					Scheme:     SchemeHTTP,
+					Scheme:     registry_const.SchemeHTTP,
 					CA:         "",
 					Username:   "",
 					Password:   "",
@@ -130,7 +131,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com:8080/path",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "",
 					Password:   "",
@@ -151,7 +152,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "-----BEGIN CERTIFICATE-----",
 					Username:   "test-user",
 					Password:   "test-password",
@@ -172,7 +173,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "test-user",
 					Password:   "test-password",
@@ -193,7 +194,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com:5000/path",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "test-user",
 					Password:   "test-password",
@@ -214,7 +215,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "user",
 					Password:   "",
@@ -235,7 +236,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "",
 					Password:   "pass",
@@ -256,7 +257,7 @@ func TestInitConfig_ToRegistrySettings(t *testing.T) {
 				err: false,
 				want: RegistrySettings{
 					ImagesRepo: "registry.example.com",
-					Scheme:     SchemeHTTPS,
+					Scheme:     registry_const.SchemeHTTPS,
 					CA:         "",
 					Username:   "",
 					Password:   "",

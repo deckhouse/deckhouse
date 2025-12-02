@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	ModuleEnabledCRI = []types.CRIType{types.CRIContainerdV1, types.CRIContainerdV2}
+	ModuleEnabledCRI = []registry_const.CRIType{registry_const.CRIContainerdV1, registry_const.CRIContainerdV2}
 )
 
 type Config struct {
@@ -48,7 +48,7 @@ func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) 
 func NewConfig(
 	deckhouse *types.DeckhouseSettings,
 	initConfig *types.InitConfig,
-	cri types.CRIType,
+	cri registry_const.CRIType,
 ) (Config, error) {
 	moduleEnabled := slices.Contains(ModuleEnabledCRI, cri)
 

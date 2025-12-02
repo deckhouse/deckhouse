@@ -26,10 +26,11 @@ const (
 	Path       = "/system/deckhouse"
 	PathRegexp = "^system/deckhouse"
 	Scheme     = "https"
-)
 
-const (
-	UnknownVersion = "unknown"
+	UnknownVersion  = "unknown"
+	LicenseUsername = "license-token"
+	CEImagesRepo    = "registry.deckhouse.io/deckhouse/ce"
+	CEScheme        = SchemeHTTPS
 )
 
 var (

@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strings"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
@@ -37,7 +38,7 @@ func (config InitConfig) ToRegistrySettings() (RegistrySettings, error) {
 	if config.RegistryDockerCfg == "" {
 		registrySettings := RegistrySettings{
 			ImagesRepo: imagesRepo,
-			Scheme:     SchemeFromString(config.RegistryScheme),
+			Scheme:     registry_const.ToScheme(config.RegistryScheme),
 			CA:         config.RegistryCA,
 		}
 		return registrySettings, nil
@@ -59,7 +60,7 @@ func (config InitConfig) ToRegistrySettings() (RegistrySettings, error) {
 
 	registrySettings := RegistrySettings{
 		ImagesRepo: imagesRepo,
-		Scheme:     SchemeFromString(config.RegistryScheme),
+		Scheme:     registry_const.ToScheme(config.RegistryScheme),
 		CA:         config.RegistryCA,
 		Username:   username,
 		Password:   password,

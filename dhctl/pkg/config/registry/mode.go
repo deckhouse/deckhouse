@@ -113,7 +113,7 @@ func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (types.Data, 
 
 	return types.Data{
 		ImagesRepo: registry_const.HostWithPath,
-		Scheme:     types.SchemeHTTPS,
+		Scheme:     registry_const.SchemeHTTPS,
 		Username:   m.RemoteData.Username,
 		Password:   m.RemoteData.Password,
 		CA:         pki.CA.Cert,

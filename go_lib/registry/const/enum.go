@@ -20,12 +20,40 @@ import (
 	"strings"
 )
 
-type CheckModeType = string
-
 const (
+	ModeUnmanaged ModeType = "Unmanaged"
+	ModeDirect    ModeType = "Direct"
+	ModeProxy     ModeType = "Proxy"
+	ModeLocal     ModeType = "Local"
+
 	CheckModeDefault CheckModeType = "Default"
 	CheckModeRelax   CheckModeType = "Relax"
+
+	SchemeHTTP  SchemeType = "HTTP"
+	SchemeHTTPS SchemeType = "HTTPS"
+
+	CRIContainerdV1 CRIType = "Containerd"
+	CRIContainerdV2 CRIType = "ContainerdV2"
 )
+
+type ModeType = string
+type CheckModeType = string
+type SchemeType = string
+type CRIType = string
+
+func ToModeType(mode string) ModeType {
+	val := strings.ToLower(mode)
+	switch val {
+	case "direct":
+		return ModeDirect
+	case "proxy":
+		return ModeProxy
+	case "local":
+		return ModeLocal
+	default:
+		return ModeUnmanaged
+	}
+}
 
 func ToCheckModeType(mode string) CheckModeType {
 	val := strings.ToLower(mode)
@@ -35,4 +63,11 @@ func ToCheckModeType(mode string) CheckModeType {
 	default:
 		return CheckModeDefault
 	}
+}
+
+func ToScheme(scheme string) SchemeType {
+	if strings.EqualFold(scheme, SchemeHTTP) {
+		return SchemeHTTP
+	}
+	return SchemeHTTPS
 }

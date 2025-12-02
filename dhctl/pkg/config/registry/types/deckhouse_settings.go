@@ -32,7 +32,7 @@ type DeckhouseSettings struct {
 
 type RegistrySettings struct {
 	ImagesRepo string                       `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     SchemeType                   `json:"scheme" yaml:"scheme"`
+	Scheme     registry_const.SchemeType    `json:"scheme" yaml:"scheme"`
 	CA         string                       `json:"ca,omitempty" yaml:"ca,omitempty"`
 	Username   string                       `json:"username,omitempty" yaml:"username,omitempty"`
 	Password   string                       `json:"password,omitempty" yaml:"password,omitempty"`
@@ -65,10 +65,10 @@ func (settings *DeckhouseSettings) CorrectWithDefault() {
 func (settings *RegistrySettings) CorrectWithDefault() {
 	settings.ImagesRepo = strings.TrimRight(strings.TrimSpace(settings.ImagesRepo), "/")
 	if strings.TrimSpace(settings.ImagesRepo) == "" {
-		settings.ImagesRepo = CEImagesRepo
+		settings.ImagesRepo = registry_const.CEImagesRepo
 	}
 	if strings.TrimSpace(settings.Scheme) == "" {
-		settings.Scheme = CEScheme
+		settings.Scheme = registry_const.CEScheme
 	}
 }
 
@@ -111,7 +111,7 @@ func (settings RegistrySettings) Validate() error {
 		validation.Field(&settings.Scheme,
 			validation.Required.
 				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
-			validation.In(SchemeHTTP, SchemeHTTPS).
+			validation.In(registry_const.SchemeHTTP, registry_const.SchemeHTTPS).
 				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
 		),
 		validation.Field(&settings.Username,
@@ -130,7 +130,7 @@ func (settings RegistrySettings) Validate() error {
 			),
 		),
 		validation.Field(&settings.CA,
-			validation.When(settings.Scheme == SchemeHTTP,
+			validation.When(settings.Scheme == registry_const.SchemeHTTP,
 				validation.Empty.Error("CA is not allowed when scheme is 'HTTP'"),
 			),
 		),
