@@ -78,22 +78,22 @@ memory: 50Mi
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
   {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $provisionerImage := include "helm_lib_module_common_image_no_fail" (list $context $provisionerImageName) }}
+  {{- $provisionerImage := include "helm_lib_csi_image_with_common_fallback" (list $context $provisionerImageName) }}
 
   {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $attacherImage := include "helm_lib_module_common_image_no_fail" (list $context $attacherImageName) }}
+  {{- $attacherImage := include "helm_lib_csi_image_with_common_fallback" (list $context $attacherImageName) }}
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $resizerImage := include "helm_lib_module_common_image_no_fail" (list $context $resizerImageName) }}
+  {{- $resizerImage := include "helm_lib_csi_image_with_common_fallback" (list $context $resizerImageName) }}
 
   {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
 
   {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $snapshotterImage := include "helm_lib_module_common_image_no_fail" (list $context $snapshotterImageName) }}
+  {{- $snapshotterImage := include "helm_lib_csi_image_with_common_fallback" (list $context $snapshotterImageName) }}
 
   {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $livenessprobeImage := include "helm_lib_module_common_image_no_fail" (list $context $livenessprobeImageName) }}
+  {{- $livenessprobeImage := include "helm_lib_csi_image_with_common_fallback" (list $context $livenessprobeImageName) }}
 
   {{- if $provisionerImage }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

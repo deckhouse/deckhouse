@@ -38,7 +38,7 @@ memory: 25Mi
   {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
+  {{- $driverRegistrarImage := include "helm_lib_csi_image_with_common_fallback" (list $context $driverRegistrarImageName) }}
   {{- if $driverRegistrarImage }}
     {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

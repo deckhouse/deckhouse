@@ -77,6 +77,26 @@
   {{- end }}
 {{- end }}
 
+{{- /* Usage: {{ include "helm_lib_csi_image_with_common_fallback" (list . "<container-name>") }} */ -}}
+{{- /* returns image name from storage foundation module if enabled, otherwise from common module */ -}}
+{{- define "helm_lib_csi_image_with_common_fallback" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
+  {{- $imageDigest := "" }}
+  {{- /* Try to get from storage foundation module if enabled */}}
+  {{- if $context.Values.global.enabledModules | has "storage-foundation" }}
+    {{- $storageFoundationModuleName := (include "helm_lib_module_camelcase_name" "storage-foundation") }}
+    {{- $imageDigest = index $context.Values.global.modulesImages.digests $storageFoundationModuleName $containerName | default "" }}
+  {{- end }}
+  {{- /* Fallback to common module if not found in storage foundation */}}
+  {{- if not $imageDigest }}
+    {{- $imageDigest = index $context.Values.global.modulesImages.digests "common" $containerName | default "" }}
+  {{- end }}
+  {{- if $imageDigest }}
+  {{- printf "%s@%s" $context.Values.global.modulesImages.registry.base $imageDigest }}
+  {{- end }}
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_image_digest" (list . "<container-name>" "<module-name>(optional)") }} */ -}}
 {{- /* returns image digest */ -}}
 {{- define "helm_lib_module_image_digest" }}
