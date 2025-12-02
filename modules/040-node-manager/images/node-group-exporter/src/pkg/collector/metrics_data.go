@@ -82,7 +82,6 @@ func isHasErrors(nodeGroup *ngv1.NodeGroup) float64 {
 }
 
 func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
-
 	return NodeGroupMetricsData{
 		Name:      nodeGroup.Name,
 		NodeType:  nodeGroup.Spec.NodeType.String(),

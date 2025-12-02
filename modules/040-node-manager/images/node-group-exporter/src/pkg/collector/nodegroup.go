@@ -188,6 +188,7 @@ func (c *NodeGroupCollector) Start(ctx context.Context) error {
 
 	if err := c.syncResources(ctx); err != nil {
 		c.logger.Error("Error during initial sync: ", log.Err(err))
+		return err
 	}
 
 	return nil
@@ -244,10 +245,12 @@ func (c *NodeGroupCollector) syncResources(ctx context.Context) error {
 
 	if err := c.syncNodes(ctx); err != nil {
 		c.logger.Error("Error syncing nodes: ", log.Err(err))
+		return err
 	}
 
 	if err := c.syncNodeGroups(ctx); err != nil {
 		c.logger.Error("Error syncing node groups: ", log.Err(err))
+		return err
 	}
 
 	c.updateMetrics()
