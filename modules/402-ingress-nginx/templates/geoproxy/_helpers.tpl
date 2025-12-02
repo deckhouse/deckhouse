@@ -1,4 +1,4 @@
-{{/* Collect map: { "<license>": {"maxmindAccountID": "<account>", "editions": ["GeoLite2-City","GeoLite2-ASN", ...]}, ... } */}}
+{{/* Collect map: { "<license>": {"maxmindAccountID": "<account>", "editions": ["GeoLite2-City","GeoLite2-ASN", ...], "maxmindMirror": {"url": "<mirror>", "insecureSkipVerify": <bool>}}, ... } */}}
 {{- define "geoip_collect_license_editions" -}}
 {{- $controllers := .controllers | default (list) -}}
 {{- $out := dict -}}
@@ -7,16 +7,9 @@
   {{- $spec := (get $crd "spec") | default dict -}}
   {{- $geo  := (get $spec "geoIP2") | default dict -}}
   {{- $lic  := (get $geo "maxmindLicenseKey") | default "" | toString | trim -}}
-  {{- $mirrorRaw := (get $geo "maxmindMirror") -}}
-  {{- $mirrorURL := "" -}}
-  {{- $skipTLS := false -}}
-  {{- if kindIs "map" $mirrorRaw }}
-    {{- $mirrorURL = (get $mirrorRaw "url") | default "" | toString | trim -}}
-    {{- $skipTLS = (get $mirrorRaw "insecureSkipVerify") | default false -}}
-  {{- else if $mirrorRaw }}
-    {{- $mirrorURL = ($mirrorRaw | toString | trim) -}}
-    {{- $skipTLS = (get $geo "maxmindMirrorSkipTLSVerify") | default false -}}
-  {{- end }}
+  {{- $mirror := (get $geo "maxmindMirror") | default dict -}}
+  {{- $mirrorURL := (get $mirror "url") | default "" | toString | trim -}}
+  {{- $skipTLS := (get $mirror "insecureSkipVerify") | default false -}}
   {{- $accRaw  := (((get $geo "maxmindAccountID") | default (get $geo "accountID") | default 0) | int) -}}
   {{- $key := $lic -}}
   {{- if and (eq $key "") (ne $mirrorURL "") }}
