@@ -29,7 +29,7 @@ import (
 )
 
 func createInitSecret(ctx context.Context, kubeClient client.KubeClient, applied bool) error {
-	pki, err := generatePKI()
+	pki, err := GeneratePKI()
 	if err != nil {
 		return err
 	}

@@ -379,11 +379,12 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryPKI := registry_config.NewLazyPKIGenerator()
 	registryData, err := m.Registry.
 		Manifest().
 		BashibleTplCtx(
-			func() (registry_config.PKI, error) { return registryPKI.Get() })
+			func() (registry_config.PKI, error) {
+				return registry_config.GeneratePKI()
+			})
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible context: %s", err)
 	}

@@ -17,7 +17,9 @@ package registry
 import (
 	"context"
 	"fmt"
-	"sync"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
@@ -32,59 +34,19 @@ const (
 type PKI = init_secret.Config
 type CertKey = init_secret.CertKey
 
-type ClusterPKIManager struct {
-	kubeClient client.KubeClient
-
-	mu  sync.RWMutex
-	pki *PKI
-}
-
-type LazyPKIGenerator struct {
-	once sync.Once
-	pki  PKI
-	err  error
-}
-
-func NewLazyPKIGenerator() *LazyPKIGenerator {
-	return &LazyPKIGenerator{}
-}
-
-func NewClusterPKIManager(kubeClient client.KubeClient) *ClusterPKIManager {
-	return &ClusterPKIManager{kubeClient: kubeClient}
-}
-
-func (g *LazyPKIGenerator) Get() (PKI, error) {
-	g.once.Do(func() {
-		g.pki, g.err = generatePKI()
-	})
-	if g.err != nil {
-		return PKI{}, fmt.Errorf("generate registry PKI: %w", g.err)
+func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
+	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+	if err != nil {
+		return PKI{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
-	return g.pki.DeepCopy(), nil
+	var ret PKI
+	if err := yaml.Unmarshal(secret.Data["config"], &ret); err != nil {
+		return PKI{}, fmt.Errorf("unmarshal secret data: %w", err)
+	}
+	return ret, nil
 }
 
-func (m *ClusterPKIManager) Get(ctx context.Context) (PKI, error) {
-	m.mu.RLock()
-	if m.pki != nil {
-		pkiCopy := m.pki.DeepCopy()
-		m.mu.RUnlock()
-		return pkiCopy, nil
-	}
-	m.mu.RUnlock()
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.pki == nil {
-		pki, err := fetchInitSecret(ctx, m.kubeClient)
-		if err != nil {
-			return PKI{}, fmt.Errorf("fetch registry PKI from cluster: %w", err)
-		}
-		m.pki = &pki
-	}
-	return m.pki.DeepCopy(), nil
-}
-
-func generatePKI() (PKI, error) {
+func GeneratePKI() (PKI, error) {
 	var ret PKI
 
 	certKey, err := pki.GenerateCACertificate(certificateCommonName)

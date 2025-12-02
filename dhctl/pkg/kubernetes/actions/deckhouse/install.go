@@ -292,9 +292,10 @@ func CreateDeckhouseManifests(
 
 	// Registry secrets
 	registryManifest := cfg.Registry.Manifest()
-	registryPKI := registry.NewClusterPKIManager(kubeCl)
 	deckhouseRegistrySecretData, err := registryManifest.DeckhouseRegistrySecretData(
-		func() (registry.PKI, error) { return registryPKI.Get(ctx) })
+		func() (registry.PKI, error) {
+			return registry.GetPKI(ctx, kubeCl)
+		})
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
 	}
