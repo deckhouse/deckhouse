@@ -213,7 +213,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		Spec: v1alpha1.ModuleConfigSpec{
 			Enabled:  ptr.To(true),
 			Version:  1,
-			Settings: &v1alpha1.MappedFields{},
+			Settings: nil,
 		},
 	}
 	// If the MC exists, use its Settings to generate the desired MC.
