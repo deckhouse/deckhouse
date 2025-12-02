@@ -1,0 +1,4 @@
+node-manager:
+  channels:
+    alpha:
+      version: v1.1
