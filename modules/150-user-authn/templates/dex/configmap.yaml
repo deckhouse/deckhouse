@@ -10,3 +10,15 @@ data:
   oidcCA: |
     {{- .Values.userAuthn.internal.discoveredDexCA | nindent 4 }}
 {{- end }}
+{{- if .Values.userAuthn.internal.dexTLS }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-tls-ca
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+data:
+  ca.crt: |
+    {{ .Values.userAuthn.internal.dexTLS.ca | nindent 4 }}
+{{- end }}
