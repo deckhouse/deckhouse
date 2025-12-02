@@ -36,7 +36,7 @@ layout: sidebar-guides
 
 Если указан автоматический выбор версии Kubernetes, Deckhouse может обновить версию Kubernetes в кластере при обновлении релиза Deckhouse (при обновлении минорной версии). Когда версия Kubernetes явно прописана в параметре [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), очередное обновление Deckhouse может завершиться неудачей, если окажется, что используемая в кластере версия Kubernetes более не поддерживается.
 
-Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/kubernetes-platform/documentation/v1/supported_versions.html), и [установите ее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-обновить-версию-kubernetes-в-кластере).
+Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/kubernetes-platform/documentation/v1/supported_versions.html), и [установите ее](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Требования к ресурсам
 
