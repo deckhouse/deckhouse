@@ -19,6 +19,7 @@ data:
         serve_stale 1h {{ include "helm_lib_is_ha_to_value" (list . "immediate" "verify") }}
         servfail 0 # disable caching servfail
       }
+      metadata # need for slow logs
       kubeforward {
         namespace kube-system
         service_name d8-kube-dns
@@ -26,6 +27,10 @@ data:
         expire 10s
         health_check 330ms
         prefer_udp
+        slow_threshold 300ms # show slow query and export metrics coredns_kubeforward_slow_requests_total
+{{- if .Values.nodeLocalDns.enableLogs }}
+        slow_log 
+{{- end }}
       }
       reload 2s
       loop
