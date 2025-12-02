@@ -92,6 +92,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		}
 
 		shapp.AppStartMessage = version()
+		shapp.KubeClientFieldManager = "deckhouse-hook"
 
 		ctx := context.Background()
 
