@@ -8,6 +8,7 @@ spec:
             * Deployment с OAuth2-Proxy и Redis;
             * Сервис (Service), ведущий на OAuth2-Proxy;
             * Ingress-ресурс, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
+            * HTTPRoute-ресурс (опционально), который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
             * Секреты, необходимые для доступа к Dex.
 
             **Внимание.** DexAuthenticator работает только по HTTPS. Ingress приложения должен иметь настроенный TLS.
@@ -32,6 +33,24 @@ spec:
                 applicationIngressClassName:
                   description: |
                     Название Ingress-класса, которое будет использоваться в Ingress-ресурсе (должно совпадать с названием Ingress-класса для домена приложения).
+                gatewayAPI:
+                  description: |
+                    Набор параметров, которые будут использоваться в HTTPRoute-ресурсе.
+
+                    **Внимание.** Используется, только в кластерах с поддержкой Gateway API.
+
+                    **Внимание.** Должен быть указан тот же ListenerSet-ресурс, что ListenerSet-ресурс используемый для домена приложения.
+                  properties:
+                    applicationHTTPRouteListenerSetName:
+                      description: |
+                        Наименование Gateway API ListenerSet-ресурса, на который будет ссылаться созданный HTTPRoute-ресурса.
+                    applicationHTTPRouteListenerSetNamespace:
+                      description: |
+                        Наименование пространства имен, в котором располагается Gateway API ListenerSet-ресурс на который будет ссылаться HTTPRoute-ресурс.
+                    applicationHTTPRouteListenerSetSectionName:
+                      description: |
+                        Название секции в Gateway API ListenerSet-ресурсе на которую будет ссылаться HTTPRoute-ресурс.
+
                 signOutURL:
                   description: |
                     URL для завершения сеанса аутентификации.
@@ -241,6 +260,23 @@ spec:
                       whitelistSourceRanges:
                         description: |
                           Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+                      gatewayAPI:
+                        description: |
+                          Набор параметров, которые будут использоваться в HTTPRoute-ресурсе.
+
+                          **Внимание.** Используется, только в кластерах с поддержкой Gateway API.
+
+                          **Внимание.** Должен быть указан тот же ListenerSet-ресурс, что ListenerSet-ресурс используемый для домена приложения.
+                        properties:
+                          httpRouteListenerSetName:
+                            description: |
+                              Наименование Gateway API ListenerSet-ресурса, на который будет ссылаться созданный HTTPRoute-ресурса.
+                          httpRouteListenerSetNamespace:
+                            description: |
+                              Наименование пространства имен, в котором располагается Gateway API ListenerSet-ресурс на который будет ссылаться HTTPRoute-ресурс.
+                          httpRouteListenerSetSectionName:
+                            description: |
+                              Название секции в Gateway API ListenerSet-ресурсе на которую будет ссылаться HTTPRoute-ресурс.
                 nodeSelector:
                   description: |-
                     Определяет `nodeSelector` для подов `dex-authenticator`.
