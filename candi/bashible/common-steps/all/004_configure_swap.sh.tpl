@@ -26,8 +26,8 @@ SYSCTL_CONF="/etc/sysctl.d/99-swap.conf"
 
 # Stop and mask systemd swap units
 for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
-  systemctl stop "$swapunit"
-  systemctl mask "$swapunit"
+  systemctl stop "$swapunit" || true
+  systemctl mask "$swapunit" || true
 done
 
 # systemd-gpt-auto-generator automatically detects swap partition in GPT and activates it
@@ -43,7 +43,7 @@ if [ -f "$SWAPFILE" ]; then
   rm -f "$SWAPFILE"
 fi
 
-if grep -q "swap" /etc/fstab; then
+if grep -q "[[:space:]]swap[[:space:]]" /etc/fstab; then
   sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
 fi
 
@@ -61,23 +61,34 @@ exit 0
 {{- if eq $swapBehavior "LimitedSwap" }}
 
 if [ -z "{{ $limitedSwapSize }}" ]; then
-  echo "ERROR: limitedSwap.size is required when swapBehavior=LimitedSwap"
+  bb-log-error "Error getting limitedSwap.size"
   exit 1
 fi
 
 SIZE="{{ $limitedSwapSize }}"
+bb-log-info "Configuring LimitedSwap with size: $SIZE"
 
 # Convert human size to bytes for comparison
 bytes() {
   local s=$1
-  local n=${s%[KkMmGgIi]*}
-  local u=${s#${n}}
+  local n u
+  
+  # Extract number and unit
+  n=$(echo "$s" | sed 's/[^0-9].*$//')
+  u=$(echo "$s" | sed 's/^[0-9]*//')
+
+  # Validate: number must exist
+  if [ -z "$n" ]; then
+    bb-log-error "Invalid size format (no number): $s"
+    return 1
+  fi
 
   case "$u" in
-    Ki | ki | K | k) echo $((n * 1024));;
-    Mi | mi | M | m) echo $((n * 1024 * 1024));;
-    Gi | gi | G | g) echo $((n * 1024 * 1024 * 1024));;
-    *) echo "$n";;
+    Gi|gi|G|g) echo $((n * 1024 * 1024 * 1024));;
+    Mi|mi|M|m) echo $((n * 1024 * 1024));;
+    Ki|ki|K|k) echo $((n * 1024));;
+    "") echo "$n";;
+    *) bb-log-error "Unknown size unit '$u' in: $s"; return 1;;
   esac
 }
 
@@ -95,12 +106,21 @@ fi
 
 # Recreate swapfile if size differs or doesn't exist
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
-  swapoff -a || true
+  bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes"
+  swapoff "$SWAPFILE" 2>/dev/null || true
   rm -f "$SWAPFILE"
   # Use bytes for fallocate (more reliable), fallback to dd if fallocate fails
-  fallocate -l "$DESIRED_BYTES" "$SWAPFILE" || dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((DESIRED_BYTES / 1024 / 1024))
+  if fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
+    bb-log-info "Swapfile created with fallocate"
+  else
+    bb-log-info "fallocate failed, using dd as fallback"
+    dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((DESIRED_BYTES / 1024 / 1024))
+  fi
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
+  bb-log-info "Swapfile formatted successfully"
+else
+  bb-log-info "Swapfile already exists with correct size: ${CURRENT_BYTES} bytes"
 fi
 
 # Ensure fstab entry exists
@@ -108,8 +128,17 @@ if ! grep -q "$SWAPFILE" /etc/fstab; then
   echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 fi
 
-# Enable swap
-swapon "$SWAPFILE" || true
+# Enable swap if not already active
+if swapon --show | grep -q "$SWAPFILE"; then
+  bb-log-info "Swap already active"
+else
+  if swapon "$SWAPFILE"; then
+    bb-log-info "Swap enabled successfully"
+  else
+    bb-log-error "Failed to enable swap"
+    exit 1
+  fi
+fi
 
 # Configure swappiness
 SWAPPINESS="{{ $swappiness }}"
