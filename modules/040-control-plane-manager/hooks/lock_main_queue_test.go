@@ -33,6 +33,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-a
   namespace: kube-system
@@ -48,6 +49,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-b
   namespace: kube-system
@@ -63,6 +65,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-a
   namespace: kube-system
@@ -78,6 +81,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-b
   namespace: kube-system

@@ -228,6 +228,7 @@ spec:
     metadata:
       labels:
         app: {{ $dsMode }}
+        component: control-plane-manager
       annotations:
         checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
         checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}

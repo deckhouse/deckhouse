@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "d8-control-plane-manager",
+					"component": "control-plane-manager",
 				},
 			},
 			FilterFunc: lockQueueFilterPod,

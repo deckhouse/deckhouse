@@ -66,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updateApprovalFilterNode,
 		},
 		{
-			Name:                   "control_plane_manager",
+			Name:                   "control_plane_manager_pods",
 			ApiVersion:             "v1",
 			Kind:                   "Pod",
 			WaitForSynchronization: ptr.To(false),
@@ -78,30 +78,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "app",
+						Key:      "component",
 						Operator: v1.LabelSelectorOpIn,
-						Values:   []string{"d8-control-plane-manager"},
-					},
-				},
-			},
-			FilterFunc: updateApprovalFilterPod,
-		},
-		{
-			Name:                   "control_plane_manager_etcd_only",
-			ApiVersion:             "v1",
-			Kind:                   "Pod",
-			WaitForSynchronization: ptr.To(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			LabelSelector: &v1.LabelSelector{
-				MatchExpressions: []v1.LabelSelectorRequirement{
-					{
-						Key:      "app",
-						Operator: v1.LabelSelectorOpIn,
-						Values:   []string{"d8-control-plane-manager-etcd-only"},
+						Values:   []string{"control-plane-manager"},
 					},
 				},
 			},
@@ -208,31 +187,10 @@ func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Remove approved annotations if pod is ready and node has annotation
-	snaps = input.Snapshots.Get("control_plane_manager")
+	snaps = input.Snapshots.Get("control_plane_manager_pods")
 	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)
-		}
-
-		if !pod.IsReady {
-			continue
-		}
-
-		node, ok := nodeMap[pod.NodeName]
-		if !ok {
-			input.Logger.Warn("Node not found", slog.String("name", pod.NodeName))
-			continue
-		}
-		if node.IsApproved {
-			input.PatchCollector.PatchWithMerge(removeApprovedPatch, "v1", "Node", "", node.Name)
-			return nil
-		}
-	}
-
-	snaps = input.Snapshots.Get("control_plane_manager_etcd_only")
-	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'control_plane_manager_etcd_only' snapshots: %v", err)
+			return fmt.Errorf("failed to iterate over 'control_plane_manager_pods' snapshots: %v", err)
 		}
 
 		if !pod.IsReady {

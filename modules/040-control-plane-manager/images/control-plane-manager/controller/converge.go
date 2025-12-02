@@ -35,6 +35,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Generate etcd performance patch before converge phase
+func generateEtcdPerformancePatch() error {
+	log.Info("phase: generate etcd performance patch")
+	params := GetEtcdPerformanceParams()
+	if err := GenerateEtcdPerformancePatch(params); err != nil {
+		return fmt.Errorf("failed to generate etcd performance patch: %w", err)
+	}
+	return nil
+}
+
 // Synchronize extra files with the destination directory,
 // ensuring the destination contains exactly the same set of files as in the config.
 func syncExtraFiles() error {
@@ -120,13 +130,6 @@ func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
-
-	if componentName == "etcd" {
-		params := GetEtcdPerformanceParams()
-		if err := GenerateEtcdPerformancePatch(params); err != nil {
-			return fmt.Errorf("failed to generate etcd performance patch: %w", err)
-		}
-	}
 
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
