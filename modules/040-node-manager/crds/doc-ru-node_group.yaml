@@ -173,9 +173,9 @@ spec:
                           description: |
                             Выгон (draining) подов с узла перед выдачей разрешения на disruption.
 
-                            **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
+                            **Внимание.** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -212,7 +212,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -413,7 +417,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -436,7 +440,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -736,7 +744,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -779,7 +787,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).

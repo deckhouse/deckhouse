@@ -37,7 +37,7 @@ If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade 
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
-If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
+If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Resource requirements
 

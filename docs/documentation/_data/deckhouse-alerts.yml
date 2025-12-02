@@ -197,7 +197,13 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        For details, refer to the logs of the agent:
+        For details, query Cilium health status API:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} exec {{ $labels.pod }} -- cilium-health status
+        ```
+
+        You can also refer to the agent logs:
 
         ```bash
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
@@ -1813,9 +1819,7 @@ alerts:
 
         Please migrate to the next kubernetes version (at least 1.31)
 
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
-
-        Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
+        Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"

@@ -14,7 +14,7 @@ apiVersions:
         d8 system edit provider-cluster-configuration
         ```
 
-        > Once you modify the node configuration, run [`dhctl converge`](../../deckhouse-faq.html#changing-the-configuration) for changes to take effect.
+        > Once you modify the node configuration, run `dhctl converge` for changes to take effect.
       x-doc-search: |
         ProviderClusterConfiguration
       x-examples:
