@@ -22,7 +22,7 @@ shell:
 
         echo "[] Getting modules metadata from module.yaml files..."
         export METADATA_SOURCE_DIR=/src/modules-metadata
-        export METADATA_TARGET_FILE=/srv/jekyll-data/documentation/_data/modules/metadata.json
+        export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
         bash _tools/modules_generate_metadata.sh
 
         echo "Render global OpenAPI DKP schemas..."
