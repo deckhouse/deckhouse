@@ -12,7 +12,7 @@ relatedLinks:
 ---
 
 {% alert level="warning" %}
-This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/products/kubernetes-platform/gs/) section, where step-by-step guides are available.
+This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the {% if site.mode == 'module' %}[Getting started]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Getting started](/products/kubernetes-platform/gs/){% endif %} section, where step-by-step guides are available.
 {% endalert %}
 
 The Deckhouse installer is available as a container image and is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility, which is responsible for:
@@ -460,13 +460,14 @@ The configuration file provided through the `--config` parameter when running th
 
 ### Installing Deckhouse Kubernetes Platform from an external registry
 
-{% alert level="warning" %}  
-Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+{% alert level="warning" %}
+Available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
-{% alert level="warning" %}  
-DKP supports only the Bearer token authentication scheme for container registries.  
-The following container registries are tested and officially supported:  
+{% alert level="warning" %}
+DKP supports only the Bearer token authentication scheme for container registries.
+
+The following container registries are tested and officially supported:
 {% for registry in site.data.supported_versions.registries %}
 [{{ registry[1].shortname }}]({{ registry[1].url }})
 {%- unless forloop.last %}, {% endunless %}
@@ -474,6 +475,10 @@ The following container registries are tested and officially supported:
 {% endalert %}
 
 During installation, DKP can be configured to work with an external registry (e.g., a proxy registry in an air-gapped environment).
+
+{% alert level="warning" %}
+When working with an external registry, do not use an administrator account to access it from Deckhouse Kubernetes Platform. Create a separate account for Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
+{% endalert %}
 
 Set the following parameters in the `InitConfiguration` resource:
 
@@ -514,8 +519,6 @@ MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
 MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
 echo "$MYRESULTSTRING"
 ```
-
-## Custom external registry configuration
 
 To support non-standard configurations of external registries, the `InitConfiguration` resource provides two additional parameters:
 

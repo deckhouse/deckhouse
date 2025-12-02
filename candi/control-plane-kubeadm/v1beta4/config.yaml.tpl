@@ -2,9 +2,34 @@
 RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
-{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
+{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- $apiserverFeatureGates := $baseFeatureGates -}}
+{{- $controllerManagerFeatureGates := $baseFeatureGates -}}
+{{- $schedulerFeatureGates := $baseFeatureGates -}}
+{{- if hasKey . "allowedFeatureGates" -}}
+  {{- range .allowedFeatureGates.apiserver -}}
+    {{- $apiserverFeatureGates = append $apiserverFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeControllerManager -}}
+    {{- $controllerManagerFeatureGates = append $controllerManagerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeScheduler -}}
+    {{- $schedulerFeatureGates = append $schedulerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
+{{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
+{{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
+{{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
+{{- end }}
+{{- $runtimeConfig := join "," $runtimeConfig -}}
 {{- $nodesCount := .nodesCount | default 0 | int }}
-{{- $gcThresholdCount := 1000}}
+{{- $gcThresholdCount := 1000 }}
 {{- if lt $nodesCount 100 }}
     {{- $gcThresholdCount = 1000 }}
 {{- else if lt $nodesCount 300 }}
@@ -131,9 +156,9 @@ apiServer:
       value: >-
         https://127.0.0.1:2379{{ if .apiserver.etcdServers }},{{ .apiserver.etcdServers | join "," }}{{ end }}
     - name: feature-gates
-      value: {{ $featureGates | quote }}
+      value: {{ $apiserverFeatureGatesStr | quote }}
     - name: runtime-config
-      value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
+      value: {{ $runtimeConfig }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
@@ -161,7 +186,7 @@ apiServer:
     - name: request-timeout
       value: 60s
     - name: tls-cipher-suites
-      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256    
+      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
     {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
       value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
@@ -185,7 +210,7 @@ controllerManager:
     - name: terminated-pod-gc-threshold
       value: {{ $gcThresholdCount | quote }}
     - name: feature-gates
-      value: {{ $featureGates | quote }}
+      value: {{ $controllerManagerFeatureGatesStr | quote }}
     - name: node-cidr-mask-size
       value: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     - name: bind-address
@@ -213,7 +238,7 @@ scheduler:
     - name: profiling
       value: "false"
     - name: feature-gates
-      value: {{ $featureGates | quote }}
+      value: {{ $schedulerFeatureGatesStr | quote }}
     - name: bind-address
       value: "127.0.0.1"
     {{- if ne .runType "ClusterBootstrap" }}

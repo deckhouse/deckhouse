@@ -17,7 +17,7 @@
 - name: https_proxy
   value: {{ $context.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
       {{- end }}
-      {{- $noProxy := list "127.0.0.1" "169.254.169.254" $context.Values.global.clusterConfiguration.clusterDomain $context.Values.global.clusterConfiguration.podSubnetCIDR $context.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+      {{- $noProxy := list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc" $context.Values.global.clusterConfiguration.clusterDomain $context.Values.global.clusterConfiguration.podSubnetCIDR $context.Values.global.clusterConfiguration.serviceSubnetCIDR }}
       {{- if $context.Values.global.clusterConfiguration.proxy.noProxy }}
         {{- $noProxy = concat $noProxy $context.Values.global.clusterConfiguration.proxy.noProxy }}
       {{- end }}

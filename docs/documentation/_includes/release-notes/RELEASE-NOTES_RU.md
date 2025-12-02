@@ -4,7 +4,7 @@
 
 - Релиз содержит ряд важных изменений, повышающих безопасность. Устранен ряд известных уязвимостей. В частности, устранена уязвимость в модуле `user-authn` (CVE-2025-22868), потенциально позволявшая обходить проверку аутентификации. Рекомендуется запланировать обновление. Подробнее в разделе [Безопасность](#безопасность).
 
-- Модуль `dashboard` будет удален в версии 1.75 DKP. Используйте [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) (необходим включенный модуль [`console`](https://deckhouse.ru/modules/console/)).
+- Модуль `dashboard` будет удален в будущих версиях DKP. Используйте [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) (необходим включенный модуль [`console`](https://deckhouse.ru/modules/console/)).
 
 - Модуль `runtime-audit-engine` теперь загружается из  внешнего источника (ModuleSource `deckhouse`).
 
@@ -46,7 +46,7 @@
 
 - В аудит-логах теперь видно, какой OIDC-провайдер выдал токен аутентификации.
 
-- Обновлена версия Deckhouse CLI (`d8`) до v0.20.7:
+- Обновлена версия Deckhouse CLI (`d8`) до v0.23.0:
   - Добавлена команда [`d8 status`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-status). Быстрый сводный отчёт о состоянии кластера (узлы, релизы, поды Deckhouse, алерты, registry, настройки Deckhouse, CNI, состояние очереди).
   - Добавлена команда [`d8 k debug`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-k-debug). Запускает встроенный в DKP debug-контейнер — образ можно переопределить через `--image`. Упрощает интерактивную отладку подов.
   - Для команды [`d8 system queue list`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-system-queue-list) добавлен режим наблюдения за состоянием очереди (ключ `--watch`).

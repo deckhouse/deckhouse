@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/ssh"
+	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -105,6 +105,7 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 		session, err = client.sshClient.NewSession()
 		return err
 	})
+	client.RegisterSession(session)
 
 	return &SSHCommand{
 		// Executor: process.NewDefaultExecutor(sess.Run(cmd)),
@@ -145,7 +146,8 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
-	if c.WaitHandler != nil {
+	// if c.WaitHandler != nil {
+	if c.WaitHandler != nil || c.timeout > 0 {
 		c.ProcessWait()
 	} else {
 		err = c.wait()
@@ -155,7 +157,6 @@ func (c *SSHCommand) Start() error {
 	}
 
 	log.DebugF("Register stoppable: '%s'\n", command)
-	c.sshClient.RegisterSession(c.session)
 
 	return nil
 }
@@ -177,9 +178,6 @@ func (c *SSHCommand) start() error {
 
 	command := c.cmd + " " + strings.Join(c.Args, " ")
 
-	if c.session == nil {
-		return fmt.Errorf("ssh session not started")
-	}
 	return c.session.Start(command)
 }
 
@@ -289,7 +287,7 @@ func (c *SSHCommand) Run(ctx context.Context) error {
 	if c.session == nil {
 		return fmt.Errorf("ssh session not started")
 	}
-	defer c.session.Close()
+	defer c.closeSession()
 
 	err := c.Start()
 	if err != nil {
@@ -308,11 +306,27 @@ func (c *SSHCommand) WaitError() error {
 }
 
 func (c *SSHCommand) StderrBytes() []byte {
-	return c.ErrBytes.Bytes()
+	if len(c.ErrBytes.Bytes()) > 0 {
+		return c.ErrBytes.Bytes()
+	}
+
+	if c.err != nil {
+		return c.err.Bytes()
+	}
+
+	return nil
 }
 
 func (c *SSHCommand) StdoutBytes() []byte {
-	return c.OutBytes.Bytes()
+	if len(c.OutBytes.Bytes()) > 0 {
+		return c.OutBytes.Bytes()
+	}
+
+	if c.out != nil {
+		return c.out.Bytes()
+	}
+
+	return nil
 }
 
 func (c *SSHCommand) WithMatchers(matchers ...*process.ByteSequenceMatcher) *SSHCommand {
@@ -409,7 +423,7 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	if c.session == nil {
 		return nil, nil, fmt.Errorf("ssh session not started")
 	}
-	defer c.session.Close()
+	defer c.closeSession()
 
 	if c.out == nil {
 		c.out = new(bytes.Buffer)
@@ -456,7 +470,7 @@ func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("ssh session not started")
 	}
 
-	defer c.session.Close()
+	defer c.closeSession()
 
 	if c.out == nil {
 		c.out = new(bytes.Buffer)
@@ -779,4 +793,9 @@ func (c *SSHCommand) setWaitError(err error) {
 	defer c.lockWaitError.Unlock()
 	c.lockWaitError.Lock()
 	c.waitError = err
+}
+
+func (c *SSHCommand) closeSession() {
+	c.session.Close()
+	c.sshClient.UnregisterSession(c.session)
 }

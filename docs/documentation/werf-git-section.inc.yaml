@@ -11,6 +11,12 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /candi/feature_gates_map.yml
+  to: /srv/jekyll-data/documentation/_data/feature_gates_map.yml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 - add: /dhctl/pkg/config/base.go
   to: /srv/jekyll-data/documentation/_data/dhctl-base.go
   owner: jekyll

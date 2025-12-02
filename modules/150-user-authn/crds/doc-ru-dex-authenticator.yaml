@@ -10,6 +10,8 @@ spec:
             * Ingress-ресурс, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
             * Секреты, необходимые для доступа к Dex.
 
+            **Внимание.** DexAuthenticator работает только по HTTPS. Ingress приложения должен иметь настроенный TLS.
+
             **Внимание.** При перезапуске пода с OAuth2-Proxy, с помощью refresh-токена в память Redis будут получены и сохранены актуальные Access Token и ID Token.
           properties:
             spec:
@@ -162,6 +164,8 @@ spec:
             * Сервис (Service), ведущий на oAuth2 Proxy;
             * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
             * Секреты, необходимые для доступа к Dex.
+
+            **Внимание.** DexAuthenticator работает только по HTTPS. Ingress приложения должен иметь настроенный TLS.
 
             **Внимание.** При перезапуске пода с oAuth2 Proxy, с помощью refresh-токена в память Redis будут получены и сохранены актуальные Access Token и ID Token.
           properties:

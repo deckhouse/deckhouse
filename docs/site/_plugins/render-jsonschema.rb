@@ -537,6 +537,71 @@ module JSONSchemaRenderer
             # result.push("no properties for #{name}")
         end
 
+        # Render additionalProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
+            additionalProps = attributes['additionalProperties']
+            
+            # Render additionalProperties if it is a schema object with properties (not primitive type) AND parent has no properties
+            if additionalProps.is_a?(Hash) and 
+               (not attributes.has_key?('properties') or attributes['properties'].nil?) and
+               additionalProps.has_key?('properties') and
+               (not additionalProps.has_key?('type') or additionalProps['type'] == 'object')
+                additionalPropsData = additionalProps.dup
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                
+                # Prepare the description with special text for additionalProperties object
+                additionalPropertyName = '<KEY_NAME>'.gsub('<', '&lt;').gsub('>', '&gt;')
+                additionalPropertyNameQuoted = '`<KEY_NAME>`'
+                mapKeyName = get_hash_value(additionalPropsData, 'x-doc-map-key-name')
+                additionalPropertyNameLang = get_i18n_term('additional_property_name')
+                
+                if mapKeyName
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{mapKeyName}"
+                else
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{additionalPropertyNameLang}."
+                end
+                
+                # Get existing description if any
+                existingDescription = ''
+                if get_hash_value(additionalPropsLangData, 'description')
+                    existingDescription = additionalPropsLangData['description']
+                elsif get_hash_value(additionalPropsData, 'description')
+                    existingDescription = additionalPropsData['description']
+                end
+                
+                # Combine special text with existing description
+                finalDescription = specialDescriptionText
+                if existingDescription and existingDescription.length > 0
+                    finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                end
+                
+                # Create modified data with updated description
+                additionalPropsData['description'] = finalDescription
+                if additionalPropsLangData
+                    additionalPropsLangData = additionalPropsLangData.dup
+                    additionalPropsLangData['description'] = finalDescription
+                else
+                    additionalPropsLangData = { 'description' => finalDescription }
+                end
+                
+                result.push('<ul>')
+                result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            # Only render if additionalProperties is a schema object AND has properties
+            elsif additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                additionalPropsData = additionalProps
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                result.push('<ul>')
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            end
+            
+        end
+
         if parameterTitle != ''
             result.push('</li>')
         end

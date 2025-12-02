@@ -291,21 +291,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return nil
 	}
 
-	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
-	if err != nil {
-		return fmt.Errorf("unable to get cluster config yaml: %w", err)
-	}
-	providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
-	}
-
-	clusterUUID, err := uuid.Parse(metaConfig.UUID)
-	if err != nil {
-		return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
-	}
-
-	if err := deckhouse.ConvergeDeckhouseConfiguration(ctx.Ctx(), ctx.KubeClient(), clusterUUID, commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+	if err := deckhouse.ConvergeDeckhouseConfigurationForCommander(ctx.Ctx(), ctx.KubeClient(), commanderUUID, metaConfig); err != nil {
 		return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 	}
 
@@ -340,7 +326,9 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
 			CommanderMode: ctx.CommanderMode(),
 			StateCache:    ctx.StateCache(),
-		})
+		},
+			false,
+		)
 
 		if err != nil {
 			return err
@@ -447,7 +435,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 
-		err = r.switcher.SwitchToNodeUser(nodesStates[global.MasterNodeGroupName].State)
+		err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
 		if err != nil {
 			return err
 		}

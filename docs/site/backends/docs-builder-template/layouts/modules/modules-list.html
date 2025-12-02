@@ -1,5 +1,5 @@
 {{ define "main" }}
-<div class="breadcrumbs-container">
+<div class="navigation__container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
       <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
@@ -12,11 +12,15 @@
   </div>
 
   <!--start search-->
+  {{- $cachingTime := "60" }}
+  {{- if eq site.Params.mode "module" }}
+    {{- $cachingTime = "15" }}
+  {{- end -}}
   <div class="searchV3">
     <div class="container">
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
-        data-search-index-path="/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        data-search-index-path="/modules/search-embedded-modules-index.json:1.0:{{ $cachingTime }},/modules/search-external-modules-index.json:1.0:{{$cachingTime}}"
         data-search-context='{{ T "search_context_modules" }}'
         >
         <div id="search-results" class="results" style="display: none"></div>
@@ -167,6 +171,15 @@
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
+    <script>
+      function getHeaderHeight() {
+        const header = $('header');
+        return header.outerHeight(true);
+      }
+      const headerHeight = getHeaderHeight();
+      const $navigationContainer = $('.navigation__container');
+      $navigationContainer.css("top", headerHeight);
+    </script>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
     {{ end }}

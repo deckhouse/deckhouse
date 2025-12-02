@@ -58,7 +58,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 18.04+, Fedora 35+);
    - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
 {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry;
 {%- endif %}

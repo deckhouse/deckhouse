@@ -197,7 +197,13 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        For details, refer to the logs of the agent:
+        For details, query Cilium health status API:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} exec {{ $labels.pod }} -- cilium-health status
+        ```
+
+        You can also refer to the agent logs:
 
         ```bash
         d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
@@ -630,7 +636,14 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: ""
+      description: |-
+        The {{$labels.pod}} Pod is {{$labels.phase}}.
+
+        To check the Pod's status, run the following command:
+
+        ```shell
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        ```
       summary: |
         The {{$labels.pod}} Pod is NOT Ready.
       severity: "8"
@@ -1689,6 +1702,7 @@ alerts:
         - The remote API endpoint is not reachable.
         - The remote ServiceAccount token is invalid or expired.
         - There is a TLS or certificate issue between the clusters.
+        - Remote and local Istio versions mismatch.
       summary: |
         Istio remote cluster {{$labels.cluster_id}} is not synchronized.
       severity: "4"
@@ -1805,9 +1819,7 @@ alerts:
 
         Please migrate to the next kubernetes version (at least 1.31)
 
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
-
-        Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
+        Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
@@ -2064,6 +2076,10 @@ alerts:
         - `metallb.universe.tf/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
         - `metallb.universe.tf/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
         - `metallb.universe.tf/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
+        - `metallb.io/ip-allocated-from-pool`: Remove this annotation.
+        - `metallb.io/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
+        - `metallb.io/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
+        - `metallb.io/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
 
         **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
       summary: |
@@ -2278,7 +2294,11 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.  \nAlthough Nodes have detected the update, none of them have received approval to start the update process.\n\nMost likely, there is a problem with the `update_approval` hook of the `node-manager` module.\n"
+      description: |
+        There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.
+        Although Nodes have detected the update, none of them have received approval to start the update process.
+
+        Most likely, there is a problem with the `update_approval` hook of the `node-manager` module.
       summary: |
         NodeGroup {{ $labels.node_group }} is not handling the update correctly.
       severity: "8"
@@ -2327,7 +2347,15 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received approval, started the update, and encountered a step that could cause downtime.  \nThe update manager (the `update_approval` hook of the `node-group` module) granted downtime approval, but no success message was received, which indicates that the update has not completed.\n\nTo investigate the details, view Bashible logs on the Node:\n\n```shell\njournalctl -fu bashible\n```\n"
+      description: |
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received approval, started the update, and encountered a step that could cause downtime.
+        The update manager (the `update_approval` hook of the `node-group` module) granted downtime approval, but no success message was received, which indicates that the update has not completed.
+
+        To investigate the details, view Bashible logs on the Node:
+
+        ```shell
+        journalctl -fu bashible
+        ```
       summary: |
         Node {{ $labels.node }} cannot complete the update.
       severity: "7"
@@ -2528,12 +2556,46 @@ alerts:
         Services with the prometheus-target label are being used for metric collection.
       severity: "6"
       markupFormat: markdown
+    - name: D8ProblematicFeatureGateInUse
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is {{ $labels.status }} in the current Kubernetes version `{{ $labels.current_version }}`.
+
+        {{- if eq $labels.status "unknown" }}
+        This feature gate does not exist in any component (apiserver, kube-controller-manager, kube-scheduler, kubelet) and is not being applied to the cluster.
+        {{- end }}
+
+        **Recommended actions:**
+
+        1. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
+
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      summary: |
+        Feature gate {{ $labels.feature_gate }} is {{ $labels.status }} in current Kubernetes version {{ $labels.current_version }} and should be removed from the configuration. Is not using in the cluster control-plane.
+      severity: "9"
+      markupFormat: markdown
     - name: D8ProblematicNodeGroupConfiguration
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.  \nHowever, Node `{{ $labels.node }}` cannot begin the update.\n\nThe Node is missing the `node.deckhouse.io/configuration-checksum` annotation, which may indicate that its bootstrap process did not complete correctly.\n\nTroubleshooting options:\n\n- Check the `cloud-init` log (`/var/log/cloud-init-output.log`) on the node.\n- Check the NodeGroupConfiguration resource associated with the `{{ $labels.node_group }}` NodeGroup for potential issues.\n"
+      description: |
+        There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.
+        However, Node `{{ $labels.node }}` cannot begin the update.
+
+        The Node is missing the `node.deckhouse.io/configuration-checksum` annotation, which may indicate that its bootstrap process did not complete correctly.
+
+        Troubleshooting options:
+
+        - Check the `cloud-init` log (`/var/log/cloud-init-output.log`) on the node.
+        - Check the NodeGroupConfiguration resource associated with the `{{ $labels.node_group }}` NodeGroup for potential issues.
       summary: |
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
@@ -3392,6 +3454,31 @@ alerts:
         ```
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8UsingFeatureGateWillBeDeprecated
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
+
+        Current Kubernetes version: `{{ $labels.current_version }}`
+
+        **Recommended actions:**
+
+        1. Review the usage of this feature gate in your cluster.
+        2. Plan migration away from this feature gate before upgrading to version `{{ $labels.deprecated_version }}`.
+        3. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
+
+        ```bash
+        d8 k edit mc control-plane-manager
+        ```
+
+        For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      summary: |
+        Feature gate {{ $labels.feature_gate }} will be deprecated in Kubernetes version {{ $labels.deprecated_version }}.
       severity: "9"
       markupFormat: markdown
     - name: D8YandexNatInstanceConnectionsQuotaUtilization
@@ -5773,7 +5860,33 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, received initial approval, and started the update.  \nHowever, it encountered a stage that may cause downtime and requires manual disruption approval, because the NodeGroup is configured with `disruptions.approvalMode: Manual`.\n\nTo resolve the issue, ensure the Node is ready for unsafe updates (drained) and grant disruption approval by annotating the Node with `update.node.deckhouse.io/disruption-approved=`.\n\n**Caution**:\n\n- Nodes in manual mode aren't drained automatically.\n- Do not drain master nodes.\n\n1. To drain the Node and grant the update approval, run the following command:\n\n   ```shell\n   d8 k drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&\n     d8 k annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=\n   ```\n\n2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:\n\n   ```shell\n   while d8 k get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has(\"update.node.deckhouse.io/approved\")' > /dev/null; do sleep 1; done\n   d8 k uncordon {{ $labels.node }}\n   ```\n\nIf the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.\nConsider temporarily switching to automatic disruption approval (`disruptions.approvalMode: Automatic`).\n"
+      description: |
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, received initial approval, and started the update.
+        However, it encountered a stage that may cause downtime and requires manual disruption approval, because the NodeGroup is configured with `disruptions.approvalMode: Manual`.
+
+        To resolve the issue, ensure the Node is ready for unsafe updates (drained) and grant disruption approval by annotating the Node with `update.node.deckhouse.io/disruption-approved=`.
+
+        **Caution**:
+
+        - Nodes in manual mode aren't drained automatically.
+        - Do not drain master nodes.
+
+        1. To drain the Node and grant the update approval, run the following command:
+
+           ```shell
+           d8 k drain {{ $labels.node }} --delete-emptydir-data --ignore-daemonsets --force=true &&
+             d8 k annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
+           ```
+
+        2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:
+
+           ```shell
+           while d8 k get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
+           d8 k uncordon {{ $labels.node }}
+           ```
+
+        If the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.
+        Consider temporarily switching to automatic disruption approval (`disruptions.approvalMode: Automatic`).
       summary: |
         Node {{ $labels.node }} requires disruption approval to proceed with the update.
       severity: "8"
@@ -5802,7 +5915,15 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, started the update, and reached a step that could cause downtime.  \nIt is currently stuck in the draining process while waiting for automatic disruption approval.\n\nTo get more details, run the following:\n\n```shell\nd8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'\n```\n"
+      description: |
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, started the update, and reached a step that could cause downtime.
+        It is currently stuck in the draining process while waiting for automatic disruption approval.
+
+        To get more details, run the following:
+
+        ```shell
+        d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'
+        ```
       summary: |
         Node {{ $labels.node }} is stuck in draining.
       severity: "6"
@@ -6294,7 +6415,7 @@ alerts:
            ```
       summary: |
         Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
-      severity: undefined
+      severity: "6"
       markupFormat: markdown
     - name: PrometheusDirectAccessDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml

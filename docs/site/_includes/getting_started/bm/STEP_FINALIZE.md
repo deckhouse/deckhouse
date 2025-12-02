@@ -2,34 +2,13 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-At this point, you have created a cluster consisting of a **single node** — the master node. By default, only a limited set of system components runs on the master node. To ensure the full functionality of the cluster, you need to either add at least one worker node to the cluster or allow the remaining Deckhouse components to run on the master node.
-
-Select one of the two options below to continue installing the cluster:
-
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        A cluster of several nodes
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        A cluster of a single node
-        </a>
-</div>
+<style>
+  #block_layout_master, #block_layout_worker { display: none; }
+</style>
 
 <div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
 <ul>
-  <li>
-<p>Run the following command on the <strong>master node</strong>, to remove the taint from the master node and permit the other Deckhouse components to run on it:</p>
-<div markdown="1">
-```bash
-sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-</div>
-  </li>
   <li>
 <p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -356,10 +335,11 @@ sudo -i d8 k create -f $PWD/user.yml
           <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
+code.example.com
+commander.example.com
+console.example.com
 dex.example.com
+documentation.example.com
 grafana.example.com
 hubble.example.com
 istio.example.com
@@ -368,6 +348,7 @@ kubeconfig.example.com
 openvpn-admin.example.com
 prometheus.example.com
 status.example.com
+tools.example.com
 upmeter.example.com</code>
 </pre>
         </div>
@@ -382,10 +363,11 @@ upmeter.example.com</code>
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
+$PUBLIC_IP code.example.com
+$PUBLIC_IP commander.example.com
+$PUBLIC_IP console.example.com
 $PUBLIC_IP dex.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com
 $PUBLIC_IP istio.example.com
@@ -394,6 +376,7 @@ $PUBLIC_IP kubeconfig.example.com
 $PUBLIC_IP openvpn-admin.example.com
 $PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
+$PUBLIC_IP tools.example.com
 $PUBLIC_IP upmeter.example.com
 EOF
 "

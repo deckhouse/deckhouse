@@ -56,6 +56,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -1311,20 +1312,52 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		Path:   modulePath,
 	}
 
-	var valuesByConfig bool
+	// get values from module config
+	logger.Debug("get module config")
+	config := new(v1alpha1.ModuleConfig)
+	err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
+	if err != nil {
+		return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
+	}
 	values := make(addonutils.Values)
-	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
-		values = module.GetConfigValues(false)
-	} else {
-		config := new(v1alpha1.ModuleConfig)
-		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
+	if err == nil {
+		values = addonutils.Values(config.Spec.Settings)
+	}
+
+	// check conversions
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	_, err = os.Stat(conversionsDir)
+	if err == nil {
+		logger.Debug("conversions for the module found")
+		values, err = r.applyValuesConversions(def, conversionsDir, config.Spec.Version, values)
+		if err != nil {
+			status := &v1alpha1.ModuleReleaseStatus{
+				Phase:   v1alpha1.ModuleReleasePhaseSuspended,
+				Message: "apply conversions failed: " + err.Error(),
 			}
-		} else {
-			values = addonutils.Values(config.Spec.Settings)
-			valuesByConfig = true
+
+			if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
+				r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
+					map[string]string{
+						"version": release.GetVersion().String(),
+						"module":  release.GetModuleName(),
+						"error":   err.Error(),
+					},
+				)
+
+				status.Phase = v1alpha1.ModuleReleasePhasePending
+			}
+
+			if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+				return fmt.Errorf("update status: the '%s:v%s' module conversion: %w", release.GetModuleName(), release.GetVersion().String(), err)
+			}
+
+			logger.Debug("successfully updated module conditions")
+			return fmt.Errorf("apply conversions: %w", err)
 		}
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
 	configConfigurationErrorMetricsLabels := map[string]string{
@@ -1339,7 +1372,8 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			Message: "validation failed: " + err.Error(),
 		}
 
-		if valuesByConfig || strings.Contains(err.Error(), "is required") {
+		if strings.Contains(err.Error(), "is required") ||
+			strings.Contains(err.Error(), "is a forbidden property") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
 			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
@@ -1381,6 +1415,25 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	}
 
 	return nil
+}
+
+func (r *reconciler) applyValuesConversions(def *moduletypes.Definition, pathToConversions string, fromVersion int, values addonutils.Values) (addonutils.Values, error) {
+	// create a temporary store to avoid writing not valid conversions to the main store
+	tmpStore := conversion.NewConversionsStore()
+	err := tmpStore.Add(def.Name, pathToConversions)
+	if err != nil {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+	// apply conversions to values
+	r.log.Debug("apply conversions to values",
+		slog.Int("from_version", fromVersion),
+		slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()),
+		slog.String("module", def.Name))
+	_, newValues, err := tmpStore.Get(def.Name).ConvertToLatest(fromVersion, values)
+	if err != nil {
+		return nil, fmt.Errorf("convert values to latest version: %w", err)
+	}
+	return newValues, nil
 }
 
 var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")

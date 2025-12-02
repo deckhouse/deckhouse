@@ -55,10 +55,7 @@ func TestExporterGetStatistic(t *testing.T) {
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		loggerProvider := func() log.Logger {
-			return log.GetDefaultLogger()
-		}
-		dummyCleaner := cache.NewDummyTmpCleaner(loggerProvider, "")
+		dummyCleaner := cache.NewDummyTmpCleaner(log.GetDefaultLoggerProvider(), "")
 		exporter.recordStatistic(exporter.getStatistic(context.Background(), dummyCleaner))
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})

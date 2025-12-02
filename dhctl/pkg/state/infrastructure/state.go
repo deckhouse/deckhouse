@@ -62,7 +62,7 @@ func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (strin
 	var clusterUUID string
 	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
-			uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
+			uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
 			if err != nil {
 				return err
 			}

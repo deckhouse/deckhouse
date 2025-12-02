@@ -64,6 +64,18 @@ description: Deckhouse управляет компонентами control plane
 При масштабировании узлов с 2 до 1 требуются [ручные действия](./faq.html#что-делать-если-кластер-etcd-развалился) с `etcd`. В остальных случаях все необходимые действия происходят автоматически. Обратите внимание, что при масштабировании с любого количества master-узлов до 1 рано или поздно на последнем шаге возникнет ситуация масштабирования узлов с 2 до 1.
 {% endalert %}
 
+### Динамическое пороговое значение удаления выселенных подов
+
+Автоматически настраивает оптимальное значение `--terminated-pod-gc-threshold` в зависимости от размера кластера:
+
+- **Малые кластеры** (менее 100 узлов): 1000 завершенных подов.
+- **Средние кластеры** (от 100 до 300 узлов): 3000 завершенных подов.  
+- **Крупные кластеры** (от 300 узлов): 6000 завершенных подов.
+
+{% alert level="info" %}
+Эта функция применяется только в средах, где параметр `--terminated-pod-gc-threshold` можно настраивать. В управляемых Kubernetes-кластерах, таких как EKS, GKE, AKS, это значение контролируется провайдером.
+{% endalert %}
+
 ## Управление версиями
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.30.13` на `1.30.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
@@ -101,3 +113,35 @@ description: Deckhouse управляет компонентами control plane
 - `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
 
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
+
+## Feature Gates
+
+Управление feature gates осуществляется с помощью параметра [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) ModuleConfig `control-plane-manager`.
+
+Изменение списка feature gates вызывает перезапуск соответствующего компонента (например, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+
+Пример включения feature gates `ComponentFlagz` и `ComponentStatusz`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    enabledFeatureGates:
+      - ComponentFlagz
+      - ComponentStatusz
+```
+
+Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
+
+{% alert level="warning" %}
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
+{% endalert %}
+
+Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
+
+{% include feature_gates.liquid %}

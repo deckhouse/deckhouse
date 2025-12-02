@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -65,6 +66,7 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	conversionsStore *conversion.ConversionsStore,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
@@ -72,15 +74,16 @@ func RegisterController(
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:            new(sync.WaitGroup),
-		client:          runtimeManager.GetClient(),
-		logger:          logger,
-		handler:         handler,
-		moduleManager:   mm,
-		edition:         edition,
-		metricStorage:   ms,
-		configValidator: configtools.NewValidator(mm),
-		exts:            exts,
+		init:             new(sync.WaitGroup),
+		client:           runtimeManager.GetClient(),
+		logger:           logger,
+		handler:          handler,
+		conversionsStore: conversionsStore,
+		moduleManager:    mm,
+		edition:          edition,
+		metricStorage:    ms,
+		configValidator:  configtools.NewValidator(mm, conversionsStore),
+		exts:             exts,
 	}
 
 	r.init.Add(1)
@@ -120,15 +123,16 @@ func RegisterController(
 }
 
 type reconciler struct {
-	init            *sync.WaitGroup
-	client          client.Client
-	edition         *d8edition.Edition
-	handler         *confighandler.Handler
-	moduleManager   moduleManager
-	metricStorage   metricsstorage.Storage
-	configValidator *configtools.Validator
-	exts            *extenders.ExtendersStack
-	logger          *log.Logger
+	init             *sync.WaitGroup
+	client           client.Client
+	conversionsStore *conversion.ConversionsStore
+	edition          *d8edition.Edition
+	handler          *confighandler.Handler
+	moduleManager    moduleManager
+	metricStorage    metricsstorage.Storage
+	configValidator  *configtools.Validator
+	exts             *extenders.ExtendersStack
+	logger           *log.Logger
 }
 
 type moduleManager interface {
@@ -285,7 +289,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return ctrl.Result{}, err
 		}
 
-		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		err := utils.Update(ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 				return true
@@ -295,6 +299,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		if err != nil {
 			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
 			return ctrl.Result{}, err
+		}
+
+		// Reset deprecated and experimental metrics when module is disabled
+		if module.IsDeprecated() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+		}
+		if module.IsExperimental() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 		}
 
 		// skip disabled modules

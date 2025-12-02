@@ -1,34 +1,48 @@
-<div class="breadcrumbs-container">
-  <div class="breadcrumbs__left">
-    <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
-    </ol>
+<div class="navigation__container">
+  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
+    <div>
+      {%- if site.mode == 'module' %}
+        <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
+      {%- else if page.sidebar == 'embedded-modules' %}
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+      {%- else %}
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+      {%- endif %}
+
+      <!-- module-version-badge -->
+      <div id="doc-versions-menu" class="channel-menu submenu-parent">
+        {%- unless site.mode == 'module' %}
+          {%- if page.sidebar == 'embedded-modules' %}
+            <!--#include virtual="/includes/channel-menu-module.html" -->
+          {%- else %}
+            <!--#include virtual="/includes/channel-menu-v2.html" -->
+          {%- endif %}
+        {%- endunless -%}
+      </div>
   </div>
-  <div class="breadcrumbs__right">
+  <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
-      <!--#include virtual="/includes/group-menu.html" -->
       {% include nav-breadcrumbs-pagepath.html %}
     </ol>
   </div>
-
   {% if page.searchBageEnabled %}
-  <!--start search-->
-  <div class="searchV3">
-    <div class="container">
-      <div class="input-wrapper">
-        <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
-        data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json"
-        data-search-context="{{ site.data.i18n.common.search_context_only_product_docs[page.lang] }}"
-        >
-        <div id="search-results" class="results" style="display: none"></div>
+    <!--start search-->
+    <div class="searchV3">
+      <div class="container">
+        <div class="input-wrapper">
+          <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+          data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json:1.0:240"
+          data-search-context="{{ site.data.i18n.common.search_context_only_product_docs[page.lang] }}"
+          >
+          <div id="search-results" class="results" style="display: none"></div>
+        </div>
       </div>
     </div>
-  </div>
-  <!--end search-->
-  <!--loading search JS-->
-  {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
-  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
-  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
-  <!--end loading search JS-->
+    <!--end search-->
+    <!--loading search JS-->
+    {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+    <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
+    <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+    <!--end loading search JS-->
   {%- endif %}
 </div>

@@ -21,12 +21,6 @@ type ApplicationPackageExpansion interface{}
 
 type ApplicationPackageVersionExpansion interface{}
 
-type ClusterApplicationExpansion interface{}
-
-type ClusterApplicationPackageExpansion interface{}
-
-type ClusterApplicationPackageVersionExpansion interface{}
-
 type DeckhouseReleaseExpansion interface{}
 
 type ModuleExpansion interface{}

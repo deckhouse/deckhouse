@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -182,13 +183,13 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 
 	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(step)+deckhouseClusterStateSuffix)
 	if err != nil {
-		log.ErrorF("can't save infrastructure state for runner %s: %s\n", step, err)
+		log.ErrorF("Can't save infrastructure state for runner %s: %s\n", step, err)
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
-		log.ErrorF("can't write infrastructure state for runner %s: %s\n", step, err)
+		log.ErrorF("Can't write infrastructure state for runner %s: %s\n", step, err)
 		return r
 	}
 
@@ -201,13 +202,13 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 
 	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), varFileName)
 	if err != nil {
-		log.ErrorF("can't save infrastructure variables for runner %s: %s\n", step, err)
+		log.ErrorF("Can't save infrastructure variables for runner %s: %s\n", step, err)
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
-		log.ErrorF("can't write infrastructure variables for runner %s: %s\n", step, err)
+		log.ErrorF("Can't write infrastructure variables for runner %s: %s\n", step, err)
 		return r
 	}
 
@@ -315,7 +316,7 @@ func (r *Runner) Init(ctx context.Context) error {
 			if len(stateData) > 0 {
 				err := fs.WriteContentIfNeed(r.statePath, stateData)
 				if err != nil {
-					err := fmt.Errorf("can't write infrastructure state for runner %s: %s", r.infraExecutor.Step(), err)
+					err := fmt.Errorf("Can't write infrastructure state for runner %s: %s", r.infraExecutor.Step(), err)
 					r.logger.LogErrorLn(err)
 					return err
 				}
@@ -343,7 +344,7 @@ func (r *Runner) stateName() string {
 }
 
 func (r *Runner) getHook() InfraActionHook {
-	if r.hook == nil {
+	if govalue.IsNil(r.hook) {
 		return &DummyHook{}
 	}
 
@@ -420,17 +421,17 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return nil
 		}
 
-		if r.stateChecker != nil {
+		if !govalue.IsNil(r.stateChecker) {
 			err = r.logger.LogProcess("default", "infrastructure state check before apply...", func() error {
 				if r.statePath == "" {
-					log.InfoF("Infrastructure state path is empty. Skip infrastructure state check.")
+					log.InfoF("Infrastructure state path is empty. Skip infrastructure state check.\n")
 					return nil
 				}
 
 				st, err := os.ReadFile(r.statePath)
 				if err != nil {
 					if os.IsNotExist(err) {
-						log.DebugF("File %s with state not found, Probably call apply with new resource. Skip check.", r.statePath)
+						log.DebugF("File %s with state not found, Probably call apply with new resource. Skip check.\n", r.statePath)
 						return nil
 					}
 					return err
@@ -481,13 +482,13 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
-		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
 	}
 
 	return rawPlan, nil
 }
 
-func (r *Runner) Plan(ctx context.Context, destroy bool) error {
+func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -495,7 +496,7 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 	return r.logger.LogProcess("default", "infrastructure plan ...", func() error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)
 		if err != nil {
-			return fmt.Errorf("can't create temp file for plan: %w", err)
+			return fmt.Errorf("Can't create temp file for plan: %w", err)
 		}
 
 		exitCode, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
@@ -505,21 +506,32 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 				VariablesPath:    r.variablesPath,
 				OutPath:          tmpFile.Name(),
 				DetailedExitCode: true,
+				NoOutput:         noout,
 			})
 		})
 
 		// todo need refactor
 		if exitCode == infraexec.HasChangesExitCode {
 			r.changesInPlan = plan.HasChanges
-			report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
-			destructiveChanges := report.changes
-			if err != nil {
-				return err
-			}
-			if destructiveChanges != nil {
-				r.changesInPlan = plan.HasDestructiveChanges
-				r.planDestructiveChanges = destructiveChanges
-				r.hasVMDestruction = report.hasVMChanges
+			if noout {
+				destructiveChanged, err := r.planHasDestructiveChanges(ctx, tmpFile.Name())
+				if err != nil {
+					return err
+				}
+				if destructiveChanged {
+					r.changesInPlan = plan.HasDestructiveChanges
+				}
+			} else {
+				report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
+				destructiveChanges := report.changes
+				if err != nil {
+					return err
+				}
+				if destructiveChanges != nil {
+					r.changesInPlan = plan.HasDestructiveChanges
+					r.planDestructiveChanges = destructiveChanges
+					r.hasVMDestruction = report.hasVMChanges
+				}
 			}
 		} else if err != nil {
 			return err
@@ -537,7 +549,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 	}
 
 	if r.statePath == "" {
-		return nil, fmt.Errorf("no state found, try to run infastructure apply first")
+		return nil, fmt.Errorf("No state found, try to run infastructure apply first")
 	}
 
 	var result []byte
@@ -556,7 +568,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
-		return nil, fmt.Errorf("can't get infrastructure output for %q\n%v", output, err)
+		return nil, fmt.Errorf("Can't get infrastructure output for %q\n%v", output, err)
 	}
 
 	return result, nil
@@ -568,7 +580,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	if r.statePath == "" {
-		return fmt.Errorf("no state found, try to run infrastructure apply first")
+		return fmt.Errorf("No state found, try to run infrastructure apply first")
 	}
 
 	if r.changeSettings.AutoDismissChanges {
@@ -576,7 +588,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	if r.changeSettings.AutoDismissDestructive {
-		r.logger.LogInfoLn("infrastructure destroy skipped")
+		r.logger.LogInfoLn("Infrastructure destroy skipped.")
 		return nil
 	}
 
@@ -595,7 +607,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
-			return fmt.Errorf("infrastructure destroy aborted")
+			return fmt.Errorf("Infrastructure destroy aborted.")
 		}
 	}
 
@@ -730,7 +742,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		if errors.As(err, &ee) {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
-		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
+		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
 	var pl plan.InfrastructurePlan
@@ -769,9 +781,39 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 			}
 		}
 	}
-	log.DebugF("hasVMDestruction: %s\n", hasVMChange)
+	log.DebugF("HasVMDestruction: %v\n", hasVMChange)
 	return &destructiveChangesReport{
 		changes:      destructiveChanges,
 		hasVMChanges: hasVMChange,
 	}, nil
+}
+
+func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string) (bool, error) {
+	var result []string
+
+	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+		res, err := r.infraExecutor.GetActions(ctx, planFile)
+		if err != nil {
+			return 0, err
+		}
+
+		result = res
+		return 0, nil
+	})
+
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
+	}
+
+	for _, action := range result {
+		if action == "delete" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

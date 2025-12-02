@@ -64,6 +64,18 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically. Please note that when scaling from any number of master nodes to one, sooner or later at the last step, the situation of scaling nodes from two to one will arise.
 {% endalert %}
 
+### Dynamic terminated pod garbage collection threshold
+
+Automatically configures the optimal `--terminated-pod-gc-threshold` based on cluster size:
+
+- **Small clusters** (less than 100 nodes): 1000 terminated Pods.
+- **Medium clusters** (from 100 to 300 nodes): 3000 terminated Pods.
+- **Large clusters** (from 300 nodes): 6000 terminated Pods.
+
+{% alert level="info" %}
+Note. This feature only takes effect in environments where the `--terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
+{% endalert %}
+
 ## Version control
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.30.13` to `1.30.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
@@ -101,3 +113,35 @@ When OIDC authentication is configured, additional user information is included 
 - `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
+
+## Feature Gates
+
+You can configure feature gates using the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter of the `control-plane-manager` ModuleConfig.
+
+Changing the list of feature gates causes a restart of the corresponding component (for example, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+
+The following example enables the `ComponentFlagz` and `ComponentStatusz` feature gates:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    enabledFeatureGates:
+      - ComponentFlagz
+      - ComponentStatusz
+```
+
+If a feature gate is not supported or is deprecated, the monitoring system generates the [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse) alert indicating that the feature gate will not be applied.
+
+{% alert level="warning" %}
+The Kubernetes version update (controlled by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) will not occur if the list of enabled feature gates for the new version of Kubernetes includes deprecated feature gates.
+{% endalert %}
+
+More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
+
+{% include feature_gates.liquid %}

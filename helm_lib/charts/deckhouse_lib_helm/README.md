@@ -650,16 +650,17 @@ list:
 
 ### helm_lib_module_container_security_context_pss_restricted_flexible
 
- SecurityContext for Deckhouse UID/GID 64535, PSS Restricted 
+ SecurityContext for Deckhouse UID/GID 64535 (or root), PSS Restricted 
  Optional keys: 
  .ro   – bool, read-only root FS (default true) 
  .caps – []string, capabilities.add (default empty) 
  .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .runAsNonRoot   – bool, run as Deckhouse user when true, root when false (default true) 
  .seccompProfile  – bool, disable seccompProfile when false (default true) 
 
 #### Usage
 
-`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false "runAsNonRoot" true) `
 
 
 

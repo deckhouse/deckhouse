@@ -114,6 +114,7 @@ spec:
 
 
 {{- define "bashible_input_data" }}
+    podSubnetNodeCIDRPrefix: {{ $.Values.global.clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
 
@@ -155,6 +156,10 @@ spec:
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
+    {{- if hasKey $.Values.nodeManager.internal "allowedKubeletFeatureGates" }}
+    allowedKubeletFeatureGates:
+      {{- $.Values.nodeManager.internal.allowedKubeletFeatureGates | toYaml | nindent 6 }}
+    {{- end }}
 {{- end }}
 ---
 apiVersion: v1
