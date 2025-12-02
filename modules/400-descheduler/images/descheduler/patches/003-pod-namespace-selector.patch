@@ -11,7 +11,7 @@ index db668965a..f57e0c6f4 100644
  | `priorityThreshold`       | `priorityThreshold`    |               | (See [priority filtering](#priority-filtering))                                                                                                                                                                     |
  | `nodeFit`                 | `bool`                 | `false`       | (See [node fit filtering](#node-fit-filtering))                                                                                                                                                                     |
 diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
-index f505886ea..a0cc614b7 100644
+index f505886ea..8573af860 100644
 --- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
 +++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
 @@ -21,12 +21,15 @@ import (
@@ -36,13 +36,13 @@ index f505886ea..a0cc614b7 100644
  		}
 +	}
 +
-+	if d.args.PodProtections.NamespaceLabelSelector == nil {
++	if d.args.NamespaceLabelSelector == nil {
  		return true
  	}
 +
 +	// check pod by namespace label filter
 +	indexName := "namespaceWithLabelSelector"
-+	indexer, err := getNamespacesListByLabelSelector(indexName, d.args.PodProtections.NamespaceLabelSelector, d.handle)
++	indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
 +	if err != nil {
 +		klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
 +		return false
@@ -249,7 +249,7 @@ index 0f2484788..25d57817a 100644
  		ctx,
  		defaultEvictorArgs,
 diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
-index cca10adc4..39014c153 100644
+index cca10adc4..deb7b1751 100644
 --- a/pkg/framework/plugins/defaultevictor/defaults.go
 +++ b/pkg/framework/plugins/defaultevictor/defaults.go
 @@ -24,4 +24,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -257,12 +257,12 @@ index cca10adc4..39014c153 100644
  // DefaultEvictorArgs configuration.
  func SetDefaults_DefaultEvictorArgs(obj runtime.Object) {
 +	args := obj.(*DefaultEvictorArgs)
-+	if args.PodProtections.NamespaceLabelSelector == nil {
-+		args.PodProtections.NamespaceLabelSelector = nil
++	if args.NamespaceLabelSelector == nil {
++		args.NamespaceLabelSelector = nil
 +	}
  }
 diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go
-index 7c6600d47..844db0924 100644
+index 7c6600d47..58f0a209d 100644
 --- a/pkg/framework/plugins/defaultevictor/types.go
 +++ b/pkg/framework/plugins/defaultevictor/types.go
 @@ -15,6 +15,7 @@ package defaultevictor
@@ -273,31 +273,44 @@ index 7c6600d47..844db0924 100644
  	"sigs.k8s.io/descheduler/pkg/api"
  )
  
-@@ -68,6 +69,7 @@ const (
- // NOTE: The list of default enabled pod protection policies is subject to change in future versions.
- // +k8s:deepcopy-gen=true
- type PodProtections struct {
-+	NamespaceLabelSelector *metav1.LabelSelector `json:"namespaceLabelSelector,omitempty"`
- 	// ExtraEnabled specifies additional protection policies that should be enabled.
- 	// Supports: PodsWithPVC, PodsWithoutPDB
- 	ExtraEnabled []PodProtection `json:"extraEnabled,omitempty"`
+@@ -25,13 +26,14 @@ import (
+ type DefaultEvictorArgs struct {
+ 	metav1.TypeMeta `json:",inline"`
+ 
+-	NodeSelector      string                 `json:"nodeSelector,omitempty"`
+-	LabelSelector     *metav1.LabelSelector  `json:"labelSelector,omitempty"`
+-	PriorityThreshold *api.PriorityThreshold `json:"priorityThreshold,omitempty"`
+-	NodeFit           bool                   `json:"nodeFit,omitempty"`
+-	MinReplicas       uint                   `json:"minReplicas,omitempty"`
+-	MinPodAge         *metav1.Duration       `json:"minPodAge,omitempty"`
+-	NoEvictionPolicy  NoEvictionPolicy       `json:"noEvictionPolicy,omitempty"`
++	NodeSelector           string                 `json:"nodeSelector,omitempty"`
++	LabelSelector          *metav1.LabelSelector  `json:"labelSelector,omitempty"`
++	NamespaceLabelSelector *metav1.LabelSelector  `json:"namespaceLabelSelector,omitempty"`
++	PriorityThreshold      *api.PriorityThreshold `json:"priorityThreshold,omitempty"`
++	NodeFit                bool                   `json:"nodeFit,omitempty"`
++	MinReplicas            uint                   `json:"minReplicas,omitempty"`
++	MinPodAge              *metav1.Duration       `json:"minPodAge,omitempty"`
++	NoEvictionPolicy       NoEvictionPolicy       `json:"noEvictionPolicy,omitempty"`
+ 
+ 	// PodProtections holds the list of enabled and disabled protection policies.
+ 	// Users can selectively disable certain default protection rules or enable extra ones.
 diff --git a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
-index 9faf7c10e..0fbb4d8d1 100644
+index 9faf7c10e..cb6700460 100644
 --- a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
 +++ b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
-@@ -81,6 +81,12 @@ func (in *PodProtections) DeepCopyInto(out *PodProtections) {
- 		*out = make([]PodProtection, len(*in))
- 		copy(*out, *in)
+@@ -46,6 +46,11 @@ func (in *DefaultEvictorArgs) DeepCopyInto(out *DefaultEvictorArgs) {
+ 		*out = new(v1.Duration)
+ 		**out = **in
  	}
-+
 +	if in.NamespaceLabelSelector != nil {
 +		in, out := &in.NamespaceLabelSelector, &out.NamespaceLabelSelector
 +		*out = new(v1.LabelSelector)
 +		(*in).DeepCopyInto(*out)
 +	}
+ 	in.PodProtections.DeepCopyInto(&out.PodProtections)
  	return
  }
- 
 diff --git a/test/test_utils.go b/test/test_utils.go
 index 5a3169dd1..e44bc2cd1 100644
 --- a/test/test_utils.go
