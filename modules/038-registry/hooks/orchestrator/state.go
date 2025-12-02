@@ -26,10 +26,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
@@ -672,7 +672,7 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
 	}
 
-	registryAddr, _ := helpers.RegistryAddressAndPathFromImagesRepo(params.Address)
+	registryAddr, _ := registry_helpers.SplitAddressAndPath(params.Address)
 	state.CheckerParams = checker.Params{
 		Registries: map[string]checker.RegistryParams{
 			registryAddr: params,

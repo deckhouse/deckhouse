@@ -19,8 +19,7 @@ import (
 	"fmt"
 
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 type Data struct {
@@ -68,5 +67,5 @@ func (d Data) DockerCfgBase64() (string, error) {
 }
 
 func (d Data) AddressAndPath() (string, string) {
-	return helpers.SplitAddressAndPath(d.ImagesRepo)
+	return registry_helpers.SplitAddressAndPath(d.ImagesRepo)
 }

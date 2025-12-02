@@ -26,6 +26,7 @@ import (
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -421,7 +422,7 @@ func (p *DirectModeParams) isEqual(other *DirectModeParams) bool {
 }
 
 func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, _ := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, _ := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -434,7 +435,7 @@ func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost
 }
 
 func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, path := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, path := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return registry_const.Host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,

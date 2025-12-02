@@ -9,11 +9,13 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.36.0
+	gotest.tools/v3 v3.0.3
 )
 
 require (
 	github.com/docker/cli v28.2.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

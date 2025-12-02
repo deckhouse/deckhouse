@@ -83,10 +83,6 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f h1:z0HVydB3RdiW02V301QPJDx0xmmVgJf1Bkjyu9oILXU=
 github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f/go.mod h1:6idedofcaW43YLVGOAv7Uz9X4xOek/YyOPhiBEr36iM=
-github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8 h1:ZvmrsnGY5rnrwrjGzHAUeW9KDlYWx3a3VA4M7LCRCKs=
-github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
-github.com/deckhouse/lib-gossh v0.0.0-20251126101911-9386ba63ac7d h1:rulzTXecx58s6F+jaO2hUTk6fdVOK8DxQ53xMoilFMc=
-github.com/deckhouse/lib-gossh v0.0.0-20251126101911-9386ba63ac7d/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 h1:fntxXW2hn5Vnqa7u802glEzEEy4ye8ztuRBKy/r02Wk=
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.2.0 h1:MOK03UZ88T7T52bk+lmAz0bRJiljtN5ysq7y8FjEF3s=

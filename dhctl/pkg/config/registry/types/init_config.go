@@ -22,8 +22,7 @@ import (
 	"strings"
 
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/helpers"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 type InitConfig struct {
@@ -45,7 +44,7 @@ func (config InitConfig) ToRegistrySettings() (RegistrySettings, error) {
 	}
 
 	// Validate and pars dockerCfg
-	address, _ := helpers.SplitAddressAndPath(config.ImagesRepo)
+	address, _ := registry_helpers.SplitAddressAndPath(config.ImagesRepo)
 	if err := validateRegistryDockerCfg(config.RegistryDockerCfg, address); err != nil {
 		return RegistrySettings{}, fmt.Errorf("failed to validate registryDockerCfg: %w", err)
 	}

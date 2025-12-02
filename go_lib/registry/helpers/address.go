@@ -20,8 +20,8 @@ import (
 	"strings"
 )
 
-func RegistryAddressAndPathFromImagesRepo(imgRepo string) (string, string) {
-	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)
+func SplitAddressAndPath(ref string) (string, string) {
+	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(ref, "/")), "/", 2)
 	if len(parts) == 1 {
 		return parts[0], ""
 	}

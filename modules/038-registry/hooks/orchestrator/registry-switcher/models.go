@@ -23,8 +23,8 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
 var (
@@ -159,7 +159,7 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.C
 }
 
 func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Config, error) {
-	address, path := helpers.RegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
+	address, path := registry_helpers.SplitAddressAndPath(params.ImagesRepo)
 
 	dockerCfg, err := registry_docker.DockerCfgFromCreds(params.Username, params.Password, address)
 	if err != nil {

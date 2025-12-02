@@ -23,9 +23,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
 type Inputs = DeploymentStatus
@@ -196,7 +196,7 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 		upstreamCA = string(pki.EncodeCertificate(params.Upstream.CA))
 	}
 
-	host, path := helpers.RegistryAddressAndPathFromImagesRepo(params.Upstream.ImagesRepo)
+	host, path := registry_helpers.SplitAddressAndPath(params.Upstream.ImagesRepo)
 	*cfg = InclusterProxyConfig{
 		CACert:           string(pki.EncodeCertificate(params.CA.Cert)),
 		TokenCert:        string(pki.EncodeCertificate(params.Token.Cert)),
