@@ -80,7 +80,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "nodeGroupExporter") }}
         args:
         - --server.exporter-address=127.0.0.1:9000
-        - --server.log-level=info
         livenessProbe:
           failureThreshold: 3
           httpGet:
