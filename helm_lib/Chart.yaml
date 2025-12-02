@@ -6,4 +6,3 @@ description: Helm helpers
 dependencies:
   - name: deckhouse_lib_helm
     version: "1.71.1"
-    repository: https://deckhouse.github.io/lib-helm

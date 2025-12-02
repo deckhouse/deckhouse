@@ -41,8 +41,6 @@ properties:
                 minimum: 0
                 x-examples: [ 536870912 ]
                 default: 0
-  clusterConfiguration:
-    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   clusterIsBootstrapped:
     type: boolean
     description: |
@@ -179,6 +177,20 @@ properties:
         description: |
           Nested level of virtualization.
         x-examples: [ 1 ]
+      gatewayAPIDefaultGateway:
+        type: object
+        properties:
+          name:
+            type: string
+          namespace:
+            type: string
+        required:
+          - name
+          - namespace
+        description: |
+          The name of the discovered default Gateway used for Deckhouse modules if Gateway API is used.
+  clusterConfiguration:
+    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   modulesImages:
     additionalProperties: true
     type: object

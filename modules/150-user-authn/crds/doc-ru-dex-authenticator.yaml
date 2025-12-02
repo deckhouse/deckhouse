@@ -32,6 +32,18 @@ spec:
                 applicationIngressClassName:
                   description: |
                     Название Ingress-класса, которое будет использоваться в Ingress-ресурсе (должно совпадать с названием Ingress-класса для домена приложения).
+                applicationHTTPRouteCertificateSecretName:
+                  description: |
+                    Имя секрета (Secret) с TLS-сертификатом для домена приложения, который используется в HTTPRoute-ресурсе приложения. 
+                applicationHTTPRouteParentRefName:
+                  description: |
+                    Название Gateway API ListenerSet-ресурса, который будет использоваться для обслуживания HTTPRoute-ресурса.
+                applicationHTTPRouteParentRefNamespace:
+                  description:
+                    Название пространства имен, в котором располагается Gateway API ListenerSet-ресурс обслуживающий HTTPRoute-ресурс.
+                applicationHTTPRouteParentRefSectionName:
+                  description: |
+                    Название секции в Gateway API ListenerSet-ресурсе на которую будет ссылаться HTTPRoute-ресурс.
                 signOutURL:
                   description: |
                     URL для завершения сеанса аутентификации.
@@ -241,6 +253,18 @@ spec:
                       whitelistSourceRanges:
                         description: |
                           Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+                      httpRouteCertificateSecretName:
+                        description: |
+                          Имя секрета (Secret) с TLS-сертификатом для домена приложения, который используется в HTTPRoute-ресурсе приложения. 
+                      httpRouteParentRefName:
+                        description: |
+                          Название Gateway API ListenerSet-ресурса, который будет использоваться для обслуживания HTTPRoute-ресурса.
+                      httpRouteParentRefNamespace:
+                        description: |
+                          Название пространства имен, в котором располагается Gateway API ListenerSet-ресурс обслуживающий HTTPRoute-ресурс.
+                      httpRouteParentRefSectionName:
+                        description: |
+                          Название секции в Gateway API ListenerSet-ресурсе на которую будет ссылаться HTTPRoute-ресурс.
                 nodeSelector:
                   description: |-
                     Определяет `nodeSelector` для подов `dex-authenticator`.

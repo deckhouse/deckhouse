@@ -1,1 +1,6 @@
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "ingress-tls") -}}
+{{- $defaultGateway := dict }}
+{{- include "helm_lib_default_gateway" (list . $defaultGateway) }}
+{{- if $defaultGateway }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "httproute-tls") -}}
+{{- end }}
