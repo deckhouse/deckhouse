@@ -34,6 +34,7 @@ rules:
   resourceNames:
   - cacets
   - d8-istio-sidecar-registry
+  - d8-remote-clusters-public-metadata
   - deckhouse-registry
   verbs:
   - get
