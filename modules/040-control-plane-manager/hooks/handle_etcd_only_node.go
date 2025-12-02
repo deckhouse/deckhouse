@@ -73,4 +73,3 @@ func handleCheckEtcdOnlyNode(_ context.Context, input *go_hook.HookInput) error 
 
 	return nil
 }
-

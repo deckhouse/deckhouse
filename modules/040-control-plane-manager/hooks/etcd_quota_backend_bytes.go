@@ -24,6 +24,10 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -31,12 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/module-sdk/pkg"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	"github.com/deckhouse/deckhouse/go_lib/filter"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type etcdNode struct {
@@ -256,11 +254,11 @@ func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) in
 
 	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
 	etcdOnlyNodeSnapshots := input.Snapshots.Get("etcd_only_node")
-	
+
 	allNodesSnapshots := make([]pkg.Snapshot, 0, len(masterNodeSnapshots)+len(etcdOnlyNodeSnapshots))
 	allNodesSnapshots = append(allNodesSnapshots, masterNodeSnapshots...)
 	allNodesSnapshots = append(allNodesSnapshots, etcdOnlyNodeSnapshots...)
-	
+
 	node, err := getNodeWithMinimalMemory(allNodesSnapshots)
 
 	if err != nil {

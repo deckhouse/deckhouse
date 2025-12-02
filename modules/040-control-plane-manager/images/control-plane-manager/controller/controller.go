@@ -76,6 +76,9 @@ func main() {
 	runPhase(checkKubeletConfig())
 	runPhase(installKubeadmConfig())
 	runPhase(installBasePKIfiles())
+	if config.EtcdOnly {
+		runPhase(generateEtcdPerformancePatch(GetEtcdPerformanceParams()))
+	}
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
 	
