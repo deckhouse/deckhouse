@@ -30,13 +30,24 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - secrets
+  resourceNames:
+  - cacets
+  - d8-istio-sidecar-registry
+  - deckhouse-registry
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - endpoints
   - pods
   - services
   - nodes
   - replicationcontrollers
   - namespaces
-  - secrets
   verbs:
   - get
   - list
