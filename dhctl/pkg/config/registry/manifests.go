@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
-func NewManifestBuilder(modeModel ModeModel, moduleEnable bool) *ManifestBuilder {
+func newManifestBuilder(modeModel ModeModel, moduleEnable bool) *ManifestBuilder {
 	return &ManifestBuilder{
 		modeModel:     modeModel,
 		moduleEnabled: moduleEnable,

@@ -26,7 +26,7 @@ type ModeSettings struct {
 	Remote Data
 }
 
-func NewModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
+func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
 	switch {
 	case settings.Direct != nil:
 		remote := Data{}

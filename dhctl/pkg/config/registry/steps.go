@@ -82,7 +82,7 @@ func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
 }
 
 func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
-	conditions, err := fetchStateSecret(ctx, kubeClient)
+	conditions, err := getStateSecret(ctx, kubeClient)
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +118,7 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 	return msg.String(), ErrIsNotReady
 }
 
-func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
+func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
 	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, stateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
@@ -145,7 +145,6 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 		}
 		return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
-
 	_, applied := secret.Annotations[initSecretAppliedAnnotation]
 	return true, applied, nil
 }

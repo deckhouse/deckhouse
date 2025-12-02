@@ -34,7 +34,7 @@ type Config struct {
 }
 
 func (c *Config) Manifest() *ManifestBuilder {
-	return NewManifestBuilder(c.Settings.ToModel(), c.ModuleEnabled)
+	return newManifestBuilder(c.Settings.ToModel(), c.ModuleEnabled)
 }
 
 func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) {
@@ -52,12 +52,12 @@ func NewConfig(
 ) (Config, error) {
 	moduleEnabled := slices.Contains(ModuleEnabledCRI, cri)
 
-	dekhouseSettings, err := NewDeckhouseSettings(deckhouse, initConfig)
+	dekhouseSettings, err := newDeckhouseSettings(deckhouse, initConfig)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get registry settings: %w", err)
 	}
 
-	settings, err := NewModeSettings(dekhouseSettings)
+	settings, err := newModeSettings(dekhouseSettings)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to get registry mode settings: %w", err)
 	}
@@ -80,7 +80,7 @@ func NewConfig(
 	}, nil
 }
 
-func NewDeckhouseSettings(
+func newDeckhouseSettings(
 	deckhouse *module_config.DeckhouseSettings,
 	initConfig *init_config.Config,
 ) (module_config.DeckhouseSettings, error) {

@@ -247,7 +247,7 @@ func TestNewDeckhouseSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := NewDeckhouseSettings(tt.input.deckhouse, tt.input.initConfig)
+			result, err := newDeckhouseSettings(tt.input.deckhouse, tt.input.initConfig)
 
 			if tt.output.err {
 				assert.Error(t, err)

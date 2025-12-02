@@ -57,12 +57,12 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 	}
 
-	dekhouseSettings, err := NewDeckhouseSettings(&dekhouseSettings, nil)
+	dekhouseSettings, err := newDeckhouseSettings(&dekhouseSettings, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	settings, err := NewModeSettings(dekhouseSettings)
+	settings, err := newModeSettings(dekhouseSettings)
 	if err != nil {
 		panic(err)
 	}
