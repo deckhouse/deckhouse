@@ -67,7 +67,7 @@ func handleCheckEtcdOnlyNode(_ context.Context, input *go_hook.HookInput) error 
 		return fmt.Errorf("etcd-only label must be present on at most one node, found %d nodes", len(etcdOnlyNodes))
 	}
 
-	hasEtcdOnlyNode := len(masterNodes) == 2 && len(etcdOnlyNodes) == 1
+	hasEtcdOnlyNode := len(masterNodes) >= 2 && len(etcdOnlyNodes) == 1
 
 	input.Values.Set("controlPlaneManager.internal.hasEtcdOnlyNode", hasEtcdOnlyNode)
 
