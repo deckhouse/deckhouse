@@ -63,12 +63,12 @@ type ApplicationPackage struct {
 type NamespaceName string
 
 type ApplicationPackageStatus struct {
-	Instances             map[NamespaceName][]ApplicationPackageStatusInstance `json:"instances,omitempty"`
-	InstancesOverall      int                                                  `json:"instancesOverall,omitempty"`
-	AvailableRepositories []string                                             `json:"availableRepositories,omitempty"`
+	Installed             map[NamespaceName][]ApplicationPackageStatusInstalled `json:"installed,omitempty"`
+	InstalledOverall      int                                                   `json:"installedOverall,omitempty"`
+	AvailableRepositories []string                                              `json:"availableRepositories,omitempty"`
 }
 
-type ApplicationPackageStatusInstance struct {
+type ApplicationPackageStatusInstalled struct {
 	Name string `json:"name,omitempty"`
 }
 
