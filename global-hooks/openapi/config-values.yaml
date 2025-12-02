@@ -44,6 +44,32 @@ properties:
     default: {}
     type: object
     properties:
+      gatewayAPIParentRefs:
+        type: array
+        default:
+          - name: shared-gateway
+            namespace: d8-alb-istio
+            kind: Gateway
+            group: gateway.networking.k8s.io
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            kind:
+              type: string
+              enum: ['Gateway', 'XListenerSet']
+            group:
+              type: string
+            namespace:
+              type: string
+          requied:
+            - name
+            - kind
+            - group
+            - namespace
+        Description: |
+          The list of Gateway API parent references (Gateways or/and XListenerSets) used for Deckhouse modules if Gateway API is used.
       ingressClass:
         type: string
         default: nginx

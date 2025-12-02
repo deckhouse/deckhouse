@@ -1,0 +1,62 @@
+{{- if (.Values.global.enabledModules | has "alb-istio") }}
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not .spec.applications }}
+    {{- continue }}
+  {{- end }}
+  {{- range $idx, $app := $crd.spec.applications }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $nameSuffix := "" }}
+  {{- if ne $idx 0 }}
+    {{- $nameSuffix = printf "-%s" $hashedDomain }}
+  {{- end }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $svcName := $info.name }}
+  {{- $ingInfo := (index $info.ingressNames (printf "%d" $idx)) }}
+  {{- $ingName := (default (printf "%s%s-dex-authenticator" $crd.name $nameSuffix) (index $ingInfo "name")) }}
+  {{- $ingTruncated := (index $ingInfo "truncated") }}
+  {{- $ingHash := (index $ingInfo "hash") }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+    alb-istio.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.ingressSecretName }}
+  name: {{ $ingName }}
+  namespace: {{ $crd.namespace }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $ingTruncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $ingHash }}
+  {{- end }}
+spec:
+  hostnames:
+  - {{ $app.domain }}
+  parentRefs:
+  {{- range $parentRef := $.Values.global.modules.gatewayAPIParentRefs }}
+  - group: {{ $parentRef.group }}
+    kind: {{ $parentRef.kind }}
+    name: {{ $parentRef.name }}
+    {{- if eq $parentRef.kind "Gateway" }}
+    namespace: d8-alb-istio
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
+  {{- end }}
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ $svcName }}
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /dex-authenticator
+  {{- end }}
+{{- end }}
+{{- end }}

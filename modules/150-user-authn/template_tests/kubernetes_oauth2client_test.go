@@ -39,6 +39,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 	})
 
 	Context("Without dex authenticator", func() {
