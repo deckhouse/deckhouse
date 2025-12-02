@@ -1,0 +1,83 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: deckhouse-tools
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "tools"
+    web.deckhouse.io/export-icon: "/public/img/tools.ico"
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+    alb-gateway.network.deckhouse.io/tls-secrets: d8-system/{{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
+  {{- end }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseTools.auth.externalAuthentication }}
+    alb-gateway.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "tools")) .Values.deckhouseTools.auth.externalAuthentication.authSignInURL | quote }}
+    alb-gateway.network.deckhouse.io/auth-url: {{ .Values.deckhouseTools.auth.externalAuthentication.authURL | quote }}
+    {{- if $satisfyAny }}
+    alb-gateway.network.deckhouse.io/satisfy: "any"
+    {{- end }}
+  {{- else }}
+    alb-gateway.network.deckhouse.io/basic-auth-secret: d8-system/tools-basic-auth
+  {{- end }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb-gateway.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "tools") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-system
+    sectionName: tools
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: deckhouse-tools
+      port: 80
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: deckhouse-tools-redirect
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
+  annotations:
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "tools") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-system
+    sectionName: tools-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- end }}

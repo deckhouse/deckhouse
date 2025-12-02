@@ -1,0 +1,73 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "is_basic_auth_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+    alb-gateway.network.deckhouse.io/rewrite-target: /\2
+    alb-gateway.network.deckhouse.io/buffer-max-request-bytes: "10485760"
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "publish_api_http_route_certificate_name" . }}
+  {{- end }}
+  {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
+    alb-gateway.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: api
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: RegularExpression
+        value: /basic-auth(/|$)(.*)
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: basic-auth-proxy-redirect
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: api-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- end }}

@@ -1,0 +1,69 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+    alb-gateway.network.deckhouse.io/limit-rps: "50"
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+    alb-gateway.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+  {{- end }}
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: dex
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: dex
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb-gateway.network.deckhouse.io/gateway: {{ printf "%s/%s" $moduleGateway.namespace $moduleGateway.name }}
+    alb-gateway.network.deckhouse.io/auto-create-xlistenerset: "true"
+  name: dex-redirect
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+  parentRefs:
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-listenerset
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: dex-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- end }}
