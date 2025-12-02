@@ -72,14 +72,16 @@ func ToNodeMetricsData(node *v1.Node) NodeMetricsData {
 	}
 }
 
-func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
-	hasErrors := 0.0
+func isHasErrors(nodeGroup *ngv1.NodeGroup) float64 {
 	for _, condition := range nodeGroup.Status.Conditions {
 		if condition.Type == ngv1.NodeGroupConditionTypeError && condition.Status == ngv1.ConditionTrue {
-			hasErrors = 1.0
-			break
+			return 1.0
 		}
 	}
+	return 0.0
+}
+
+func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
 
 	return NodeGroupMetricsData{
 		Name:      nodeGroup.Name,
@@ -92,6 +94,6 @@ func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
 		Min:       nodeGroup.Status.Min,
 		UpToDate:  nodeGroup.Status.UpToDate,
 		Standby:   nodeGroup.Status.Standby,
-		HasErrors: hasErrors,
+		HasErrors: isHasErrors(nodeGroup),
 	}
 }
