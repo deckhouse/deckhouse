@@ -149,7 +149,7 @@ yandex:
   namespace: yandex-cloud
   cloudName: Yandex
   type: yandex
-  version: 0.172.0
+  version: 0.173.0
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
