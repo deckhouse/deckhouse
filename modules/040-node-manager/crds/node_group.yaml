@@ -608,8 +608,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -1219,8 +1222,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -2108,8 +2114,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `/24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `/23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `/22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `/21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
