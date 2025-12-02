@@ -28,11 +28,15 @@ import (
 )
 
 type (
+	mirrorInfo struct {
+		URL                string `json:"url"`
+		InsecureSkipVerify bool   `json:"insecureSkipVerify"`
+	}
+
 	licenseInfo struct {
-		AccountID int      `json:"maxmindAccountID"`
-		Editions  []string `json:"editions"`
-		Mirror    string   `json:"maxmindMirror,omitempty"`
-		SkipTLS   bool     `json:"maxmindMirrorSkipTLSVerify"`
+		AccountID int        `json:"maxmindAccountID"`
+		Editions  []string   `json:"editions"`
+		Mirror    mirrorInfo `json:"maxmindMirror"`
 	}
 )
 
@@ -42,8 +46,9 @@ const (
   spec:
     geoIP2:
       maxmindLicenseKey: shared-license
-      maxmindMirror: https://mirror.shared
-      maxmindMirrorSkipTLSVerify: true
+      maxmindMirror:
+        url: https://mirror.shared
+        insecureSkipVerify: true
       maxmindEditionIDs:
         - GeoLite2-City
         - GeoLite2-ASN
@@ -65,8 +70,9 @@ const (
   spec:
     geoIP2:
       maxmindLicenseKey: another-license
-      maxmindMirror: https://mirror.com
-      maxmindMirrorSkipTLSVerify: false
+      maxmindMirror:
+        url: https://mirror.com
+        insecureSkipVerify: false
       maxmindAccountID: 888
       maxmindEditionIDs:
         - GeoLite2-ISP
@@ -88,7 +94,8 @@ const (
 - name: mirror-only
   spec:
     geoIP2:
-      maxmindMirror: https://mirror-only.local
+      maxmindMirror:
+        url: https://mirror-only.local
       maxmindEditionIDs:
         - GeoLite2-City
 `
@@ -128,14 +135,18 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 		shared := licenseMap["shared-license"]
 		Expect(shared.AccountID).To(Equal(777))
 		Expect(shared.Editions).To(ConsistOf("GeoLite2-City", "GeoLite2-ASN", "GeoLite2-Country"))
-		Expect(shared.Mirror).To(Equal("https://mirror.shared"))
-		Expect(shared.SkipTLS).To(BeTrue())
+		Expect(shared.Mirror).To(Equal(mirrorInfo{
+			URL:                "https://mirror.shared",
+			InsecureSkipVerify: true,
+		}))
 
 		another := licenseMap["another-license"]
 		Expect(another.AccountID).To(Equal(888))
 		Expect(another.Editions).To(ConsistOf("GeoLite2-Country", "GeoLite2-ISP"))
-		Expect(another.Mirror).To(Equal("https://mirror.com"))
-		Expect(another.SkipTLS).To(BeFalse())
+		Expect(another.Mirror).To(Equal(mirrorInfo{
+			URL:                "https://mirror.com",
+			InsecureSkipVerify: false,
+		}))
 	})
 
 	It("skips geoproxy resources when license data absent", func() {
@@ -168,7 +179,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 		licenseMap := decodeLicenseMap(secret)
 		Expect(licenseMap).To(HaveKey("mirror:e17d2092"))
 		mirrorEntry := licenseMap["mirror:e17d2092"]
-		Expect(mirrorEntry.Mirror).To(Equal("https://mirror-only.local"))
+		Expect(mirrorEntry.Mirror.URL).To(Equal("https://mirror-only.local"))
 		Expect(mirrorEntry.AccountID).To(Equal(0))
 		Expect(mirrorEntry.Editions).To(ConsistOf("GeoLite2-City"))
 	})

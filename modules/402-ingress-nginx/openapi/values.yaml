@@ -216,9 +216,12 @@ properties:
                   type: object
                   properties:
                     maxmindMirror:
-                      type: string
-                    maxmindMirrorSkipTLSVerify:
-                      type: boolean
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        insecureSkipVerify:
+                          type: boolean
                     maxmindLicenseKey:
                       type: string
                     maxmindEditionIDs:

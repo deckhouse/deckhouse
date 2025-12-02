@@ -117,8 +117,8 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	if !d.isLeader() {
 		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
 		if err == nil && link != "" {
-			account.Mirror = link
-			account.SkipTLS = true // skip TLS kubeRbacProxy
+			account.Mirror.URL = link
+			account.Mirror.InsecureSkipVerify = true // skip TLS kubeRbacProxy
 			account.DownloadFromLeader = true
 			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 		}
@@ -126,7 +126,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	}
 
 	// try download db bu official library
-	if clientInitialized && account.Mirror == "" {
+	if clientInitialized && account.Mirror.URL == "" {
 		handled, err := d.tryMaxMindClient(ctx, client, edition, currentMD5, dstPathRoot)
 		if handled {
 			return err
@@ -169,17 +169,18 @@ func (d *Downloader) tryMaxMindClient(ctx context.Context, client maxmindClient.
 }
 
 func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, licenseKey, edition string, account Account) error {
-	url := createURL(account.Mirror, licenseKey, edition)
+	url := createURL(account.Mirror.URL, licenseKey, edition)
 	switch {
 	case account.DownloadFromLeader:
-		log.Info(fmt.Sprintf("Downloading %v from leader: %s", edition, account.Mirror))
-	case account.Mirror != "":
-		log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror))
+		log.Info(fmt.Sprintf("Downloading %v from leader: %s", edition, account.Mirror.URL))
+	case account.Mirror.URL != "":
+		log.Info(fmt.Sprintf("Downloading %v from mirror: %s", edition, account.Mirror.URL))
 	default:
 		log.Info(fmt.Sprintf("Downloading %v from MaxMind", edition))
 	}
 
-	dataDB, err := downloadDB(ctx, url, account.SkipTLS)
+	skipTLS := account.Mirror.InsecureSkipVerify || account.LegacySkipTLS
+	dataDB, err := downloadDB(ctx, url, skipTLS)
 	if err != nil {
 		incrementError(err)
 		return fmt.Errorf("download data: %w", err)

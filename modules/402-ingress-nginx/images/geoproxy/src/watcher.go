@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -34,18 +35,52 @@ import (
 
 // {
 //   "ABC123": {
-//     "accountID": "67890",
-//     "editions": ["GeoLite2-City", "GeoLite2-ASN"]
+//     "maxmindAccountID": 67890,
+//     "editions": ["GeoLite2-City", "GeoLite2-ASN"],
+//     "maxmindMirror": {
+//       "url": "https://mirror.local",
+//       "insecureSkipVerify": true
+//     }
 //   }
 // }
 
 type Account struct {
 	AccountID int      `json:"maxmindAccountID,omitempty"`
 	Editions  []string `json:"editions,omitempty"`
-	Mirror    string   `json:"maxmindMirror,omitempty"`
-	SkipTLS   bool     `json:"maxmindMirrorSkipTLSVerify,omitempty"`
+	Mirror    Mirror   `json:"maxmindMirror,omitempty"`
+	// LegacySkipTLS is kept for backward compatibility with pre-nested mirrors.
+	LegacySkipTLS bool `json:"maxmindMirrorSkipTLSVerify,omitempty"`
 	// DownloadFromLeader marks that Mirror points to the elected leader endpoint instead of a user-provided mirror.
 	DownloadFromLeader bool `json:"-"`
+}
+
+type Mirror struct {
+	URL                string `json:"url,omitempty"`
+	InsecureSkipVerify bool   `json:"insecureSkipVerify,omitempty"`
+}
+
+// UnmarshalJSON supports both legacy string values and the new nested structure.
+func (m *Mirror) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*m = Mirror{}
+		return nil
+	}
+
+	var urlOnly string
+	if err := json.Unmarshal(data, &urlOnly); err == nil {
+		m.URL = strings.TrimSpace(urlOnly)
+		return nil
+	}
+
+	type mirrorAlias Mirror
+	var aux mirrorAlias
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	aux.URL = strings.TrimSpace(aux.URL)
+	*m = Mirror(aux)
+	return nil
 }
 
 type LicenseEditions map[string]Account

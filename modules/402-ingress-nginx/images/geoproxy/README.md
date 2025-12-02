@@ -22,7 +22,7 @@ Goal: preload the MaxMind databases into geoproxy storage when the cluster has n
 >  - Without a StorageClass, `/data` is `emptyDir` (non‑persistent; data **lost when the Pod is recreated or rescheduled**.).
 
 > [!IMPORTANT]
->  You can configure `spec.geoIP2.maxmindMirror` without `maxmindLicenseKey`. In this case geoproxy will only download archives from your mirror (or use the preloaded tarballs) and won't attempt to reach MaxMind directly.
+>  You can configure `spec.geoIP2.maxmindMirror.url` without `maxmindLicenseKey`. In this case geoproxy will only download archives from your mirror (or use the preloaded tarballs) and won't attempt to reach MaxMind directly.
 
 ### Preload into PVC (recommended)
   -  Ensure geoproxy is deployed and the PVC for the first replica exists (usually `geo-data-geoproxy-0`).

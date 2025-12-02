@@ -639,15 +639,18 @@ spec:
                   properties:
                     maxmindMirror:
                       description: |
-                        URL для скачивания баз GeoIP. 
+                        Настройки зеркала для скачивания баз GeoIP. 
                         Если параметр не указан или имеет пустое значение, то по умолчанию будет использоваться `https://download.maxmind.com`.
 
                         Пример корректного URL: https://mirror.local/GeoLite2-City.tar.gz.
 
-                        **Если зеркало использует самоподписанный TLS-сертификат, включите `maxmindMirrorSkipTLSVerify`.**
-                    maxmindMirrorSkipTLSVerify:
-                      description: |
-                        При использовании пользовательского URL для скачивания баз GeoIP, при помощи данного параметра вы можете отключить проверку TLS сертификатов.
+                        Если зеркало используется для хранения предзагруженных архивов, параметр `licenseKey` можно не указывать.
+                      properties:
+                        url:
+                          description: URL для скачивания баз GeoIP.
+                        insecureSkipVerify:
+                          description: |
+                            Отключает проверку TLS сертификатов зеркала, например, если используется самоподписанный сертификат.
                     maxmindAccountID:
                       description: |
                         Идентификатор учетной записи MaxMind, используемый для аутентификации загрузки базы данных GeoIP2.
