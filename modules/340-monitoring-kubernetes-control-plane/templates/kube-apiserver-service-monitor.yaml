@@ -25,6 +25,8 @@ spec:
       action: labeldrop
     - targetLabel: job
       replacement: kube-apiserver
+    - targetLabel: namespace
+      replacement: kube-system
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
