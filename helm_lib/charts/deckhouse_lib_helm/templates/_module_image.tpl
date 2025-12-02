@@ -85,18 +85,19 @@
   {{- $imageDigest := "" }}
   {{- /* Try to get from storage foundation module if enabled */}}
   {{- if $context.Values.global.enabledModules | has "storage-foundation" }}
+    {{- printf "storage-foundation" }}
     {{- $storageFoundationModuleName := (include "helm_lib_module_camelcase_name" "storage-foundation") }}
     {{- $host := trimAll "/" (index $context.Values $storageFoundationModuleName "registry" "base") }}
     {{- $path := trimAll "/" $context.Chart.Name }}
     {{- $registryBase = join "/" (list $host $path "modules" "storage-foundation" ) }}
     {{- $imageDigest = index $context.Values.global.modulesImages.digests $storageFoundationModuleName $containerName | default "" }}
-    {{- printf "%s@%s" $registryBase $imageDigest }}
-  {{- end }}
+    {{- /* printf "%s@%s" $registryBase $imageDigest */ }}
   {{- /* Fallback to common module if not found in storage foundation */}}
-  {{- if not $imageDigest }}
+  {{- else }}
+    {{- printf "common" }}
     {{- $registryBase = $context.Values.global.modulesImages.registry.base }}
     {{- $imageDigest = index $context.Values.global.modulesImages.digests "common" $containerName | default "" }}
-    {{- printf "%s@%s" $registryBase $imageDigest }}
+    {{- /* printf "%s@%s" $registryBase $imageDigest */ }}
   {{- end }}
 {{- end }}
 
