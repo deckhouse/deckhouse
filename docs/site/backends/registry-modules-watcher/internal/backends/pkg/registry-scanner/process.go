@@ -27,6 +27,7 @@ import (
 	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
@@ -47,9 +48,17 @@ var (
 
 const versionFileName = "version.json"
 
+// moduleDefinition is a minimal struct for parsing module.yaml.
+// We only need the critical field for telemetry - full definition is in
+// deckhouse-controller/pkg/controller/moduleloader/types/definition.go
+type moduleDefinition struct {
+	Critical bool `yaml:"critical"`
+}
+
 type ImageMetadata struct {
 	Version               string
 	ModuleDefinitionFound bool
+	ModuleCritical        bool
 }
 
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
@@ -183,9 +192,15 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	s.logger.Debug("module.yaml state",
 		slog.String("module", module),
 		slog.String("channel", releaseChannel),
-		slog.Bool("found", imageMeta.ModuleDefinitionFound))
+		slog.Bool("found", imageMeta.ModuleDefinitionFound),
+		slog.Bool("critical", imageMeta.ModuleCritical))
 	if !imageMeta.ModuleDefinitionFound {
 		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+	}
+
+	// Track critical modules to identify potential "critical" field misuse
+	if imageMeta.ModuleCritical {
+		s.ms.GaugeSet(metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
 	}
 
 	versionData.Version = imageMeta.Version
@@ -337,6 +352,11 @@ func getMetadataFromImage(releaseImage crv1.Image) (*ImageMetadata, error) {
 			}
 			if len(buf.Bytes()) > 0 {
 				metadata.ModuleDefinitionFound = true
+				// Parse module.yaml to extract critical flag
+				var modDef moduleDefinition
+				if err := yaml.Unmarshal(buf.Bytes(), &modDef); err == nil {
+					metadata.ModuleCritical = modDef.Critical
+				}
 			}
 		}
 	}

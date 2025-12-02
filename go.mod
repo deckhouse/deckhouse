@@ -302,7 +302,7 @@ require (
 	github.com/werf/kubedog v0.13.1-0.20251110132552-6ffc5a117ada // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.18.1-0.20251128101624-0116483ae155
+	github.com/werf/nelm v1.18.1-0.20251127115054-cb2cde474127
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
