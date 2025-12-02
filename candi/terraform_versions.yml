@@ -149,7 +149,7 @@ yandex:
   namespace: yandex-cloud
   cloudName: Yandex
   type: yandex
-  version: 0.83.0
+  version: 0.173.0
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
@@ -191,7 +191,7 @@ kubernetes:
   namespace: hashicorp
   cloudName: DVP
   type: kubernetes
-  version: 2.38.0
+  version: 2.35.1
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes
