@@ -16,12 +16,19 @@ memory: 40Mi
 {{- if $backupEnabled }}
   {{- if .Values.global.clusterIsBootstrapped }}
     {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
+      {{- $etcdNodes := list }}
       {{- range $node := .Values.controlPlaneManager.internal.mastersNode }}
+        {{- $etcdNodes = append $etcdNodes (dict "name" $node "isEtcdOnly" false) }}
+      {{- end }}
+      {{- if $.Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
+        {{- $etcdNodes = append $etcdNodes (dict "name" "etcd-only" "isEtcdOnly" true) }}
+      {{- end }}
+      {{- range $nodeInfo := $etcdNodes }}
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: d8-etcd-backup-{{ $node | sha256sum | trunc 33 }}
+  name: d8-etcd-backup-{{ $nodeInfo.name | sha256sum | trunc 33 }}
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-etcd-backup")) | nindent 2 }}
 spec:
@@ -38,7 +45,11 @@ spec:
           {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 10 }}
           {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 10 }}
           nodeSelector:
-            kubernetes.io/hostname: {{ $node }}
+            {{- if $nodeInfo.isEtcdOnly }}
+            node-role.deckhouse.io/etcd-only: ""
+            {{- else }}
+            kubernetes.io/hostname: {{ $nodeInfo.name }}
+            {{- end }}
           imagePullSecrets:
           - name: deckhouse-registry
           restartPolicy: Never
