@@ -23,10 +23,6 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-var (
-	ModuleEnabledCRI = []constant.CRIType{constant.CRIContainerdV1, constant.CRIContainerdV2}
-)
-
 type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
@@ -50,7 +46,7 @@ func NewConfig(
 	initConfig *init_config.Config,
 	cri constant.CRIType,
 ) (Config, error) {
-	moduleEnabled := slices.Contains(ModuleEnabledCRI, cri)
+	moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
 
 	dekhouseSettings, err := newDeckhouseSettings(deckhouse, initConfig)
 	if err != nil {
@@ -69,7 +65,7 @@ func NewConfig(
 				"Please switch to 'Unmanaged' registry mode or use one of defaultCRI: %v",
 			settings.Mode,
 			cri,
-			ModuleEnabledCRI,
+			constant.ModuleEnabledCRI,
 		)
 	}
 
