@@ -17734,7 +17734,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{vg_name}} - Usage %",
+              "legendFormat": "{{volume_group}} - Usage %",
               "refId": "A",
               "step": 240
             }
