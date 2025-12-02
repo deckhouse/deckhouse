@@ -76,7 +76,7 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	return tag
 }
 
-func (c *DeckhouseInstaller) GetInclusteImage(forceVersionTag bool) string {
+func (c *DeckhouseInstaller) GetInclusterImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
 	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
 }

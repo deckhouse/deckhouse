@@ -623,7 +623,7 @@ func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetInclusteImage(true),
+		Registry:           cfg.GetInclusterImage(true),
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
