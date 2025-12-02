@@ -118,7 +118,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	}
 
 	etcdServersEndpoints := make([]string, 0, len(snaps))
-	discoveredMasterMap := make(map[string]string, len(snaps))
+	discoveredEtcdNodesMap := make(map[string]string, len(snaps))
 	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
@@ -131,7 +131,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 			return fmt.Errorf("ip should not be empty")
 		}
 
-		discoveredMasterMap[node.Name] = node.IP
+		discoveredEtcdNodesMap[node.Name] = node.IP
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
@@ -154,7 +154,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 
 	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if _, ok := discoveredMasterMap[mem.Name]; !ok {
+		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
 			removeListIDs = append(removeListIDs, mem.ID)
 			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 		}
