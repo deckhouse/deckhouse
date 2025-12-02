@@ -273,44 +273,18 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-1. Select the master node to update (enter its name):
+1. **In the container with the installer**, run the following command to update the nodes:
 
-   ```bash
-   NODE="<MASTER-NODE-N-NAME>"
-   ```
+   Carefully review the actions that converge plans to perform when it asks for confirmation.
 
-1. Run the following command to remove the `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` labels from the node:
-
-   ```bash
-   d8 k label node ${NODE} \
-     node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Make sure that the node is no longer listed as an etcd cluster member:
-
-   ```bash
-   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-     if [ $? -eq 0 ]; then
-       break
-     fi
-   done
-   ```
-
-1. **In the installer container**, run the following command to perform nodes upgrade:
-
-    You should read carefully what converge is going to do when it asks for approval.
-
-    When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
+   When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
+   Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
 
 1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
 
@@ -335,7 +309,7 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
-     -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
 
 1. Proceed to update the next node (repeat the steps above).
