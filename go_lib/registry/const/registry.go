@@ -38,7 +38,8 @@ var (
 	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
 
-	ModuleEnabledCRI = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	ModuleEnabledCRI     = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	ModesRequiringModule = []ModeType{ModeDirect}
 )
 
 func NodeRegistryAddr(addr string) string {

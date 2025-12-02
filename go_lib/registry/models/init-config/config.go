@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strings"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
@@ -35,19 +34,7 @@ type Config struct {
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
 }
 
-func (config *Config) Correct() {
-	config.ImagesRepo = strings.TrimRight(strings.TrimSpace(config.ImagesRepo), "/")
-	if strings.TrimSpace(config.ImagesRepo) == "" {
-		config.ImagesRepo = constant.CEImagesRepo
-	}
-	if strings.TrimSpace(config.RegistryScheme) == "" {
-		config.RegistryScheme = constant.CEScheme
-	}
-}
-
 func (config Config) ToRegistrySettings() (module_config.RegistrySettings, error) {
-	config.Correct()
-
 	registrySettings := module_config.RegistrySettings{
 		ImagesRepo: config.ImagesRepo,
 		Scheme:     constant.ToScheme(config.RegistryScheme),

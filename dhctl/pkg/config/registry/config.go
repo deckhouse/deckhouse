@@ -19,7 +19,6 @@ import (
 	"slices"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
@@ -27,6 +26,68 @@ type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
 	ModuleEnabled     bool
+}
+
+func (c *Config) FromDefault(
+	cri constant.CRIType,
+) error {
+	registrySettings := module_config.RegistrySettings{}
+	registrySettings.Correct()
+	return c.FromRegistrySettings(registrySettings, cri)
+}
+
+func (c *Config) FromRegistrySettings(
+	registrySettings module_config.RegistrySettings,
+	cri constant.CRIType,
+) error {
+	// TODO:
+	// moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
+	// if moduleEnabled {
+	// 	return c.fromDeckhouseSettings(module_config.DeckhouseSettings{
+	// 		Mode:   constant.ModeDirect,
+	// 		Direct: &registrySettings,
+	// 	}, cri)
+	// }
+	return c.FromDeckhouseSettings(module_config.DeckhouseSettings{
+		Mode:      constant.ModeUnmanaged,
+		Unmanaged: &registrySettings,
+	}, cri)
+}
+
+func (c *Config) FromDeckhouseSettings(
+	deckhouseSettings module_config.DeckhouseSettings,
+	cri constant.CRIType,
+) error {
+	// Check if module can be enabled with current CRI
+	moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
+	moduleRequired := slices.Contains(
+		constant.ModesRequiringModule,
+		deckhouseSettings.Mode,
+	)
+	if moduleRequired && !moduleEnabled {
+		return fmt.Errorf(
+			"registry mode '%s' is not supported with defaultCRI:'%s'. "+
+				"Please switch to 'Unmanaged' registry mode or use one of defaultCRI: %v",
+			deckhouseSettings.Mode,
+			cri,
+			constant.ModuleEnabledCRI,
+		)
+	}
+
+	deckhouseSettings.Correct()
+	if err := deckhouseSettings.Validate(); err != nil {
+		return fmt.Errorf("validate registry settings: %w", err)
+	}
+	settings, err := newModeSettings(deckhouseSettings)
+	if err != nil {
+		return fmt.Errorf("get registry mode settings: %w", err)
+	}
+	*c = Config{
+		Settings:          settings,
+		DeckhouseSettings: deckhouseSettings,
+		ModuleEnabled:     moduleEnabled,
+	}
+	return nil
 }
 
 func (c *Config) Manifest() *ManifestBuilder {
@@ -37,81 +98,6 @@ func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) 
 	if !c.ModuleEnabled {
 		return false, nil, nil
 	}
-	mapSettings, err := c.DeckhouseSettings.ToMap()
-	return true, mapSettings, err
-}
-
-func NewConfig(
-	deckhouse *module_config.DeckhouseSettings,
-	initConfig *init_config.Config,
-	cri constant.CRIType,
-) (Config, error) {
-	moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
-
-	dekhouseSettings, err := newDeckhouseSettings(deckhouse, initConfig)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to get registry settings: %w", err)
-	}
-
-	settings, err := newModeSettings(dekhouseSettings)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to get registry mode settings: %w", err)
-	}
-
-	// Check if module can be enabled with current CRI
-	if settings.ToModel().ModuleRequired && !moduleEnabled {
-		return Config{}, fmt.Errorf(
-			"registry mode '%s' is not supported with defaultCRI:'%s'. "+
-				"Please switch to 'Unmanaged' registry mode or use one of defaultCRI: %v",
-			settings.Mode,
-			cri,
-			constant.ModuleEnabledCRI,
-		)
-	}
-
-	return Config{
-		Settings:          settings,
-		DeckhouseSettings: dekhouseSettings,
-		ModuleEnabled:     moduleEnabled,
-	}, nil
-}
-
-func newDeckhouseSettings(
-	deckhouse *module_config.DeckhouseSettings,
-	initConfig *init_config.Config,
-) (module_config.DeckhouseSettings, error) {
-	if deckhouse != nil && initConfig != nil {
-		return module_config.DeckhouseSettings{}, fmt.Errorf(
-			"duplicate registry configuration detected in initConfiguration.deckhouse " +
-				"and moduleConfig/deckhouse.spec.settings.registry. Please specify registry settings in only one location.")
-	}
-
-	// Use deckhouse settings if available
-	if deckhouse != nil {
-		deckhouseSettings := *deckhouse
-		deckhouseSettings.Correct()
-		if err := deckhouseSettings.Validate(); err != nil {
-			return module_config.DeckhouseSettings{}, fmt.Errorf("validate registry settings: %w", err)
-		}
-		return deckhouseSettings, nil
-	}
-
-	// Build registry settings from init config or use defaults
-	var registrySettings module_config.RegistrySettings
-	if initConfig != nil {
-		var err error
-		registrySettings, err = initConfig.ToRegistrySettings()
-		if err != nil {
-			return module_config.DeckhouseSettings{}, fmt.Errorf("get registry settings from init config: %w", err)
-		}
-	}
-	deckhouseSettings := module_config.DeckhouseSettings{
-		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &registrySettings,
-	}
-	deckhouseSettings.Correct()
-	if err := deckhouseSettings.Validate(); err != nil {
-		return deckhouseSettings, fmt.Errorf("validate registry settings: %w", err)
-	}
-	return deckhouseSettings, nil
+	ret, err := c.DeckhouseSettings.ToMap()
+	return true, ret, err
 }

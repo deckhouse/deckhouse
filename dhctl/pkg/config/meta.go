@@ -26,8 +26,8 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
-	registry_init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
-	registry_module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
+	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -92,71 +92,15 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 	}
 
-	if rawDeckhouseCfg, exists := m.InitClusterConfig["deckhouse"]; exists {
-		if err := json.Unmarshal(rawDeckhouseCfg, &m.DeckhouseConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %w", err)
+	if len(m.InitClusterConfig) > 0 {
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
 	}
 
-	// Prepare registry configuration
-	{
-		var (
-			deckhouseSettings *registry_module_config.DeckhouseSettings
-			initConfig        *registry_init_config.Config
-			defaultCRI        string
-		)
-
-		// Get defaultCRI
-		if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-			if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal 'defaultCRI' from cluster config: %w", err)
-			}
-		}
-
-		// Settings from initConfig
-		if m.DeckhouseConfig.ImagesRepo != "" ||
-			m.DeckhouseConfig.RegistryDockerCfg != "" ||
-			m.DeckhouseConfig.RegistryCA != "" {
-			initConfig = &registry_init_config.Config{
-				ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
-				RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
-				RegistryCA:        m.DeckhouseConfig.RegistryCA,
-				RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
-			}
-			initConfig.Correct()
-		}
-
-		// Settings from moduleConfig
-		for _, modCfg := range m.ModuleConfigs {
-			if modCfg.GetName() != "deckhouse" {
-				continue
-			}
-
-			registrySettings, ok := modCfg.Spec.Settings["registry"]
-			if !ok {
-				break
-			}
-
-			raw, err := json.Marshal(registrySettings)
-			if err != nil {
-				return nil, fmt.Errorf("unable to marshal registry settings from 'deckhouse' moduleConfig: %w", err)
-			}
-
-			var decoded registry_module_config.DeckhouseSettings
-			if err := json.Unmarshal(raw, &decoded); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal registry settings from 'deckhouse' moduleConfig: %w", err)
-			}
-			deckhouseSettings = &decoded
-			deckhouseSettings.Correct()
-			break
-		}
-
-		registryCfg, err := registry_config.NewConfig(deckhouseSettings, initConfig, defaultCRI)
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize registry config: %w", err)
-		}
-		m.Registry = registryCfg
+	// Prepare registry config
+	if err := m.PrepareRegistry(); err != nil {
+		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -190,6 +134,70 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+}
+
+func (m *MetaConfig) PrepareRegistry() error {
+	var (
+		cri               string
+		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
+		initConfig        *registry_initconfig.Config
+	)
+
+	// Get defaultCRI
+	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+		if err := json.Unmarshal(rawCRI, &cri); err != nil {
+			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+		}
+	}
+
+	// Settings from initConfig
+	if m.DeckhouseConfig.ImagesRepo != "" ||
+		m.DeckhouseConfig.RegistryDockerCfg != "" ||
+		m.DeckhouseConfig.RegistryCA != "" {
+		initConfig = &registry_initconfig.Config{
+			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
+			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
+			RegistryCA:        m.DeckhouseConfig.RegistryCA,
+			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
+		}
+	}
+
+	// Settings from moduleConfig
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() != "deckhouse" {
+			continue
+		}
+		registrySettings, ok := mc.Spec.Settings["registry"]
+		if !ok {
+			break
+		}
+		raw, err := json.Marshal(registrySettings)
+		if err != nil {
+			return fmt.Errorf("get registry settings from moduleConfig/deckhouse: %w", err)
+		}
+		var decoded registry_moduleconfig.DeckhouseSettings
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return fmt.Errorf("get registry settings from moduleConfig/deckhouse: %w", err)
+		}
+		deckhouseSettings = &decoded
+		break
+	}
+
+	switch {
+	case deckhouseSettings != nil && initConfig != nil:
+		return fmt.Errorf(
+			"duplicate registry configuration detected in initConfiguration.deckhouse " +
+				"and moduleConfig/deckhouse.spec.settings.registry. Please specify registry settings in only one location.")
+	case deckhouseSettings != nil:
+		return m.Registry.FromDeckhouseSettings(*deckhouseSettings, cri)
+	case initConfig != nil:
+		registrySettings, err := initConfig.ToRegistrySettings()
+		if err != nil {
+			return fmt.Errorf("get registry settings from initConfig: %w", err)
+		}
+		return m.Registry.FromRegistrySettings(registrySettings, cri)
+	}
+	return m.Registry.FromDefault(cri)
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {

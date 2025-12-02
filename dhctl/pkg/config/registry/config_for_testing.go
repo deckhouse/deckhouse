@@ -42,35 +42,34 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 	}
 
-	var dekhouseSettings module_config.DeckhouseSettings
+	var deckhouseSettings module_config.DeckhouseSettings
 	switch mode {
 	case constant.ModeDirect:
-		dekhouseSettings = module_config.DeckhouseSettings{
+		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
 		moduleEnabled = true
 	default:
-		dekhouseSettings = module_config.DeckhouseSettings{
+		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
 			Unmanaged: &registrySettings,
 		}
 	}
 
-	dekhouseSettings, err := newDeckhouseSettings(&dekhouseSettings, nil)
-	if err != nil {
-		panic(err)
+	cri := constant.CRIContainerdV1
+	if !moduleEnabled {
+		cri = ""
 	}
 
-	settings, err := newModeSettings(dekhouseSettings)
-	if err != nil {
+	config := Config{}
+	if err := config.FromDeckhouseSettings(
+		deckhouseSettings,
+		cri,
+	); err != nil {
 		panic(err)
 	}
-	return Config{
-		Settings:          settings,
-		DeckhouseSettings: dekhouseSettings,
-		ModuleEnabled:     moduleEnabled,
-	}
+	return config
 }
 
 func WithImagesRepo(repo string) TestConfigUpdateRegistrySettings {
