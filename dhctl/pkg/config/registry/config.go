@@ -41,7 +41,7 @@ func (c *Config) FromRegistrySettings(
 	cri constant.CRIType,
 ) error {
 	// TODO:
-	// moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
+	// moduleEnabled := moduleEnabled(cri)
 	// if moduleEnabled {
 	// 	return c.fromDeckhouseSettings(module_config.DeckhouseSettings{
 	// 		Mode:   constant.ModeDirect,
@@ -59,11 +59,8 @@ func (c *Config) FromDeckhouseSettings(
 	cri constant.CRIType,
 ) error {
 	// Check if module can be enabled with current CRI
-	moduleEnabled := slices.Contains(constant.ModuleEnabledCRI, cri)
-	moduleRequired := slices.Contains(
-		constant.ModesRequiringModule,
-		deckhouseSettings.Mode,
-	)
+	moduleEnabled := moduleEnabled(cri)
+	moduleRequired := moduleRequired(deckhouseSettings.Mode)
 	if moduleRequired && !moduleEnabled {
 		return fmt.Errorf(
 			"registry mode '%s' is not supported with defaultCRI:'%s'. "+
@@ -100,4 +97,12 @@ func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) 
 	}
 	ret, err := c.DeckhouseSettings.ToMap()
 	return true, ret, err
+}
+
+func moduleEnabled(cri constant.CRIType) bool {
+	return slices.Contains(constant.ModuleEnabledCRI, cri)
+}
+
+func moduleRequired(mode constant.ModeType) bool {
+	return slices.Contains(constant.ModesRequiringModule, mode)
 }
