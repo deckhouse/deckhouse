@@ -46,13 +46,11 @@ func TestNewConfig(t *testing.T) {
 			input: input{
 				deckhouse: &registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTPS",
-							Username:   "user",
-							Password:   "pass",
-						},
+					Direct: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com",
+						Scheme:     "HTTPS",
+						Username:   "user",
+						Password:   "pass",
 					},
 				},
 				initConfig: nil,
@@ -67,13 +65,11 @@ func TestNewConfig(t *testing.T) {
 			input: input{
 				deckhouse: &registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTPS",
-							Username:   "user",
-							Password:   "pass",
-						},
+					Direct: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com",
+						Scheme:     "HTTPS",
+						Username:   "user",
+						Password:   "pass",
 					},
 				},
 				initConfig: nil,
@@ -89,11 +85,9 @@ func TestNewConfig(t *testing.T) {
 			input: input{
 				deckhouse: &registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.UnmanagedModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTPS",
-						},
+					Unmanaged: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com",
+						Scheme:     "HTTPS",
 					},
 				},
 				initConfig: nil,
@@ -149,11 +143,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				err: false,
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.UnmanagedModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: registry_types.CEImagesRepo,
-							Scheme:     registry_types.CEScheme,
-						},
+					Unmanaged: &registry_types.RegistrySettings{
+						ImagesRepo: registry_types.CEImagesRepo,
+						Scheme:     registry_types.CEScheme,
 					},
 				},
 			},
@@ -163,7 +155,7 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			input: input{
 				deckhouse: &registry_types.DeckhouseSettings{
 					Mode:   registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{},
+					Direct: &registry_types.RegistrySettings{},
 				},
 				initConfig: nil,
 			},
@@ -171,11 +163,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				err: false,
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: registry_types.CEImagesRepo,
-							Scheme:     registry_types.CEScheme,
-						},
+					Direct: &registry_types.RegistrySettings{
+						ImagesRepo: registry_types.CEImagesRepo,
+						Scheme:     registry_types.CEScheme,
 					},
 				},
 			},
@@ -190,11 +180,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				err: false,
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.UnmanagedModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: registry_types.CEImagesRepo,
-							Scheme:     registry_types.CEScheme,
-						},
+					Unmanaged: &registry_types.RegistrySettings{
+						ImagesRepo: registry_types.CEImagesRepo,
+						Scheme:     registry_types.CEScheme,
 					},
 				},
 			},
@@ -217,11 +205,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			input: input{
 				deckhouse: &registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com/",
-							Scheme:     "HTTP",
-						},
+					Direct: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com/",
+						Scheme:     "HTTP",
 					},
 				},
 				initConfig: nil,
@@ -230,11 +216,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				err: false,
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.DirectModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTP",
-						},
+					Direct: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com",
+						Scheme:     "HTTP",
 					},
 				},
 			},
@@ -252,11 +236,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 				err: false,
 				want: registry_types.DeckhouseSettings{
 					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.UnmanagedModeSettings{
-						RegistrySettings: registry_types.RegistrySettings{
-							ImagesRepo: "registry.example.com",
-							Scheme:     "HTTP",
-						},
+					Unmanaged: &registry_types.RegistrySettings{
+						ImagesRepo: "registry.example.com",
+						Scheme:     "HTTP",
 					},
 				},
 			},

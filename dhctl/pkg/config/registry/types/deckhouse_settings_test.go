@@ -24,7 +24,7 @@ import (
 
 type registrySettingsOption func(*RegistrySettings)
 
-func validRegistrySettings(opts ...registrySettingsOption) RegistrySettings {
+func validRegistrySettings(opts ...registrySettingsOption) *RegistrySettings {
 	settings := RegistrySettings{
 		ImagesRepo: "test:80/a/b/c/d",
 		Scheme:     SchemeHTTPS,
@@ -36,7 +36,7 @@ func validRegistrySettings(opts ...registrySettingsOption) RegistrySettings {
 	for _, opt := range opts {
 		opt(&settings)
 	}
-	return settings
+	return &settings
 }
 
 func TestDeckhouseSettings_ToMap(t *testing.T) {
@@ -48,10 +48,8 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 		{
 			name: "direct mode to map",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeDirect,
-				Direct: &DirectModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:   registry_const.ModeDirect,
+				Direct: validRegistrySettings(),
 			},
 			output: map[string]interface{}{
 				"mode": "Direct",
@@ -68,10 +66,8 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 		{
 			name: "unmanaged mode to map",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeUnmanaged,
-				Unmanaged: &UnmanagedModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:      registry_const.ModeUnmanaged,
+				Unmanaged: validRegistrySettings(),
 			},
 			output: map[string]interface{}{
 				"mode": "Unmanaged",
@@ -106,15 +102,13 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 			name: "correct direct mode settings",
 			input: DeckhouseSettings{
 				Mode:   registry_const.ModeDirect,
-				Direct: &DirectModeSettings{},
+				Direct: &RegistrySettings{},
 			},
 			expected: DeckhouseSettings{
 				Mode: registry_const.ModeDirect,
-				Direct: &DirectModeSettings{
-					RegistrySettings: RegistrySettings{
-						ImagesRepo: CEImagesRepo,
-						Scheme:     CEScheme,
-					},
+				Direct: &RegistrySettings{
+					ImagesRepo: CEImagesRepo,
+					Scheme:     CEScheme,
 				},
 			},
 		},
@@ -122,15 +116,13 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 			name: "correct unmanaged mode settings",
 			input: DeckhouseSettings{
 				Mode:      registry_const.ModeUnmanaged,
-				Unmanaged: &UnmanagedModeSettings{},
+				Unmanaged: &RegistrySettings{},
 			},
 			expected: DeckhouseSettings{
 				Mode: registry_const.ModeUnmanaged,
-				Unmanaged: &UnmanagedModeSettings{
-					RegistrySettings: RegistrySettings{
-						ImagesRepo: CEImagesRepo,
-						Scheme:     CEScheme,
-					},
+				Unmanaged: &RegistrySettings{
+					ImagesRepo: CEImagesRepo,
+					Scheme:     CEScheme,
 				},
 			},
 		},
@@ -233,10 +225,8 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "valid direct mode",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeDirect,
-				Direct: &DirectModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:      registry_const.ModeDirect,
+				Direct:    validRegistrySettings(),
 				Unmanaged: nil,
 			},
 			output: output{
@@ -246,11 +236,9 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "valid unmanaged mode",
 			input: DeckhouseSettings{
-				Mode:   registry_const.ModeUnmanaged,
-				Direct: nil,
-				Unmanaged: &UnmanagedModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:      registry_const.ModeUnmanaged,
+				Direct:    nil,
+				Unmanaged: validRegistrySettings(),
 			},
 			output: output{
 				err: false,
@@ -297,13 +285,9 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "non-direct mode with direct settings",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeUnmanaged,
-				Direct: &DirectModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
-				Unmanaged: &UnmanagedModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:      registry_const.ModeUnmanaged,
+				Direct:    validRegistrySettings(),
+				Unmanaged: validRegistrySettings(),
 			},
 			output: output{
 				err:    true,
@@ -326,13 +310,9 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "non-unmanaged mode with unmanaged settings",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeDirect,
-				Direct: &DirectModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
-				Unmanaged: &UnmanagedModeSettings{
-					RegistrySettings: validRegistrySettings(),
-				},
+				Mode:      registry_const.ModeDirect,
+				Direct:    validRegistrySettings(),
+				Unmanaged: validRegistrySettings(),
 			},
 			output: output{
 				err:    true,
@@ -365,7 +345,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		input  RegistrySettings
+		input  *RegistrySettings
 		output output
 	}{
 		// Valid cases

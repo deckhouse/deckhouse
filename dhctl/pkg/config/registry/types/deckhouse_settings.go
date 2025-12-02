@@ -26,16 +26,8 @@ import (
 
 type DeckhouseSettings struct {
 	Mode      registry_const.ModeType `json:"mode" yaml:"mode"`
-	Direct    *DirectModeSettings     `json:"direct,omitempty" yaml:"direct,omitempty"`
-	Unmanaged *UnmanagedModeSettings  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-}
-
-type DirectModeSettings struct {
-	RegistrySettings
-}
-
-type UnmanagedModeSettings struct {
-	RegistrySettings
+	Direct    *RegistrySettings       `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Unmanaged *RegistrySettings       `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
 }
 
 type RegistrySettings struct {

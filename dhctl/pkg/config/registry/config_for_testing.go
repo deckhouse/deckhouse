@@ -47,18 +47,14 @@ func NewTestConfig(opts ...interface{}) Config {
 	switch mode {
 	case registry_const.ModeDirect:
 		dekhouseSettings = types.DeckhouseSettings{
-			Mode: registry_const.ModeDirect,
-			Direct: &types.DirectModeSettings{
-				RegistrySettings: registrySettings,
-			},
+			Mode:   registry_const.ModeDirect,
+			Direct: &registrySettings,
 		}
 		moduleEnabled = true
 	default:
 		dekhouseSettings = types.DeckhouseSettings{
-			Mode: registry_const.ModeUnmanaged,
-			Unmanaged: &types.UnmanagedModeSettings{
-				RegistrySettings: registrySettings,
-			},
+			Mode:      registry_const.ModeUnmanaged,
+			Unmanaged: &registrySettings,
 		}
 	}
 

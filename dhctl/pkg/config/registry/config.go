@@ -110,10 +110,8 @@ func NewDeckhouseSettings(
 		}
 	}
 	deckhouseSettings := types.DeckhouseSettings{
-		Mode: registry_const.ModeUnmanaged,
-		Unmanaged: &types.UnmanagedModeSettings{
-			RegistrySettings: registrySettings,
-		},
+		Mode:      registry_const.ModeUnmanaged,
+		Unmanaged: &registrySettings,
 	}
 	deckhouseSettings.CorrectWithDefault()
 	if err := deckhouseSettings.Validate(); err != nil {

@@ -31,14 +31,14 @@ func NewModeSettings(settings types.DeckhouseSettings) (ModeSettings, error) {
 	switch {
 	case settings.Direct != nil:
 		remote := types.Data{}
-		remote.FromRegistrySettings(settings.Direct.RegistrySettings)
+		remote.FromRegistrySettings(*settings.Direct)
 		return ModeSettings{
 			Mode:   registry_const.ModeDirect,
 			Remote: remote,
 		}, nil
 	case settings.Unmanaged != nil:
 		remote := types.Data{}
-		remote.FromRegistrySettings(settings.Unmanaged.RegistrySettings)
+		remote.FromRegistrySettings(*settings.Unmanaged)
 		return ModeSettings{
 			Mode:   registry_const.ModeUnmanaged,
 			Remote: remote,
