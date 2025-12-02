@@ -10,6 +10,7 @@ positive:
     - vpa:
         kubeStateMetricsMaxCPU: 1
         kubeStateMetricsMaxMemory: 26214400
+    - oom-kills-exporter: true
   values:
     - { internal: {} }
 negative:

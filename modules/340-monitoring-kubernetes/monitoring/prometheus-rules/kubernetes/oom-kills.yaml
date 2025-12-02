@@ -1,0 +1,26 @@
+- name: oom-kills
+  rules:
+  - alert: PodOOMKilled
+    expr: increase(klog_pod_oomkill[3m]) > 0
+    for: 1m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: monitoring-kubernetes
+      d8_component: oom-kills-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_oom_kills: "PodOOMKilledGroup,tier=cluster,pod={{ $labels.pod_name }},prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_oom_kills: "PodOOMKilledGroup,tier=cluster,pod={{ $labels.pod_name }},prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "container_name"
+      summary: >
+        Pod was OOMKilled.
+      description: |
+        The container was killed by the Linux OOM Killer.
+
+        * Namespace: {{ $labels.namespace }}
+        * Pod: {{ $labels.pod_name }}
+        * Container: {{ $labels.container_name }}
+
+        Check memory limits and actual memory usage.
