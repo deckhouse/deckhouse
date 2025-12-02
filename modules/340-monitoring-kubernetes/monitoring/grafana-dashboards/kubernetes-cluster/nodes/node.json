@@ -17730,7 +17730,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "100 - ((sds_lvm_vg_free_bytes{node=~\"$node\"} * 100) / sds_lvm_vg_size_bytes{node=~\"$node\"})",
+              "expr": "100 - ((sds_node_configurator_lvm_volume_group_free_bytes{node=~\"$node\"} * 100) / sds_node_configurator_lvm_volume_group_size_bytes{node=~\"$node\"})",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
