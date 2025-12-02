@@ -88,7 +88,7 @@
     {{- $storageFoundationModuleName := (include "helm_lib_module_camelcase_name" "storage-foundation") }}
     {{- $host := trimAll "/" (index $context.Values $storageFoundationModuleName "registry" "base") }}
     {{- $path := trimAll "/" $context.Chart.Name }}
-    {{- $registryBase = join "/" (list $host $path) }}
+    {{- $registryBase = join "/" (list $host $path "modules" "storage-foundation" ) }}
     {{- $imageDigest = index $context.Values.global.modulesImages.digests $storageFoundationModuleName $containerName | default "" }}
     {{- printf "%s@%s" $registryBase $imageDigest }}
   {{- end }}
