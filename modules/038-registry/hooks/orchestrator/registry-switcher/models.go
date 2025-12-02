@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
@@ -144,7 +143,7 @@ func buildRegistrySecret(params Params) (deckhouse_registry.Config, error) {
 }
 
 func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.Config, error) {
-	dockerCfg, err := registry_docker.DockerCfgFromCreds(params.Username, params.Password, registry_const.Host)
+	dockerCfg, err := registry_helpers.DockerCfgFromCreds(params.Username, params.Password, registry_const.Host)
 	if err != nil {
 		return deckhouse_registry.Config{}, fmt.Errorf("failed to create Docker config in managed mode: %w", err)
 	}
@@ -161,7 +160,7 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.C
 func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Config, error) {
 	address, path := registry_helpers.SplitAddressAndPath(params.ImagesRepo)
 
-	dockerCfg, err := registry_docker.DockerCfgFromCreds(params.Username, params.Password, address)
+	dockerCfg, err := registry_helpers.DockerCfgFromCreds(params.Username, params.Password, address)
 	if err != nil {
 		return deckhouse_registry.Config{}, fmt.Errorf("failed to create Docker config in unmanaged mode: %w", err)
 	}

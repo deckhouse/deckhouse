@@ -20,7 +20,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
@@ -83,7 +83,7 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][
 // Context
 // =======================
 func (b *ManifestBuilder) KubeadmTplCtx() map[string]interface{} {
-	address, path := registry_helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
+	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
 	return map[string]interface{}{
 		"address": address,
 		"path":    path,

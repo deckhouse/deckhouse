@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package registry
 
 import (
 	"encoding/base64"
@@ -21,20 +21,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
 func TestData_FromRegistrySettings(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  RegistrySettings
+		input  module_config.RegistrySettings
 		output Data
 	}{
 		{
 			name: "Without username and password",
-			input: RegistrySettings{
+			input: module_config.RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     registry_const.SchemeHTTPS,
+				Scheme:     constant.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -42,7 +43,7 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			},
 			output: Data{
 				ImagesRepo: "registry.example.com",
-				Scheme:     registry_const.SchemeHTTPS,
+				Scheme:     constant.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -50,9 +51,9 @@ func TestData_FromRegistrySettings(t *testing.T) {
 		},
 		{
 			name: "With license",
-			input: RegistrySettings{
+			input: module_config.RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     registry_const.SchemeHTTPS,
+				Scheme:     constant.SchemeHTTPS,
 				CA:         "ca-cert",
 				Username:   "user",
 				Password:   "pass",
@@ -60,9 +61,9 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			},
 			output: Data{
 				ImagesRepo: "registry.example.com",
-				Scheme:     registry_const.SchemeHTTPS,
+				Scheme:     constant.SchemeHTTPS,
 				CA:         "ca-cert",
-				Username:   registry_const.LicenseUsername,
+				Username:   constant.LicenseUsername,
 				Password:   "license-key",
 			},
 		},

@@ -22,11 +22,10 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
-	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -346,7 +345,7 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
-	username, password, err := registry_docker.CredsFromDockerCfg(
+	username, password, err := registry_helpers.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,
 	)

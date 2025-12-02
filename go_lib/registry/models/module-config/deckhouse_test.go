@@ -1,25 +1,27 @@
-// Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2025 Flant JSC
 
-package types
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package moduleconfig
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 type registrySettingsOption func(*RegistrySettings)
@@ -27,11 +29,11 @@ type registrySettingsOption func(*RegistrySettings)
 func validRegistrySettings(opts ...registrySettingsOption) *RegistrySettings {
 	settings := RegistrySettings{
 		ImagesRepo: "test:80/a/b/c/d",
-		Scheme:     registry_const.SchemeHTTPS,
+		Scheme:     constant.SchemeHTTPS,
 		CA:         "-----BEGIN CERTIFICATE-----",
 		Username:   "test-user",
 		Password:   "test-password",
-		CheckMode:  registry_const.CheckModeDefault,
+		CheckMode:  constant.CheckModeDefault,
 	}
 	for _, opt := range opts {
 		opt(&settings)
@@ -48,7 +50,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 		{
 			name: "direct mode to map",
 			input: DeckhouseSettings{
-				Mode:   registry_const.ModeDirect,
+				Mode:   constant.ModeDirect,
 				Direct: validRegistrySettings(),
 			},
 			output: map[string]interface{}{
@@ -66,7 +68,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 		{
 			name: "unmanaged mode to map",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeUnmanaged,
+				Mode:      constant.ModeUnmanaged,
 				Unmanaged: validRegistrySettings(),
 			},
 			output: map[string]interface{}{
@@ -101,28 +103,28 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 		{
 			name: "correct direct mode settings",
 			input: DeckhouseSettings{
-				Mode:   registry_const.ModeDirect,
+				Mode:   constant.ModeDirect,
 				Direct: &RegistrySettings{},
 			},
 			expected: DeckhouseSettings{
-				Mode: registry_const.ModeDirect,
+				Mode: constant.ModeDirect,
 				Direct: &RegistrySettings{
-					ImagesRepo: registry_const.CEImagesRepo,
-					Scheme:     registry_const.CEScheme,
+					ImagesRepo: constant.CEImagesRepo,
+					Scheme:     constant.CEScheme,
 				},
 			},
 		},
 		{
 			name: "correct unmanaged mode settings",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeUnmanaged,
+				Mode:      constant.ModeUnmanaged,
 				Unmanaged: &RegistrySettings{},
 			},
 			expected: DeckhouseSettings{
-				Mode: registry_const.ModeUnmanaged,
+				Mode: constant.ModeUnmanaged,
 				Unmanaged: &RegistrySettings{
-					ImagesRepo: registry_const.CEImagesRepo,
-					Scheme:     registry_const.CEScheme,
+					ImagesRepo: constant.CEImagesRepo,
+					Scheme:     constant.CEScheme,
 				},
 			},
 		},
@@ -131,7 +133,7 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settings := tt.input
-			settings.CorrectWithDefault()
+			settings.Correct()
 			assert.Equal(t, tt.expected, settings)
 		})
 	}
@@ -161,7 +163,7 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 				Scheme:     "HTTPS",
 			},
 			expected: RegistrySettings{
-				ImagesRepo: registry_const.CEImagesRepo,
+				ImagesRepo: constant.CEImagesRepo,
 				Scheme:     "HTTPS",
 			},
 		},
@@ -173,7 +175,7 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 			},
 			expected: RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     registry_const.CEScheme,
+				Scheme:     constant.CEScheme,
 			},
 		},
 		{
@@ -183,8 +185,8 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 				Scheme:     "",
 			},
 			expected: RegistrySettings{
-				ImagesRepo: registry_const.CEImagesRepo,
-				Scheme:     registry_const.CEScheme,
+				ImagesRepo: constant.CEImagesRepo,
+				Scheme:     constant.CEScheme,
 			},
 		},
 		{
@@ -203,7 +205,7 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settings := tt.input
-			settings.CorrectWithDefault()
+			settings.Correct()
 
 			assert.Equal(t, tt.expected, settings)
 		})
@@ -225,7 +227,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "valid direct mode",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeDirect,
+				Mode:      constant.ModeDirect,
 				Direct:    validRegistrySettings(),
 				Unmanaged: nil,
 			},
@@ -236,7 +238,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "valid unmanaged mode",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeUnmanaged,
+				Mode:      constant.ModeUnmanaged,
 				Direct:    nil,
 				Unmanaged: validRegistrySettings(),
 			},
@@ -254,7 +256,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Unknown registry mode",
+				errMsg: "unknown registry mode",
 			},
 		},
 		{
@@ -266,14 +268,14 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Unknown registry mode",
+				errMsg: "unknown registry mode",
 			},
 		},
 		// Invalid cases - Direct mode validation
 		{
 			name: "direct mode without direct settings",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeDirect,
+				Mode:      constant.ModeDirect,
 				Direct:    nil,
 				Unmanaged: nil,
 			},
@@ -285,7 +287,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "non-direct mode with direct settings",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeUnmanaged,
+				Mode:      constant.ModeUnmanaged,
 				Direct:    validRegistrySettings(),
 				Unmanaged: validRegistrySettings(),
 			},
@@ -298,7 +300,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "unmanaged mode without unmanaged settings",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeUnmanaged,
+				Mode:      constant.ModeUnmanaged,
 				Direct:    nil,
 				Unmanaged: nil,
 			},
@@ -310,7 +312,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "non-unmanaged mode with unmanaged settings",
 			input: DeckhouseSettings{
-				Mode:      registry_const.ModeDirect,
+				Mode:      constant.ModeDirect,
 				Direct:    validRegistrySettings(),
 				Unmanaged: validRegistrySettings(),
 			},
@@ -369,7 +371,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name: "valid settings with HTTP scheme and no CA",
 			input: validRegistrySettings(
-				func(s *RegistrySettings) { s.Scheme = registry_const.SchemeHTTP },
+				func(s *RegistrySettings) { s.Scheme = constant.SchemeHTTP },
 				func(s *RegistrySettings) { s.CA = "" },
 			),
 			output: output{
@@ -390,7 +392,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name: "valid settings with relaxed check mode",
 			input: validRegistrySettings(
-				func(s *RegistrySettings) { s.CheckMode = registry_const.CheckModeRelax },
+				func(s *RegistrySettings) { s.CheckMode = constant.CheckModeRelax },
 			),
 			output: output{
 				err: false,
@@ -502,7 +504,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name: "CA with HTTP scheme",
 			input: validRegistrySettings(
-				func(s *RegistrySettings) { s.Scheme = registry_const.SchemeHTTP },
+				func(s *RegistrySettings) { s.Scheme = constant.SchemeHTTP },
 			),
 			output: output{
 				err:    true,

@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"sync"
 
-	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
-	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
+	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -29,8 +29,8 @@ const (
 	certificateCommonName = "registry-ca"
 )
 
-type PKI = registry_init.Config
-type CertKey = registry_init.CertKey
+type PKI = init_secret.Config
+type CertKey = init_secret.CertKey
 
 type ClusterPKIManager struct {
 	kubeClient client.KubeClient
@@ -87,12 +87,12 @@ func (m *ClusterPKIManager) Get(ctx context.Context) (PKI, error) {
 func generatePKI() (PKI, error) {
 	var ret PKI
 
-	certKey, err := registry_pki.GenerateCACertificate(certificateCommonName)
+	certKey, err := pki.GenerateCACertificate(certificateCommonName)
 	if err != nil {
 		return PKI{}, fmt.Errorf("generate CA certificate: %w", err)
 	}
 
-	cert, key, err := registry_pki.EncodeCertKey(certKey)
+	cert, key, err := pki.EncodeCertKey(certKey)
 	if err != nil {
 		return PKI{}, fmt.Errorf("encode CA cert/key: %w", err)
 	}

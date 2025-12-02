@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -139,15 +139,15 @@ func fetchStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]meta
 	return conditions, nil
 }
 
-func fetchInitSecret(ctx context.Context, kubeClient client.KubeClient) (registry_init.Config, error) {
+func fetchInitSecret(ctx context.Context, kubeClient client.KubeClient) (init_secret.Config, error) {
 	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
 	if err != nil {
-		return registry_init.Config{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
+		return init_secret.Config{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
-	var config registry_init.Config
+	var config init_secret.Config
 	if err := yaml.Unmarshal(secret.Data["config"], &config); err != nil {
-		return registry_init.Config{}, fmt.Errorf("unmarshal secret data: %w", err)
+		return init_secret.Config{}, fmt.Errorf("unmarshal secret data: %w", err)
 	}
 	return config, nil
 }

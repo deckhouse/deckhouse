@@ -16,40 +16,39 @@ package registry
 import (
 	"strings"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
 type ModeSettings struct {
-	Mode   registry_const.ModeType
-	Remote types.Data
+	Mode   constant.ModeType
+	Remote Data
 }
 
-func NewModeSettings(settings types.DeckhouseSettings) (ModeSettings, error) {
+func NewModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
 	switch {
 	case settings.Direct != nil:
-		remote := types.Data{}
+		remote := Data{}
 		remote.FromRegistrySettings(*settings.Direct)
 		return ModeSettings{
-			Mode:   registry_const.ModeDirect,
+			Mode:   constant.ModeDirect,
 			Remote: remote,
 		}, nil
 	case settings.Unmanaged != nil:
-		remote := types.Data{}
+		remote := Data{}
 		remote.FromRegistrySettings(*settings.Unmanaged)
 		return ModeSettings{
-			Mode:   registry_const.ModeUnmanaged,
+			Mode:   constant.ModeUnmanaged,
 			Remote: remote,
 		}, nil
 	}
-	return ModeSettings{}, types.ErrUnknownMode
+	return ModeSettings{}, ErrUnknownMode
 }
 
 func (s ModeSettings) ToModel() ModeModel {
 	switch s.Mode {
-	case registry_const.ModeDirect:
+	case constant.ModeDirect:
 		return s.directModel()
 	default:
 		return s.unmanagedModel()
@@ -59,8 +58,8 @@ func (s ModeSettings) ToModel() ModeModel {
 func (s ModeSettings) directModel() ModeModel {
 	return ModeModel{
 		ModuleRequired:      true,
-		Mode:                registry_const.ModeDirect,
-		InClusterImagesRepo: registry_const.HostWithPath,
+		Mode:                constant.ModeDirect,
+		InClusterImagesRepo: constant.HostWithPath,
 		RemoteImagesRepo:    s.Remote.ImagesRepo,
 		RemoteData:          s.Remote,
 	}
@@ -69,7 +68,7 @@ func (s ModeSettings) directModel() ModeModel {
 func (s ModeSettings) unmanagedModel() ModeModel {
 	return ModeModel{
 		ModuleRequired:      false,
-		Mode:                registry_const.ModeUnmanaged,
+		Mode:                constant.ModeUnmanaged,
 		InClusterImagesRepo: s.Remote.ImagesRepo,
 		RemoteImagesRepo:    s.Remote.ImagesRepo,
 		RemoteData:          s.Remote,
@@ -78,15 +77,15 @@ func (s ModeSettings) unmanagedModel() ModeModel {
 
 type ModeModel struct {
 	ModuleRequired      bool
-	Mode                registry_const.ModeType
+	Mode                constant.ModeType
 	InClusterImagesRepo string
 	RemoteImagesRepo    string
-	RemoteData          types.Data
+	RemoteData          Data
 }
 
-func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (types.Data, error) {
+func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (Data, error) {
 	switch m.Mode {
-	case registry_const.ModeDirect:
+	case constant.ModeDirect:
 		return m.directInClusterData(getPKI)
 	default:
 		return m.unmanagedInClusterData()
@@ -98,29 +97,29 @@ func (m ModeModel) BashibleMirrors() (
 	cfgHosts map[string]bashible.ConfigHosts,
 ) {
 	switch m.Mode {
-	case registry_const.ModeDirect:
+	case constant.ModeDirect:
 		return m.directBashibleMirrors()
 	default:
 		return m.unmanagedBashibleMirrors()
 	}
 }
 
-func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (types.Data, error) {
+func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (Data, error) {
 	pki, err := getPKI()
 	if err != nil {
-		return types.Data{}, err
+		return Data{}, err
 	}
 
-	return types.Data{
-		ImagesRepo: registry_const.HostWithPath,
-		Scheme:     registry_const.SchemeHTTPS,
+	return Data{
+		ImagesRepo: constant.HostWithPath,
+		Scheme:     constant.SchemeHTTPS,
 		Username:   m.RemoteData.Username,
 		Password:   m.RemoteData.Password,
 		CA:         pki.CA.Cert,
 	}, nil
 }
 
-func (m ModeModel) unmanagedInClusterData() (types.Data, error) {
+func (m ModeModel) unmanagedInClusterData() (Data, error) {
 	return m.RemoteData, nil
 }
 
@@ -130,7 +129,7 @@ func (m ModeModel) directBashibleMirrors() (
 ) {
 	host, path := m.RemoteData.AddressAndPath()
 	scheme := strings.ToLower(string(m.RemoteData.Scheme))
-	from := registry_const.PathRegexp
+	from := constant.PathRegexp
 	to := strings.TrimLeft(path, "/")
 
 	ctxMirror := bashible.ContextMirrorHost{
@@ -162,10 +161,10 @@ func (m ModeModel) directBashibleMirrors() (
 	}
 
 	return map[string]bashible.ContextHosts{
-			registry_const.Host: {
+			constant.Host: {
 				Mirrors: []bashible.ContextMirrorHost{ctxMirror}},
 		}, map[string]bashible.ConfigHosts{
-			registry_const.Host: {
+			constant.Host: {
 				Mirrors: []bashible.ConfigMirrorHost{cfgMirror}},
 		}
 }

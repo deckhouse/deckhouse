@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -36,7 +35,7 @@ import (
 
 func TestNewRegistryClientConfigGetter(t *testing.T) {
 	t.Run("Path with leading slash", func(t *testing.T) {
-		config := registry_types.Data{
+		config := registry_config.Data{
 			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
 			Username:   "",
 			Password:   "",
@@ -46,7 +45,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Path without leading slash", func(t *testing.T) {
-		config := registry_types.Data{
+		config := registry_config.Data{
 			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
 			Username:   "",
 			Password:   "",
@@ -56,7 +55,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Host with port, path with leading slash", func(t *testing.T) {
-		config := registry_types.Data{
+		config := registry_config.Data{
 			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
 			Username:   "",
 			Password:   "",
@@ -66,7 +65,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
 	})
 	t.Run("Host with port, path without leading slash", func(t *testing.T) {
-		config := registry_types.Data{
+		config := registry_config.Data{
 			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
 			Username:   "",
 			Password:   "",

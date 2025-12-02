@@ -15,22 +15,21 @@
 package registry
 
 import (
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-type TestConfigUpdateRegistrySettings func(*types.RegistrySettings)
+type TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
 type TestConfigUpdateModuleEnabled func() bool
-type TestConfigUpdateMode func() registry_const.ModeType
+type TestConfigUpdateMode func() constant.ModeType
 
 func NewTestConfig(opts ...interface{}) Config {
-	registrySettings := types.RegistrySettings{
-		ImagesRepo: registry_const.CEImagesRepo,
-		Scheme:     registry_const.CEScheme,
+	registrySettings := module_config.RegistrySettings{
+		ImagesRepo: constant.CEImagesRepo,
+		Scheme:     constant.CEScheme,
 	}
 
-	mode := registry_const.ModeUnmanaged
+	mode := constant.ModeUnmanaged
 	moduleEnabled := true
 	for _, opt := range opts {
 		switch fn := opt.(type) {
@@ -43,17 +42,17 @@ func NewTestConfig(opts ...interface{}) Config {
 		}
 	}
 
-	var dekhouseSettings types.DeckhouseSettings
+	var dekhouseSettings module_config.DeckhouseSettings
 	switch mode {
-	case registry_const.ModeDirect:
-		dekhouseSettings = types.DeckhouseSettings{
-			Mode:   registry_const.ModeDirect,
+	case constant.ModeDirect:
+		dekhouseSettings = module_config.DeckhouseSettings{
+			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
 		moduleEnabled = true
 	default:
-		dekhouseSettings = types.DeckhouseSettings{
-			Mode:      registry_const.ModeUnmanaged,
+		dekhouseSettings = module_config.DeckhouseSettings{
+			Mode:      constant.ModeUnmanaged,
 			Unmanaged: &registrySettings,
 		}
 	}
@@ -75,38 +74,38 @@ func NewTestConfig(opts ...interface{}) Config {
 }
 
 func WithImagesRepo(repo string) TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
+	return func(rs *module_config.RegistrySettings) {
 		rs.ImagesRepo = repo
 	}
 }
 
 func WithSchemeHTTP() TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
-		rs.Scheme = registry_const.SchemeHTTP
+	return func(rs *module_config.RegistrySettings) {
+		rs.Scheme = constant.SchemeHTTP
 	}
 }
 
 func WithSchemeHTTPS() TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
-		rs.Scheme = registry_const.SchemeHTTPS
+	return func(rs *module_config.RegistrySettings) {
+		rs.Scheme = constant.SchemeHTTPS
 	}
 }
 
 func WithCredentials(username, password string) TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
+	return func(rs *module_config.RegistrySettings) {
 		rs.Username = username
 		rs.Password = password
 	}
 }
 
 func WithCA(ca string) TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
+	return func(rs *module_config.RegistrySettings) {
 		rs.CA = ca
 	}
 }
 
 func WithLicense(license string) TestConfigUpdateRegistrySettings {
-	return func(rs *types.RegistrySettings) {
+	return func(rs *module_config.RegistrySettings) {
 		rs.License = license
 	}
 }
@@ -124,13 +123,13 @@ func WithModuleDisable() TestConfigUpdateModuleEnabled {
 }
 
 func WithModeDirect() TestConfigUpdateMode {
-	return func() registry_const.ModeType {
-		return registry_const.ModeDirect
+	return func() constant.ModeType {
+		return constant.ModeDirect
 	}
 }
 
 func WithModeUnmanaged() TestConfigUpdateMode {
-	return func() registry_const.ModeType {
-		return registry_const.ModeUnmanaged
+	return func() constant.ModeType {
+		return constant.ModeUnmanaged
 	}
 }

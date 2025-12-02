@@ -1,18 +1,20 @@
-// Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2025 Flant JSC
 
-package types
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package initconfig
 
 import (
 	"encoding/base64"
@@ -21,50 +23,56 @@ import (
 	"regexp"
 	"strings"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
-	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-type InitConfig struct {
+type Config struct {
 	ImagesRepo        string `json:"imagesRepo" yaml:"imagesRepo"`
 	RegistryScheme    string `json:"registryScheme" yaml:"registryScheme"`
 	RegistryDockerCfg string `json:"registryDockerCfg,omitempty" yaml:"registryDockerCfg,omitempty"`
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
 }
 
-func (config InitConfig) ToRegistrySettings() (RegistrySettings, error) {
-	imagesRepo := strings.TrimRight(strings.TrimSpace(config.ImagesRepo), "/")
+func (config *Config) Correct() {
+	config.ImagesRepo = strings.TrimRight(strings.TrimSpace(config.ImagesRepo), "/")
+	if strings.TrimSpace(config.ImagesRepo) == "" {
+		config.ImagesRepo = constant.CEImagesRepo
+	}
+	if strings.TrimSpace(config.RegistryScheme) == "" {
+		config.RegistryScheme = constant.CEScheme
+	}
+}
+
+func (config Config) ToRegistrySettings() (module_config.RegistrySettings, error) {
+	config.Correct()
+
+	registrySettings := module_config.RegistrySettings{
+		ImagesRepo: config.ImagesRepo,
+		Scheme:     constant.ToScheme(config.RegistryScheme),
+		CA:         config.RegistryCA,
+	}
+
 	if config.RegistryDockerCfg == "" {
-		registrySettings := RegistrySettings{
-			ImagesRepo: imagesRepo,
-			Scheme:     registry_const.ToScheme(config.RegistryScheme),
-			CA:         config.RegistryCA,
-		}
 		return registrySettings, nil
 	}
 
 	// Validate and pars dockerCfg
-	address, _ := registry_helpers.SplitAddressAndPath(config.ImagesRepo)
+	address, _ := helpers.SplitAddressAndPath(config.ImagesRepo)
 	if err := validateRegistryDockerCfg(config.RegistryDockerCfg, address); err != nil {
-		return RegistrySettings{}, fmt.Errorf("failed to validate registryDockerCfg: %w", err)
+		return module_config.RegistrySettings{}, fmt.Errorf("failed to validate registryDockerCfg: %w", err)
 	}
 	dockerCfgDecode, err := base64.StdEncoding.DecodeString(config.RegistryDockerCfg)
 	if err != nil {
-		return RegistrySettings{}, fmt.Errorf("failed to decode registryDockerCfg: %w", err)
+		return module_config.RegistrySettings{}, fmt.Errorf("failed to decode registryDockerCfg: %w", err)
 	}
-	username, password, err := registry_docker.CredsFromDockerCfg(dockerCfgDecode, address)
+	username, password, err := helpers.CredsFromDockerCfg(dockerCfgDecode, address)
 	if err != nil {
-		return RegistrySettings{}, err
+		return module_config.RegistrySettings{}, err
 	}
-
-	registrySettings := RegistrySettings{
-		ImagesRepo: imagesRepo,
-		Scheme:     registry_const.ToScheme(config.RegistryScheme),
-		CA:         config.RegistryCA,
-		Username:   username,
-		Password:   password,
-	}
+	registrySettings.Username = username
+	registrySettings.Password = password
 	return registrySettings, nil
 }
 

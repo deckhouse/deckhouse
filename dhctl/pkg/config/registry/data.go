@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package registry
 
 import (
 	"encoding/base64"
 	"fmt"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
-	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
 type Data struct {
-	ImagesRepo string                    `json:"imagesRepo" yaml:"imagesRepo"`
-	Scheme     registry_const.SchemeType `json:"scheme" yaml:"scheme"`
-	CA         string                    `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username   string                    `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string                    `json:"password,omitempty" yaml:"password,omitempty"`
+	ImagesRepo string              `json:"imagesRepo" yaml:"imagesRepo"`
+	Scheme     constant.SchemeType `json:"scheme" yaml:"scheme"`
+	CA         string              `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username   string              `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string              `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
-func (d *Data) FromRegistrySettings(settings RegistrySettings) {
+func (d *Data) FromRegistrySettings(settings module_config.RegistrySettings) {
 	*d = Data{
 		ImagesRepo: settings.ImagesRepo,
 		Scheme:     settings.Scheme,
@@ -40,7 +40,7 @@ func (d *Data) FromRegistrySettings(settings RegistrySettings) {
 		Password:   settings.Password,
 	}
 	if settings.License != "" {
-		d.Username = registry_const.LicenseUsername
+		d.Username = constant.LicenseUsername
 		d.Password = settings.License
 	}
 }
@@ -55,7 +55,7 @@ func (d Data) AuthBase64() string {
 
 func (d Data) DockerCfg() ([]byte, error) {
 	address, _ := d.AddressAndPath()
-	cfg, err := registry_docker.DockerCfgFromCreds(d.Username, d.Password, address)
+	cfg, err := helpers.DockerCfgFromCreds(d.Username, d.Password, address)
 	return cfg, err
 }
 
@@ -68,5 +68,5 @@ func (d Data) DockerCfgBase64() (string, error) {
 }
 
 func (d Data) AddressAndPath() (string, string) {
-	return registry_helpers.SplitAddressAndPath(d.ImagesRepo)
+	return helpers.SplitAddressAndPath(d.ImagesRepo)
 }

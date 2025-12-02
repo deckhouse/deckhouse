@@ -36,7 +36,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-
 	"strconv"
 	"strings"
 	tplt "text/template"
@@ -48,7 +47,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -299,7 +297,7 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config registry_types.Data) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(config registry_config.Data) (*registryClientConfigGetter, error) {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
 			Repository: config.ImagesRepo,
@@ -314,7 +312,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_types.Data, rppSignCheck string, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_config.Data, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)

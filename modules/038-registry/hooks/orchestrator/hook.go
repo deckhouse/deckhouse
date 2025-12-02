@@ -30,7 +30,7 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
-	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
+	registry_initsecret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
@@ -188,7 +188,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		err    error
 	)
 
-	var initConfig registry_init.Config
+	var initConfig registry_initsecret.Config
 
 	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {

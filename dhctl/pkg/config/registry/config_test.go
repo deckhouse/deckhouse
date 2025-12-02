@@ -20,16 +20,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
 func TestNewConfig(t *testing.T) {
 	type input struct {
-		deckhouse  *registry_types.DeckhouseSettings
-		initConfig *registry_types.InitConfig
-		cri        registry_const.CRIType
+		deckhouse  *module_config.DeckhouseSettings
+		initConfig *init_config.Config
+		cri        constant.CRIType
 	}
 	type output struct {
 		err    bool
@@ -44,9 +44,9 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "mode: direct, containerd: v1 -> no errors",
 			input: input{
-				deckhouse: &registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{
+				deckhouse: &module_config.DeckhouseSettings{
+					Mode: constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com",
 						Scheme:     "HTTPS",
 						Username:   "user",
@@ -54,7 +54,7 @@ func TestNewConfig(t *testing.T) {
 					},
 				},
 				initConfig: nil,
-				cri:        registry_const.CRIContainerdV1,
+				cri:        constant.CRIContainerdV1,
 			},
 			output: output{
 				err: false,
@@ -63,9 +63,9 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "mode: direct, containerd: unknown -> error",
 			input: input{
-				deckhouse: &registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{
+				deckhouse: &module_config.DeckhouseSettings{
+					Mode: constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com",
 						Scheme:     "HTTPS",
 						Username:   "user",
@@ -73,7 +73,7 @@ func TestNewConfig(t *testing.T) {
 					},
 				},
 				initConfig: nil,
-				cri:        registry_const.CRIType("unknown"),
+				cri:        constant.CRIType("unknown"),
 			},
 			output: output{
 				err:    true,
@@ -83,15 +83,15 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "mode: unmanaged, containerd: unknown -> no errors",
 			input: input{
-				deckhouse: &registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.RegistrySettings{
+				deckhouse: &module_config.DeckhouseSettings{
+					Mode: constant.ModeUnmanaged,
+					Unmanaged: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com",
 						Scheme:     "HTTPS",
 					},
 				},
 				initConfig: nil,
-				cri:        registry_const.CRIType("unknown"),
+				cri:        constant.CRIType("unknown"),
 			},
 			output: output{
 				err: false,
@@ -119,13 +119,13 @@ func TestNewConfig(t *testing.T) {
 
 func TestNewDeckhouseSettings(t *testing.T) {
 	type input struct {
-		deckhouse  *registry_types.DeckhouseSettings
-		initConfig *registry_types.InitConfig
+		deckhouse  *module_config.DeckhouseSettings
+		initConfig *init_config.Config
 	}
 	type output struct {
 		err    bool
 		errMsg string
-		want   registry_types.DeckhouseSettings
+		want   module_config.DeckhouseSettings
 	}
 
 	tests := []struct {
@@ -141,11 +141,11 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			},
 			output: output{
 				err: false,
-				want: registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.RegistrySettings{
-						ImagesRepo: registry_const.CEImagesRepo,
-						Scheme:     registry_const.CEScheme,
+				want: module_config.DeckhouseSettings{
+					Mode: constant.ModeUnmanaged,
+					Unmanaged: &module_config.RegistrySettings{
+						ImagesRepo: constant.CEImagesRepo,
+						Scheme:     constant.CEScheme,
 					},
 				},
 			},
@@ -153,19 +153,19 @@ func TestNewDeckhouseSettings(t *testing.T) {
 		{
 			name: "only deckhouse (with empty inputs)",
 			input: input{
-				deckhouse: &registry_types.DeckhouseSettings{
-					Mode:   registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{},
+				deckhouse: &module_config.DeckhouseSettings{
+					Mode:   constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{},
 				},
 				initConfig: nil,
 			},
 			output: output{
 				err: false,
-				want: registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{
-						ImagesRepo: registry_const.CEImagesRepo,
-						Scheme:     registry_const.CEScheme,
+				want: module_config.DeckhouseSettings{
+					Mode: constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{
+						ImagesRepo: constant.CEImagesRepo,
+						Scheme:     constant.CEScheme,
 					},
 				},
 			},
@@ -174,15 +174,15 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			name: "only initConfig (with empty inputs)",
 			input: input{
 				deckhouse:  nil,
-				initConfig: &registry_types.InitConfig{},
+				initConfig: &init_config.Config{},
 			},
 			output: output{
 				err: false,
-				want: registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.RegistrySettings{
-						ImagesRepo: registry_const.CEImagesRepo,
-						Scheme:     registry_const.CEScheme,
+				want: module_config.DeckhouseSettings{
+					Mode: constant.ModeUnmanaged,
+					Unmanaged: &module_config.RegistrySettings{
+						ImagesRepo: constant.CEImagesRepo,
+						Scheme:     constant.CEScheme,
 					},
 				},
 			},
@@ -190,8 +190,8 @@ func TestNewDeckhouseSettings(t *testing.T) {
 		{
 			name: "both - error",
 			input: input{
-				deckhouse:  &registry_types.DeckhouseSettings{},
-				initConfig: &registry_types.InitConfig{},
+				deckhouse:  &module_config.DeckhouseSettings{},
+				initConfig: &init_config.Config{},
 			},
 			output: output{
 				err: true,
@@ -203,9 +203,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 		{
 			name: "deckhouse with trailing slashes - should be trimmed",
 			input: input{
-				deckhouse: &registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{
+				deckhouse: &module_config.DeckhouseSettings{
+					Mode: constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com/",
 						Scheme:     "HTTP",
 					},
@@ -214,9 +214,9 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			},
 			output: output{
 				err: false,
-				want: registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeDirect,
-					Direct: &registry_types.RegistrySettings{
+				want: module_config.DeckhouseSettings{
+					Mode: constant.ModeDirect,
+					Direct: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com",
 						Scheme:     "HTTP",
 					},
@@ -227,16 +227,16 @@ func TestNewDeckhouseSettings(t *testing.T) {
 			name: "initConfig with trailing slashes - should be trimmed",
 			input: input{
 				deckhouse: nil,
-				initConfig: &registry_types.InitConfig{
+				initConfig: &init_config.Config{
 					ImagesRepo:     "registry.example.com/",
 					RegistryScheme: "HTTP",
 				},
 			},
 			output: output{
 				err: false,
-				want: registry_types.DeckhouseSettings{
-					Mode: registry_const.ModeUnmanaged,
-					Unmanaged: &registry_types.RegistrySettings{
+				want: module_config.DeckhouseSettings{
+					Mode: constant.ModeUnmanaged,
+					Unmanaged: &module_config.RegistrySettings{
 						ImagesRepo: "registry.example.com",
 						Scheme:     "HTTP",
 					},

@@ -26,9 +26,11 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	registry_init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
+	registry_module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_types "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry/types"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -100,8 +102,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	// Prepare registry configuration
 	{
 		var (
-			deckhouseSettings *registry_types.DeckhouseSettings
-			initConfig        *registry_types.InitConfig
+			deckhouseSettings *registry_module_config.DeckhouseSettings
+			initConfig        *registry_init_config.Config
 			defaultCRI        string
 		)
 
@@ -116,12 +118,13 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		if m.DeckhouseConfig.ImagesRepo != "" ||
 			m.DeckhouseConfig.RegistryDockerCfg != "" ||
 			m.DeckhouseConfig.RegistryCA != "" {
-			initConfig = &registry_types.InitConfig{
+			initConfig = &registry_init_config.Config{
 				ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
 				RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
 				RegistryCA:        m.DeckhouseConfig.RegistryCA,
 				RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
 			}
+			initConfig.Correct()
 		}
 
 		// Settings from moduleConfig
@@ -140,11 +143,12 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 				return nil, fmt.Errorf("unable to marshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
 
-			var decoded registry_types.DeckhouseSettings
+			var decoded registry_module_config.DeckhouseSettings
 			if err := json.Unmarshal(raw, &decoded); err != nil {
 				return nil, fmt.Errorf("unable to unmarshal registry settings from 'deckhouse' moduleConfig: %w", err)
 			}
 			deckhouseSettings = &decoded
+			deckhouseSettings.Correct()
 			break
 		}
 
