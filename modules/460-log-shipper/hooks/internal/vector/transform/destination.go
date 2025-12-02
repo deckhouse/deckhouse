@@ -36,7 +36,9 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		transforms = append(transforms, DeDotTransform())
 		fallthrough
 	case v1alpha1.DestSocket, v1alpha1.DestVector, v1alpha1.DestKafka:
-		if len(dest.Spec.ExtraLabels) > 0 {
+		// Skip ExtraFieldTransform for Socket/Syslog - it will be handled by SyslogExtraLabelsTransform
+		skipExtraFields := dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog
+		if len(dest.Spec.ExtraLabels) > 0 && !skipExtraFields {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
 
@@ -73,6 +75,9 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 
 	/// encoding transforms go last to prevent mutating fields that have to be deleted
 	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		if len(dest.Spec.ExtraLabels) > 0 {
+			transforms = append(transforms, SyslogExtraLabelsTransform(dest.Spec.ExtraLabels))
+		}
 		transforms = append(transforms, SyslogEncoding())
 	}
 

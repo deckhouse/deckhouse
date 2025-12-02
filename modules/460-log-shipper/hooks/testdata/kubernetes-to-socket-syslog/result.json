@@ -1,0 +1,92 @@
+{
+  "sources": {
+    "cluster_logging_config/test-k8s-syslog": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "app=test-app,log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    }
+  },
+  "transforms": {
+    "transform/destination/syslog-dest/00_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-k8s-syslog/02_clean_up"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/destination/syslog-dest/01_syslog_extra_labels": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/syslog-dest/00_del_parsed_data"
+      ],
+      "source": "if !exists(.syslog) { .syslog = {} }\nif !exists(.syslog.extra_labels) { .syslog.extra_labels = {} }\n.syslog.extra_labels.\"environment\" = \"production\"\n.syslog.extra_labels.\"team\" = \"platform\"",
+      "type": "remap"
+    },
+    "transform/destination/syslog-dest/02_syslog_encoding": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/syslog-dest/01_syslog_extra_labels"
+      ],
+      "source": "if !exists(.syslog.severity) {\n  .syslog.severity = 6;\n} else if is_string(.syslog.severity) {\n  .syslog.severity = to_syslog_severity!(.syslog.severity);\n} else {\n  .syslog.severity = 6;\n};\n\npri = 1 * 8 + .syslog.severity;\n\n# Build structured-data from extra_labels (RFC5424 format)\nstructured_data = \"-\";\nif exists(.syslog.extra_labels) \u0026\u0026 is_object(.syslog.extra_labels) {\n  params = [];\n  for_each(object!(.syslog.extra_labels)) -\u003e |key, value| {\n    # Escape quotes in key and value for RFC5424\n    escaped_key = replace(to_string(key), r'\"', r'\\\"');\n    escaped_value = replace(to_string(value), r'\"', r'\\\"');\n    params = push(params, escaped_key + \"=\\\"\" + escaped_value + \"\\\"\");\n  }\n  if length(params) \u003e 0 {\n    structured_data = \"[extraLabels \" + join!(params, separator: \" \") + \"]\";\n  }\n}\n\n., err = join([\n  \"\u003c\" + to_string(pri) + \"\u003e\" + \"1\",     # \u003cpri\u003eversion\n  to_string!(.timestamp),\n  to_string!(.pod || .hostname || \"${VECTOR_SELF_NODE_NAME}\"),\n  to_string!(.app || .pod_labels.app || .syslog.app || \"-\"),\n  \"-\", # procid\n  to_string!(.syslog.message_id || \"-\"), # msgid\n  structured_data, # structured-data with extraLabels\n  decode_base16!(\"EFBBBF\") + to_string!(.message || encode_json(.)) # msg\n], separator: \" \")\n\nif err != null {\n  log(\"Unable to construct syslog message for event:\" + err + \". Dropping invalid event: \" + encode_json(.), level: \"error\", rate_limit_secs: 10)\n}",
+      "type": "remap"
+    },
+    "transform/source/test-k8s-syslog/00_owner_ref": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-k8s-syslog"
+      ],
+      "source": "if exists(.pod_owner) {\n    .pod_owner = string!(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string!(.pod_labels.\"pod-template-hash\")\n        }\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            .pod_owner = replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            .pod_owner = replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'-[0-9]{8,11}$') {\n            .pod_owner = replace(.pod_owner, \"Job/\", \"CronJob/\")\n            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
+      "type": "remap"
+    },
+    "transform/source/test-k8s-syslog/01_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-k8s-syslog/00_owner_ref"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-k8s-syslog/02_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-k8s-syslog/01_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/syslog-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/destination/syslog-dest/02_syslog_encoding"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "udp",
+      "address": "192.168.1.1:514"
+    }
+  }
+}
