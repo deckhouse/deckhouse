@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env bash
-set -euo pipefail
-
 {{- $swapBehavior := dig "kubelet" "memorySwap" "swapBehavior" "" .nodeGroup }}
 {{- $limitedSwapSize := dig "kubelet" "memorySwap" "limitedSwap" "size" "" .nodeGroup }}
 {{- $swappiness := dig "kubelet" "memorySwap" "swappiness" 60 .nodeGroup }}
@@ -100,7 +97,8 @@ fi
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   swapoff -a || true
   rm -f "$SWAPFILE"
-  fallocate -l "$SIZE" "$SWAPFILE" || dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((DESIRED_BYTES / 1024 / 1024))
+  # Use bytes for fallocate (more reliable), fallback to dd if fallocate fails
+  fallocate -l "$DESIRED_BYTES" "$SWAPFILE" || dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((DESIRED_BYTES / 1024 / 1024))
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
 fi
