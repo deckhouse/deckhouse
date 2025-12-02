@@ -4036,20 +4036,6 @@ alerts:
         Pod {{$labels.pod}} has detected an unavailable PSI subsystem.
       severity: "8"
       markupFormat: markdown
-    - name: EbpfExporterKernelNotSupported
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/ebpf-exporter.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        Possible options to resolve the issue:
-
-        * Build the kernel with [BTF type information](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
-        * [Disable ebpf_exporter](https://deckhouse.io/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
-      summary: |
-        The BTF module required for ebpf_exporter is missing from the kernel.
-      severity: "8"
-      markupFormat: markdown
     - name: ExtendedMonitoringTargetDown
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/self.yaml
       moduleUrl: 340-extended-monitoring
@@ -6355,6 +6341,23 @@ alerts:
       summary: |
         PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
       severity: "5"
+      markupFormat: markdown
+    - name: PodOOMKilled
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/oom-kills.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        The container was killed by the Linux OOM Killer.
+
+        * Namespace: {{ $labels.namespace }}
+        * Pod: {{ $labels.pod_name }}
+        * Container: {{ $labels.container_name }}
+
+        Check memory limits and actual memory usage.
+      summary: |
+        Pod was OOMKilled.
+      severity: "4"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
