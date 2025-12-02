@@ -466,7 +466,6 @@ status:
 					"conditions": [
 						{
 							"lastTransitionTime": "2023-03-03T16:49:52Z",
-							"status": "True",
 							"type": "Ready"
 						},
 						{

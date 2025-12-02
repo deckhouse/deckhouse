@@ -221,6 +221,9 @@ func CalculateNodeGroupConditions(
 	}
 
 	isReady := readySchedulableNodes >= minPerAllZone
+	if ng.Type == ngv1.NodeTypeStatic {
+		isReady = readySchedulableNodes == int(ng.Desired)
+	}
 
 	errorCondition := calcErrorCondition(&ng, currentConditions, errors)
 
