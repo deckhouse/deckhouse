@@ -226,7 +226,7 @@ func (a AutomaticDisruptions) IsEmpty() bool {
 }
 
 type Kubelet struct {
-	// Set the max count of pods per node. Depends on podSubnetNodeCIDRPrefix, if not explicitly set.
+	// Set the max count of pods per node. Default: 110
 	MaxPods *int32 `json:"maxPods,omitempty"`
 
 	// Directory path for managing kubelet files (volume mounts,etc).
