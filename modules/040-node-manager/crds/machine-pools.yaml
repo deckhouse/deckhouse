@@ -624,7 +624,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
         specReplicasPath: .spec.replicas
@@ -1275,7 +1275,7 @@ spec:
         - spec
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       scale:
         specReplicasPath: .spec.replicas
