@@ -19,3 +19,15 @@ status:
     reason: VersionNotFound
     status: "False"
     type: Processed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "1"
+status:
+  availableRepositories:
+  - deckhouse

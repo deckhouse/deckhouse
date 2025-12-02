@@ -23,6 +23,22 @@ status:
     type: UpdateNotified
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
+  installed:
+    foobar:
+    - name: test-app
+  installedOverall: 1
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
@@ -30,7 +46,7 @@ metadata:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.1
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepository: deckhouse
@@ -51,6 +67,10 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
   version: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1

@@ -287,16 +287,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get ApplicationPackage for %s: %w", app.Spec.PackageName, err)
 	}
 
-	if !ap.Status.IsAppInstalled(app.Namespace, app.Name) {
-		original := ap.DeepCopy()
-
-		ap.Status = ap.Status.AddInstalledApp(app.Namespace, app.Name)
-
-		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
-		}
-	}
-
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
@@ -339,6 +329,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 			return fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
+		}
+	}
+
+	if !ap.Status.IsAppInstalled(app.Namespace, app.Name) {
+		original := ap.DeepCopy()
+
+		ap.Status = ap.Status.AddInstalledApp(app.Namespace, app.Name)
+
+		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
 

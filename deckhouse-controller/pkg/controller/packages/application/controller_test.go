@@ -140,6 +140,16 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 		result.Write(got)
 	}
 
+	var apList v1alpha1.ApplicationPackageList
+	err = suite.kubeClient.List(context.TODO(), &apList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range apList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
 	var apvList v1alpha1.ApplicationPackageVersionList
 	err = suite.kubeClient.List(context.TODO(), &apvList)
 	require.NoError(suite.T(), err)
@@ -183,7 +193,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects().
-		WithStatusSubresource(&v1alpha1.Application{}).
+		WithStatusSubresource(&v1alpha1.Application{}, &v1alpha1.ApplicationPackage{}, &v1alpha1.ApplicationPackageVersion{}).
 		Build()
 
 	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
@@ -234,6 +244,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				err := yaml.Unmarshal([]byte(manifest), &app)
 				require.NoError(t, err)
 				require.NoError(t, kubeClient.Create(context.TODO(), &app))
+			case "ApplicationPackage":
+				var ap v1alpha1.ApplicationPackage
+				err := yaml.Unmarshal([]byte(manifest), &ap)
+				require.NoError(t, err)
+				require.NoError(t, kubeClient.Create(context.TODO(), &ap))
 			case "ApplicationPackageVersion":
 				var apv v1alpha1.ApplicationPackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &apv)
