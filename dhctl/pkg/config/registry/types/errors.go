@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package types
 
 import (
 	"errors"
 )
 
 var (
-	ErrIsNotReady     = errors.New("Registry is not ready")
-	ErrNotInitialized = errors.New("Registry is not initialized")
+	ErrUnknownMode = errors.New("Unknown registry mode")
 )

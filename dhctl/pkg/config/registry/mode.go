@@ -44,7 +44,7 @@ func NewModeSettings(settings types.DeckhouseSettings) (ModeSettings, error) {
 			Remote: remote,
 		}, nil
 	}
-	return ModeSettings{}, ErrUnknownMode
+	return ModeSettings{}, types.ErrUnknownMode
 }
 
 func (s ModeSettings) ToModel() ModeModel {

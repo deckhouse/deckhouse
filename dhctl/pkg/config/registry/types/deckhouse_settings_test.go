@@ -56,7 +56,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 			output: map[string]interface{}{
 				"mode": "Direct",
 				"direct": map[string]interface{}{
-					"imagesRepo": "registry.example.com",
+					"imagesRepo": "test:80/a/b/c/d",
 					"scheme":     "HTTPS",
 					"username":   "test-user",
 					"password":   "test-password",
@@ -68,15 +68,15 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 		{
 			name: "unmanaged mode to map",
 			input: DeckhouseSettings{
-				Mode: registry_const.ModeDirect,
-				Direct: &DirectModeSettings{
+				Mode: registry_const.ModeUnmanaged,
+				Unmanaged: &UnmanagedModeSettings{
 					RegistrySettings: validRegistrySettings(),
 				},
 			},
 			output: map[string]interface{}{
 				"mode": "Unmanaged",
 				"unmanaged": map[string]interface{}{
-					"imagesRepo": "registry.example.com",
+					"imagesRepo": "test:80/a/b/c/d",
 					"scheme":     "HTTPS",
 					"username":   "test-user",
 					"password":   "test-password",
@@ -291,7 +291,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Field 'direct' is required",
+				errMsg: "direct: is required",
 			},
 		},
 		{
@@ -320,7 +320,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Field 'unmanaged' is required",
+				errMsg: "unmanaged: is required",
 			},
 		},
 		{

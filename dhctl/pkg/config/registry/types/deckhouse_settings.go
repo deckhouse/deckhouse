@@ -83,8 +83,10 @@ func (settings *RegistrySettings) CorrectWithDefault() {
 func (settings DeckhouseSettings) Validate() error {
 	return validation.ValidateStruct(&settings,
 		validation.Field(&settings.Mode,
+			validation.Required.
+				Error(fmt.Sprintf("%s: %s", ErrUnknownMode.Error(), settings.Mode)),
 			validation.In(registry_const.ModeDirect, registry_const.ModeUnmanaged).
-				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
+				Error(fmt.Sprintf("%s: %s", ErrUnknownMode.Error(), settings.Mode)),
 		),
 		validation.Field(&settings.Direct,
 			validation.When(settings.Mode == registry_const.ModeDirect,
@@ -108,14 +110,15 @@ func (settings DeckhouseSettings) Validate() error {
 func (settings RegistrySettings) Validate() error {
 	return validation.ValidateStruct(&settings,
 		validation.Field(&settings.CheckMode,
-			validation.When(settings.CheckMode != "",
-				validation.In(registry_const.CheckModeDefault, registry_const.CheckModeRelax).
-					Error(fmt.Sprintf("unknown registry check mode: %s", settings.CheckMode))),
+			validation.In(registry_const.CheckModeDefault, registry_const.CheckModeRelax).
+				Error(fmt.Sprintf("unknown registry check mode: %s", settings.CheckMode)),
 		),
 		validation.Field(&settings.ImagesRepo,
 			validation.Required.Error("Field 'imagesRepo' is required"),
 		),
 		validation.Field(&settings.Scheme,
+			validation.Required.
+				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
 			validation.In(SchemeHTTP, SchemeHTTPS).
 				Error(fmt.Sprintf("Invalid scheme '%s'; expected 'HTTP' or 'HTTPS'", settings.Scheme)),
 		),
