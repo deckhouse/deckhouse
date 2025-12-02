@@ -72,6 +72,28 @@ type ApplicationPackageStatusInstalled struct {
 	Name string `json:"name,omitempty"`
 }
 
+func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appName string) bool {
+	for _, v := range apStatus.Installed[NamespaceName(namespace)] {
+		if v.Name == appName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (apStatus *ApplicationPackageStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageStatus {
+	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
+
+	apStatusInstalled := append(apStatus.Installed[NamespaceName(namespace)], apStatusInstalledApp)
+
+	apStatus.Installed[NamespaceName(namespace)] = apStatusInstalled
+
+	apStatus.InstalledOverall++
+
+	return *apStatus
+}
+
 // +kubebuilder:object:root=true
 
 // ApplicationPackageList is a list of ApplicationPackage resources

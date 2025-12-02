@@ -33,10 +33,11 @@ const (
 	ApplicationConditionReplicasAvailable      = "ReplicasAvailable"
 
 	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeProcessed                = "Processed"
-	ApplicationConditionReasonVersionNotFound        = "VersionNotFound"
-	ApplicationConditionReasonVersionIsDraft         = "VersionIsDraft"
-	ApplicationConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
+	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
+	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
+	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
+	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
 
 	// Application condition types
 	ApplicationConditionInstalled            = "Installed"
