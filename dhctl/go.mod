@@ -18,7 +18,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/lib-gossh v0.0.0-20251020135121-5001bcb43ae8
 	github.com/deckhouse/module-sdk v0.2.0
-	github.com/flant/kube-client v1.5.1-0.20251119050911-2a62f11c9af6
+	github.com/flant/kube-client v1.5.1-0.20251202051457-2a3b6bd485c0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/go-openapi/strfmt v0.19.5
