@@ -18,8 +18,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -176,24 +178,63 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepository, err)
 	}
 
+	var requirements apps.Requirements
+	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
+		var err error
+
+		var kubernetesConstraint *semver.Constraints
+		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
+			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
+				return fmt.Errorf("parse kubernetes requirement: %w", err)
+			}
+		}
+
+		var deckhouseConstraint *semver.Constraints
+		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
+			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
+				return fmt.Errorf("parse deckhouse requirement: %w", err)
+			}
+		}
+
+		modules := make(map[string]apps.Dependency)
+		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
+			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
+			constraint, err := semver.NewConstraint(raw)
+			if err != nil {
+				return fmt.Errorf("parse module requirement '%s': %w", module, err)
+			}
+
+			modules[module] = apps.Dependency{
+				Constraints: constraint,
+				Optional:    optional,
+			}
+		}
+
+		requirements = apps.Requirements{
+			Kubernetes: kubernetesConstraint,
+			Deckhouse:  deckhouseConstraint,
+			Modules:    modules,
+		}
+	}
+
 	r.operator.Update(ctx, repo, packageoperator.Instance{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
-			Name:    apv.Status.PackageName,
-			Version: apv.Status.Version,
+			Name:         apv.Status.PackageName,
+			Version:      apv.Status.Version,
+			Requirements: requirements,
 		},
 		Settings: app.Spec.Settings.GetMap(),
 	})
 
-	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
+	app = r.setConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
+	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch status application %s: %w", app.Name, err)
+	}
 
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerProcessed)
-	}
-
-	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
@@ -225,7 +266,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	return nil
 }
 
-func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
+func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
 	time := metav1.NewTime(r.dc.GetClock().Now())
 
 	for idx, cond := range app.Status.Conditions {
