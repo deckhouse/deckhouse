@@ -23,12 +23,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	ngv1 "node-group-exporter/internal/v1"
+	"node-group-exporter/pkg/entity"
 	k8s "node-group-exporter/pkg/kubernetes"
 )
 
@@ -36,8 +35,8 @@ import (
 type NodeGroupCollector struct {
 	clientset    kubernetes.Interface
 	watcher      *k8s.Watcher
-	nodeGroups   map[string]*NodeGroupMetricsData
-	nodesByGroup map[string][]*NodeMetricsData
+	nodeGroups   map[string]*entity.NodeGroupData
+	nodesByGroup map[string][]*entity.NodeData
 	mutex        sync.RWMutex
 	logger       *log.Logger
 
@@ -62,8 +61,8 @@ type NodeGroupCollector struct {
 func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config, logger *log.Logger) (*NodeGroupCollector, error) {
 	collector := &NodeGroupCollector{
 		clientset:    clientset,
-		nodeGroups:   make(map[string]*NodeGroupMetricsData),
-		nodesByGroup: make(map[string][]*NodeMetricsData),
+		nodeGroups:   make(map[string]*entity.NodeGroupData),
+		nodesByGroup: make(map[string][]*entity.NodeData),
 		logger:       logger,
 	}
 
@@ -267,9 +266,9 @@ func (c *NodeGroupCollector) syncNodes(ctx context.Context) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.nodesByGroup = make(map[string][]*NodeMetricsData)
+	c.nodesByGroup = make(map[string][]*entity.NodeData)
 	for _, node := range nodes.Items {
-		nodeData := ToNodeMetricsData(&node)
+		nodeData := k8s.ToNodeMetricsData(&node)
 		if nodeData.NodeGroup != "" {
 			c.nodesByGroup[nodeData.NodeGroup] = append(c.nodesByGroup[nodeData.NodeGroup], &nodeData)
 		}
@@ -288,14 +287,13 @@ func (c *NodeGroupCollector) syncNodeGroups(ctx context.Context) error {
 	defer c.mutex.Unlock()
 
 	for _, nodeGroup := range nodeGroupList {
-		nodeGroupData := ToNodeGroupMetricsData(nodeGroup)
-		c.nodeGroups[nodeGroup.Name] = &nodeGroupData
+		c.nodeGroups[nodeGroup.Name] = nodeGroup
 	}
 
 	return nil
 }
 
-func (c *NodeGroupCollector) removeNodeFromIndex(node *NodeMetricsData) {
+func (c *NodeGroupCollector) removeNodeFromIndex(node *entity.NodeData) {
 	if node.NodeGroup == "" {
 		return
 	}
@@ -314,7 +312,7 @@ func (c *NodeGroupCollector) removeNodeFromIndex(node *NodeMetricsData) {
 	}
 }
 
-func (c *NodeGroupCollector) ensureNodeInIndex(node *NodeMetricsData) bool {
+func (c *NodeGroupCollector) ensureNodeInIndex(node *entity.NodeData) bool {
 	if node.NodeGroup == "" {
 		return false
 	}
@@ -354,7 +352,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 	c.d8NodeGroupHasErrors.Reset()
 
 	for _, nodeGroup := range c.nodeGroups {
-		// Use values from NodeGroupMetricsData
+		// Use values from NodeGroupData
 		totalNodes := int(nodeGroup.Nodes)
 		readyNodes := int(nodeGroup.Ready)
 		maxNodes := int(nodeGroup.Max)
@@ -406,23 +404,22 @@ func (c *NodeGroupCollector) updateMetrics() {
 
 // EventHandler implementation
 
-func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) {
+func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *entity.NodeGroupData) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	nodeGroupData := ToNodeGroupMetricsData(nodegroup)
 	// Update if NodeGroup is different
-	if c.nodeGroups[nodegroup.Name] == nil || *c.nodeGroups[nodegroup.Name] != nodeGroupData {
-		c.nodeGroups[nodegroup.Name] = &nodeGroupData
+	if c.nodeGroups[nodegroup.Name] == nil || *c.nodeGroups[nodegroup.Name] != *nodegroup {
+		c.nodeGroups[nodegroup.Name] = nodegroup
 		c.updateMetrics()
 	}
 	c.logger.Debug("Add or Update NodeGroup",
 		slog.String("NodeGroup", nodegroup.Name),
-		slog.String("Type", nodeGroupData.NodeType),
+		slog.String("Type", nodegroup.NodeType),
 		slog.Int("Nodes", len(c.nodeGroups)))
 }
 
-func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup) {
+func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *entity.NodeGroupData) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -432,30 +429,28 @@ func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup) {
 		slog.String("NodeGroup", nodegroup.Name))
 }
 
-func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
+func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *entity.NodeData) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	nodeData := ToNodeMetricsData(node)
-	updated := c.ensureNodeInIndex(&nodeData)
+	updated := c.ensureNodeInIndex(node)
 	if updated {
 		c.updateMetrics()
 	}
 	c.logger.Debug("Add or Updated Node",
 		slog.String("Node", node.Name),
-		slog.String("NodeGroup", nodeData.NodeGroup),
-		slog.Float64("Ready", nodeData.IsReady),
+		slog.String("NodeGroup", node.NodeGroup),
+		slog.Float64("Ready", node.IsReady),
 		slog.Bool("Updated", updated))
 }
 
-func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
+func (c *NodeGroupCollector) OnNodeDelete(node *entity.NodeData) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	nodeData := ToNodeMetricsData(node)
-	c.removeNodeFromIndex(&nodeData)
+	c.removeNodeFromIndex(node)
 	c.updateMetrics()
 	c.logger.Debug("Deleted Node",
 		slog.String("Node", node.Name),
-		slog.String("NodeGroup", nodeData.NodeGroup))
+		slog.String("NodeGroup", node.NodeGroup))
 }

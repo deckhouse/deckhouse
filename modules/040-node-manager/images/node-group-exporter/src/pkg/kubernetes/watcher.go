@@ -19,15 +19,11 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"node-group-exporter/pkg/entity"
 	"sync"
 
-	ngv1 "node-group-exporter/internal/v1"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	dynamicInformers "k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
@@ -38,10 +34,10 @@ import (
 
 // EventHandler defines interface for handling resource events
 type EventHandler interface {
-	OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup)
-	OnNodeGroupDelete(nodegroup *ngv1.NodeGroup)
-	OnNodeAddOrUpdate(node *v1.Node)
-	OnNodeDelete(node *v1.Node)
+	OnNodeGroupAddOrUpdate(nodegroup *entity.NodeGroupData)
+	OnNodeGroupDelete(nodegroup *entity.NodeGroupData)
+	OnNodeAddOrUpdate(node *entity.NodeData)
+	OnNodeDelete(node *entity.NodeData)
 }
 
 // Watcher watches for changes in Node and NodeGroup resources
@@ -174,13 +170,13 @@ func (w *Watcher) Stop() {
 }
 
 // ListNodeGroups lists all NodeGroups using the dynamic client
-func (w *Watcher) ListNodeGroups(ctx context.Context) ([]*ngv1.NodeGroup, error) {
+func (w *Watcher) ListNodeGroups(ctx context.Context) ([]*entity.NodeGroupData, error) {
 	nodeGroupList, err := w.dynamicClient.Resource(NodeGroupGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*ngv1.NodeGroup, 0, len(nodeGroupList.Items))
+	result := make([]*entity.NodeGroupData, 0, len(nodeGroupList.Items))
 	for _, item := range nodeGroupList.Items {
 		nodeGroup, err := ConvertToNodeGroup(&item)
 		if err != nil {
@@ -191,28 +187,4 @@ func (w *Watcher) ListNodeGroups(ctx context.Context) ([]*ngv1.NodeGroup, error)
 	}
 
 	return result, nil
-}
-
-// ConvertToNodeGroup converts a runtime.Object to NodeGroup
-func ConvertToNodeGroup(obj any) (*ngv1.NodeGroup, error) {
-	unstructuredObj, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert obj to unstructured: %T", obj)
-	}
-	var ng ngv1.NodeGroup
-	err := sdk.FromUnstructured(unstructuredObj, &ng)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ng, nil
-}
-
-// ConvertToNode converts a runtime.Object to Node
-func ConvertToNode(obj any) (*v1.Node, error) {
-	nodeObj, ok := obj.(*v1.Node)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert obj to v1.Node: %T", obj)
-	}
-	return nodeObj, nil
 }

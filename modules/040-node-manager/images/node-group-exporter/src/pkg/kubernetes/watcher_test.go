@@ -17,108 +17,229 @@ limitations under the License.
 package kubernetes
 
 import (
+	"context"
 	"testing"
+	"time"
 
-	ngv1 "node-group-exporter/internal/v1"
+	"node-group-exporter/pkg/entity"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicInformers "k8s.io/client-go/dynamic/dynamicinformer"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/informers"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
-// MockEventHandler is a mock implementation of EventHandler
-type MockEventHandler struct {
-	mock.Mock
+// TestEventHandler collects received events for testing
+type TestEventHandler struct {
+	nodeGroups        map[string]*entity.NodeGroupData
+	nodes             map[string]*entity.NodeData
+	deletedNodeGroups map[string]*entity.NodeGroupData
+	deletedNodes      map[string]*entity.NodeData
 }
 
-func (m *MockEventHandler) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) { m.Called(nodegroup) }
-func (m *MockEventHandler) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup)      { m.Called(nodegroup) }
-func (m *MockEventHandler) OnNodeAddOrUpdate(node *v1.Node)                  { m.Called(node) }
-func (m *MockEventHandler) OnNodeDelete(node *v1.Node)                       { m.Called(node) }
+func newTestEventHandler() *TestEventHandler {
+	return &TestEventHandler{
+		nodeGroups:        make(map[string]*entity.NodeGroupData),
+		nodes:             make(map[string]*entity.NodeData),
+		deletedNodeGroups: make(map[string]*entity.NodeGroupData),
+		deletedNodes:      make(map[string]*entity.NodeData),
+	}
+}
 
-// test helpers
-func newWatcherForTest(t *testing.T) (*Watcher, *MockEventHandler) {
+func (t *TestEventHandler) OnNodeGroupAddOrUpdate(nodegroup *entity.NodeGroupData) {
+	t.nodeGroups[nodegroup.Name] = nodegroup
+}
+
+func (t *TestEventHandler) OnNodeGroupDelete(nodegroup *entity.NodeGroupData) {
+	t.deletedNodeGroups[nodegroup.Name] = nodegroup
+}
+
+func (t *TestEventHandler) OnNodeAddOrUpdate(node *entity.NodeData) {
+	t.nodes[node.Name] = node
+}
+
+func (t *TestEventHandler) OnNodeDelete(node *entity.NodeData) {
+	t.deletedNodes[node.Name] = node
+}
+
+func newWatcherWithFakeClients(t *testing.T, nodes []runtime.Object, nodeGroups []runtime.Object) (*Watcher, *TestEventHandler, *k8sfake.Clientset, *dynamicfake.FakeDynamicClient) {
 	t.Helper()
-	clientset := fake.NewSimpleClientset()
-	restConfig := &rest.Config{}
-	mockHandler := &MockEventHandler{}
-	w, err := NewWatcher(clientset, restConfig, mockHandler, log.Default())
-	assert.NoError(t, err)
-	return w, mockHandler
+	clientset := k8sfake.NewSimpleClientset(nodes...)
+	scheme := runtime.NewScheme()
+	dynamicClient := dynamicfake.NewSimpleDynamicClient(scheme, nodeGroups...)
+	testHandler := newTestEventHandler()
+
+	watcher := &Watcher{
+		clientset:     clientset,
+		dynamicClient: dynamicClient,
+		eventHandler:  testHandler,
+		stopCh:        make(chan struct{}),
+		logger:        log.Default(),
+	}
+
+	nodeFactory := informers.NewSharedInformerFactory(clientset, InformerResyncPeriod)
+	dynamicFactory := dynamicInformers.NewDynamicSharedInformerFactory(dynamicClient, InformerResyncPeriod)
+	watcher.nodeInformer = nodeFactory.Core().V1().Nodes().Informer()
+	watcher.nodeGroupInformer = dynamicFactory.ForResource(NodeGroupGVR).Informer()
+
+	return watcher, testHandler, clientset, dynamicClient
 }
 
-// TestWatcher tests the Watcher
-func TestWatcher(t *testing.T) {
-	w, _ := newWatcherForTest(t)
-	assert.NotNil(t, w.clientset)
-	assert.NotNil(t, w.dynamicClient)
-	assert.NotNil(t, w.eventHandler)
-	assert.NotNil(t, w.stopCh)
+func newTestNodeGroupUnstructured(name, nodeType string, status map[string]any) *unstructured.Unstructured {
+	obj := map[string]any{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]any{
+			"name": name,
+		},
+		"spec": map[string]any{
+			"nodeType": nodeType,
+		},
+		"status": status,
+	}
+	return &unstructured.Unstructured{Object: obj}
 }
 
-// TestConvertToNodeGroup tests the ConvertToNodeGroup function
-func TestConvertToNodeGroup(t *testing.T) {
+func newTestNode(name, nodeGroup string, ready bool) *v1.Node {
+	status := v1.ConditionFalse
+	if ready {
+		status = v1.ConditionTrue
+	}
 
-	obj := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "deckhouse.io/v1",
-			"kind":       "NodeGroup",
-			"metadata": map[string]any{
-				"name":      "test-nodegroup",
-				"namespace": "default",
-				"labels":    map[string]any{"env": "test"},
-			},
-			"spec": map[string]any{
-				"nodeType": "Cloud",
-				"cloudInstances": map[string]any{
-					"maxPerZone": int64(5),
-					"minPerZone": int64(1),
-					"zones":      []any{"zone-a", "zone-b"},
+	node := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{
+				{
+					Type:   v1.NodeReady,
+					Status: status,
 				},
 			},
-			"status": map[string]any{"desired": int64(4), "ready": int64(3)},
 		},
 	}
-
-	result, err := ConvertToNodeGroup(obj)
-	assert.Nil(t, err)
-	assert.NotNil(t, result)
-	assert.Equal(t, "test-nodegroup", result.Name)
-	assert.Equal(t, "default", result.Namespace)
-	assert.Equal(t, "Cloud", result.Spec.NodeType.String())
-	assert.NotNil(t, result.Spec.CloudInstances)
-	assert.NotNil(t, result.Spec.CloudInstances.MaxPerZone)
-	assert.Equal(t, int32(5), *result.Spec.CloudInstances.MaxPerZone)
-	assert.NotNil(t, result.Spec.CloudInstances.MinPerZone)
-	assert.Equal(t, int32(1), *result.Spec.CloudInstances.MinPerZone)
-	assert.Equal(t, []string{"zone-a", "zone-b"}, result.Spec.CloudInstances.Zones)
-	assert.Equal(t, int32(4), result.Status.Desired)
-	assert.Equal(t, int32(3), result.Status.Ready)
-
-	invalidObj := "not a nodegroup"
-	result, err = ConvertToNodeGroup(invalidObj)
-	assert.NotNil(t, err)
-	assert.Nil(t, result)
+	if nodeGroup != "" {
+		node.Labels = map[string]string{"node.deckhouse.io/group": nodeGroup}
+	}
+	return node
 }
 
-// TestWatcherEventHandler tests the EventHandler integration
-func TestWatcherEventHandler(t *testing.T) {
-	w, mh := newWatcherForTest(t)
+// TestWatcherStartWithKubernetesObjects tests Watcher.Start() by creating objects in fake Kubernetes
+func TestWatcherStartWithKubernetesObjects(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	mh.On("OnNodeGroupAddOrUpdate", mock.Anything)
-	mh.On("OnNodeAddOrUpdate", mock.Anything)
+	testNode := newTestNode("test-node-1", "test-group", true)
+	testNodeGroup := newTestNodeGroupUnstructured("test-group", "Cloud", map[string]any{
+		"desired":   int64(5),
+		"ready":     int64(3),
+		"nodes":     int64(4),
+		"instances": int64(6),
+		"min":       int64(1),
+		"max":       int64(10),
+		"upToDate":  int64(2),
+		"standby":   int64(1),
+	})
 
-	ng := &ngv1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "test-group", Namespace: "default"}}
-	n := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "test-node"}}
+	w, testHandler, clientset, dynamicClient := newWatcherWithFakeClients(t, []runtime.Object{testNode}, []runtime.Object{testNodeGroup})
 
-	if w.eventHandler != nil {
-		w.eventHandler.OnNodeGroupAddOrUpdate(ng)
-		w.eventHandler.OnNodeAddOrUpdate(n)
-	}
-	mh.AssertExpectations(t)
+	err := w.Start(ctx)
+	assert.NoError(t, err)
+	defer w.Stop()
+
+	time.Sleep(200 * time.Millisecond)
+
+	assert.GreaterOrEqual(t, len(testHandler.nodes), 1, "Should have received at least one node from initial sync")
+	assert.GreaterOrEqual(t, len(testHandler.nodeGroups), 1, "Should have received at least one nodegroup from initial sync")
+
+	foundNode, exists := testHandler.nodes["test-node-1"]
+	assert.True(t, exists, "Should have found test-node-1")
+	assert.Equal(t, "test-node-1", foundNode.Name)
+	assert.Equal(t, "test-group", foundNode.NodeGroup)
+	assert.Equal(t, float64(1), foundNode.IsReady)
+
+	foundNodeGroup, exists := testHandler.nodeGroups["test-group"]
+	assert.True(t, exists, "Should have found test-group")
+	assert.Equal(t, "test-group", foundNodeGroup.Name)
+	assert.Equal(t, "Cloud", foundNodeGroup.NodeType)
+	assert.Equal(t, int32(5), foundNodeGroup.Desired)
+	assert.Equal(t, int32(3), foundNodeGroup.Ready)
+	assert.Equal(t, int32(4), foundNodeGroup.Nodes)
+	assert.Equal(t, int32(6), foundNodeGroup.Instances)
+	assert.Equal(t, int32(1), foundNodeGroup.Min)
+	assert.Equal(t, int32(10), foundNodeGroup.Max)
+	assert.Equal(t, int32(2), foundNodeGroup.UpToDate)
+	assert.Equal(t, int32(1), foundNodeGroup.Standby)
+	assert.Equal(t, float64(0), foundNodeGroup.HasErrors)
+
+	t.Run("create new node after start", func(t *testing.T) {
+		initialNodeCount := len(testHandler.nodes)
+
+		newNode := newTestNode("test-node-2", "test-group", false)
+		_, err := clientset.CoreV1().Nodes().Create(ctx, newNode, metav1.CreateOptions{})
+		assert.NoError(t, err)
+
+		time.Sleep(200 * time.Millisecond)
+
+		assert.Greater(t, len(testHandler.nodes), initialNodeCount, "Should have received new node event")
+
+		foundNewNode, exists := testHandler.nodes["test-node-2"]
+		assert.True(t, exists, "Should have found test-node-2")
+		assert.Equal(t, "test-node-2", foundNewNode.Name)
+		assert.Equal(t, "test-group", foundNewNode.NodeGroup)
+		assert.Equal(t, float64(0), foundNewNode.IsReady)
+	})
+
+	t.Run("create new nodegroup after start", func(t *testing.T) {
+		initialNodeGroupCount := len(testHandler.nodeGroups)
+
+		newNodeGroup := newTestNodeGroupUnstructured("test-group-2", "Static", map[string]any{
+			"desired": int64(2),
+			"ready":   int64(1),
+			"nodes":   int64(1),
+		})
+
+		_, err := dynamicClient.Resource(NodeGroupGVR).Create(ctx, newNodeGroup, metav1.CreateOptions{})
+		assert.NoError(t, err)
+
+		time.Sleep(200 * time.Millisecond)
+
+		assert.Greater(t, len(testHandler.nodeGroups), initialNodeGroupCount, "Should have received new nodegroup event")
+
+		foundNewNodeGroup, exists := testHandler.nodeGroups["test-group-2"]
+		assert.True(t, exists, "Should have found test-group-2")
+		assert.Equal(t, "test-group-2", foundNewNodeGroup.Name)
+		assert.Equal(t, "Static", foundNewNodeGroup.NodeType)
+	})
+
+	t.Run("nodegroup with error condition", func(t *testing.T) {
+		errorNodeGroup := newTestNodeGroupUnstructured("test-group-error", "Static", map[string]any{
+			"desired": int64(2),
+			"ready":   int64(1),
+			"nodes":   int64(1),
+			"conditions": []any{
+				map[string]any{
+					"type":   "Error",
+					"status": "True",
+				},
+			},
+		})
+
+		_, err := dynamicClient.Resource(NodeGroupGVR).Create(ctx, errorNodeGroup, metav1.CreateOptions{})
+		assert.NoError(t, err)
+
+		time.Sleep(200 * time.Millisecond)
+
+		foundErrorNodeGroup, exists := testHandler.nodeGroups["test-group-error"]
+		assert.True(t, exists, "Should have found test-group-error")
+		assert.Equal(t, "test-group-error", foundErrorNodeGroup.Name)
+		assert.Equal(t, float64(1), foundErrorNodeGroup.HasErrors)
+	})
 }

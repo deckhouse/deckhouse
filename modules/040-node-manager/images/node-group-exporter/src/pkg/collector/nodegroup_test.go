@@ -20,70 +20,46 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/smithy-go/ptr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
 	ngv1 "node-group-exporter/internal/v1"
+	"node-group-exporter/pkg/entity"
 
 	dto "github.com/prometheus/client_model/go"
 )
 
-func newTestNode(name, nodeGroup string, ready bool) *v1.Node {
-	status := v1.ConditionFalse
+func newTestNodeData(name, nodeGroup string, ready bool) *entity.NodeData {
+	isReady := 0.0
 	if ready {
-		status = v1.ConditionTrue
+		isReady = 1.0
 	}
-	labels := make(map[string]string)
-	if nodeGroup != "" {
-		labels["node.deckhouse.io/group"] = nodeGroup
-	}
-	return &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-			Labels:    labels,
-		},
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{
-				{
-					Type:   v1.NodeReady,
-					Status: status,
-				},
-			},
-		},
+	return &entity.NodeData{
+		Name:      name,
+		NodeGroup: nodeGroup,
+		IsReady:   isReady,
 	}
 }
 
-func newTestNodeGroup(name string, nodeType ngv1.NodeType, status ngv1.NodeGroupStatus) *ngv1.NodeGroup {
-	nodeGroup := &ngv1.NodeGroup{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "deckhouse.io/v1",
-			Kind:       "NodeGroup",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-		},
-		Spec: ngv1.NodeGroupSpec{
-			NodeType: nodeType,
-		},
-		Status: status,
+func newTestNodeGroupData(name string, nodeType string, status ngv1.NodeGroupStatus) *entity.NodeGroupData {
+	hasErrors := 0.0
+	return &entity.NodeGroupData{
+		Name:      name,
+		NodeType:  nodeType,
+		HasErrors: hasErrors,
+		Nodes:     status.Nodes,
+		Ready:     status.Ready,
+		Max:       status.Max,
+		Instances: status.Instances,
+		Desired:   status.Desired,
+		Min:       status.Min,
+		UpToDate:  status.UpToDate,
+		Standby:   status.Standby,
 	}
-	if nodeType == "Cloud" {
-		nodeGroup.Spec.CloudInstances = ngv1.CloudInstances{
-			MaxPerZone: ptr.Int32(5),
-			MinPerZone: ptr.Int32(1),
-			Zones:      []string{"zone-a", "zone-b"},
-		}
-	}
-	return nodeGroup
 }
 
 // labelsMatch checks if all labels in the map match the metric labels
@@ -128,7 +104,7 @@ func getMetricValueByLabel(metrics []*dto.MetricFamily, metricName, labelName, l
 }
 
 // findNodeInGroups searches for a node by name in all groups and returns the node data and group name if found
-func findNodeInGroups(collector *NodeGroupCollector, nodeName string) (*NodeMetricsData, string) {
+func findNodeInGroups(collector *NodeGroupCollector, nodeName string) (*entity.NodeData, string) {
 	for groupName, nodes := range collector.nodesByGroup {
 		for _, node := range nodes {
 			if node.Name == nodeName {
@@ -145,18 +121,17 @@ func TestNodeGroupCollectorMetrics(t *testing.T) {
 	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	testNodeGroup := newTestNodeGroup("test-worker", "Cloud", ngv1.NodeGroupStatus{
+	testNodeGroupData := newTestNodeGroupData("test-worker", "Cloud", ngv1.NodeGroupStatus{
 		Desired: 3,
 		Ready:   1,
 		Nodes:   2,
 		Max:     10,
 	})
-	testNodeGroup.Labels = map[string]string{"env": "test"}
 
-	testNode := newTestNode("test-node-1", "test-worker", true)
+	testNodeData := newTestNodeData("test-node-1", "test-worker", true)
 
-	collector.OnNodeGroupAddOrUpdate(testNodeGroup)
-	collector.OnNodeAddOrUpdate(testNode)
+	collector.OnNodeGroupAddOrUpdate(testNodeGroupData)
+	collector.OnNodeAddOrUpdate(testNodeData)
 
 	count := testutil.ToFloat64(collector.nodeGroupCountNodesTotal.WithLabelValues("test-worker", "Cloud"))
 	assert.Equal(t, float64(2), count)
@@ -177,16 +152,16 @@ func TestStaticNodeGroup(t *testing.T) {
 	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	staticNodeGroup := newTestNodeGroup("static-master", "Static", ngv1.NodeGroupStatus{
+	staticNodeGroupData := newTestNodeGroupData("static-master", "Static", ngv1.NodeGroupStatus{
 		Ready: 3,
 		Nodes: 5,
 	})
 
-	collector.OnNodeGroupAddOrUpdate(staticNodeGroup)
+	collector.OnNodeGroupAddOrUpdate(staticNodeGroupData)
 
 	for i := 1; i <= 3; i++ {
-		node := newTestNode(fmt.Sprintf("static-master-%d", i), "static-master", true)
-		collector.OnNodeAddOrUpdate(node)
+		nodeData := newTestNodeData(fmt.Sprintf("static-master-%d", i), "static-master", true)
+		collector.OnNodeAddOrUpdate(nodeData)
 	}
 
 	max := testutil.ToFloat64(collector.nodeGroupCountMaxTotal.WithLabelValues("static-master", "Static"))
@@ -216,74 +191,52 @@ func TestStaticNodeGroup(t *testing.T) {
 	}
 }
 
-// TestIsNodeReady tests the isNodeReady function
-func TestIsNodeReady(t *testing.T) {
-	readyNode := newTestNode("ready-node", "", true)
-	nodeData := ToNodeMetricsData(readyNode)
-	assert.Equal(t, 1.0, nodeData.IsReady, "ready node should have IsReady=1.0")
-
-	notReadyNode := newTestNode("not-ready-node", "", false)
-	nodeData = ToNodeMetricsData(notReadyNode)
-	assert.Equal(t, 0.0, nodeData.IsReady, "not ready node should have IsReady=0.0")
-
-	noConditionNode := &v1.Node{
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{},
-		},
-	}
-
-	nodeData = ToNodeMetricsData(noConditionNode)
-	assert.Equal(t, 0.0, nodeData.IsReady, "node without condition should have IsReady=0.0")
-}
-
 // TestEventHandler tests the EventHandler implementation
 func TestEventHandler(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	nodeGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{})
-
-	collector.OnNodeGroupAddOrUpdate(nodeGroup)
+	nodeGroupData := newTestNodeGroupData("test-group", "Cloud", ngv1.NodeGroupStatus{})
+	collector.OnNodeGroupAddOrUpdate(nodeGroupData)
 	assert.Contains(t, collector.nodeGroups, "test-group")
 
-	updatedNodeGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{
+	updatedNodeGroupData := newTestNodeGroupData("test-group", "Cloud", ngv1.NodeGroupStatus{
 		Desired: 5,
 	})
 
-	collector.OnNodeGroupAddOrUpdate(updatedNodeGroup)
+	collector.OnNodeGroupAddOrUpdate(updatedNodeGroupData)
 	assert.Contains(t, collector.nodeGroups, "test-group")
-	nodeGroupData := collector.nodeGroups["test-group"]
-	assert.Equal(t, "test-group", nodeGroupData.Name)
-	assert.Equal(t, int32(5), nodeGroupData.Desired)
+	storedNodeGroupData := collector.nodeGroups["test-group"]
+	assert.Equal(t, "test-group", storedNodeGroupData.Name)
+	assert.Equal(t, int32(5), storedNodeGroupData.Desired)
 
-	collector.OnNodeGroupDelete(nodeGroup)
+	collector.OnNodeGroupDelete(nodeGroupData)
 	assert.NotContains(t, collector.nodeGroups, "test-group")
 
-	node := newTestNode("test-node", "", false)
-
-	collector.OnNodeAddOrUpdate(node)
+	nodeData := newTestNodeData("test-node", "", false)
+	collector.OnNodeAddOrUpdate(nodeData)
 	// Node without group should not be in nodesByGroup
 	_, groupName := findNodeInGroups(collector, "test-node")
 	assert.Empty(t, groupName, "Node without group should not be in nodesByGroup")
 
-	updatedNode := newTestNode("test-node", "test-group", false)
-
-	collector.OnNodeAddOrUpdate(updatedNode)
-	nodeData, groupName := findNodeInGroups(collector, "test-node")
-	assert.NotNil(t, nodeData, "Node should be found in nodesByGroup")
-	assert.Equal(t, "test-node", nodeData.Name)
-	assert.Equal(t, "test-group", nodeData.NodeGroup)
+	updatedNodeData := newTestNodeData("test-node", "test-group", false)
+	collector.OnNodeAddOrUpdate(updatedNodeData)
+	var foundNodeData *entity.NodeData
+	foundNodeData, groupName = findNodeInGroups(collector, "test-node")
+	assert.NotNil(t, foundNodeData, "Node should be found in nodesByGroup")
+	assert.Equal(t, "test-node", foundNodeData.Name)
+	assert.Equal(t, "test-group", foundNodeData.NodeGroup)
 	assert.Equal(t, "test-group", groupName)
 
-	notReadyNode := newTestNode("test-node-status", "test-group", false)
+	notReadyNodeData := newTestNodeData("test-node-status", "test-group", false)
 
-	testGroup := newTestNodeGroup("test-group", "Cloud", ngv1.NodeGroupStatus{
+	testGroupData := newTestNodeGroupData("test-group", "Cloud", ngv1.NodeGroupStatus{
 		Nodes: 1,
 		Ready: 0,
 	})
-	collector.OnNodeGroupAddOrUpdate(testGroup)
-	collector.OnNodeAddOrUpdate(notReadyNode)
+	collector.OnNodeGroupAddOrUpdate(testGroupData)
+	collector.OnNodeAddOrUpdate(notReadyNodeData)
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
@@ -293,11 +246,14 @@ func TestEventHandler(t *testing.T) {
 	assert.True(t, found, "node_group_count_ready_total metric should be found")
 	assert.Equal(t, 0.0, readyCount, "Status should show 0 ready initially")
 
-	readyNode := newTestNode("test-node-status", "test-group", true)
+	readyNodeData := newTestNodeData("test-node-status", "test-group", true)
 
-	testGroup.Status.Ready = 1
-	collector.OnNodeGroupAddOrUpdate(testGroup)
-	collector.OnNodeAddOrUpdate(readyNode)
+	updatedTestGroupData := newTestNodeGroupData("test-group", "Cloud", ngv1.NodeGroupStatus{
+		Nodes: 1,
+		Ready: 1,
+	})
+	collector.OnNodeGroupAddOrUpdate(updatedTestGroupData)
+	collector.OnNodeAddOrUpdate(readyNodeData)
 
 	metrics, _ = registry.Gather()
 	readyCount, found = getMetricValue(metrics, "node_group_count_ready_total")
@@ -319,19 +275,21 @@ func TestEventHandler(t *testing.T) {
 	assert.True(t, found, "node_group_count_max_total metric should be found")
 	assert.Equal(t, 1.0, maxCount, "node_group_count_max_total should equal 1")
 
-	collector.OnNodeDelete(updatedNode)
+	collector.OnNodeDelete(updatedNodeData)
 	deletedNode, _ := findNodeInGroups(collector, "test-node")
 	assert.Nil(t, deletedNode, "Node should be removed from nodesByGroup")
 
 	// Delete the ready node as well to test complete cleanup
-	collector.OnNodeDelete(readyNode)
+	collector.OnNodeDelete(readyNodeData)
 	deletedReadyNode, _ := findNodeInGroups(collector, "test-node-status")
 	assert.Nil(t, deletedReadyNode, "Node should be removed from nodesByGroup")
 
 	// Update NodeGroup status to reflect all nodes deleted
-	testGroup.Status.Nodes = 0
-	testGroup.Status.Ready = 0
-	collector.OnNodeGroupAddOrUpdate(testGroup)
+	finalTestGroupData := newTestNodeGroupData("test-group", "Cloud", ngv1.NodeGroupStatus{
+		Nodes: 0,
+		Ready: 0,
+	})
+	collector.OnNodeGroupAddOrUpdate(finalTestGroupData)
 
 	metrics, _ = registry.Gather()
 	readyCountAfterDelete, found := getMetricValue(metrics, "node_group_count_ready_total")
@@ -356,9 +314,8 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	collector, err := NewNodeGroupCollector(clientset, &rest.Config{}, log.Default())
 	assert.NoError(t, err)
 
-	orphanNode := newTestNode("orphan-node-1", "nonexistent-group", true)
-
-	collector.OnNodeAddOrUpdate(orphanNode)
+	orphanNodeData := newTestNodeData("orphan-node-1", "nonexistent-group", true)
+	collector.OnNodeAddOrUpdate(orphanNodeData)
 
 	nodeData, groupName := findNodeInGroups(collector, "orphan-node-1")
 	assert.Equal(t, "nonexistent-group", nodeData.NodeGroup)
@@ -372,11 +329,11 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	_, err = registry.Gather()
 	assert.NoError(t, err)
 
-	nodeGroup := newTestNodeGroup("nonexistent-group", "Cloud", ngv1.NodeGroupStatus{
+	nodeGroupData := newTestNodeGroupData("nonexistent-group", "Cloud", ngv1.NodeGroupStatus{
 		Desired: 1,
 		Ready:   1,
 	})
-	collector.OnNodeGroupAddOrUpdate(nodeGroup)
+	collector.OnNodeGroupAddOrUpdate(nodeGroupData)
 	metrics, err := registry.Gather()
 
 	assert.NoError(t, err)
@@ -392,12 +349,12 @@ func TestNodeWithoutNodeGroup(t *testing.T) {
 	assert.True(t, found, "node_group_node metric should have correct node_group label")
 	assert.Equal(t, 1.0, nodeMetricValueWithGroup, "node_group_node metric should be 1 for ready node with correct group")
 
-	collector.OnNodeDelete(orphanNode)
+	collector.OnNodeDelete(orphanNodeData)
 	deletedNodeData, _ := findNodeInGroups(collector, "orphan-node-1")
 	assert.Nil(t, deletedNodeData, "Node should be removed from nodesByGroup")
 	assert.NotContains(t, collector.nodesByGroup, "nonexistent-group")
 
-	collector.OnNodeGroupDelete(nodeGroup)
+	collector.OnNodeGroupDelete(nodeGroupData)
 
 	metrics, err = registry.Gather()
 	assert.NoError(t, err)

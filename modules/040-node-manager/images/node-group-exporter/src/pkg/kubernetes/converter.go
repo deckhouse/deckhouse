@@ -14,37 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package collector
+package kubernetes
 
 import (
-	ngv1 "node-group-exporter/internal/v1"
+	"fmt"
 
+	ngv1 "node-group-exporter/internal/v1"
+	"node-group-exporter/pkg/entity"
+
+	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
 	NodeGroupLabelKey = "node.deckhouse.io/group"
 )
-
-type NodeMetricsData struct {
-	Name      string
-	NodeGroup string
-	IsReady   float64
-}
-
-type NodeGroupMetricsData struct {
-	Name      string
-	NodeType  string
-	HasErrors float64
-	Nodes     int32
-	Ready     int32
-	Max       int32
-	Instances int32
-	Desired   int32
-	Min       int32
-	UpToDate  int32
-	Standby   int32
-}
 
 func isNodeReady(node *v1.Node) float64 {
 	for _, condition := range node.Status.Conditions {
@@ -63,9 +48,9 @@ func extractNodeGroupFromNode(node *v1.Node) string {
 	return ""
 }
 
-func ToNodeMetricsData(node *v1.Node) NodeMetricsData {
+func ToNodeMetricsData(node *v1.Node) entity.NodeData {
 	nodeGroup := extractNodeGroupFromNode(node)
-	return NodeMetricsData{
+	return entity.NodeData{
 		Name:      node.Name,
 		NodeGroup: nodeGroup,
 		IsReady:   isNodeReady(node),
@@ -81,8 +66,8 @@ func isHasErrors(nodeGroup *ngv1.NodeGroup) float64 {
 	return 0.0
 }
 
-func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
-	return NodeGroupMetricsData{
+func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) entity.NodeGroupData {
+	return entity.NodeGroupData{
 		Name:      nodeGroup.Name,
 		NodeType:  nodeGroup.Spec.NodeType.String(),
 		Nodes:     nodeGroup.Status.Nodes,
@@ -95,4 +80,30 @@ func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) NodeGroupMetricsData {
 		Standby:   nodeGroup.Status.Standby,
 		HasErrors: isHasErrors(nodeGroup),
 	}
+}
+
+// ConvertToNodeGroup converts a runtime.Object to NodeGroup
+func ConvertToNodeGroup(obj any) (*entity.NodeGroupData, error) {
+	unstructuredObj, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert obj to unstructured: %T", obj)
+	}
+	var ng ngv1.NodeGroup
+	err := sdk.FromUnstructured(unstructuredObj, &ng)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeGroupData := ToNodeGroupMetricsData(&ng)
+	return &nodeGroupData, nil
+}
+
+// ConvertToNode converts a runtime.Object to Node
+func ConvertToNode(obj any) (*entity.NodeData, error) {
+	nodeObj, ok := obj.(*v1.Node)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert obj to v1.Node: %T", obj)
+	}
+	nodeData := ToNodeMetricsData(nodeObj)
+	return &nodeData, nil
 }
