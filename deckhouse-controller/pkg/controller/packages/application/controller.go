@@ -345,19 +345,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
-	// set finalizer if it is not set
-	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
-		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizer)
-	}
-
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
 
-	err = r.client.Patch(ctx, app, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("patch application %s: %w", app.Name, err)
+	// set finalizer if it is not set
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+		original = app.DeepCopy()
+
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizer)
+
+		err = r.client.Patch(ctx, app, client.MergeFrom(original))
+		if err != nil {
+			return fmt.Errorf("patch application %s: %w", app.Name, err)
+		}
 	}
 
 	// call PackageOperator method (maybe PackageAdder interface)
