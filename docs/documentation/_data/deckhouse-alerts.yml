@@ -2473,10 +2473,10 @@ alerts:
       edition: be
       description: |
         The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
-        exceeded 300 milliseconds over the last 5 minutes.
+        exceeded 300 milliseconds over the last 5 minutes while handling more than 0.1 QPS.
         This may indicate slow upstreams, network issues, or DNS overload on this node.
       summary: |
-        High DNS request latency in kubeforward (p95 &gt; 300ms).
+        High DNS request latency in kubeforward (p95 &gt; 300ms under load).
       severity: "4"
       markupFormat: default
     - name: D8NodeLocalDNSUpstreamHealthcheckFailed
