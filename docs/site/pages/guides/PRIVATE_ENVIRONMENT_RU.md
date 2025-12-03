@@ -54,3 +54,7 @@ layout: sidebar-guides
 <img src="/images/gs/guides/private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
 </div>
 
+Скопируйте адрес ссылки. Для версии `harbor-offline-installer-v2.14.1.tgz` ссылка будет выглядеть следующим образом: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
+
+Подключитель к вашему бастиону по SSH и скачайте файл любым удобным вам способом.
+
