@@ -141,7 +141,7 @@ k8s:
       gcp: ccm/v34.0.0
     csi:
       aws: v1.53.0
-      azure: v1.31.2
+      azure: v1.33.7
       gcp: v1.15.4
       vsphere: v3.0.3
       openstack: v1.31.2
