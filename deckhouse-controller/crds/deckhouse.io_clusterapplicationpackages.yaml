@@ -40,6 +40,17 @@ spec:
           status:
             description: Status of a ClusterApplicationPackage.
             properties:
+              installed:
+                additionalProperties:
+                  items:
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  type: array
+                type: object
+              installedOverall:
+                type: integer
               availableRepositories:
                 items:
                   type: string

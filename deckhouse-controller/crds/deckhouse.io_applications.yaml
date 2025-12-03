@@ -39,18 +39,18 @@ spec:
           spec:
             description: Spec defines the behavior of an Application.
             properties:
-              applicationPackageName:
+              packageName:
+                type: string
+              packageRepository:
+                type: string
+              version:
                 type: string
               releaseChannel:
                 type: string
-              repository:
-                type: string
               settings:
                 x-kubernetes-preserve-unknown-fields: true
-              version:
-                type: string
             required:
-            - applicationPackageName
+            - packageName
             - version
             type: object
           status:
