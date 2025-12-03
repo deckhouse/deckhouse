@@ -23,7 +23,7 @@ const (
 	ConvergeNodeUserName = "d8-dhctl-converger"
 	ConvergeNodeUserUID  = 64536
 
-	NodeUserAnnotation = "node.deckhouse.io/nodeuser"
+	ConvergerNodeUserAnnotation = "node.deckhouse.io/has-converger-nodeuser"
 
 	D8SystemNamespace = "d8-system"
 

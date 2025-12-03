@@ -430,8 +430,8 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeUser string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", nodeUser), 30, 5*time.Second).
+func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", global.ConvergeNodeUserName), 30, 5*time.Second).
 		RunContext(ctx, func() error {
 			present := make(map[string]bool)
 
@@ -445,15 +445,18 @@ func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.Kubernetes
 			for _, node := range nodesForClient.Items {
 				present[node.Name] = false
 
-				value, ok := node.Annotations[global.NodeUserAnnotation]
-				if ok && value == nodeUser {
-					present[node.Name] = true
+				if node.Annotations != nil {
+					value, ok := node.Annotations[global.ConvergerNodeUserAnnotation]
+					if ok && value == "true" {
+						present[node.Name] = true
+					}
 				}
+
 			}
 
 			for node, ok := range present {
 				if !ok {
-					return fmt.Errorf("NodeUser %s is not present on %s yet", nodeUser, node)
+					return fmt.Errorf("NodeUser %s is not present on %s yet", global.ConvergeNodeUserName, node)
 				}
 			}
 
