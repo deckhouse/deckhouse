@@ -50,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -133,7 +132,7 @@ type reconciler struct {
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
-	metricStorage    metricsstorage.Storage
+	metricStorage    metric.Storage
 	configValidator  *configtools.Validator
 	exts             *extenders.ExtendersStack
 	logger           *log.Logger
