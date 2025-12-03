@@ -410,6 +410,14 @@ apiVersions:
           A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `0.0.0.0/0`.
+      publicNetworkAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDRs allowed to access public endpoints of the cluster
+
+          By default, `0.0.0.0/0`.
       tags:
         type: object
         additionalProperties:
