@@ -50,5 +50,7 @@ layout: sidebar-guides
 
 Устанавливать мы будем latest-версию [из GitHub-репозитория](https://github.com/goharbor/harbor/releases) проекта. Для этого нужно скачать архив с установщиком из нужного релиза, выбрав вариант с `harbor-offline-installer` в названии.
 
+<div style="text-align: center;">
 <img src="/images/gs/guides/private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
+</div>
 
