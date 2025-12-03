@@ -1678,79 +1678,79 @@ metadata:
      nodeGroups:
      - gpu
      weight: 5  
-    ```
+   ```
 
-    **CentOS**
+   **CentOS**
 
-    > Протестировано для CentOS 9.
+   > Протестировано для CentOS 9.
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: install-cuda.sh
-    spec:
-      bundles:
-      - centos
-      content: |
-        #!/bin/bash
-        set -e
-        INSTALL_NEEDED=false
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - centos
+     content: |
+       #!/bin/bash
+       set -e
+       INSTALL_NEEDED=false
   
-        # Checking if curl is installed
-        if ! command -v curl &> /dev/null; then
-          echo "curl is not installed. Installing..."
-          sudo dnf install -y curl
-          INSTALL_NEEDED=true
-        fi
+       # Checking if curl is installed
+       if ! command -v curl &> /dev/null; then
+         echo "curl is not installed. Installing..."
+         sudo dnf install -y curl
+         INSTALL_NEEDED=true
+       fi
   
-        # Checking another necessary packages and dependencies are installed
-        if ! rpm -q epel-release &> /dev/null; then
-          echo "EPEL release is not installed. Installing..."
-          sudo dnf install -y epel-release
-          INSTALL_NEEDED=true
-        fi
+       # Checking another necessary packages and dependencies are installed
+       if ! rpm -q epel-release &> /dev/null; then
+         echo "EPEL release is not installed. Installing..."
+         sudo dnf install -y epel-release
+         INSTALL_NEEDED=true
+       fi
         
-        # Checking if dev tools are installed
-        if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
-          echo "Development tools are not completely installed. Installing..."
-          sudo dnf update -y
-          sudo dnf install -y gcc make dracut kernel-devel-$(uname -r) elfutils-libelf-devel
-          INSTALL_NEEDED=true
-        fi
+       # Checking if dev tools are installed
+       if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
+         echo "Development tools are not completely installed. Installing..."
+         sudo dnf update -y
+         sudo dnf install -y gcc make dracut kernel-devel-$(uname -r) elfutils-libelf-devel
+         INSTALL_NEEDED=true
+       fi
         
-        # Installation of NVIDIA drivers
-        if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
-          echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
-          sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
-          sudo rpm --import https://developer.download.nvidia.com/compute/cuda/repos/GPGKEY
-          sudo dnf clean all
-          sudo dnf install -y nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-settings nvidia-persistenced
-          INSTALL_NEEDED=true
-        fi
+       # Installation of NVIDIA drivers
+       if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
+         echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
+         sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+         sudo rpm --import https://developer.download.nvidia.com/compute/cuda/repos/GPGKEY
+         sudo dnf clean all
+         sudo dnf install -y nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-settings nvidia-persistenced
+         INSTALL_NEEDED=true
+       fi
   
-        # Installation of NVIDIA Container Toolkit
-        if ! rpm -q nvidia-container-toolkit &> /dev/null; then
-          echo "NVIDIA container toolkit is not installed. Installing..."
-          curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-          sudo dnf install -y nvidia-container-toolkit
-          INSTALL_NEEDED=true
-        fi
+       # Installation of NVIDIA Container Toolkit
+       if ! rpm -q nvidia-container-toolkit &> /dev/null; then
+         echo "NVIDIA container toolkit is not installed. Installing..."
+         curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+         sudo dnf install -y nvidia-container-toolkit
+         INSTALL_NEEDED=true
+       fi
   
-        # Bashible service creating if drivers were installed
-        if [ "$INSTALL_NEEDED" = true ]; then
-          base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
-          echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
-          sudo systemctl enable bashible.timer
-          base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
-          echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
-          sudo systemctl enable bashible.service
-          sudo systemctl reboot
-        fi
+       # Bashible service creating if drivers were installed
+       if [ "$INSTALL_NEEDED" = true ]; then
+         base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+         echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+         sudo systemctl enable bashible.timer
+         base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+         echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+         sudo systemctl enable bashible.service
+         sudo systemctl reboot
+       fi
   
-      nodeGroups:
-      - gpu
-      weight: 5
+     nodeGroups:
+     - gpu
+     weight: 5
    ```
 
    **RedOS**
@@ -1796,13 +1796,13 @@ metadata:
  
        # Bashible service creating if drivers were installed
        if [ "$INSTALL_NEEDED" = true ]; then
-       base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
-       echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
-       sudo systemctl enable bashible.timer
-       base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
-       echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
-       sudo systemctl enable bashible.service
-       sudo systemctl reboot
+         base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+         echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+         sudo systemctl enable bashible.timer
+         base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+         echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+         sudo systemctl enable bashible.service
+         sudo systemctl reboot
        fi
  
      nodeGroups:
