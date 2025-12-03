@@ -15,8 +15,8 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
-  - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
+  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db_to_archive_1.git /src/trivy-db
+  - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy_to_archive.git /src/trivy
   - rm -rf /src/trivy/docs /src/trivy/integration
   - find /src/trivy -type d -name testdata | xargs rm -rf
   - rm -rf /src/trivy/.git /src/trivy-db/.git
