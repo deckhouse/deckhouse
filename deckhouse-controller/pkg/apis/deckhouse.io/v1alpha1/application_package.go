@@ -86,7 +86,7 @@ func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appNa
 	return false
 }
 
-func (apStatus ApplicationPackageStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageStatus {
+func (apStatus *ApplicationPackageStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageStatus {
 	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
 
 	if apStatus.Installed == nil {
@@ -96,7 +96,31 @@ func (apStatus ApplicationPackageStatus) AddInstalledApp(namespace string, appNa
 
 	apStatus.InstalledOverall++
 
-	return apStatus
+	return *apStatus
+}
+
+func (apStatus *ApplicationPackageStatus) RemoveInstalledApp(namespace string, appName string) ApplicationPackageStatus {
+	if apStatus.Installed == nil {
+		return *apStatus
+	}
+
+	installed := make([]ApplicationPackageStatusInstalled, 0, len(apStatus.Installed[NamespaceName(namespace)]))
+
+	for _, pkg := range apStatus.Installed[NamespaceName(namespace)] {
+		if pkg.Name == appName {
+			continue
+		}
+
+		installed = append(installed, pkg)
+	}
+
+	apStatus.Installed[NamespaceName(namespace)] = installed
+
+	if apStatus.InstalledOverall > 0 {
+		apStatus.InstalledOverall--
+	}
+
+	return *apStatus
 }
 
 // +kubebuilder:object:root=true

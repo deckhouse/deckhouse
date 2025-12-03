@@ -157,6 +157,26 @@ func (appStatus ApplicationPackageVersionStatus) AddInstalledApp(namespace strin
 	return appStatus
 }
 
+func (appStatus *ApplicationPackageVersionStatus) RemoveInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
+	usedBy := make([]ApplicationPackageVersionStatusInstance, 0, len(appStatus.UsedBy))
+
+	for _, v := range appStatus.UsedBy {
+		if v.Namespace == namespace && v.Name == appName {
+			continue
+		}
+
+		usedBy = append(usedBy, v)
+	}
+
+	appStatus.UsedBy = usedBy
+
+	if appStatus.UsedByCount > 0 {
+		appStatus.UsedByCount--
+	}
+
+	return *appStatus
+}
+
 // +kubebuilder:object:root=true
 
 // ApplicationPackageVersionList is a list of ApplicationPackageVersion resources
