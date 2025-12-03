@@ -45,12 +45,19 @@ func (settings DeckhouseSettings) ToMap() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (settings *DeckhouseSettings) Correct() {
-	switch {
-	case settings.Direct != nil:
-		settings.Direct.Correct()
-	case settings.Unmanaged != nil:
-		settings.Unmanaged.Correct()
+func (settings *DeckhouseSettings) ApplySettings(userSettings DeckhouseSettings) {
+	*settings = DeckhouseSettings{
+		Mode: userSettings.Mode,
+	}
+	switch settings.Mode {
+	case constant.ModeDirect:
+		direct := RegistrySettings{}
+		direct.ApplySettings(userSettings.Direct)
+		settings.Direct = &direct
+	case constant.ModeUnmanaged:
+		unmanaged := RegistrySettings{}
+		unmanaged.ApplySettings(userSettings.Unmanaged)
+		settings.Unmanaged = &unmanaged
 	}
 }
 
@@ -58,9 +65,9 @@ func (settings DeckhouseSettings) Validate() error {
 	return validation.ValidateStruct(&settings,
 		validation.Field(&settings.Mode,
 			validation.Required.
-				Error(fmt.Sprintf("unknown registry mode: %s", settings.Mode)),
+				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
 			validation.In(constant.ModeDirect, constant.ModeUnmanaged).
-				Error(fmt.Sprintf("unknown registry mode: %s", settings.Mode)),
+				Error(fmt.Sprintf("Unknown registry mode: %s", settings.Mode)),
 		),
 		validation.Field(&settings.Direct,
 			validation.When(settings.Mode == constant.ModeDirect,
@@ -91,13 +98,39 @@ type RegistrySettings struct {
 	CheckMode  constant.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
 }
 
-func (settings *RegistrySettings) Correct() {
-	settings.ImagesRepo = strings.TrimRight(strings.TrimSpace(settings.ImagesRepo), "/")
-	if strings.TrimSpace(settings.ImagesRepo) == "" {
-		settings.ImagesRepo = constant.CEImagesRepo
+func (settings *RegistrySettings) ApplySettings(userSettings *RegistrySettings) {
+	// Set default
+	*settings = RegistrySettings{
+		ImagesRepo: constant.CEImagesRepo,
+		Scheme:     constant.CEScheme,
 	}
-	if strings.TrimSpace(settings.Scheme) == "" {
-		settings.Scheme = constant.CEScheme
+
+	if userSettings == nil {
+		return
+	}
+
+	// Set user settings
+	userSettings.ImagesRepo = strings.TrimRight(strings.TrimSpace(userSettings.ImagesRepo), "/")
+	if userSettings.ImagesRepo != "" {
+		settings.ImagesRepo = userSettings.ImagesRepo
+	}
+	if userSettings.Scheme != "" {
+		settings.Scheme = userSettings.Scheme
+	}
+	if userSettings.CA != "" {
+		settings.CA = userSettings.CA
+	}
+	if userSettings.Username != "" {
+		settings.Username = userSettings.Username
+	}
+	if userSettings.Password != "" {
+		settings.Password = userSettings.Password
+	}
+	if userSettings.License != "" {
+		settings.License = userSettings.License
+	}
+	if userSettings.CheckMode != "" {
+		settings.CheckMode = userSettings.CheckMode
 	}
 }
 

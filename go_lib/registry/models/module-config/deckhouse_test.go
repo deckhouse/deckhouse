@@ -19,14 +19,14 @@ package moduleconfig
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 type registrySettingsOption func(*RegistrySettings)
 
-func validRegistrySettings(opts ...registrySettingsOption) *RegistrySettings {
+func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 	settings := RegistrySettings{
 		ImagesRepo: "test:80/a/b/c/d",
 		Scheme:     constant.SchemeHTTPS,
@@ -42,45 +42,41 @@ func validRegistrySettings(opts ...registrySettingsOption) *RegistrySettings {
 }
 
 func TestDeckhouseSettings_ToMap(t *testing.T) {
+	registrySettings := registrySettingsBuilder()
+	registrySettingsMap := map[string]interface{}{
+		"imagesRepo": "test:80/a/b/c/d",
+		"scheme":     "HTTPS",
+		"username":   "test-user",
+		"password":   "test-password",
+		"ca":         "-----BEGIN CERTIFICATE-----",
+		"checkMode":  "Default",
+	}
+
 	tests := []struct {
 		name   string
 		input  DeckhouseSettings
 		output map[string]interface{}
 	}{
 		{
-			name: "direct mode to map",
+			name: "mode direct",
 			input: DeckhouseSettings{
 				Mode:   constant.ModeDirect,
-				Direct: validRegistrySettings(),
+				Direct: registrySettings,
 			},
 			output: map[string]interface{}{
-				"mode": "Direct",
-				"direct": map[string]interface{}{
-					"imagesRepo": "test:80/a/b/c/d",
-					"scheme":     "HTTPS",
-					"username":   "test-user",
-					"password":   "test-password",
-					"ca":         "-----BEGIN CERTIFICATE-----",
-					"checkMode":  "Default",
-				},
+				"mode":   "Direct",
+				"direct": registrySettingsMap,
 			},
 		},
 		{
-			name: "unmanaged mode to map",
+			name: "mode unmanaged",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeUnmanaged,
-				Unmanaged: validRegistrySettings(),
+				Unmanaged: registrySettings,
 			},
 			output: map[string]interface{}{
-				"mode": "Unmanaged",
-				"unmanaged": map[string]interface{}{
-					"imagesRepo": "test:80/a/b/c/d",
-					"scheme":     "HTTPS",
-					"username":   "test-user",
-					"password":   "test-password",
-					"ca":         "-----BEGIN CERTIFICATE-----",
-					"checkMode":  "Default",
-				},
+				"mode":      "Unmanaged",
+				"unmanaged": registrySettingsMap,
 			},
 		},
 	}
@@ -88,23 +84,22 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := tt.input.ToMap()
-			assert.NoError(t, err)
-			assert.Equal(t, tt.output, result)
+			require.NoError(t, err)
+			require.EqualValues(t, tt.output, result)
 		})
 	}
 }
 
-func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
+func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    DeckhouseSettings
 		expected DeckhouseSettings
 	}{
 		{
-			name: "correct direct mode settings",
+			name: "mode direct",
 			input: DeckhouseSettings{
-				Mode:   constant.ModeDirect,
-				Direct: &RegistrySettings{},
+				Mode: constant.ModeDirect,
 			},
 			expected: DeckhouseSettings{
 				Mode: constant.ModeDirect,
@@ -115,10 +110,9 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "correct unmanaged mode settings",
+			name: "mode unmanaged",
 			input: DeckhouseSettings{
-				Mode:      constant.ModeUnmanaged,
-				Unmanaged: &RegistrySettings{},
+				Mode: constant.ModeUnmanaged,
 			},
 			expected: DeckhouseSettings{
 				Mode: constant.ModeUnmanaged,
@@ -128,13 +122,22 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "mode unknown",
+			input: DeckhouseSettings{
+				Mode: "Unknown",
+			},
+			expected: DeckhouseSettings{
+				Mode: "Unknown",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings := tt.input
-			settings.Correct()
-			assert.Equal(t, tt.expected, settings)
+			deckhouseSettings := DeckhouseSettings{}
+			deckhouseSettings.ApplySettings(tt.input)
+			require.EqualValues(t, tt.expected, deckhouseSettings)
 		})
 	}
 }
@@ -142,12 +145,42 @@ func TestDeckhouseSettings_CorrectWithDefault(t *testing.T) {
 func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    RegistrySettings
+		input    *RegistrySettings
 		expected RegistrySettings
 	}{
 		{
-			name: "trim trailing slash from images repo",
-			input: RegistrySettings{
+			name: "default ImagesRepo",
+			input: &RegistrySettings{
+				ImagesRepo: "",
+				Scheme:     "HTTPS",
+			},
+			expected: RegistrySettings{
+				ImagesRepo: constant.CEImagesRepo,
+				Scheme:     "HTTPS",
+			},
+		},
+		{
+			name: "default Scheme",
+			input: &RegistrySettings{
+				ImagesRepo: "registry.example.com",
+				Scheme:     "",
+			},
+			expected: RegistrySettings{
+				ImagesRepo: "registry.example.com",
+				Scheme:     constant.CEScheme,
+			},
+		},
+		{
+			name:  "default ImagesRepo and Scheme",
+			input: nil,
+			expected: RegistrySettings{
+				ImagesRepo: constant.CEImagesRepo,
+				Scheme:     constant.CEScheme,
+			},
+		},
+		{
+			name: "trim ImagesRepo",
+			input: &RegistrySettings{
 				ImagesRepo: "registry.example.com/",
 				Scheme:     "HTTPS",
 			},
@@ -157,57 +190,17 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "empty images repo gets default",
-			input: RegistrySettings{
-				ImagesRepo: "",
-				Scheme:     "HTTPS",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: constant.CEImagesRepo,
-				Scheme:     "HTTPS",
-			},
-		},
-		{
-			name: "empty scheme gets default",
-			input: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     "",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     constant.CEScheme,
-			},
-		},
-		{
-			name: "both empty get defaults",
-			input: RegistrySettings{
-				ImagesRepo: "",
-				Scheme:     "",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: constant.CEImagesRepo,
-				Scheme:     constant.CEScheme,
-			},
-		},
-		{
-			name: "no changes needed",
-			input: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     "HTTP",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     "HTTP",
-			},
+			name:     "full",
+			input:    registrySettingsBuilder(),
+			expected: *registrySettingsBuilder(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings := tt.input
-			settings.Correct()
-
-			assert.Equal(t, tt.expected, settings)
+			registrySettings := RegistrySettings{}
+			registrySettings.ApplySettings(tt.input)
+			require.Equal(t, tt.expected, registrySettings)
 		})
 	}
 }
@@ -228,7 +221,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			name: "valid direct mode",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeDirect,
-				Direct:    validRegistrySettings(),
+				Direct:    registrySettingsBuilder(),
 				Unmanaged: nil,
 			},
 			output: output{
@@ -240,7 +233,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			input: DeckhouseSettings{
 				Mode:      constant.ModeUnmanaged,
 				Direct:    nil,
-				Unmanaged: validRegistrySettings(),
+				Unmanaged: registrySettingsBuilder(),
 			},
 			output: output{
 				err: false,
@@ -256,7 +249,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "unknown registry mode",
+				errMsg: "Unknown registry mode",
 			},
 		},
 		{
@@ -268,7 +261,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "unknown registry mode",
+				errMsg: "Unknown registry mode",
 			},
 		},
 		// Invalid cases - Direct mode validation
@@ -288,8 +281,8 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			name: "non-direct mode with direct settings",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeUnmanaged,
-				Direct:    validRegistrySettings(),
-				Unmanaged: validRegistrySettings(),
+				Direct:    registrySettingsBuilder(),
+				Unmanaged: registrySettingsBuilder(),
 			},
 			output: output{
 				err:    true,
@@ -313,8 +306,8 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			name: "non-unmanaged mode with unmanaged settings",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeDirect,
-				Direct:    validRegistrySettings(),
-				Unmanaged: validRegistrySettings(),
+				Direct:    registrySettingsBuilder(),
+				Unmanaged: registrySettingsBuilder(),
 			},
 			output: output{
 				err:    true,
@@ -328,12 +321,12 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			err := tt.input.Validate()
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.output.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.output.errMsg)
+					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -353,14 +346,14 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Valid cases
 		{
 			name:  "valid settings with all fields",
-			input: validRegistrySettings(),
+			input: registrySettingsBuilder(),
 			output: output{
 				err: false,
 			},
 		},
 		{
 			name: "valid settings without credentials",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "" },
 				func(s *RegistrySettings) { s.Password = "" },
 			),
@@ -370,7 +363,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "valid settings with HTTP scheme and no CA",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Scheme = constant.SchemeHTTP },
 				func(s *RegistrySettings) { s.CA = "" },
 			),
@@ -380,7 +373,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "valid settings with license only",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "" },
 				func(s *RegistrySettings) { s.Password = "" },
 				func(s *RegistrySettings) { s.License = "test-license" },
@@ -391,7 +384,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "valid settings with relaxed check mode",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.CheckMode = constant.CheckModeRelax },
 			),
 			output: output{
@@ -400,7 +393,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "empty check mode is valid",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.CheckMode = "" },
 			),
 			output: output{
@@ -411,7 +404,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - ImagesRepo
 		{
 			name: "empty images repo",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.ImagesRepo = "" },
 			),
 			output: output{
@@ -423,7 +416,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - Scheme
 		{
 			name: "invalid scheme",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Scheme = "ftp" },
 			),
 			output: output{
@@ -433,7 +426,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "empty scheme",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Scheme = "" },
 			),
 			output: output{
@@ -445,7 +438,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - Credentials
 		{
 			name: "password without username",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "" },
 				func(s *RegistrySettings) { s.Password = "test-password" },
 			),
@@ -456,7 +449,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "username without password",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "test-user" },
 				func(s *RegistrySettings) { s.Password = "" },
 			),
@@ -469,7 +462,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - License
 		{
 			name: "license with credentials",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.License = "test-license" },
 			),
 			output: output{
@@ -479,7 +472,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "license with username only",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Password = "" },
 				func(s *RegistrySettings) { s.License = "test-license" },
 			),
@@ -490,7 +483,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		},
 		{
 			name: "license with password only",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Username = "" },
 				func(s *RegistrySettings) { s.License = "test-license" },
 			),
@@ -503,7 +496,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - CA
 		{
 			name: "CA with HTTP scheme",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.Scheme = constant.SchemeHTTP },
 			),
 			output: output{
@@ -515,7 +508,7 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		// Invalid cases - CheckMode
 		{
 			name: "invalid check mode",
-			input: validRegistrySettings(
+			input: registrySettingsBuilder(
 				func(s *RegistrySettings) { s.CheckMode = "invalid-mode" },
 			),
 			output: output{
@@ -530,12 +523,12 @@ func TestRegistrySettings_Validate(t *testing.T) {
 			err := tt.input.Validate()
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.output.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.output.errMsg)
+					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

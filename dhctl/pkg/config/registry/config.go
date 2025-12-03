@@ -16,8 +16,6 @@ package registry
 
 import (
 	"fmt"
-	"slices"
-
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
@@ -31,36 +29,51 @@ type Config struct {
 func (c *Config) FromDefault(
 	cri constant.CRIType,
 ) error {
-	registrySettings := module_config.RegistrySettings{}
-	registrySettings.Correct()
-	return c.FromRegistrySettings(registrySettings, cri)
+	userRegistrySettings := module_config.RegistrySettings{}
+	return c.FromRegistrySettings(
+		userRegistrySettings,
+		cri,
+	)
 }
 
 func (c *Config) FromRegistrySettings(
-	registrySettings module_config.RegistrySettings,
+	userRegistrySettings module_config.RegistrySettings,
 	cri constant.CRIType,
 ) error {
-	// TODO:
-	// moduleEnabled := moduleEnabled(cri)
-	// if moduleEnabled {
-	// 	return c.fromDeckhouseSettings(module_config.DeckhouseSettings{
-	// 		Mode:   constant.ModeDirect,
-	// 		Direct: &registrySettings,
-	// 	}, cri)
-	// }
-	return c.FromDeckhouseSettings(module_config.DeckhouseSettings{
+	userSettings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &registrySettings,
-	}, cri)
+		Unmanaged: &userRegistrySettings,
+	}
+
+	// TODO:
+	// moduleEnabled := constant.ModuleEnabled(cri)
+	// if moduleEnabled {
+	// 	userSettings = module_config.DeckhouseSettings{
+	// 	Mode:      constant.ModeDirect,
+	// 	Direct: &userRegistrySettings,
+	// }
+	return c.FromDeckhouseSettings(
+		userSettings,
+		cri,
+	)
 }
 
 func (c *Config) FromDeckhouseSettings(
-	deckhouseSettings module_config.DeckhouseSettings,
+	userSettings module_config.DeckhouseSettings,
 	cri constant.CRIType,
 ) error {
+	// Prepare settings
+	deckhouseSettings := module_config.DeckhouseSettings{}
+	deckhouseSettings.ApplySettings(userSettings)
+
+	// Validate
+	if err := deckhouseSettings.Validate(); err != nil {
+		return fmt.Errorf("validate registry settings: %w", err)
+	}
+
 	// Check if module can be enabled with current CRI
-	moduleEnabled := moduleEnabled(cri)
-	moduleRequired := moduleRequired(deckhouseSettings.Mode)
+	moduleEnabled := constant.ModuleEnabled(cri)
+	moduleRequired := constant.ModuleRequired(deckhouseSettings.Mode)
 	if moduleRequired && !moduleEnabled {
 		return fmt.Errorf(
 			"registry mode '%s' is not supported with defaultCRI:'%s'. "+
@@ -71,14 +84,12 @@ func (c *Config) FromDeckhouseSettings(
 		)
 	}
 
-	deckhouseSettings.Correct()
-	if err := deckhouseSettings.Validate(); err != nil {
-		return fmt.Errorf("validate registry settings: %w", err)
-	}
+	// Prepare mode settings
 	settings, err := newModeSettings(deckhouseSettings)
 	if err != nil {
 		return fmt.Errorf("get registry mode settings: %w", err)
 	}
+
 	*c = Config{
 		Settings:          settings,
 		DeckhouseSettings: deckhouseSettings,
@@ -97,12 +108,4 @@ func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) 
 	}
 	ret, err := c.DeckhouseSettings.ToMap()
 	return true, ret, err
-}
-
-func moduleEnabled(cri constant.CRIType) bool {
-	return slices.Contains(constant.ModuleEnabledCRI, cri)
-}
-
-func moduleRequired(mode constant.ModeType) bool {
-	return slices.Contains(constant.ModesRequiringModule, mode)
 }

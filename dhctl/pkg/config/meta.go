@@ -140,7 +140,7 @@ func (m *MetaConfig) PrepareRegistry() error {
 	var (
 		cri               string
 		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
-		initConfig        *registry_initconfig.Config
+		registrySettings  *registry_moduleconfig.RegistrySettings
 	)
 
 	// Get defaultCRI
@@ -154,12 +154,17 @@ func (m *MetaConfig) PrepareRegistry() error {
 	if m.DeckhouseConfig.ImagesRepo != "" ||
 		m.DeckhouseConfig.RegistryDockerCfg != "" ||
 		m.DeckhouseConfig.RegistryCA != "" {
-		initConfig = &registry_initconfig.Config{
+		initConfig := registry_initconfig.Config{
 			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
 			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
 			RegistryCA:        m.DeckhouseConfig.RegistryCA,
 			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
 		}
+		settings, err := initConfig.ToRegistrySettings()
+		if err != nil {
+			return fmt.Errorf("get registry settings from initConfig: %w", err)
+		}
+		registrySettings = &settings
 	}
 
 	// Settings from moduleConfig
@@ -167,11 +172,11 @@ func (m *MetaConfig) PrepareRegistry() error {
 		if mc.GetName() != "deckhouse" {
 			continue
 		}
-		registrySettings, ok := mc.Spec.Settings["registry"]
+		settings, ok := mc.Spec.Settings["registry"]
 		if !ok {
 			break
 		}
-		raw, err := json.Marshal(registrySettings)
+		raw, err := json.Marshal(settings)
 		if err != nil {
 			return fmt.Errorf("get registry settings from moduleConfig/deckhouse: %w", err)
 		}
@@ -184,18 +189,14 @@ func (m *MetaConfig) PrepareRegistry() error {
 	}
 
 	switch {
-	case deckhouseSettings != nil && initConfig != nil:
+	case deckhouseSettings != nil && registrySettings != nil:
 		return fmt.Errorf(
 			"duplicate registry configuration detected in initConfiguration.deckhouse " +
 				"and moduleConfig/deckhouse.spec.settings.registry. Please specify registry settings in only one location.")
 	case deckhouseSettings != nil:
 		return m.Registry.FromDeckhouseSettings(*deckhouseSettings, cri)
-	case initConfig != nil:
-		registrySettings, err := initConfig.ToRegistrySettings()
-		if err != nil {
-			return fmt.Errorf("get registry settings from initConfig: %w", err)
-		}
-		return m.Registry.FromRegistrySettings(registrySettings, cri)
+	case registrySettings != nil:
+		return m.Registry.FromRegistrySettings(*registrySettings, cri)
 	}
 	return m.Registry.FromDefault(cri)
 }

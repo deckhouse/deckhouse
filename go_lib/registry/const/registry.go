@@ -18,6 +18,7 @@ package constant
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -39,7 +40,7 @@ var (
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
 
 	ModuleEnabledCRI     = []CRIType{CRIContainerdV1, CRIContainerdV2}
-	ModesRequiringModule = []ModeType{ModeDirect}
+	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
 
 func NodeRegistryAddr(addr string) string {
@@ -52,4 +53,12 @@ func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", ip, Port))
 	}
 	return proxyEndpoints
+}
+
+func ModuleEnabled(cri CRIType) bool {
+	return slices.Contains(ModuleEnabledCRI, cri)
+}
+
+func ModuleRequired(mode ModeType) bool {
+	return slices.Contains(ModesRequiringModule, mode)
 }
