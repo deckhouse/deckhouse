@@ -197,81 +197,41 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 	if params.ModeParams.isEmpty() {
 		return failedResult, fmt.Errorf("mode params are empty")
 	}
-
 	// Transition stage + params already contained -> skip (stage already done)
 	if isTransitionStage &&
 		s.ActualParams != nil && s.ActualParams.isEqual(params.ModeParams) {
 		return successResult, nil
 	}
 
-	// Transition stage + nodes have final version -> skip (transition stage not needed)
-	// This check is required to handle cases when the cluster is already configured in its final state, for example:
-	// * State was lost and restored — if the cluster is already in final state, there's no need to repeat the transition stage.
-	// * Cluster bootstrap — the initial state already matches the final one, so the transition stage can be skipped.
-	if isTransitionStage && s.Config == nil {
-		config, err := s.finalConfig(params, inputs)
-		if err != nil {
-			return failedResult, fmt.Errorf("failed to build config: %w", err)
-		}
-		isFinalVersionApplied := true
-		for _, node := range inputs.NodeStatus {
-			if config.Version != node.Version {
-				isFinalVersionApplied = false
-				break
-			}
-		}
-		if isFinalVersionApplied {
-			return successResult, nil
+	// Init actual params from secret, if empty
+	if s.ActualParams == nil || s.ActualParams.isEmpty() {
+		s.ActualParams = &ModeParams{}
+		if err := s.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
+			return failedResult, fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
 
+	builder := ConfigBuilder{
+		ModeParams:     params.ModeParams,
+		MasterNodesIPs: inputs.MasterNodesIPs,
+	}
+	actualParams := &params.ModeParams
+
+	// In transition stage, use actual params
 	if isTransitionStage {
-		// Initialize actual params from secret if not set or empty
-		if s.ActualParams == nil || s.ActualParams.isEmpty() {
-			s.ActualParams = &ModeParams{}
-			if err := s.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
-				return failedResult, fmt.Errorf("cannot load actual params from registry secret: %w", err)
-			}
-		}
-
-		// Build transition config using actual params
-		config, err := s.transitionConfig(params, inputs, *s.ActualParams)
-		if err != nil {
-			return failedResult, fmt.Errorf("failed to build config: %w", err)
-		}
-		s.Config = config
-	} else {
-		// Build final config (no actual params needed at this point)
-		config, err := s.finalConfig(params, inputs)
-		if err != nil {
-			return failedResult, fmt.Errorf("failed to build config: %w", err)
-		}
-		s.Config = config
-
-		// Store current params:
-		// - for potential future transition stage
-		// - to check if the transition stage has already been applied
-		s.ActualParams = &params.ModeParams
+		builder.ActualParams = []ModeParams{*s.ActualParams}
+		actualParams = s.ActualParams
 	}
 
-	return buildResult(inputs, false, s.Config.Version), nil
-}
-
-func (s *State) transitionConfig(params Params, inputs Inputs, actualParams ModeParams) (*Config, error) {
-	builder := ConfigBuilder{
-		ModeParams:     params.ModeParams,
-		MasterNodesIPs: inputs.MasterNodesIPs,
-		ActualParams:   []ModeParams{actualParams},
+	config, err := builder.build()
+	if err != nil {
+		return failedResult, fmt.Errorf("failed to build config: %w", err)
 	}
-	return builder.build()
-}
 
-func (s *State) finalConfig(params Params, inputs Inputs) (*Config, error) {
-	builder := ConfigBuilder{
-		ModeParams:     params.ModeParams,
-		MasterNodesIPs: inputs.MasterNodesIPs,
-	}
-	return builder.build()
+	s.ActualParams = actualParams
+	s.Config = config
+
+	return buildResult(inputs, false, config.Version), nil
 }
 
 func (b *ConfigBuilder) build() (*Config, error) {

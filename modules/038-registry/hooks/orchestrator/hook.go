@@ -30,7 +30,7 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
-	registry_initsecret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
@@ -188,14 +188,14 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		err    error
 	)
 
-	var initConfig registry_initsecret.Config
-
+	var initConfig init_secret.Config
 	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {
 		input.Logger.Info("Init secret snapshot found, trying to load init config")
 		if err = yaml.Unmarshal(initSecret.Config, &initConfig); err != nil {
 			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
 		}
+		inputs.InitSecret = initConfig
 	}
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		input.Logger.Warn(
@@ -286,20 +286,19 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
 
-	// Initialize state with init config
-	if initSecret.IsExist && !initSecret.Applied {
-		if initConfig.CA != nil {
-			values.State.PKI.CA = &pki.CertModel{}
-			values.State.PKI.CA.Cert = initConfig.CA.Cert
-			values.State.PKI.CA.Key = initConfig.CA.Key
-		}
-	}
-
 	// Initialize RegistrySecret before processing
 	values.State.RegistrySecret.Config = inputs.RegistrySecret
 
 	// Load checker params
 	values.State.CheckerParams = checker.GetParams(ctx, input)
+
+	// Process the state with init config
+	if initSecret.IsExist && !initSecret.Applied {
+		err = values.State.processInit(input.Logger, inputs)
+		if err != nil {
+			return fmt.Errorf("cannot process: %w", err)
+		}
+	}
 
 	// Process the state and update internal values
 	err = values.State.process(input.Logger, inputs)

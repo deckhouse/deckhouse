@@ -24,6 +24,7 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
@@ -50,6 +51,7 @@ type Params struct {
 type Inputs struct {
 	Params         Params
 	RegistrySecret deckhouse_registry.Config
+	InitSecret     init_secret.Config
 
 	PKI              pki.Inputs
 	Secrets          secrets.Inputs

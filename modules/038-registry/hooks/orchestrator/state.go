@@ -100,6 +100,46 @@ func (state *State) clearConditions() {
 	state.Conditions = nil
 }
 
+func (state *State) processInit(log go_hook.Logger, inputs Inputs) error {
+	// Process PKI
+	if inputs.InitSecret.CA != nil {
+		state.PKI.CA = &pki.CertModel{}
+		state.PKI.CA.Cert = inputs.InitSecret.CA.Cert
+		state.PKI.CA.Key = inputs.InitSecret.CA.Key
+	}
+	_, err := state.PKI.Process(log)
+	if err != nil {
+		return fmt.Errorf("cannot process PKI: %w", err)
+	}
+
+	// Set Bashible ActualParams
+	var bashibleActualParams *bashible.ModeParams
+	switch inputs.Params.Mode {
+	case registry_const.ModeDirect:
+		bashibleActualParams = &bashible.ModeParams{
+			Direct: &bashible.DirectModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			},
+		}
+	case registry_const.ModeUnmanaged:
+		bashibleActualParams = &bashible.ModeParams{
+			Unmanaged: &bashible.UnmanagedModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			},
+		}
+	}
+	state.Bashible.ActualParams = bashibleActualParams
+	return nil
+}
+
 func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	if inputs.Params.Mode == "" {
 		inputs.Params.Mode = registry_const.ModeUnmanaged
@@ -131,12 +171,6 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 }
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
-	// PKI
-	pkiResult, err := state.PKI.Process(log)
-	if err != nil {
-		return fmt.Errorf("cannot process PKI: %w", err)
-	}
-
 	// check upstream registry
 	checkerRegistryParams := checker.RegistryParams{
 		Address:  inputs.Params.ImagesRepo,
@@ -162,6 +196,12 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	if !state.bashiblePreflightCheck(inputs) {
 		state.setReadyCondition(false, inputs)
 		return nil
+	}
+
+	// PKI
+	pkiResult, err := state.PKI.Process(log)
+	if err != nil {
+		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
 	// Secrets
