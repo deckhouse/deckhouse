@@ -126,14 +126,17 @@ func (state *State) processInit(log go_hook.Logger, inputs Inputs) error {
 			},
 		}
 	case registry_const.ModeUnmanaged:
-		bashibleActualParams = &bashible.ModeParams{
-			Unmanaged: &bashible.UnmanagedModeParams{
-				ImagesRepo: inputs.Params.ImagesRepo,
-				Scheme:     inputs.Params.Scheme,
-				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
-				Username:   inputs.Params.UserName,
-				Password:   inputs.Params.Password,
-			},
+		// Only for configurable unmanaged mode
+		if inputs.Params.ImagesRepo != "" {
+			bashibleActualParams = &bashible.ModeParams{
+				Unmanaged: &bashible.UnmanagedModeParams{
+					ImagesRepo: inputs.Params.ImagesRepo,
+					Scheme:     inputs.Params.Scheme,
+					CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+					Username:   inputs.Params.UserName,
+					Password:   inputs.Params.Password,
+				},
+			}
 		}
 	}
 	state.Bashible.ActualParams = bashibleActualParams
