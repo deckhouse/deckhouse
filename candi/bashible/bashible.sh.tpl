@@ -123,11 +123,11 @@ function bb-event-error-create() {
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
       indent="            " # 12 spaces
       logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
-      bb-kubectl-exec apply -f - <<EOF || true
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-error-${eventName}
+            generateName: bashible-error-${eventName}-
           regarding:
             apiVersion: v1
             kind: Node
@@ -146,14 +146,14 @@ EOF
 }
 
 function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$1"
+    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo $1 | sed 's#.*/##; s/_/-/g')"
     nodeName="$(bb-d8-node-name)"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec apply -f - <<EOF || true
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-info-${eventName}-update-$(date -u +"%Y-%m-%dt%H-%M-%S-%6N")
+            generateName: bashible-info-${eventName}-update-
           regarding:
             apiVersion: v1
             kind: Node

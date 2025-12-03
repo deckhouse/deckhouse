@@ -115,6 +115,7 @@
       "module": "cloud-provider-dvp",
       "embedded": "true",
       "tags": [
+        "cloud",
         "embedded",
         "virtualization"
       ],
@@ -131,6 +132,7 @@
       "module": "cloud-provider-dynamix",
       "embedded": "true",
       "tags": [
+        "cloud",
         "bare-metal",
         "embedded"
       ],
