@@ -907,7 +907,7 @@ type: Opaque
 			},
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: map[string]interface{}{},
+				Settings: nil,
 			},
 		}
 		initObjects = append(initObjects, moduleConfig)

@@ -213,7 +213,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		Spec: v1alpha1.ModuleConfigSpec{
 			Enabled:  ptr.To(true),
 			Version:  1,
-			Settings: v1alpha1.SettingsValues{},
+			Settings: nil,
 		},
 	}
 	// If the MC exists, use its Settings to generate the desired MC.
@@ -221,6 +221,9 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		cniModuleConfig := cniModuleConfigs[0]
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
+
+	settings := desiredCNIModuleConfig.Spec.Settings.GetMap()
+
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
 	// Skip if in the secret key "cilium" does not exist or empty.
 	secretMatchesMC := true
@@ -229,24 +232,24 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		case "VXLAN":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "VXLAN" {
-				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "VXLAN"
+				settings["tunnelMode"] = "VXLAN"
 				secretMatchesMC = false
 			}
 		case "Direct":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "Disabled" {
-				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
+				settings["tunnelMode"] = "Disabled"
 				secretMatchesMC = false
 			}
 		case "DirectWithNodeRoutes":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "Disabled" {
-				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
+				settings["tunnelMode"] = "Disabled"
 				secretMatchesMC = false
 			}
 			value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 			if !ok || !value.Bool() {
-				desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = true
+				settings["createNodeRoutes"] = true
 				secretMatchesMC = false
 			}
 		default:
@@ -257,18 +260,20 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		case "Netfilter", "BPF":
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 			if !ok || value.String() != cniSecret.Cilium.MasqueradeMode {
-				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.Cilium.MasqueradeMode
+				settings["masqueradeMode"] = cniSecret.Cilium.MasqueradeMode
 				secretMatchesMC = false
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 			if !ok || value.String() != "BPF" {
-				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = "BPF"
+				settings["masqueradeMode"] = "BPF"
 				secretMatchesMC = false
 			}
 		default:
 			input.Logger.Warn("An unknown cilium masqueradeMode was specified in the d8-cni-configuration secret, so the default cni masqueradeMode will be used instead.", slog.String("specified masqueradeMode", cniSecret.Cilium.Mode))
 		}
+
+		desiredCNIModuleConfig.Spec.Settings = v1alpha1.MakeMappedFields(settings)
 	}
 
 	// If MC does not exist, then we should

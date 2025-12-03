@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -257,25 +256,6 @@ func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
 	return mr.Spec.UpdateSpec
 }
 
-func (c Changelog) DeepCopy() Changelog {
-	if c == nil {
-		return nil
-	}
-
-	data, err := json.Marshal(c)
-	if err != nil {
-		panic(err)
-	}
-
-	var out Changelog
-	err = json.Unmarshal(data, &out)
-	if err != nil {
-		panic(err)
-	}
-
-	return out
-}
-
 type ModuleReleaseRequirements struct {
 	ModuleReleasePlatformRequirements `json:",inline"`
 	ParentModules                     map[string]string `json:"modules,omitempty"`
@@ -294,7 +274,7 @@ type ModuleReleaseSpec struct {
 	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
 	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
-	Changelog    Changelog                  `json:"changelog,omitempty"`
+	Changelog    *MappedFields              `json:"changelog,omitempty"`
 }
 
 type UpdateSpec struct {

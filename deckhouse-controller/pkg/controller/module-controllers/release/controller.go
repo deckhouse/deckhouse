@@ -1336,7 +1336,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	if err == nil {
 		isModuleConfigFound = true
 
-		values = addonutils.Values(config.Spec.Settings)
+		values = addonutils.Values(config.Spec.Settings.GetMap())
 
 		// try to get the values version from status
 		valuesVersion, err = strconv.Atoi(config.Status.Version)

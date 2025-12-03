@@ -65,7 +65,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
+	cniMCYAML := func(cniName string, enabled *bool, settings map[string]any, creationTime *time.Time) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -78,7 +78,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: settings,
+				Settings: v1alpha1.MakeMappedFields(settings),
 				Enabled:  enabled,
 			},
 		}
@@ -185,7 +185,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "VXLAN",
 				}, nil),
 			}
@@ -207,7 +207,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "Netfilter",
 				}, nil),
@@ -228,7 +228,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "Disabled",
 				}, nil),
 			}
@@ -248,7 +248,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"createNodeRoutes": true,
 				}, nil),
 			}
@@ -269,7 +269,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"createNodeRoutes": false,
 				}, nil),
 			}
@@ -349,7 +349,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "Netfilter",
 				}, nil),
@@ -379,7 +379,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"createNodeRoutes": false,
 				}, nil),
 			}
@@ -407,7 +407,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "Disabled",
 				}, nil),
 			}
@@ -432,7 +432,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":       "Disabled",
 					"createNodeRoutes": true,
 				}, nil),
@@ -457,7 +457,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"masqueradeMode": "Netfilter",
 				}, nil),
 			}
@@ -480,7 +480,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "VXLAN",
 				}, nil),
 			}
@@ -503,7 +503,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), map[string]any{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -525,7 +525,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), map[string]any{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -548,7 +548,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":       "Disabled",
 					"createNodeRoutes": true,
 				}, nil),
@@ -574,7 +574,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -600,7 +600,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -625,7 +625,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":       "Disabled",
 					"createNodeRoutes": true,
 				}, nil),
@@ -650,7 +650,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":       "Disabled",
 					"createNodeRoutes": true,
 				}, nil),
