@@ -147,16 +147,14 @@ func (appStatus *ApplicationPackageVersionStatus) IsAppInstalled(namespace strin
 	return false
 }
 
-func (appStatus *ApplicationPackageVersionStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
+func (appStatus ApplicationPackageVersionStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
 	appStatusInstalledApp := ApplicationPackageVersionStatusInstance{Namespace: namespace, Name: appName}
 
-	usedBy := append(appStatus.UsedBy, appStatusInstalledApp)
-
-	appStatus.UsedBy = usedBy
+	appStatus.UsedBy = append(appStatus.UsedBy, appStatusInstalledApp)
 
 	appStatus.UsedByCount++
 
-	return *appStatus
+	return appStatus
 }
 
 // +kubebuilder:object:root=true
