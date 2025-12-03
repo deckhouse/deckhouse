@@ -1842,30 +1842,30 @@ To add a GPU node to the cluster, perform the following steps:
    Create a Job:
 
    ```yaml
-  apiVersion: batch/v1
-  kind: Job
-  metadata:
-    name: nvidia-cuda-test
-    namespace: default
-  spec:
-    completions: 1
-    template:
-      spec:
-        restartPolicy: Never
-        nodeSelector:
-          node.deckhouse.io/group: gpu
-          node-role/gpu: ""
-        tolerations:
-          - key: "node-role"
-            operator: "Equal"
-            value: "gpu"
-            effect: "NoSchedule"
-        containers:
-          - name: nvidia-cuda-test
-            image: nvidia/cuda:11.6.2-base-ubuntu20.04
-            imagePullPolicy: "IfNotPresent"
-            command:
-              - nvidia-smi
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: nvidia-cuda-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+           node-role/gpu: ""
+         tolerations:
+           - key: "node-role"
+             operator: "Equal"
+             value: "gpu"
+             effect: "NoSchedule"
+         containers:
+           - name: nvidia-cuda-test
+             image: nvidia/cuda:11.6.2-base-ubuntu20.04
+             imagePullPolicy: "IfNotPresent"
+             command:
+               - nvidia-smi
    ```
 
    Check the logs using the command:

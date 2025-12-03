@@ -1679,9 +1679,9 @@ metadata:
      - gpu
      weight: 5  
     ```
- 
+
     **CentOS**
- 
+
     > Протестировано для CentOS 9.
 
     ```yaml
@@ -1900,30 +1900,30 @@ metadata:
    Создайте в кластере задачу (Job):
 
    ```yaml
-  apiVersion: batch/v1
-  kind: Job
-  metadata:
-    name: nvidia-cuda-test
-    namespace: default
-  spec:
-    completions: 1
-    template:
-      spec:
-        restartPolicy: Never
-        nodeSelector:
-          node.deckhouse.io/group: gpu
-          node-role/gpu: ""
-        tolerations:
-          - key: "node-role"
-            operator: "Equal"
-            value: "gpu"
-            effect: "NoSchedule"
-        containers:
-          - name: nvidia-cuda-test
-            image: nvidia/cuda:11.6.2-base-ubuntu20.04
-            imagePullPolicy: "IfNotPresent"
-            command:
-              - nvidia-smi
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: nvidia-cuda-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+           node-role/gpu: ""
+         tolerations:
+           - key: "node-role"
+             operator: "Equal"
+             value: "gpu"
+             effect: "NoSchedule"
+         containers:
+           - name: nvidia-cuda-test
+             image: nvidia/cuda:11.6.2-base-ubuntu20.04
+             imagePullPolicy: "IfNotPresent"
+             command:
+               - nvidia-smi
    ```
 
    Проверьте логи командой:
