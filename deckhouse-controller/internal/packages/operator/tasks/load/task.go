@@ -16,10 +16,12 @@ package load
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -82,6 +84,18 @@ func (t *task) Execute(ctx context.Context) error {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
+
+	t.status.HandleError(t.packageName, &status.Error{
+		Err: errors.New("wait for converge done"),
+		Conditions: []status.Condition{
+			{
+				Name:    status.ConditionReadyInRuntime,
+				Status:  metav1.ConditionFalse,
+				Reason:  "WaitConverge",
+				Message: fmt.Sprintf("wait for converge done"),
+			},
+		},
+	})
 
 	return nil
 }

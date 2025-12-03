@@ -69,7 +69,8 @@ func (c *Checker) Check() checker.Result {
 	if _, errs := c.constraints.Validate(version); len(errs) != 0 {
 		return checker.Result{
 			Enabled: false,
-			Reason:  fmt.Sprintf("%s: %s", c.reason, errs[0].Error()), // Return first validation error with reason
+			Reason:  c.reason,
+			Message: errs[0].Error(),
 		}
 	}
 

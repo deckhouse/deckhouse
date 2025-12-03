@@ -137,6 +137,36 @@ func (s *Scheduler) GetState(name string) State {
 	}
 }
 
+func (s *Scheduler) Check(checks Checks) error {
+	var checkers []checker.Checker
+
+	// Add version constraint checkers (all are blockers)
+	if checks.Kubernetes != nil && s.kubeVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+	}
+
+	if checks.Deckhouse != nil && s.deckhouseVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+	}
+
+	if len(checks.Modules) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, checks.Modules))
+	}
+
+	// Add bootstrap condition as blocker (prevents enabling during startup)
+	if s.bootstrapCondition != nil {
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
+	}
+
+	for _, ch := range checkers {
+		if res := ch.Check(); !res.Enabled {
+			return newRequirementsErr(res.Reason, res.Message)
+		}
+	}
+
+	return nil
+}
+
 // Add registers a package with the scheduler and creates checkers based on its constraints.
 // If scheduler is not paused and checks pass, onEnable callback is invoked immediately.
 //

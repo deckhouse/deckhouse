@@ -35,6 +35,8 @@ const (
 
 	// ConditionTypeReady means the current state, it only relies on the ReadyInRuntime internal condition
 	ConditionTypeReady = "Ready"
+
+	ConditionTypePartiallyDegraded string = "PartiallyDegraded"
 )
 
 type Service struct {
@@ -152,10 +154,13 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 	// Compute and update Ready condition (depends only on ReadyInRuntime)
 	if readyInRuntime, ok := internalConds[string(status.ConditionReadyInRuntime)]; ok && readyInRuntime.Status == corev1.ConditionTrue {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionTrue, "", "", now)
+		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionFalse, "", "", now)
 	} else if ok {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
+		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, readyInRuntime.Reason, readyInRuntime.Message, now)
 	} else {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, "", "", now)
+		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, "", "", now)
 	}
 
 	// Compute and update Installed condition (all internal conditions must be true)

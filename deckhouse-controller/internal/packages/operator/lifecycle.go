@@ -101,6 +101,13 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 	}
 
 	if o.packages[name].versionChanged(inst.Definition.Version) {
+		if err := o.scheduler.Check(inst.Definition.Requirements.Checks()); err != nil {
+			o.status.HandleError(name, err)
+			return
+		}
+
+		o.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+
 		o.packages[name].settings = inst.Settings
 
 		// Cancel previous tasks before enqueueing new ones
