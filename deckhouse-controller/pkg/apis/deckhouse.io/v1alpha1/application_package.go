@@ -73,6 +73,10 @@ type ApplicationPackageStatusInstalled struct {
 }
 
 func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appName string) bool {
+	if apStatus.Installed == nil {
+		return false
+	}
+
 	for _, v := range apStatus.Installed[NamespaceName(namespace)] {
 		if v.Name == appName {
 			return true
@@ -85,12 +89,10 @@ func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appNa
 func (apStatus ApplicationPackageStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageStatus {
 	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
 
-	apStatusInstalled := append(apStatus.Installed[NamespaceName(namespace)], apStatusInstalledApp)
-
 	if apStatus.Installed == nil {
 		apStatus.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
 	}
-	apStatus.Installed[NamespaceName(namespace)] = apStatusInstalled
+	apStatus.Installed[NamespaceName(namespace)] = append(apStatus.Installed[NamespaceName(namespace)], apStatusInstalledApp)
 
 	apStatus.InstalledOverall++
 
