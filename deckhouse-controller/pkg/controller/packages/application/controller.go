@@ -28,6 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -264,10 +265,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name))
 
-	logger.Debug("handling Application")
+	logger.Debug("handle Application")
+	defer logger.Debug("handle Application complete")
 
 	original := app.DeepCopy()
 
+	// check if application package exists
 	ap := new(v1alpha1.ApplicationPackage)
 	if err := r.client.Get(ctx, types.NamespacedName{Name: app.Spec.PackageName}, ap); err != nil {
 		r.SetConditionFalse(
@@ -342,6 +345,11 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
+	// set finalizer if it is not set
+	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizer)
+	}
+
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
@@ -354,8 +362,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	// call PackageOperator method (maybe PackageAdder interface)
 	r.pm.AddApplication(ctx, app, &apv.Status)
-
-	logger.Debug("handle Application complete")
 
 	return nil
 }
@@ -404,6 +410,11 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("deleting Application")
 
 	r.pm.RemoveApplication(ctx, app)
+
+	// remove finalizer
+	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizer) {
+		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizer)
+	}
 
 	logger.Debug("delete Application complete")
 

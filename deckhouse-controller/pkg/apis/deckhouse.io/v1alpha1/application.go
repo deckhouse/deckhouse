@@ -63,6 +63,8 @@ const (
 	ApplicationConditionPartiallyDegradedReasonScalingInProgress                = "ScalingInProgress"
 	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
 	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
+
+	ApplicationFinalizer = "application.deckhouse.io/finalizer"
 )
 
 var (
