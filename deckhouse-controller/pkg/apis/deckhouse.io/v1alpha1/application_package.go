@@ -72,12 +72,12 @@ type ApplicationPackageStatusInstalled struct {
 	Name string `json:"name,omitempty"`
 }
 
-func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appName string) bool {
-	if apStatus.Installed == nil {
+func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bool {
+	if a.Status.Installed == nil {
 		return false
 	}
 
-	for _, v := range apStatus.Installed[NamespaceName(namespace)] {
+	for _, v := range a.Status.Installed[NamespaceName(namespace)] {
 		if v.Name == appName {
 			return true
 		}
@@ -86,27 +86,27 @@ func (apStatus *ApplicationPackageStatus) IsAppInstalled(namespace string, appNa
 	return false
 }
 
-func (apStatus *ApplicationPackageStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageStatus {
+func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string) *ApplicationPackage {
 	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
 
-	if apStatus.Installed == nil {
-		apStatus.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
+	if a.Status.Installed == nil {
+		a.Status.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
 	}
-	apStatus.Installed[NamespaceName(namespace)] = append(apStatus.Installed[NamespaceName(namespace)], apStatusInstalledApp)
+	a.Status.Installed[NamespaceName(namespace)] = append(a.Status.Installed[NamespaceName(namespace)], apStatusInstalledApp)
 
-	apStatus.InstalledOverall++
+	a.Status.InstalledOverall++
 
-	return *apStatus
+	return a
 }
 
-func (apStatus *ApplicationPackageStatus) RemoveInstalledApp(namespace string, appName string) ApplicationPackageStatus {
-	if apStatus.Installed == nil {
-		return *apStatus
+func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string) *ApplicationPackage {
+	if a.Status.Installed == nil {
+		return a
 	}
 
-	installed := make([]ApplicationPackageStatusInstalled, 0, len(apStatus.Installed[NamespaceName(namespace)]))
+	installed := make([]ApplicationPackageStatusInstalled, 0, len(a.Status.Installed[NamespaceName(namespace)]))
 
-	for _, pkg := range apStatus.Installed[NamespaceName(namespace)] {
+	for _, pkg := range a.Status.Installed[NamespaceName(namespace)] {
 		if pkg.Name == appName {
 			continue
 		}
@@ -114,13 +114,13 @@ func (apStatus *ApplicationPackageStatus) RemoveInstalledApp(namespace string, a
 		installed = append(installed, pkg)
 	}
 
-	apStatus.Installed[NamespaceName(namespace)] = installed
+	a.Status.Installed[NamespaceName(namespace)] = installed
 
-	if apStatus.InstalledOverall > 0 {
-		apStatus.InstalledOverall--
+	if a.Status.InstalledOverall > 0 {
+		a.Status.InstalledOverall--
 	}
 
-	return *apStatus
+	return a
 }
 
 // +kubebuilder:object:root=true
