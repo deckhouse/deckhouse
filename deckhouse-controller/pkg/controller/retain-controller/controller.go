@@ -531,7 +531,7 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 				LastTransitionTime: now,
 			})
 			if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
-				return ctrl.Result{RequeueAfter: FollowObjectCheckInterval}, err
+				return ctrl.Result{}, err
 			}
 		}
 
