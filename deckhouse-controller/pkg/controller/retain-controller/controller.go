@@ -240,9 +240,9 @@ func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer
 			LastTransitionTime: metav1.Now(),
 		})
 
-    if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
-        return ctrl.Result{}, err
-    }
+		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
