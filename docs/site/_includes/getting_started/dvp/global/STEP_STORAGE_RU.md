@@ -1,145 +1,116 @@
 {% alert level="warning" %}
-На этом этапе приведен пример настройки программно-определяемого хранилища на основе DRBD.
+На этом этапе приведен пример настройки хранилища на основе внешнего NFS-сервера с установленным дистрибутивом на основе Debian/Ubuntu.
 Если вы хотите использовать другой типа хранилища, ознакомьтесь с разделом [«Настройка хранилища»](../../documentation/admin/install/steps/storage.html).
 {% endalert %}
 
-На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для хранения метрик компонентов кластера и дисков виртуальных машин.
+Настройте хранилище, которое будет использоваться для хранения метрик компонентов кластера и дисков виртуальных машин.
 
-Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
+## Настройка NFS-сервера
 
-```shell
-sudo -i d8 k create -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: snapshot-controller
-spec:
-  enabled: true
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  version: 1
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-replicated-volume
-spec:
-  version: 1
-  enabled: true
-EOF
-```
+1. Установите пакеты NFS-сервера (если они еще не установлены):
 
-Дождитесь, пока модуль включится, для этого можете использовать следующую команду:
+   ```bash
+   sudo apt update
+   sudo apt install nfs-kernel-server
+   ```
 
-```shell
-sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.phase}=Ready' --timeout=1200s
-```
+1. Создайте каталог, который будет использоваться для хранения данных:
 
-Объедините доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
+   ```bash
+   sudo mkdir -p /srv/nfs/dvp
+   ```
 
-```shell
-sudo -i d8 k get blockdevices.storage.deckhouse.io
-```
+1. Установите права доступа:
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
-Для создания ресурса LVMVolumeGroup на узле выполните следующую команду, предварительно заменив имена узла и блочных устройств на свои:
+   ```bash
+   sudo chown -R nobody:nogroup /srv/nfs/dvp
+   ```
 
-```shell
-sudo -i d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: LVMVolumeGroup
-metadata:
-  name: "vg-on-dvp-worker"
-spec:
-  type: Local
-  local:
-    # Замените на имя своего узла, для которого создаете группу томов.
-    nodeName: "dvp-worker"
-  blockDeviceSelector:
-    matchExpressions:
-      - key: kubernetes.io/metadata.name
-        operator: In
-        values:
-          # Замените на имена своих блочных устройств узла, для которого создаете группу томов.
-          - *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
-  # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
-  actualVGNameOnTheNode: "vg"
-EOF
-```
+1. Экспортируйте каталог с правами, позволяющими доступ root-клиентам. Для Linux-сервера это делается через опцию `no_root_squash`, например:
 
-Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Operational`:
+   ```bash
+   echo "/srv/nfs/dvp <SubnetCIDR>(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
+   ```
 
-```shell
-sudo -i d8 k get lvg vg-on-dvp-worker -w
-```
+   Замените `<SubnetCIDR>` на подсеть, в которой находятся master- и worker-узлы. 
+   
+1. Примените изменения конфигурации:
 
-Пример вывода:
+   ```bash
+   sudo exportfs -ra
+   ```
 
-```console
-NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-```
+1. Перезапустите службу NFS:
+   
+   **Для дистрибутивов на основе Debian/Ubuntu:**
+   ```bash
+   sudo systemctl restart nfs-kernel-server
+   ```
+   
+   **Для дистрибутивов на основе CentOS/RHEL:**
+   ```bash
+   sudo systemctl restart nfs-server
+   ```
 
-Создайте пул LVM-томов:
+1. Выполните следующие команды на master- и worker-узлах, чтобы убедиться в успешном монтировании каталога:
 
-```bash
-sudo -i d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: ReplicatedStoragePool
-metadata:
-  name: sds-pool
-spec:
-  type: LVM
-  lvmVolumeGroups:
-    - name: vg-on-dvp-worker
-EOF
-```
+   ```bash
+   sudo -i mount -t nfs4 <IP-адрес-NFS-сервера>:/srv/nfs/dvp /mnt
+   sudo -i umount /mnt
+   ```
 
-Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
+## Настройка модуля csi-nfs
 
-```shell
-sudo -i d8 k get rsp sds-pool -w
-```
+Для работы с NFS-хранилищем в кластере настройте модуль `csi-nfs` на master-узле. Модуль предоставляет CSI-драйвер и позволяет создавать StorageClass через ресурс [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass).
 
-Пример вывода:
+Для того чтобы настроить модуль, выполните следующие действия:
 
-```console
-NAME         PHASE       TYPE   AGE
-sds-pool     Completed   LVM    87d
-```
+1. Включите модуль `csi-nfs`, выполнив на master-узле следующую команду:
 
-Создайте StorageClass:
+   ```bash
+   sudo -i d8 system module enable csi-nfs
+   ```
 
-```bash
-sudo -i d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: ReplicatedStorageClass
-metadata:
-  name: sds-r1
-spec:
-  replication: None
-  storagePool: sds-pool
-  reclaimPolicy: Delete
-  topology: Ignored
-EOF
-```
+1. Дождитесь, пока модуль перейдет в состояние `Ready`:
 
-Проверьте, что ресурсы StorageClass появились в кластере:
+   ```bash
+   sudo -i d8 k get module csi-nfs -w
+   ```
 
-```bash
-sudo -i d8 k get storageclass
-```
+1. Проверьте, что поды драйвера запущены в пространстве имён `d8-csi-nfs`:
 
-Установите StorageClass как используемый в кластере по умолчанию (укажите имя StorageClass):
+   ```bash
+   sudo -i d8 k -n d8-csi-nfs get pod -owide -w
+   ```
 
-```shell
-DEFAULT_STORAGE_CLASS=sds-r1
-sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
-```
+1. Создайте ресурс NFSStorageClass, который описывает подключение к вашему NFS-серверу:
+
+   ```bash
+   sudo -i d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: NFSStorageClass
+   metadata:
+     name: nfs-storage-class
+   spec:
+     connection:
+       host: <IP-адрес-NFS-сервера>
+       share: /srv/nfs/dvp
+       nfsVersion: "4.1"
+     reclaimPolicy: Delete
+     volumeBindingMode: WaitForFirstConsumer
+   EOF
+   ```
+
+   Параметры, которые нужно заменить:
+
+   - `<IP-адрес-NFS-сервера>` — IP-адрес NFS-сервера, доступный из кластера;
+   - `share` — экспортируемый каталог на NFS-сервере (в примере /srv/nfs/dvp).
+
+1. Установите созданный StorageClass как используемый по умолчанию для кластера (укажите имя StorageClass):
+
+   ```bash
+   DEFAULT_STORAGE_CLASS=nfs-storage-class
+   sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+   ``` 
+
+После этого все новые PVC, для которых не указан `storageClassName`, будут автоматически создаваться на NFS-хранилище.
