@@ -28,6 +28,15 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+const (
+	// ConditionTypeInstalled means it is the first installing process(installed was unknown or false before),
+	// It gets True only if all internal conditions are true, its gets false at Download, ReadyOnFilesystem and ReadyInRuntime
+	ConditionTypeInstalled = "Installed"
+
+	// ConditionTypeReady means the current state, it only relies on the ReadyInRuntime internal condition
+	ConditionTypeReady = "Ready"
+)
+
 type Service struct {
 	client client.Client
 	getter getter
@@ -45,6 +54,8 @@ func NewService(client client.Client, getter getter, logger *log.Logger) *Servic
 	}
 }
 
+// Start begins the status service event loop in a goroutine
+// It listens for package status change events and updates Application resources accordingly
 func (s *Service) Start(ctx context.Context, ch <-chan string) {
 	go func() {
 		for {
@@ -58,31 +69,44 @@ func (s *Service) Start(ctx context.Context, ch <-chan string) {
 	}()
 }
 
+// handleEvent processes a status change event for a package
+// Event format is "namespace.name" identifying the Application resource
 func (s *Service) handleEvent(ctx context.Context, ev string) {
 	logger := s.logger.With(slog.String("name", ev))
 
+	// Parse event name: "namespace.name"
 	splits := strings.Split(ev, ".")
+	if len(splits) != 2 {
+		logger.Warn("invalid event format, expected 'namespace.name'")
+		return
+	}
 
+	// Fetch the Application resource
 	app := new(v1alpha1.Application)
 	if err := s.client.Get(ctx, client.ObjectKey{Namespace: splits[0], Name: splits[1]}, app); err != nil {
 		logger.Warn("failed to get application", log.Err(err))
 		return
 	}
 
+	// Get the package status from the operator
 	packageStatus := s.getter(ev)
 	if packageStatus == nil {
 		logger.Warn("package status not found")
 		return
 	}
 
+	// Update the Application status with new conditions
 	original := app.DeepCopy()
-	s.applyConditions(app, packageStatus.Conditions)
+	s.applyInternalConditions(app, packageStatus.Conditions)
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
 	}
 }
 
-func (s *Service) applyConditions(app *v1alpha1.Application, conds []status.Condition) {
+// applyInternalConditions updates the Application's internal conditions from the operator
+// and then computes the public Installed and Ready conditions
+func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []status.Condition) {
+	// Build a map of previous conditions to preserve LastTransitionTime
 	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
 	for _, cond := range app.Status.InternalConditions {
 		prev[cond.Type] = cond
@@ -90,6 +114,8 @@ func (s *Service) applyConditions(app *v1alpha1.Application, conds []status.Cond
 
 	now := metav1.Now()
 	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(conds))
+
+	// Convert operator conditions to Application internal conditions
 	for _, c := range conds {
 		statusString := corev1.ConditionFalse
 		if c.Status {
@@ -105,6 +131,7 @@ func (s *Service) applyConditions(app *v1alpha1.Application, conds []status.Cond
 			LastProbeTime:      now,
 		}
 
+		// Preserve LastTransitionTime if status hasn't changed
 		if p, ok := prev[cond.Type]; ok && p.Status == cond.Status {
 			cond.LastTransitionTime = p.LastTransitionTime
 		}
@@ -113,4 +140,85 @@ func (s *Service) applyConditions(app *v1alpha1.Application, conds []status.Cond
 	}
 
 	app.Status.InternalConditions = applied
+
+	// Compute public conditions (Installed and Ready) from internal conditions
+	s.computeConditions(app)
+}
+
+func (s *Service) computeConditions(app *v1alpha1.Application) {
+	now := metav1.Now()
+
+	// Build a map of internal conditions for easier access
+	internalConds := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	for _, cond := range app.Status.InternalConditions {
+		internalConds[cond.Type] = cond
+	}
+
+	// Compute and update Ready condition (depends only on ReadyInRuntime)
+	if readyInRuntime, ok := internalConds[string(status.ConditionReadyInRuntime)]; ok && readyInRuntime.Status == corev1.ConditionTrue {
+		s.setCondition(app, ConditionTypeReady, corev1.ConditionTrue, "", "", now)
+	} else if ok {
+		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
+	} else {
+		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, "", "", now)
+	}
+
+	// Compute and update Installed condition (all internal conditions must be true)
+	if failedCond := s.findFailedCondition(internalConds); failedCond != nil {
+		s.setCondition(app, ConditionTypeInstalled, corev1.ConditionFalse, failedCond.Reason, failedCond.Message, now)
+	} else {
+		s.setCondition(app, ConditionTypeInstalled, corev1.ConditionTrue, "", "", now)
+	}
+}
+
+// findFailedCondition returns the first condition that is not true, prioritizing critical conditions
+func (s *Service) findFailedCondition(internalConds map[string]v1alpha1.ApplicationInternalStatusCondition) *v1alpha1.ApplicationInternalStatusCondition {
+	// Check critical conditions first in order of execution
+	criticalConditions := []status.ConditionName{
+		status.ConditionDownloaded,
+		status.ConditionReadyOnFilesystem,
+		status.ConditionRequirementsMet,
+		status.ConditionReadyInRuntime,
+	}
+
+	for _, condName := range criticalConditions {
+		if cond, exists := internalConds[string(condName)]; exists && cond.Status != corev1.ConditionTrue {
+			return &cond
+		}
+	}
+
+	// Check remaining conditions (HooksProcessed, HelmApplied)
+	for _, cond := range internalConds {
+		if cond.Status != corev1.ConditionTrue {
+			return &cond
+		}
+	}
+
+	return nil
+}
+
+// setCondition creates or updates a condition in the application status
+func (s *Service) setCondition(app *v1alpha1.Application, condType string, status corev1.ConditionStatus, reason, message string, now metav1.Time) {
+	newCond := v1alpha1.ApplicationStatusCondition{
+		Type:               condType,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: now,
+		LastProbeTime:      now,
+	}
+
+	// Find and update existing condition, preserving LastTransitionTime if status unchanged
+	for i, cond := range app.Status.Conditions {
+		if cond.Type == condType {
+			if cond.Status == status {
+				newCond.LastTransitionTime = cond.LastTransitionTime
+			}
+			app.Status.Conditions[i] = newCond
+			return
+		}
+	}
+
+	// Condition doesn't exist, append it
+	app.Status.Conditions = append(app.Status.Conditions, newCond)
 }

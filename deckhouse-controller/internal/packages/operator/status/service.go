@@ -20,14 +20,22 @@ import (
 )
 
 const (
-	ConditionDownloaded        ConditionName = "Downloaded"
+	// ConditionDownloaded indicates package image was successfully downloaded from registry
+	ConditionDownloaded ConditionName = "Downloaded"
+	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
 	ConditionReadyOnFilesystem ConditionName = "ReadyOnFilesystem"
-	ConditionRequirementsMet   ConditionName = "RequirementsMet"
-	ConditionReadyInRuntime    ConditionName = "ReadyInRuntime"
-	ConditionHooksProcessed    ConditionName = "HooksProcessed"
-	ConditionHelmApplied       ConditionName = "HelmApplied"
+	// ConditionRequirementsMet indicates package requirements validation passed
+	ConditionRequirementsMet ConditionName = "RequirementsMet"
+	// ConditionReadyInRuntime indicates package is fully loaded and operational in runtime
+	ConditionReadyInRuntime ConditionName = "ReadyInRuntime"
+	// ConditionHooksProcessed indicates all package hooks executed successfully
+	ConditionHooksProcessed ConditionName = "HooksProcessed"
+	// ConditionHelmApplied indicates Helm release was successfully applied
+	ConditionHelmApplied ConditionName = "HelmApplied"
 )
 
+// Error wraps an error with associated status conditions
+// Used to propagate both error details and status updates through the call stack
 type Error struct {
 	Err        error
 	Conditions []Condition
@@ -41,20 +49,23 @@ type ConditionName string
 
 type ConditionReason string
 
+// Service tracks package statuses and notifies listeners of changes
 type Service struct {
 	mu       sync.Mutex
-	statuses map[string]*Status
+	statuses map[string]*Status // keyed by "namespace.name"
 
-	ch chan string
+	ch chan string // notification channel for status changes
 }
 
+// Status represents the current state of a package
 type Status struct {
 	Conditions []Condition `json:"conditions" yaml:"conditions"`
 }
 
+// Condition represents a single status condition for a package
 type Condition struct {
 	Name    ConditionName   `json:"name" yaml:"name"`
-	Status  bool            `json:"status" yaml:"status"`
+	Status  bool            `json:"status" yaml:"status"` // true = condition met, false = condition failed
 	Reason  ConditionReason `json:"reason,omitempty" yaml:"reason,omitempty"`
 	Message string          `json:"message,omitempty" yaml:"message,omitempty"`
 }
@@ -66,40 +77,77 @@ func NewService() *Service {
 	}
 }
 
+// newStatus creates a new Status with all known conditions initialized to false
+func newStatus() *Status {
+	return &Status{
+		Conditions: []Condition{
+			{Name: ConditionDownloaded, Status: false},
+			{Name: ConditionReadyOnFilesystem, Status: false},
+			{Name: ConditionRequirementsMet, Status: false},
+			{Name: ConditionReadyInRuntime, Status: false},
+			{Name: ConditionHooksProcessed, Status: false},
+			{Name: ConditionHelmApplied, Status: false},
+		},
+	}
+}
+
+// GetCh returns a read-only channel that receives package names when their status changes
 func (s *Service) GetCh() <-chan string {
 	return s.ch
 }
 
+// GetStatus retrieves a copy of the current status for a package by name ("namespace.name")
+// Returns a copy to prevent race conditions with concurrent modifications
 func (s *Service) GetStatus(name string) *Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if status, ok := s.statuses[name]; ok {
-		return status
+	status, ok := s.statuses[name]
+	if !ok {
+		return nil
 	}
 
-	return nil
+	// Return a deep copy to prevent race conditions
+	condsCopy := make([]Condition, len(status.Conditions))
+	copy(condsCopy, status.Conditions)
+
+	return &Status{
+		Conditions: condsCopy,
+	}
 }
 
+// Delete removes a package status from tracking
+// Should be called when a package is deleted to prevent memory leaks
+func (s *Service) Delete(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.statuses, name)
+}
+
+// SetConditionTrue marks a condition as successful and notifies listeners if changed
 func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.statuses[name]; !ok {
-		s.statuses[name] = new(Status)
+		s.statuses[name] = newStatus()
 	}
 
+	// Notify only if the condition actually changed
 	if s.statuses[name].setCondition(Condition{Name: condition, Status: true}) {
 		s.ch <- name
 	}
 }
 
+// HandleError processes an error and extracts status conditions from it
+// Notifies listeners if any conditions changed
 func (s *Service) HandleError(name string, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.statuses[name]; !ok {
-		s.statuses[name] = new(Status)
+		s.statuses[name] = newStatus()
 	}
 
 	var notify bool
@@ -114,23 +162,24 @@ func (s *Service) HandleError(name string, err error) {
 	}
 }
 
+// extractConditions recursively extracts all conditions from wrapped status errors
 func extractConditions(err error) []Condition {
 	statusErr := new(Error)
 	if !errors.As(err, &statusErr) {
 		return nil
 	}
 
+	// Recursively extract conditions from wrapped errors and combine with current level
 	conds := extractConditions(statusErr.Err)
-	if len(conds) > 0 {
-		conds = append(statusErr.Conditions, conds...)
-	}
-
-	return conds
+	return append(statusErr.Conditions, conds...)
 }
 
+// setCondition updates or adds a condition, returning true if anything changed
 func (s *Status) setCondition(condition Condition) bool {
 	var notify bool
 	var found bool
+
+	// Try to find and update existing condition
 	for i := range s.Conditions {
 		if s.Conditions[i].Name != condition.Name {
 			continue
@@ -138,6 +187,7 @@ func (s *Status) setCondition(condition Condition) bool {
 
 		found = true
 
+		// Track if any field changed
 		if s.Conditions[i].Status != condition.Status {
 			s.Conditions[i].Status = condition.Status
 			notify = true
@@ -154,6 +204,7 @@ func (s *Status) setCondition(condition Condition) bool {
 		}
 	}
 
+	// Condition doesn't exist, add it
 	if !found {
 		s.Conditions = append(s.Conditions, condition)
 		notify = true
