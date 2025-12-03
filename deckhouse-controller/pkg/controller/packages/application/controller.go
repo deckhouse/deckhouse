@@ -323,20 +323,20 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
-	if !apv.Status.IsAppInstalled(app.Namespace, app.Name) {
+	if !apv.IsAppInstalled(app.Namespace, app.Name) {
 		original := apv.DeepCopy()
 
-		apv.Status = apv.Status.AddInstalledApp(app.Namespace, app.Name)
+		apv = apv.AddInstalledApp(app.Namespace, app.Name)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 			return fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
 
-	if !ap.Status.IsAppInstalled(app.Namespace, app.Name) {
+	if !ap.IsAppInstalled(app.Namespace, app.Name) {
 		original := ap.DeepCopy()
 
-		ap.Status = ap.Status.AddInstalledApp(app.Namespace, app.Name)
+		ap = ap.AddInstalledApp(app.Namespace, app.Name)
 
 		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
 			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
@@ -382,10 +382,10 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 		return res, fmt.Errorf("get ApplicationPackage for %s: %w", app.Spec.PackageName, err)
 	}
 
-	if ap.Status.IsAppInstalled(app.Namespace, app.Name) {
+	if ap.IsAppInstalled(app.Namespace, app.Name) {
 		original := ap.DeepCopy()
 
-		ap.Status = ap.Status.RemoveInstalledApp(app.Namespace, app.Name)
+		ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 
 		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
 			return res, fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
@@ -399,10 +399,10 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version), err)
 	}
 
-	if apv.Status.IsAppInstalled(app.Namespace, app.Name) {
+	if apv.IsAppInstalled(app.Namespace, app.Name) {
 		original := apv.DeepCopy()
 
-		apv.Status = apv.Status.RemoveInstalledApp(app.Namespace, app.Name)
+		apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 			return res, fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)

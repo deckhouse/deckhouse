@@ -137,8 +137,8 @@ func (a *ApplicationPackageVersion) IsDraft() bool {
 	return false
 }
 
-func (appStatus *ApplicationPackageVersionStatus) IsAppInstalled(namespace string, appName string) bool {
-	for _, v := range appStatus.UsedBy {
+func (a *ApplicationPackageVersion) IsAppInstalled(namespace string, appName string) bool {
+	for _, v := range a.Status.UsedBy {
 		if v.Namespace == namespace && v.Name == appName {
 			return true
 		}
@@ -147,20 +147,20 @@ func (appStatus *ApplicationPackageVersionStatus) IsAppInstalled(namespace strin
 	return false
 }
 
-func (appStatus ApplicationPackageVersionStatus) AddInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
+func (a *ApplicationPackageVersion) AddInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
 	appStatusInstalledApp := ApplicationPackageVersionStatusInstance{Namespace: namespace, Name: appName}
 
-	appStatus.UsedBy = append(appStatus.UsedBy, appStatusInstalledApp)
+	a.Status.UsedBy = append(a.Status.UsedBy, appStatusInstalledApp)
 
-	appStatus.UsedByCount++
+	a.Status.UsedByCount++
 
-	return appStatus
+	return a
 }
 
-func (appStatus *ApplicationPackageVersionStatus) RemoveInstalledApp(namespace string, appName string) ApplicationPackageVersionStatus {
-	usedBy := make([]ApplicationPackageVersionStatusInstance, 0, len(appStatus.UsedBy))
+func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
+	usedBy := make([]ApplicationPackageVersionStatusInstance, 0, len(a.Status.UsedBy))
 
-	for _, v := range appStatus.UsedBy {
+	for _, v := range a.Status.UsedBy {
 		if v.Namespace == namespace && v.Name == appName {
 			continue
 		}
@@ -168,13 +168,13 @@ func (appStatus *ApplicationPackageVersionStatus) RemoveInstalledApp(namespace s
 		usedBy = append(usedBy, v)
 	}
 
-	appStatus.UsedBy = usedBy
+	a.Status.UsedBy = usedBy
 
-	if appStatus.UsedByCount > 0 {
-		appStatus.UsedByCount--
+	if a.Status.UsedByCount > 0 {
+		a.Status.UsedByCount--
 	}
 
-	return *appStatus
+	return a
 }
 
 // +kubebuilder:object:root=true
