@@ -69,21 +69,6 @@ installTypes:
         template: getting_started/dvp/global/STEP_VIRTUALIZATION.md
       step7:
         name:
-          en: Ingress and DNS configuration
-          ru: Настройка Ingress и DNS
-        template: getting_started/dvp/global/STEP_INGRESS.md
-      step8:
-        name:
-          en: User creation
-          ru: Создание пользователя
-        template: getting_started/dvp/global/STEP_USER.md
-      step9:
-        name:
-          en: Creating a project and a virtual machine
-          ru: Создание проекта и виртуальной машины
-        template: getting_started/dvp/global/STEP_PROJECT.md
-      step10:
-        name:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/dvp/global/STEP_FINISH.md
