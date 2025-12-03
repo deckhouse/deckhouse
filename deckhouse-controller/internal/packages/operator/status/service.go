@@ -17,6 +17,8 @@ package status
 import (
 	"errors"
 	"sync"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -64,10 +66,10 @@ type Status struct {
 
 // Condition represents a single status condition for a package
 type Condition struct {
-	Name    ConditionName   `json:"name" yaml:"name"`
-	Status  bool            `json:"status" yaml:"status"` // true = condition met, false = condition failed
-	Reason  ConditionReason `json:"reason,omitempty" yaml:"reason,omitempty"`
-	Message string          `json:"message,omitempty" yaml:"message,omitempty"`
+	Name    ConditionName          `json:"name" yaml:"name"`
+	Status  metav1.ConditionStatus `json:"status" yaml:"status"` // true = condition met, false = condition failed
+	Reason  ConditionReason        `json:"reason,omitempty" yaml:"reason,omitempty"`
+	Message string                 `json:"message,omitempty" yaml:"message,omitempty"`
 }
 
 func NewService() *Service {
@@ -81,12 +83,12 @@ func NewService() *Service {
 func newStatus() *Status {
 	return &Status{
 		Conditions: []Condition{
-			{Name: ConditionDownloaded, Status: false},
-			{Name: ConditionReadyOnFilesystem, Status: false},
-			{Name: ConditionRequirementsMet, Status: false},
-			{Name: ConditionReadyInRuntime, Status: false},
-			{Name: ConditionHooksProcessed, Status: false},
-			{Name: ConditionHelmApplied, Status: false},
+			{Name: ConditionDownloaded, Status: metav1.ConditionUnknown},
+			{Name: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
+			{Name: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
+			{Name: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
+			{Name: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
+			{Name: ConditionHelmApplied, Status: metav1.ConditionUnknown},
 		},
 	}
 }
@@ -135,7 +137,7 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	}
 
 	// Notify only if the condition actually changed
-	if s.statuses[name].setCondition(Condition{Name: condition, Status: true}) {
+	if s.statuses[name].setCondition(Condition{Name: condition, Status: metav1.ConditionTrue}) {
 		s.ch <- name
 	}
 }

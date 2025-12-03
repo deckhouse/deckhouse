@@ -117,14 +117,9 @@ func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []sta
 
 	// Convert operator conditions to Application internal conditions
 	for _, c := range conds {
-		statusString := corev1.ConditionFalse
-		if c.Status {
-			statusString = corev1.ConditionTrue
-		}
-
 		cond := v1alpha1.ApplicationInternalStatusCondition{
 			Type:               string(c.Name),
-			Status:             statusString,
+			Status:             corev1.ConditionStatus(c.Status),
 			Reason:             string(c.Reason),
 			Message:            c.Message,
 			LastTransitionTime: now,

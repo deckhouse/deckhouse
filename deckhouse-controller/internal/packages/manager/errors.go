@@ -16,6 +16,7 @@ package manager
 
 import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -38,7 +39,7 @@ func newApplySettingsErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonApplySettings,
 				Message: err.Error(),
 			},
@@ -52,7 +53,7 @@ func newHelmUpgradeErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHelmUpgradeFailed,
 				Message: err.Error(),
 			},
@@ -66,7 +67,7 @@ func newInitHooksErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonInitHooksFailed,
 				Message: err.Error(),
 			},
@@ -80,7 +81,7 @@ func newLoadFailedErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonLoadFailed,
 				Message: err.Error(),
 			},
@@ -94,13 +95,13 @@ func newStartupHookErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionHooksProcessed,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonStartupHooksFailed,
 				Message: err.Error(),
 			},
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHooksFailed,
 				Message: err.Error(),
 			},
@@ -114,13 +115,13 @@ func newBeforeHelmHookErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionHooksProcessed,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonBeforeHelmHooksFailed,
 				Message: err.Error(),
 			},
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHooksFailed,
 				Message: err.Error(),
 			},
@@ -134,13 +135,13 @@ func newAfterHelmHookErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionHooksProcessed,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonAfterHelmHooksFailed,
 				Message: err.Error(),
 			},
 			{
 				Name:    status.ConditionReadyInRuntime,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHooksFailed,
 				Message: err.Error(),
 			},

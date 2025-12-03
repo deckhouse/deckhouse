@@ -1,6 +1,8 @@
 package installer
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 )
 
@@ -23,7 +25,7 @@ func newCreatePackageDirErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionDownloaded,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreatePackageDir,
 				Message: err.Error(),
 			},
@@ -37,7 +39,7 @@ func newGetRootHashErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionDownloaded,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetRootHash,
 				Message: err.Error(),
 			},
@@ -51,7 +53,7 @@ func newGetImageReaderErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionDownloaded,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonGetImageReader,
 				Message: err.Error(),
 			},
@@ -65,7 +67,7 @@ func newImageByTarErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionDownloaded,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonImageByTar,
 				Message: err.Error(),
 			},
@@ -79,7 +81,7 @@ func newUnmountErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyOnFilesystem,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonUnmount,
 				Message: err.Error(),
 			},
@@ -93,7 +95,7 @@ func newCloseDeviceMapperErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyOnFilesystem,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCloseDeviceMapper,
 				Message: err.Error(),
 			},
@@ -107,7 +109,7 @@ func newComputeHashErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyOnFilesystem,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonComputeHash,
 				Message: err.Error(),
 			},
@@ -121,7 +123,7 @@ func newCreateDeviceMapperErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyOnFilesystem,
-				Status:  false,
+				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreateDeviceMapper,
 				Message: err.Error(),
 			},
@@ -135,7 +137,7 @@ func newMountErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:   status.ConditionReadyOnFilesystem,
-				Status: false,
+				Status: metav1.ConditionFalse,
 				Reason: ConditionReasonMount,
 			},
 		},
