@@ -5,6 +5,26 @@
 </h2>
 <div class="cards-blocks__cards">
 
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+⚙️ <span class="cards-item__title-text">Прочие настройки</span>
+</h3>
+<div class="cards-item__text">
+<p>Настройте Ingress-контроллер, DNS и создайте пользователей для доступа к веб-интерфейсам кластера.</p>
+<p><a href="/products/virtualization-platform/documentation/admin/install/steps/ingress.html" target="_blank">Прочие настройки →</a></p>
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🖥️ <span class="cards-item__title-text">Начало работы с виртуальными машинами</span>
+</h3>
+<div class="cards-item__text">
+<p>Создавайте виртуальные машины, управляйте дисками, образами и настраивайте сетевые политики.</p>
+<p><a href="/products/virtualization-platform/documentation/user/overview.html" target="_blank">Руководство пользователя →</a></p>
+</div>
+</div>
+
 {% if page.platform_code != 'existing' and page.platform_code != 'kind' %}
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
@@ -23,7 +43,7 @@
 📊 <span class="cards-item__title-text">Мониторинг</span>
 </h3>
 <div class="cards-item__text">
-<p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
+<p>Изучите дашборды Grafana, поставляемые с Deckhouse.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>Для доступа к Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
 <p><a href="/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
