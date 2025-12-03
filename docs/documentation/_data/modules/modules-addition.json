@@ -50,6 +50,13 @@
     ],
     "external": "true",
     "path": "/modules/code/stable/"
+  }, 
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/stable/" 
   },
   "commander": {
     "editions": [
