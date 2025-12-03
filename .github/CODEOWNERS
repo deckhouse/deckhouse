@@ -14,7 +14,7 @@
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212
-040-terraform-manager/          @name212 @sprait @aleksey-su
+040-terraform-manager/          @name212 @aleksey-su
 042-kube-dns/                   @apolovov
 050-network-policy-engine/      @apolovov
 101-cert-manager/               @Suselz
@@ -37,7 +37,7 @@
 450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
-470-chrony/                     @name212 @sprait
+470-chrony/                     @name212
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms
 500-openvpn/                    @apolovov
@@ -49,7 +49,7 @@
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
 610-service-with-healthchecks   @apolovov
-800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
+800-deckhouse-tools/            @RomanenkoDenys @name212
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
 candi/                          @name212
