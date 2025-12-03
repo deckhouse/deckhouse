@@ -1544,74 +1544,261 @@ To add a GPU node to the cluster, perform the following steps:
    **Ubuntu**
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: install-cuda.sh
-   spec:
-     bundles:
-     - ubuntu-lts
-     content: |
-       # Copyright 2023 Flant JSC
-       #
-       # Licensed under the Apache License, Version 2.0 (the "License");
-       # you may not use this file except in compliance with the License.
-       # You may obtain a copy of the License at
-       #
-       #     http://www.apache.org/licenses/LICENSE-2.0
-       #
-       # Unless required by applicable law or agreed to in writing, software
-       # distributed under the License is distributed on an "AS IS" BASIS,
-       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       # See the License for the specific language governing permissions and
-       # limitations under the License.
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: install-cuda.sh
+  spec:
+    bundles:
+    - ubuntu-lts
+    content: |
+      #!/bin/bash
+      set -e
 
-       if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-         distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-         curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/   sources.list.d/nvidia-container-toolkit.list
-       fi
-       bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-     nodeGroups:
-     - gpu
-     weight: 30
+      # Checking if curl is installed
+      if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
+      then
+        echo "curl or wget is not installed. Installing..."
+        sudo apt update
+        sudo apt install -y curl wget
+      fi
+
+      # Define file paths
+      CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
+      NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+
+      # Update repos
+      sudo apt update
+
+      # Install CUDA keyring
+      if [ ! -f "$CUDA_KEYRING_DEB" ]; then
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/$CUDA_KEYRING_DEB
+        sudo dpkg -i $CUDA_KEYRING_DEB
+      fi
+
+      # Add NVIDIA container toolkit repos
+      if [ ! -f "$NVIDIA_GPG_KEY" ]; then
+      curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+        sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      fi
+
+      # Check and install Linux headers
+      if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing linux headers..."
+        sudo apt install -y "linux-headers-$(uname -r)"
+      fi
+
+      # Installation of NVIDIA drivers
+      if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing CUDA drivers..."
+        sudo apt install -y cuda-drivers-575
+      fi
+
+      # Installation of NVIDIA Container Toolkit
+      if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing NVIDIA container toolkit..."
+        sudo apt install -y nvidia-container-toolkit
+      fi
+
+    nodeGroups:
+    - gpu
+    weight: 5   
+   ```
+
+   **Debian**
+
+   ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: install-cuda.sh
+  spec:
+    bundles:
+    - debian
+    content: |
+      #!/bin/bash
+      set -e
+
+      # Checking if curl is installed
+      if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
+      then
+        echo "curl or wget is not installed. Installing..."
+        sudo apt update
+        sudo apt install -y curl wget
+      fi
+
+      # Define file paths
+      CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
+      NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+
+      # Update repos
+      sudo apt update
+
+      # Install CUDA keyring
+      if [ ! -f "$CUDA_KEYRING_DEB" ]; then
+        wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
+        sudo dpkg -i $CUDA_KEYRING_DEB
+      fi
+
+      # Add NVIDIA container toolkit repos
+      if [ ! -f "$NVIDIA_GPG_KEY" ]; then
+      curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+        sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      fi
+
+      # Check and install Linux headers
+      if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing linux headers..."
+        sudo apt install -y "linux-headers-$(uname -r)"
+      fi
+
+      # Installation of NVIDIA drivers
+      if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing CUDA drivers..."
+        sudo apt install -y cuda-drivers-575
+      fi
+
+      # Installation of NVIDIA Container Toolkit
+      if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
+        echo "Installing NVIDIA container toolkit..."
+        sudo apt install -y nvidia-container-toolkit
+      fi
+
+    nodeGroups:
+    - gpu
+    weight: 5  
    ```
 
    **CentOS**
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: install-cuda.sh
-   spec:
-     bundles:
-     - centos
-     content: |
-       # Copyright 2023 Flant JSC
-       #
-       # Licensed under the Apache License, Version 2.0 (the "License");
-       # you may not use this file except in compliance with the License.
-       # You may obtain a copy of the License at
-       #
-       #     http://www.apache.org/licenses/LICENSE-2.0
-       #
-       # Unless required by applicable law or agreed to in writing, software
-       # distributed under the License is distributed on an "AS IS" BASIS,
-       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       # See the License for the specific language governing permissions and
-       # limitations under the License.
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: install-cuda.sh
+  spec:
+    bundles:
+    - centos
+    content: |
+      #!/bin/bash
+      set -e
+      INSTALL_NEEDED=false
 
-       if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-         distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-       fi
-       bb-dnf-install nvidia-container-toolkit nvidia-driver
-       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-     nodeGroups:
-     - gpu
-     weight: 30
+      # Checking if curl is installed
+      if ! command -v curl &> /dev/null; then
+        echo "curl is not installed. Installing..."
+        sudo dnf install -y curl
+        INSTALL_NEEDED=true
+      fi
+
+      # Checking another necessary packages and dependencies are installed
+      if ! rpm -q epel-release &> /dev/null; then
+        echo "EPEL release is not installed. Installing..."
+        sudo dnf install -y epel-release
+        INSTALL_NEEDED=true
+      fi
+      
+      # Checking if dev tools are installed
+      if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
+        echo "Development tools are not completely installed. Installing..."
+        sudo dnf update -y
+        sudo dnf install -y gcc make dracut kernel-devel-$(uname -r) elfutils-libelf-devel
+        INSTALL_NEEDED=true
+      fi
+      
+      # Installation of NVIDIA drivers
+      if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
+        echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
+        sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+        sudo rpm --import https://developer.download.nvidia.com/compute/cuda/repos/GPGKEY
+        sudo dnf clean all
+        sudo dnf install -y nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-settings nvidia-persistenced
+        INSTALL_NEEDED=true
+      fi
+
+      # Installation of NVIDIA Container Toolkit
+      if ! rpm -q nvidia-container-toolkit &> /dev/null; then
+        echo "NVIDIA container toolkit is not installed. Installing..."
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+        sudo dnf install -y nvidia-container-toolkit
+        INSTALL_NEEDED=true
+      fi
+
+      # Bashible service creating if drivers were installed
+      if [ "$INSTALL_NEEDED" = true ]; then
+        base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+        echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+        sudo systemctl enable bashible.timer
+        base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+        echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+        sudo systemctl enable bashible.service
+        sudo systemctl reboot
+      fi
+
+    nodeGroups:
+    - gpu
+    weight: 5
+   ```
+
+   **RedOS**
+
+   ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: NodeGroupConfiguration
+  metadata:
+    name: install-cuda.sh
+  spec:
+    bundles:
+    - redos
+    content: |
+      #!/bin/bash
+      set -e
+      INSTALL_NEEDED=false
+
+      # Installation of NVIDIA drivers
+      if ! rpm -q nvidia-drivers &> /dev/null || ! rpm -q cuda &> /dev/null || ! rpm -q nvidia-persistenced &> /dev/null; then
+        echo "Update system"
+        sudo dnf update -y
+        sudo dnf install -y nvidia-drivers.x86_64 cuda.x86_64 nvidia-persistenced.x86_64
+        INSTALL_NEEDED=true
+      fi
+
+      # Installation of NVIDIA Container Toolkit
+      if ! rpm -q nvidia-container-toolkit &> /dev/null; then
+        echo "NVIDIA container toolkit is not installed. Installing..."
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+        sudo dnf install -y nvidia-container-toolkit
+        INSTALL_NEEDED=true
+      fi
+
+      # GRUB configuration and nouveau disabling
+      if ! grep -q "nouveau.modeset=0" /etc/default/grub; then
+        echo "GRUB configuration and nouveau disabling"
+        sudo -E grubby --update-kernel ALL --args="nouveau.modeset=0"
+        sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+        INSTALL_NEEDED=true
+      fi
+
+      # Bashible service creating if drivers were installed
+      if [ "$INSTALL_NEEDED" = true ]; then
+      base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+      echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+      sudo systemctl enable bashible.timer
+      base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+      echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+      sudo systemctl enable bashible.service
+      sudo systemctl reboot
+      fi
+
+    nodeGroups:
+    - gpu
+    weight: 5
    ```
 
    After these configurations are applied, perform bootstrap and **reboot** the nodes so that settings are applied and the drivers get installed.
@@ -1704,24 +1891,30 @@ To add a GPU node to the cluster, perform the following steps:
    Create a Job:
 
    ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: nvidia-cuda-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-         containers:
-           - name: nvidia-cuda-test
-             image: nvidia/cuda:11.6.2-base-ubuntu20.04
-             imagePullPolicy: "IfNotPresent"
-             command:
-               - nvidia-smi
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: nvidia-cuda-test
+    namespace: default
+  spec:
+    completions: 1
+    template:
+      spec:
+        restartPolicy: Never
+        nodeSelector:
+          node.deckhouse.io/group: gpu
+          node-role/gpu: ""
+        tolerations:
+          - key: "node-role"
+            operator: "Equal"
+            value: "gpu"
+            effect: "NoSchedule"
+        containers:
+          - name: nvidia-cuda-test
+            image: nvidia/cuda:11.6.2-base-ubuntu20.04
+            imagePullPolicy: "IfNotPresent"
+            command:
+              - nvidia-smi
    ```
 
    Check the logs using the command:
@@ -1760,22 +1953,27 @@ To add a GPU node to the cluster, perform the following steps:
    Create a Job:
 
    ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: gpu-operator-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-         containers:
-           - name: gpu-operator-test
-             image: nvidia/samples:vectoradd-cuda10.2
-             imagePullPolicy: "IfNotPresent"
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: gpu-operator-test
+    namespace: default
+  spec:
+    completions: 1
+    template:
+      spec:
+        restartPolicy: Never
+        nodeSelector:
+          node.deckhouse.io/group: gpu
+        tolerations:
+          - key: "node-role"
+            operator: "Equal"
+            value: "gpu"
+            effect: "NoSchedule"
+        containers:
+          - name: gpu-operator-test
+            image: nvidia/samples:vectoradd-cuda10.2
+            imagePullPolicy: "IfNotPresent"
    ```
 
    Check the logs using the command::
