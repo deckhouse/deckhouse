@@ -138,4 +138,149 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the Hubble web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+  extendedMetrics:
+    type: object
+    default:
+      enabled: false
+      collectors: [ ]
+    description: |
+      Configuration for exporting extended metrics from Cilium agents.
+      Extended metrics provide deeper insight into cluster network behavior.
 
+      > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
+
+      For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics).
+    x-examples:
+      - enabled: true
+        collectors:
+          - name: Drop
+            contextOptions: labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod
+          - name: Flow
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables the export of extended metrics from Cilium agents.
+        x-examples:
+          - true
+      collectors:
+        type: array
+        default: [ ]
+        description: |
+          List of Hubble extended metrics to export. Each collector represents a specific metric type.
+          Available metrics include `DNS`, `Drop`, `Flow`, `FlowsToWorld`, `HTTP`, `HTTPv2`, `ICMP`, `Kafka`, and `TCP`.
+
+          For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
+        x-examples:
+          - - name: Drop
+              contextOptions: "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+            - name: Flow
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of the extended metric to export.
+              enum:
+                - "DNS"
+                - "Drop"
+                - "Flow"
+                - "FlowsToWorld"
+                - "HTTP"
+                - "HTTPv2"
+                - "ICMP"
+                - "Kafka"
+                - "TCP"
+              x-examples:
+                - "Flow"
+            contextOptions:
+              type: string
+              description: |
+                Optional context options for Hubble metrics.
+                Context options allow customizing metric collection behavior.
+
+                > **Warning.** A large number of labels on metrics can lead to Prometheus performance degradation.
+
+                For more information about supported options see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#context-options).
+              x-examples:
+                - "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+  flowLogs:
+    type: object
+    default:
+      enabled: false
+      allowList: [ ]
+      denyList: [ ]
+    description: |
+      Configuration for exporting event logs from Cilium agents.
+      Event logs provide detailed visibility into Cilium's network events.
+
+      > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
+
+      For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#configuring-hubble-exporter).
+    x-examples:
+      - enabled: true
+        allowList:
+          - '{"verdict":["DROPPED","ERROR"]}'
+        denyList:
+          - '{"source_pod":["kube-system/"]}'
+          - '{"destination_pod":["kube-system/"]}'
+        fieldMaskList:
+          - "time"
+          - "source.namespace"
+          - "verdict"
+        fileMaxSizeMb: 50
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enables event logging for Cilium agents.
+          The log file is located on the node's filesystem at `/var/run/cilium/hubble/events.log`.
+        x-examples:
+          - true
+      allowList:
+        type: array
+        default: [ ]
+        description: |
+          List of allowed filters for event logging.
+          Only events matching these filters will be exported.
+
+          > **Warning.** Be careful when filling out this list. If an incorrect filter value is entered, the Cilium agent may fail to start.
+
+          For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+        items:
+          type: string
+        x-examples:
+          - [ '{"verdict":["DROPPED","ERROR"]}' ]
+      denyList:
+        type: array
+        default: [ ]
+        description: |
+          List of denied filters for event logging.
+          Events matching these filters will be excluded from export.
+
+          > **Warning.** Be careful when filling out this list. If an incorrect filter value is entered, the Cilium agent may fail to start.
+
+          For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+        items:
+          type: string
+        x-examples:
+          - [ '{"source_pod":["kube-system/"]}', '{"destination_pod":["kube-system/"]}' ]
+      fieldMaskList:
+        type: array
+        default: [ ]
+        description: |
+          List of fields that should be displayed in events.
+
+          > **Warning.** Be careful when filling out this list. If an incorrect filter value is entered, the Cilium agent may fail to start.
+
+          For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#field-mask).
+        x-examples:
+          - [ "time", "source.namespace", "verdict", "IP" ]
+      fileMaxSizeMb:
+        type: integer
+        default: 10
+        description: Size in MB at which to rotate the Hubble export file.
+        x-examples:
+          - 50

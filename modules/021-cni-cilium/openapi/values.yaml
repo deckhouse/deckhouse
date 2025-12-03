@@ -86,6 +86,60 @@ properties:
                   ca:
                     type: string
                     x-examples: ["---ROOT PEM---"]
+          settings:
+            type: object
+            properties:
+              extendedMetrics:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  collectors:
+                    type: array
+                    default: [ ]
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          enum: [ "DNS","Drop","Flow","FlowsToWorld","HTTP","HTTPv2","ICMP","Kafka","TCP" ]
+                        contextOptions:
+                          type: string
+              flowLogs:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  allowList:
+                    type: array
+                    items:
+                      type: string
+                    default: [ ]
+                  denyList:
+                    type: array
+                    items:
+                      type: string
+                    default: [ ]
+                  fieldMaskList:
+                    type: array
+                    items:
+                      type: string
+                    default: [ ]
+                  fileMaxSizeMb:
+                    type: integer
+                    default: 10
+            default:
+              extendedMetrics:
+                enabled: false
+                collectors: [ ]
+              flowLogs:
+                enabled: false
+                allowList: [ ]
+                denyList: [ ]
+                fieldMaskList: [ ]
+                fileMaxSizeMb: 10
       egressGatewaysMap:
         type: object
         additionalProperties:

@@ -222,6 +222,18 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-metrics
                   name: agent
+        {{- if $context.Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
+            - upstream: http://127.0.0.1:9091/metrics
+              path: /extended-metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ $context.Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: agent
+        {{- end }}
         ports:
         - containerPort: 4241
           name: https-metrics

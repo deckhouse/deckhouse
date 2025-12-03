@@ -59,8 +59,34 @@ modules:
 )
 
 var _ = Describe("Module :: ciliumHubble :: helm template ::", func() {
-	f := SetupHelmConfig(`{ciliumHubble: {internal: {deployDexAuthenticator: true, ui: {ca: CACA, key: ZXC, cert: CERT}, relay: {serverCerts: {ca: CACA, key: ZXC, cert: CERT}, clientCerts: {ca: CACA, key: ZXC, cert: CERT}}}, auth: {}}}`)
-
+	f := SetupHelmConfig(`
+ciliumHubble:
+  internal:
+    deployDexAuthenticator: true
+    ui:
+      ca: CACA
+      key: ZXC
+      cert: CERT
+    relay:
+      serverCerts:
+        ca: CACA
+        key: ZXC
+        cert: CERT
+      clientCerts:
+        ca: CACA
+        key: ZXC
+        cert: CERT
+  auth: {}
+  extendedMetrics:
+    enabled: false
+    collectors: []
+  flowLogs:
+    enabled: false
+    allowList: []
+    denyList: []
+    fieldMaskList: []
+    fileMaxSizeMb: 10
+`)
 	Context("Cluster with ciliumHubble", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
