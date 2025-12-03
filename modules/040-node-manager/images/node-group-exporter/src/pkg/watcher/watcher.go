@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubernetes
+package watcher
 
 import (
 	"context"
@@ -180,10 +180,28 @@ func (w *Watcher) ListNodeGroups(ctx context.Context) ([]*entity.NodeGroupData, 
 	for _, item := range nodeGroupList.Items {
 		nodeGroup, err := ConvertToNodeGroup(&item)
 		if err != nil {
-			w.logger.Debug("Error Convert NodeGroup", log.Err(err))
+			w.logger.Error("Error Convert NodeGroup", log.Err(err))
 			continue
 		}
 		result = append(result, nodeGroup)
+	}
+
+	return result, nil
+}
+func (w *Watcher) ListNodes(ctx context.Context) ([]*entity.NodeData, error) {
+	nodeList, err := w.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*entity.NodeData, 0, len(nodeList.Items))
+	for _, item := range nodeList.Items {
+		node, err := ConvertToNode(&item)
+		if err != nil {
+			w.logger.Error("Error Convert Node", log.Err(err))
+			continue
+		}
+		result = append(result, node)
 	}
 
 	return result, nil

@@ -23,18 +23,16 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"node-group-exporter/pkg/entity"
-	k8s "node-group-exporter/pkg/kubernetes"
+	"node-group-exporter/pkg/watcher"
 )
 
 // NodeGroupCollector implements prometheus.Collector interface
 type NodeGroupCollector struct {
-	clientset    kubernetes.Interface
-	watcher      *k8s.Watcher
+	watcher      *watcher.Watcher
 	nodeGroups   map[string]*entity.NodeGroupData
 	nodesByGroup map[string][]*entity.NodeData
 	mutex        sync.RWMutex
@@ -60,7 +58,6 @@ type NodeGroupCollector struct {
 
 func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Config, logger *log.Logger) (*NodeGroupCollector, error) {
 	collector := &NodeGroupCollector{
-		clientset:    clientset,
 		nodeGroups:   make(map[string]*entity.NodeGroupData),
 		nodesByGroup: make(map[string][]*entity.NodeData),
 		logger:       logger,
@@ -169,7 +166,7 @@ func NewNodeGroupCollector(clientset kubernetes.Interface, restConfig *rest.Conf
 		[]string{"node_group_name"},
 	)
 
-	watcher, err := k8s.NewWatcher(clientset, restConfig, collector, logger)
+	watcher, err := watcher.NewWatcher(clientset, restConfig, collector, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +255,7 @@ func (c *NodeGroupCollector) syncResources(ctx context.Context) error {
 }
 
 func (c *NodeGroupCollector) syncNodes(ctx context.Context) error {
-	nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := c.watcher.ListNodes(ctx)
 	if err != nil {
 		return err
 	}
@@ -267,10 +264,9 @@ func (c *NodeGroupCollector) syncNodes(ctx context.Context) error {
 	defer c.mutex.Unlock()
 
 	c.nodesByGroup = make(map[string][]*entity.NodeData)
-	for _, node := range nodes.Items {
-		nodeData := k8s.ToNodeMetricsData(&node)
-		if nodeData.NodeGroup != "" {
-			c.nodesByGroup[nodeData.NodeGroup] = append(c.nodesByGroup[nodeData.NodeGroup], &nodeData)
+	for _, node := range nodes {
+		if node.NodeGroup != "" {
+			c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
 		}
 	}
 

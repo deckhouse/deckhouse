@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubernetes
+package watcher
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func extractNodeGroupFromNode(node *v1.Node) string {
 	return ""
 }
 
-func ToNodeMetricsData(node *v1.Node) entity.NodeData {
+func ToNodeData(node *v1.Node) entity.NodeData {
 	nodeGroup := extractNodeGroupFromNode(node)
 	return entity.NodeData{
 		Name:      node.Name,
@@ -66,7 +66,7 @@ func isHasErrors(nodeGroup *ngv1.NodeGroup) float64 {
 	return 0.0
 }
 
-func ToNodeGroupMetricsData(nodeGroup *ngv1.NodeGroup) entity.NodeGroupData {
+func ToNodeGroupData(nodeGroup *ngv1.NodeGroup) entity.NodeGroupData {
 	return entity.NodeGroupData{
 		Name:      nodeGroup.Name,
 		NodeType:  nodeGroup.Spec.NodeType.String(),
@@ -94,7 +94,7 @@ func ConvertToNodeGroup(obj any) (*entity.NodeGroupData, error) {
 		return nil, err
 	}
 
-	nodeGroupData := ToNodeGroupMetricsData(&ng)
+	nodeGroupData := ToNodeGroupData(&ng)
 	return &nodeGroupData, nil
 }
 
@@ -104,6 +104,6 @@ func ConvertToNode(obj any) (*entity.NodeData, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to convert obj to v1.Node: %T", obj)
 	}
-	nodeData := ToNodeMetricsData(nodeObj)
+	nodeData := ToNodeData(nodeObj)
 	return &nodeData, nil
 }
