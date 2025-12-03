@@ -19,10 +19,11 @@
 SWAPFILE="/var/lib/swapfile"
 SYSCTL_CONF="/etc/sysctl.d/99-swap.conf"
 
+
+{{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
 ###############################################
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
-{{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
 
 # Stop and mask systemd swap units
 for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
@@ -56,10 +57,35 @@ echo "vm.swappiness=0" > "$SYSCTL_CONF"
 exit 0
 {{- end }}
 
+
+{{- if eq $swapBehavior "LimitedSwap" }}
 ###############################################
 #  CASE 2: swapBehavior == LimitedSwap
 ###############################################
-{{- if eq $swapBehavior "LimitedSwap" }}
+
+SKIP_SWAP_CONFIGURATION=false
+
+# Helper functions
+version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+has_cgroup2() { [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]; }
+
+# Check Kubernetes version (minimum 1.22 for swap support)
+KUBE_VERSION="{{ .kubernetesVersion }}"
+if ! version_ge "$KUBE_VERSION" "1.22"; then
+  bb-log-warning "Swap support requires Kubernetes >= 1.22, current version is $KUBE_VERSION. Skipping swap configuration."
+  SKIP_SWAP_CONFIGURATION=true
+fi
+
+# Check cgroup v2 (swap only works with cgroupv2)
+if ! has_cgroup2; then
+  bb-log-warning "Swap support requires cgroup v2, but this node uses cgroup v1. Skipping swap configuration."
+  SKIP_SWAP_CONFIGURATION=true
+fi
+
+# Exit if preconditions are not met
+if [ "$SKIP_SWAP_CONFIGURATION" = "true" ]; then
+  exit 0
+fi
 
 if [ -z "{{ $limitedSwapSize }}" ]; then
   bb-log-error "Error getting limitedSwap.size"
