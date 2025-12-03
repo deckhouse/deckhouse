@@ -1904,30 +1904,30 @@ To add a GPU node to the cluster, perform the following steps:
    Create a Job:
 
    ```yaml
-  apiVersion: batch/v1
-  kind: Job
-  metadata:
-    name: gpu-operator-test
-    namespace: default
-  spec:
-    completions: 1
-    template:
-      spec:
-        restartPolicy: Never
-        nodeSelector:
-          node.deckhouse.io/group: gpu
-        tolerations:
-          - key: "node-role"
-            operator: "Equal"
-            value: "gpu"
-            effect: "NoSchedule"
-        containers:
-          - name: gpu-operator-test
-            image: nvidia/samples:vectoradd-cuda10.2
-            imagePullPolicy: "IfNotPresent"
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: gpu-operator-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         tolerations:
+           - key: "node-role"
+             operator: "Equal"
+             value: "gpu"
+             effect: "NoSchedule"
+         containers:
+           - name: gpu-operator-test
+             image: nvidia/samples:vectoradd-cuda10.2
+             imagePullPolicy: "IfNotPresent"
    ```
 
-   Check the logs using the command::
+   Check the logs using the command:
 
    ```bash
    d8 k logs job/gpu-operator-test
