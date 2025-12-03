@@ -433,9 +433,25 @@ spec:
       rego: |
         package d8.custom
 
-        is_connect { input.review.operation == "CONNECT" }
-        is_exec_or_attach { input.review.resource.resource == "pods/exec" }
-        is_exec_or_attach { input.review.resource.resource == "pods/attach" }
+        is_connect {
+          input.review.operation == "CONNECT"
+        }
+
+        # requestSubResource is preferred, but fall back to subResource for older APIs
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", input.review.subResource)
+          sr == sub
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("exec")
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("attach")
+        }
 
         is_forbidden_namespace {
           ns := input.review.namespace
@@ -469,6 +485,5 @@ spec:
 Key data and checks for CONNECT validation:
 
 - Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
-- Use `input.review.resource.resource` to check for `pods/exec` or `pods/attach` subresources.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
 - The namespace is available in `input.review.namespace`.

@@ -125,7 +125,7 @@ webhooks:
 {{- end }}
 
 {{/* Webhook for deny-exec in system namespaces (heritage: deckhouse) - the main webhook excludes these */}}
-{{/* TODO: restore condition: if and (ne .Values.global.deckhouseVersion "dev") ... */}}
+{{- if ne .Values.global.deckhouseVersion "dev" }}
 - name: deny-exec-heritage.admission-policy-engine.deckhouse.io
   namespaceSelector:
     matchExpressions:
@@ -140,6 +140,7 @@ webhooks:
     operations: ["CONNECT"]
   timeoutSeconds: 15
   {{- include "validating.webhook.config" . | nindent 2 }}
+{{- end }}
 
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}

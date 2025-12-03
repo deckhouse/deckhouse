@@ -25,13 +25,20 @@ spec:
         is_connect {
           input.review.operation == "CONNECT"
         }
-
-        is_pod_exec_or_attach {
-          input.review.resource.resource == "pods/exec"
+        
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", input.review.subResource)
+          sr == sub
         }
 
         is_pod_exec_or_attach {
-          input.review.resource.resource == "pods/attach"
+          input.review.resource.resource == "pods"
+          subresource_is("exec")
+        }
+
+        is_pod_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("attach")
         }
 
         # Check if the target pod has heritage: deckhouse label via inventory
