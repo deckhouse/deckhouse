@@ -21,6 +21,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'release-[0-9].[0-9]+'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -46,61 +47,6 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_ee:
-    name: Build EE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "EE"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_se:
-    name: Build SE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_se_plus:
-    name: Build SE-plus
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE-plus"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_be:
-    name: Build BE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "BE"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  build_ce:
-    name: Build CE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
@@ -218,24 +164,3 @@ jobs:
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-
-  compare_internal_modules:
-    name: Compare internal modules
-    needs:
-      - build_fe
-      - build_ee
-      - build_ce
-      - build_be
-      - build_se
-      - build_se_plus
-    if: ${{ always() && needs.build_fe.result == 'success' }}
-    runs-on: regular
-    steps:
-      - uses: actions/setup-python@v5.6.0
-        with:
-          python-version: '3.12.3'
-      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      - name: Get artifacts
-        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
-      - name: Compare modules
-        run: python .github/scripts/python/compare_internal_modules.py

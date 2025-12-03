@@ -28,6 +28,7 @@ const (
 	PackageRepositoryOperationKind     = "PackageRepositoryOperation"
 
 	PackageRepositoryOperationPhasePending    = "Pending"
+	PackageRepositoryOperationPhaseDiscover   = "Discover"
 	PackageRepositoryOperationPhaseProcessing = "Processing"
 	PackageRepositoryOperationPhaseCompleted  = "Completed"
 
@@ -99,23 +100,38 @@ type PackageRepositoryOperationUpdate struct {
 }
 
 type PackageRepositoryOperationStatus struct {
-	Phase             string                                         `json:"phase,omitempty"`
-	StartTime         *metav1.Time                                   `json:"startTime,omitempty"`
-	CompletionTime    *metav1.Time                                   `json:"completionTime,omitempty"`
-	Packages          *PackageRepositoryOperationStatusPackages      `json:"packages,omitempty"`
-	PackagesToProcess []PackageRepositoryOperationStatusPackageQueue `json:"packagesToProcess,omitempty"`
-	Conditions        []PackageRepositoryOperationStatusCondition    `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Phase          string                                      `json:"phase,omitempty"`
+	StartTime      *metav1.Time                                `json:"startTime,omitempty"`
+	CompletionTime *metav1.Time                                `json:"completionTime,omitempty"`
+	Packages       *PackageRepositoryOperationStatusPackages   `json:"packages,omitempty"`
+	Conditions     []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered int `json:"discovered,omitempty"`
-	Processed  int `json:"processed,omitempty"`
-	Total      int `json:"total,omitempty"`
+	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
+	Failed           []PackageRepositoryOperationStatusFailedPackage     `json:"failed,omitempty"`
+	Processed        []PackageRepositoryOperationStatusPackage           `json:"processed,omitempty"`
+	ProcessedOverall int                                                 `json:"processedOverall,omitempty"`
+	Total            int                                                 `json:"total,omitempty"`
 }
 
-type PackageRepositoryOperationStatusPackageQueue struct {
+type PackageRepositoryOperationStatusDiscoveredPackage struct {
 	Name string `json:"name"`
-	Type string `json:"type"`
+}
+
+type PackageRepositoryOperationStatusFailedPackage struct {
+	Name   string                                               `json:"name"`
+	Errors []PackageRepositoryOperationStatusFailedPackageError `json:"errors"`
+}
+
+type PackageRepositoryOperationStatusFailedPackageError struct {
+	Name  string `json:"name"`
+	Error string `json:"error"`
+}
+
+type PackageRepositoryOperationStatusPackage struct {
+	Name string `json:"name"`
+	Type string `json:"type,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {

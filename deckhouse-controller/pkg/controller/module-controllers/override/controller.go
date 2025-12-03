@@ -357,7 +357,9 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 				return err
 			}
 		} else {
-			values = addonutils.Values(config.Spec.Settings)
+			settings := config.Spec.Settings.GetMap()
+
+			values = addonutils.Values(settings)
 		}
 	}
 	if err = def.Validate(values, r.log); err != nil {

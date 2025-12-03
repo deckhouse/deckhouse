@@ -519,7 +519,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  meta.Changelog,
+				Changelog:  v1alpha1.MakeMappedFields(meta.Changelog),
 			},
 		}
 
@@ -577,7 +577,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
 		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  meta.Changelog,
+		Changelog:  v1alpha1.MakeMappedFields(meta.Changelog),
 	}
 
 	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
