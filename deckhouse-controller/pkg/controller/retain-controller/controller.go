@@ -498,7 +498,7 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 				// TTL expired and FollowObject notFound - delete Retainer
 				r.logger.Info("TTL expired - deleting Retainer",
 					"retainer", retainer.Name,
-					"ttl", retainer.Spec.TTL.Duration,
+					"ttl", retainer.Spec.TTL.Duration.Round(time.Minute),
 					"lostAt", retainer.Status.LostAt,
 					"expired", expiresAt.Format(time.RFC3339))
 				if err := r.Delete(ctx, retainer); err != nil {
