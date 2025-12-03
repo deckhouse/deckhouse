@@ -1,4 +1,4 @@
-{{- $version := "1.11.2" }}
+{{- $version := "1.11.3" }}
 ---
 image: {{ .ModuleName }}/capi-controller-manager
 fromImage: common/distroless
