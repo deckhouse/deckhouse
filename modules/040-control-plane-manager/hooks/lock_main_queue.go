@@ -63,7 +63,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: lockQueueFilterPod,
 		},
 		{
-			Name:                         "cpm_daemonsets",
+			Name:                         "cpm_ds",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
 			ExecuteHookOnEvents:          ptr.To(false),
@@ -148,10 +148,11 @@ func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
-
-	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[daemonSetInfo](input.Snapshots, "cpm_daemonsets")
+	
+    // Lock deckhouse main queue while the control-plane is updating.
+	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[daemonSetInfo](input.Snapshots, "cpm_ds")
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal 'cpm_daemonsets' snapshot: %w", err)
+		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
 	}
 	if len(dsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: no control-plane-manager DaemonSet found")

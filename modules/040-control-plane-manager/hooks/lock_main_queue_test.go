@@ -38,7 +38,7 @@ metadata:
   name: d8-control-plane-manager-a
   namespace: kube-system
 spec:
-  nodeName: worker-1
+  nodeName: worker-2
 status:
   conditions:
   - type: Ready
@@ -53,12 +53,10 @@ metadata:
     pod-template-generation: "105"
   name: d8-control-plane-manager-b
   namespace: kube-system
-spec:
-  nodeName: worker-2
 status:
   conditions:
   - type: Ready
-    status: 'True'
+    status: 'False'
 ---
 `
 		runningNotReadyPods = `
