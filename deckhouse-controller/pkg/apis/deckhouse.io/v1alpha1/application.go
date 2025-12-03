@@ -64,7 +64,7 @@ const (
 	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
 	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
 
-	ApplicationFinalizer = "application.deckhouse.io/finalizer"
+	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 )
 
 var (
