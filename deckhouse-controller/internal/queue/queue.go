@@ -135,7 +135,7 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 		wg:         opt.wg,
 		id:         uuid.New().String(),
 		task:       task,
-		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
+		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0), backoff.WithMaxInterval(time.Minute)),
 		nextRetry:  time.Now(),
 		enqueuedAt: time.Now(),
 		onDone:     opt.onDone,
