@@ -9,24 +9,15 @@
 {%- for versionItem in osVersions %}
   {%- assign versionNum = versionItem.version %}
   {%- assign editions = versionItem.editions %}
-  {%- assign hasCE = false %}
-  {%- assign hasCSE = false %}
-  {%- assign hasBEPlus = false %}
   
-  {%- for edition in editions %}
-    {%- if edition == 'ce' %}{% assign hasCE = true %}{% endif %}
-    {%- if edition == 'cse' %}{% assign hasCSE = true %}{% endif %}
-    {%- if edition == 'be' or edition == 'se' or edition == 'se-plus' or edition == 'ee' %}{% assign hasBEPlus = true %}{% endif %}
-  {%- endfor %}
-  
-  {%- if hasCE == true and hasCSE == true %}
+  {%- if editions contains 'ce' and editions contains 'cse' %}
     {%- assign ceVersions = ceVersions | push: versionNum %}
     {%- assign cseVersions = cseVersions | push: versionNum %}
-  {%- elsif hasCE == true and hasCSE == false %}
+  {%- elsif editions contains 'ce' %}
     {%- assign ceVersions = ceVersions | push: versionNum %}
-  {%- elsif hasCE == false and hasCSE == true %}
+  {%- elsif editions contains 'cse' %}
     {%- assign cseVersions = cseVersions | push: versionNum %}
-  {%- elsif hasCE == false and hasCSE == false and hasBEPlus == true %}
+  {%- elsif editions contains 'be' or editions contains 'se' or editions contains 'se-plus' or editions contains 'ee' %}
     {%- assign bePlusVersions = bePlusVersions | push: versionNum %}
   {%- else %}
     {%- assign otherVersions = otherVersions | push: versionNum %}
