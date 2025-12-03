@@ -1534,12 +1534,12 @@ To add a GPU node to the cluster, perform the following steps:
 
    > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
 
-   Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+   Full field schema: see [NodeGroup CR documentation](cr.html#nodegroup-v1-spec-gpu).
 
 1. Install the NVIDIA driver and nvidia-container-toolkit.
 
    Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
-   Below are NodeGroupConfiguration examples for the gpu NodeGroup
+   Below are NodeGroupConfiguration examples for the `gpu` NodeGroup.
 
    **Ubuntu**
 
@@ -1954,7 +1954,7 @@ Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metri
 - **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
 
-See examples in [Managing nodes: examples](../node-manager/examples.html#example-gpu-nodegroup) section.
+See examples in [Managing nodes: examples](examples.html#example-gpu-nodegroup) section.
 
 ## How to view available MIG profiles in the cluster?
 
