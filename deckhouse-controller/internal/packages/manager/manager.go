@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -36,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -50,10 +52,11 @@ type Manager struct {
 	mu   sync.Mutex                   // Protects apps map
 	apps map[string]*apps.Application // Loaded applications by name
 
-	onValuesChanged func(ctx context.Context, name string)
+	onValuesChanged func(name string)
 
 	loader            *loader.ApplicationLoader // Loads packages from filesystem
 	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	scheduler         *schedule.Scheduler
 	kubeObjectPatcher *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -62,9 +65,10 @@ type Manager struct {
 }
 
 type Config struct {
-	OnValuesChanged func(ctx context.Context, name string)
+	OnValuesChanged func(name string)
 
 	NelmService       *nelm.Service
+	Scheduler         *schedule.Scheduler
 	KubeObjectPatcher *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -79,6 +83,7 @@ func New(conf Config, logger *log.Logger) *Manager {
 		onValuesChanged:   conf.OnValuesChanged,
 		loader:            loader.NewApplicationLoader(appsPath, logger),
 		nelm:              conf.NelmService,
+		scheduler:         conf.Scheduler,
 		kubeEventsManager: conf.KubeEventsManager,
 		kubeObjectPatcher: conf.KubeObjectPatcher,
 		scheduleManager:   conf.ScheduleManager,
@@ -95,15 +100,17 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("registry", registry.Name))
 
 	app, err := m.loader.Load(ctx, registry, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("load from fs: %w", err)
+		return newLoadFailedErr(err)
 	}
 
 	m.mu.Lock()
 	m.apps[name] = app
+	m.scheduler.Add(app)
 	m.mu.Unlock()
 
 	return nil
@@ -119,35 +126,11 @@ func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
 		return nil
 	}
 
-	return app.ApplySettings(settings)
-}
-
-func (m *Manager) SettingsChanged(name string, settings addonutils.Values) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if len(settings) == 0 {
-		return false
+	if err := app.ApplySettings(settings); err != nil {
+		return newApplySettingsErr(err)
 	}
 
-	app := m.apps[name]
-	if app == nil {
-		return false
-	}
-
-	return app.GetSettingsChecksum() != settings.Checksum()
-}
-
-func (m *Manager) VersionChanged(name, version string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	app := m.apps[name]
-	if app == nil {
-		return false
-	}
-
-	return app.GetVersion() != version
+	return nil
 }
 
 // StartupPackage runs OnStartup hooks for a package.
@@ -170,12 +153,7 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run startup hooks: %w", err)
-	}
-
-	if err := m.RunPackage(ctx, name); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("initial run package: %w", err)
+		return newStartupHookErr(err)
 	}
 
 	return nil
@@ -213,25 +191,25 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run before helm hooks: %w", err)
+		return newBeforeHelmHookErr(err)
 	}
 
 	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("upgrade nelm package: %w", err)
+		return newHelmUpgradeErr(err)
 	}
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
 	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run after helm hooks: %w", err)
+		return newAfterHelmHookErr(err)
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
 		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("install nelm package: %w", err)
+			return newHelmUpgradeErr(err)
 		}
 	}
 
@@ -297,6 +275,8 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 		hook.GetHookController().StopMonitors()
 	}
 
+	m.scheduler.Remove(name)
+
 	return nil
 }
 
@@ -310,7 +290,10 @@ func (m *Manager) UnlockKubernetesMonitors(name, hook string, monitors ...string
 		return
 	}
 
-	m.logger.Debug("unlock kubernetes monitors", slog.String("name", name), slog.String("hook", hook))
+	m.logger.Debug("unlock kubernetes monitors",
+		slog.String("name", name),
+		slog.String("hook", hook),
+		slog.String("monitors", strings.Join(monitors, ",")))
 	app.UnlockKubernetesMonitors(hook, monitors...)
 }
 
@@ -340,13 +323,6 @@ func (m *Manager) GetPackageQueues(name string) []string {
 	}
 
 	return slices.Compact(res)
-}
-
-func (m *Manager) GetApplication(name string) *apps.Application {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	return m.apps[name]
 }
 
 func (m *Manager) GetAppInfo(name string) apps.Info {

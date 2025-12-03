@@ -17,26 +17,27 @@ package status
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Service struct {
 	client client.Client
-	getter ConditionsGetter
+	getter getter
 
 	logger *log.Logger
 }
 
-type ConditionsGetter func(namespace, name string) ([]operator.Condition, error)
+type getter func(name string) *status.Status
 
-func NewService(client client.Client, getter ConditionsGetter, logger *log.Logger) *Service {
+func NewService(client client.Client, getter getter, logger *log.Logger) *Service {
 	return &Service{
 		client: client,
 		getter: getter,
@@ -44,7 +45,7 @@ func NewService(client client.Client, getter ConditionsGetter, logger *log.Logge
 	}
 }
 
-func (s *Service) Start(ctx context.Context, ch <-chan operator.Event) {
+func (s *Service) Start(ctx context.Context, ch <-chan string) {
 	go func() {
 		for {
 			select {
@@ -57,40 +58,49 @@ func (s *Service) Start(ctx context.Context, ch <-chan operator.Event) {
 	}()
 }
 
-func (s *Service) handleEvent(ctx context.Context, ev operator.Event) {
-	logger := s.logger.With(slog.String("namespace", ev.Namespace), slog.String("name", ev.Name))
+func (s *Service) handleEvent(ctx context.Context, ev string) {
+	logger := s.logger.With(slog.String("name", ev))
+
+	splits := strings.Split(ev, ".")
 
 	app := new(v1alpha1.Application)
-	if err := s.client.Get(ctx, client.ObjectKey{Namespace: ev.Namespace, Name: ev.Name}, app); err != nil {
+	if err := s.client.Get(ctx, client.ObjectKey{Namespace: splits[0], Name: splits[1]}, app); err != nil {
 		logger.Warn("failed to get application", log.Err(err))
 		return
 	}
 
-	conditions, err := s.getter(ev.Namespace, ev.Name)
-	if err != nil {
-		logger.Warn("failed to get package conditions", log.Err(err))
+	packageStatus := s.getter(ev)
+	if packageStatus == nil {
+		logger.Warn("package status not found")
 		return
 	}
 
 	original := app.DeepCopy()
-	s.applyConditions(app, conditions)
-	if err = s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
+	s.applyConditions(app, packageStatus.Conditions)
+	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
 	}
 }
 
-func (s *Service) applyConditions(app *v1alpha1.Application, conds []operator.Condition) {
-	prev := make(map[string]v1alpha1.ApplicationStatusCondition)
-	for _, cond := range app.Status.Conditions {
+func (s *Service) applyConditions(app *v1alpha1.Application, conds []status.Condition) {
+	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	for _, cond := range app.Status.InternalConditions {
 		prev[cond.Type] = cond
 	}
 
 	now := metav1.Now()
-	applied := make([]v1alpha1.ApplicationStatusCondition, 0, len(conds))
+	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(conds))
 	for _, c := range conds {
-		cond := v1alpha1.ApplicationStatusCondition{
-			Type:               c.Type,
-			Status:             corev1.ConditionStatus(c.Status),
+		statusString := corev1.ConditionFalse
+		if c.Status {
+			statusString = corev1.ConditionTrue
+		}
+
+		cond := v1alpha1.ApplicationInternalStatusCondition{
+			Type:               string(c.Name),
+			Status:             statusString,
+			Reason:             string(c.Reason),
+			Message:            c.Message,
 			LastTransitionTime: now,
 			LastProbeTime:      now,
 		}
@@ -102,5 +112,5 @@ func (s *Service) applyConditions(app *v1alpha1.Application, conds []operator.Co
 		applied = append(applied, cond)
 	}
 
-	app.Status.Conditions = applied
+	app.Status.InternalConditions = applied
 }

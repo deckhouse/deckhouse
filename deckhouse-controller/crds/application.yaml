@@ -12,6 +12,8 @@ spec:
     listKind: ApplicationList
     plural: applications
     singular: application
+    shortNames:
+      - app
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -39,18 +41,20 @@ spec:
           spec:
             description: Spec defines the behavior of an Application.
             properties:
-              applicationPackageName:
+              packageName:
+                type: string
+              packageRepository:
                 type: string
               releaseChannel:
                 type: string
-              repository:
-                type: string
               settings:
+                description: MappedFields handles arbitrary JSON settings as a map[string]any.
+                type: object
                 x-kubernetes-preserve-unknown-fields: true
               version:
                 type: string
             required:
-            - applicationPackageName
+            - packageName
             - version
             type: object
           status:
@@ -78,17 +82,39 @@ spec:
                   - type
                   type: object
                 type: array
-              repository:
-                type: string
-              status:
-                type: string
-              version:
+              currentVersion:
                 properties:
                   channel:
                     type: string
                   current:
                     type: string
                 type: object
+              internalConditions:
+                items:
+                  properties:
+                    lastProbeTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              repository:
+                type: string
+              status:
+                type: string
             type: object
         required:
         - spec
@@ -98,12 +124,15 @@ spec:
     subresources:
       status: {}
     additionalPrinterColumns:
-      - jsonPath: .status.conditions[?(@.type=='Processed')].lastTransitionTime
-        name: TransitionTime
+      - jsonPath: .spec.packageName
+        name: Package
+        type: string
+      - jsonPath: .spec.version
+        name: Version
+        type: string
+      - jsonPath: .status.conditions[?(@.type=='Ready')].status
+        name: Ready
+        type: string
+      - name: Age
         type: date
-      - jsonPath: .status.conditions[?(@.type=='Processed')].status
-        name: Processed
-        type: string
-      - jsonPath: .status.conditions[?(@.type=='Processed')].message
-        name: Message
-        type: string
+        jsonPath: .metadata.creationTimestamp

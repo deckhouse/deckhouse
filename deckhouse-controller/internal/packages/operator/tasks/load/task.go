@@ -21,6 +21,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -35,24 +36,31 @@ type manager interface {
 	ApplySettings(name string, settings addonutils.Values) error
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type task struct {
 	packageName string
 	namespace   string
 	registry    registry.Registry
+	settings    addonutils.Values
 
-	manager  manager
-	settings addonutils.Values
+	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(reg registry.Registry, namespace, name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
+func NewTask(reg registry.Registry, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		namespace:   namespace,
 		registry:    reg,
-		manager:     manager,
 		settings:    settings,
+		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -65,11 +73,13 @@ func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
 	t.logger.Debug("load package", slog.String("name", t.packageName))
 	if err := t.manager.LoadPackage(ctx, t.registry, t.namespace, t.packageName); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("load package: %w", err)
 	}
 
 	t.logger.Debug("apply initial settings", slog.String("name", t.packageName))
 	if err := t.manager.ApplySettings(t.packageName, t.settings); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 

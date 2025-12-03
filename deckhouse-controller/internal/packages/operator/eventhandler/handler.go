@@ -25,6 +25,7 @@ package eventhandler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -188,10 +189,8 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 			slog.String("name", name),
 			slog.String("event", kubeEvent.String()))
 
-		queueName := info.QueueName
-		if queueName == "main" {
-			queueName = name
-		}
+		// queue = <name>/<queue>
+		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
 		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
 	}
@@ -209,10 +208,8 @@ func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[s
 			slog.String("name", name),
 			slog.String("event", crontab))
 
-		queueName := info.QueueName
-		if queueName == "main" {
-			queueName = name
-		}
+		// queue = <name>/<queue>
+		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
 		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
 	}

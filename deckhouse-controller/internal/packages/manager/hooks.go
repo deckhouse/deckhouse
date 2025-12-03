@@ -16,7 +16,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -75,7 +74,8 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 	}
 
 	if m.onValuesChanged != nil && oldChecksum != app.GetValuesChecksum() {
-		m.onValuesChanged(ctx, name)
+		m.logger.Debug("values changed during the hook", slog.String("hook", hook), slog.String("name", name))
+		m.onValuesChanged(name)
 	}
 
 	return nil
@@ -95,8 +95,9 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 	defer span.End()
 
 	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	app := m.apps[name]
-	m.mu.Unlock()
 	if app == nil {
 		// package can be disabled and removed before
 		return nil, nil
@@ -139,7 +140,7 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 		})
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return nil, fmt.Errorf("enable kubernetes bindings: %w", err)
+			return nil, newInitHooksErr(err)
 		}
 	}
 
@@ -167,6 +168,9 @@ type TaskBuilder func(ctx context.Context, name, hook string, info hookcontrolle
 func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.KubeEvent, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
@@ -174,7 +178,12 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 			// Check if this hook's binding criteria match the incoming event
 			// (e.g., resource type, namespace, labels, event type)
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
-				return nil
+				m.logger.Debug("skip kube hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("monitor", kubeEvent.MonitorId),
+					slog.String("event", kubeEvent.String()))
+				continue
 			}
 
 			// Process the event and generate tasks via the builder callback
@@ -199,13 +208,20 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
 			hookCtrl := hook.GetHookController()
 
 			// Check if this hook's cron schedule matches the triggered event
 			if !hookCtrl.CanHandleScheduleEvent(crontab) {
-				return nil
+				m.logger.Debug("skip schedule hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("crontab", crontab))
+				continue
 			}
 
 			// Process the schedule event and generate tasks via the builder callback

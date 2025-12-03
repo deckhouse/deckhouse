@@ -123,6 +123,13 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 
 	logger.Debug("download package")
 
+	select {
+	case <-ctx.Done():
+		span.SetStatus(codes.Error, "context canceled")
+		return nil
+	default:
+	}
+
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
@@ -130,7 +137,7 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	packagePath := filepath.Join(i.downloaded, reg.Name, name)
 	if err := os.MkdirAll(packagePath, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create package dir '%s': %w", packagePath, err)
+		return newCreatePackageDirErr(err)
 	}
 
 	// <version>.erofs
@@ -141,7 +148,7 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	rootHash, err := i.registry.GetImageRootHash(ctx, reg, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("get image root hash: %w", err)
+		return newGetRootHashErr(err)
 	}
 
 	logger.Debug("verify package")
@@ -156,14 +163,14 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	img, err := i.registry.GetImageReader(ctx, reg, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download package image: %w", err)
+		return newGetImageReaderErr(err)
 	}
 	defer img.Close()
 
 	logger.Debug("create erofs image from package image", slog.String("path", imagePath))
 	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("extract package image to erofs: %w", err)
+		return newImageByTarErr(err)
 	}
 
 	return nil
@@ -182,6 +189,13 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
 	logger.Debug("install application")
 
+	select {
+	case <-ctx.Done():
+		span.SetStatus(codes.Error, "context canceled")
+		return nil
+	default:
+	}
+
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
@@ -191,13 +205,13 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
 	if err := verity.Unmount(ctx, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
+		return newUnmountErr(err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err := verity.CloseMapper(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("close app mapper: %w", err)
+		return newCloseDeviceMapperErr(err)
 	}
 
 	// /deckhouse/downloaded/<registry>/<package>
@@ -211,19 +225,19 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create image hash: %w", err)
+		return newComputeHashErr(err)
 	}
 
 	logger.Debug("create device mapper", slog.String("path", imagePath))
 	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create device mapper: %w", err)
+		return newCreateDeviceMapperErr(err)
 	}
 
 	logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
 	if err = verity.Mount(ctx, name, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("mount erofs image: %w", err)
+		return newMountErr(err)
 	}
 
 	return nil

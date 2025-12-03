@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package run
+package rerun
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -31,24 +32,31 @@ type manager interface {
 	RunPackage(ctx context.Context, name string) error
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type task struct {
 	packageName string
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name string, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name string, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return "Run"
+	return "Rerun"
 }
 
 func (t *task) Execute(ctx context.Context) error {
@@ -56,6 +64,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// Also starts Helm resource monitoring to detect drift/deletions
 	t.logger.Debug("run package", slog.String("name", t.packageName))
 	if err := t.manager.RunPackage(ctx, t.packageName); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("run package: %w", err)
 	}
 

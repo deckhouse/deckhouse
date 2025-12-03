@@ -23,6 +23,7 @@ import (
 	bindingctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hooksync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,6 +42,11 @@ type manager interface {
 	RunPackageHook(ctx context.Context, name, hook string, bctx []bindingctx.BindingContext) error
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
 }
@@ -49,15 +55,17 @@ type task struct {
 	packageName string
 
 	manager manager
+	status  statusService
 	queue   queueService
 
 	logger *log.Logger
 }
 
-func NewTask(name string, manager manager, queueService queueService, logger *log.Logger) queue.Task {
+func NewTask(name string, status statusService, manager manager, queueService queueService, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		manager:     manager,
+		status:      status,
 		queue:       queueService,
 		logger:      logger.Named(taskTracer),
 	}
@@ -73,6 +81,8 @@ func (t *task) Execute(ctx context.Context) error {
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.manager.InitializeHooks(ctx, t.packageName)
 	if err != nil {
+		t.status.HandleError(t.packageName, err)
+
 		return fmt.Errorf("initialize hooks: %w", err)
 	}
 
@@ -87,18 +97,11 @@ func (t *task) Execute(ctx context.Context) error {
 		for _, hookInfo := range info {
 			syncTask := taskhooksync.NewTask(t.packageName, hook, hookInfo, t.manager, t.logger)
 
-			queueName := hookInfo.QueueName
-			if queueName == "main" {
-				queueName = t.packageName
-
-				// Place wait tasks in separate sync queue to avoid blocking main queue
-				// This prevents deadlocks when multiple hooks need to sync
-				if hookInfo.KubernetesBinding.WaitForSynchronization {
-					queueName = fmt.Sprintf("%s-sync", t.packageName)
-				}
-			}
+			// queue = <name>/<queue>
+			queueName := fmt.Sprintf("%s/%s", t.packageName, hookInfo.QueueName)
 
 			if hookInfo.KubernetesBinding.WaitForSynchronization {
+				queueName = fmt.Sprintf("%s/sync", queueName)
 				// Add to WaitGroup - we'll block until this completes
 				t.queue.Enqueue(ctx, queueName, syncTask, queue.WithWait(wg))
 				continue
@@ -115,8 +118,18 @@ func (t *task) Execute(ctx context.Context) error {
 	// Step 3: Run package startup hooks (onStartup binding) and initial run
 	t.logger.Debug("run package startup hooks", slog.String("name", t.packageName))
 	if err = t.manager.StartupPackage(ctx, t.packageName); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("startup package: %w", err)
 	}
+
+	if err = t.manager.RunPackage(ctx, t.packageName); err != nil {
+		t.status.HandleError(t.packageName, err)
+		return fmt.Errorf("initial run package: %w", err)
+	}
+
+	t.status.SetConditionTrue(t.packageName, status.ConditionHelmApplied)
+	t.status.SetConditionTrue(t.packageName, status.ConditionHooksProcessed)
+	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
 
 	return nil
 }

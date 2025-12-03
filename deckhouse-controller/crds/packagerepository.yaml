@@ -50,7 +50,6 @@ spec:
                   scheme:
                     type: string
                 required:
-                - dockerCfg
                 - repo
                 type: object
             required:
@@ -62,9 +61,7 @@ spec:
               message:
                 type: string
               packages:
-                type: array
                 items:
-                  type: object
                   properties:
                     name:
                       type: string
@@ -73,6 +70,8 @@ spec:
                   required:
                   - name
                   - type
+                  type: object
+                type: array
               packagesCount:
                 type: integer
               phase:
@@ -81,9 +80,10 @@ spec:
                 format: date-time
                 type: string
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
     subresources:
       status: {}
-

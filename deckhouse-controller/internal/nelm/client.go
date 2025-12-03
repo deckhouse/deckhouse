@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -121,9 +121,6 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(defaultOpts)
 	}
-
-	defaultOpts.Annotations["werf.io/skip-logs"] = "true"
-	defaultOpts.Annotations["werf.io/track-termination-mode"] = "NonBlocking"
 
 	return &Client{
 		opts: defaultOpts,
@@ -280,7 +277,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	// Combine all resources into a single YAML document with separators
 	var result strings.Builder
 	for _, resource := range res.Resources {
-		marshalled, err := yaml.Marshal(resource)
+		marshalled, err := yaml.Marshal(resource.Unstruct)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return "", fmt.Errorf("marshal resource: %w", err)

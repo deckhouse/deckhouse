@@ -248,7 +248,10 @@ func (q *queue) processOne() bool {
 	default:
 	}
 
-	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
+	q.logger.Debug("process task",
+		slog.String("id", t.id),
+		slog.String("name", t.task.String()),
+		slog.String("queue", q.name))
 
 	// Execute the task
 	if err := t.task.Execute(t.ctx); err != nil {
