@@ -65,18 +65,22 @@ bb-kubectl-exec annotate node $(bb-d8-node-name) registry.deckhouse.io/version={
 # check if d8-dhctl-converger user exists and annotate node
 
 CONVERGER_USER_ANNOTATION=$(bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."node.deckhouse.io/has-converger-nodeuser"')
-grep "d8-dhctl-converger" /etc/passwd >/dev/null 2>&1
-exit_code=$?
+if grep "d8-dhctl-converger" /etc/passwd >/dev/null 2>&1
+  then
+    converger_user_exists=1
+  else
+    converger_user_exists=0
+fi
 
 
 if [[ $CONVERGER_USER_ANNOTATION != "null" ]]
   then
-    if [[ $exit_code -eq 1 ]]
+    if [[ $converger_user_exists -eq 0 ]]
       then
         remove_node_annotation "node.deckhouse.io/has-converger-nodeuser"
       fi
     else
-     if [[ $exit_code -eq 0 ]]
+     if [[ $converger_user_exists -eq 1 ]]
         then
           add_node_annotation "node.deckhouse.io/has-converger-nodeuser=true"
       fi
