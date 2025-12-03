@@ -505,7 +505,7 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 					return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
 				}
 			}
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
 		}
 		// Other error - retry
 		r.logger.Error("Failed to get FollowObject",
@@ -531,7 +531,7 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 				LastTransitionTime: now,
 			})
 			if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
-				return ctrl.Result{}, err
+				return ctrl.Result{RequeueAfter: FollowObjectCheckInterval}, err
 			}
 		}
 
