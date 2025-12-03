@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	gohook "github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -29,6 +27,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&gohook.HookConfig{
@@ -70,7 +72,7 @@ func applyGeoProxy(obj *unstructured.Unstructured) (gohook.FilterResult, error) 
 	return ready, nil
 }
 
-func handleMaxMindSettings(ctx context.Context, input *gohook.HookInput) error {
+func handleMaxMindSettings(_ context.Context, input *gohook.HookInput) error {
 	ready := false
 
 	for isReady, err := range sdkobjectpatch.SnapshotIter[bool](input.Snapshots.Get("geoproxy")) {
