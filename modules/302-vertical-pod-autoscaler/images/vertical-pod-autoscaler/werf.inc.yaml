@@ -1,4 +1,4 @@
-{{- $vpaVersion := "vertical-pod-autoscaler-1.5.1" -}}
+{{- $vpaVersion := "1.5.1" -}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -14,7 +14,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 -b {{ $vpaVersion }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/autoscaler.git /src/autoscaler
+    - git clone --depth 1 -b vertical-pod-autoscaler-{{ $vpaVersion }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/autoscaler.git /src/autoscaler
     - cd /src/autoscaler
     - git apply /patches/*.patch --verbose
     - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
