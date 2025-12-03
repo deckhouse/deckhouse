@@ -283,6 +283,8 @@
   "operator-argo": {
     "editions": [
       "ee",
+      "fe",
+      "se-plus",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
