@@ -48,3 +48,7 @@ layout: sidebar-guides
 
 В качестве приватного registry будем использовать [Harbor](https://goharbor.io/). Это container registry с открытым исходным кодом, который имеет возможности настройки политик и управления доступом на основе ролей, проверяет образы на наличие уязвимостей и помечает их как надежные. Harbor входит в состав проектов CNCF.
 
+Устанавливать мы будем latest-версию [из GitHub-репозитория](https://github.com/goharbor/harbor/releases) проекта. Для этого нужно скачать архив с установщиком из нужного релиза, выбрав вариант с `harbor-offline-installer` в названии.
+
+<img src="/images/gsguides/private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
+
