@@ -50,6 +50,8 @@ const (
 	// TTLCheckInterval is the interval for checking TTL expiration
 	TTLCheckInterval = 1 * time.Minute
 
+	MaxConcurrentReconciles = 5
+
 	// Retained until the referenced object is deleted
 	ModeFollowObject = "FollowObject"
 	// Retained for a specific time after creation
@@ -80,16 +82,9 @@ func RegisterController(
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	// // Build RESTMapper for efficient Kind-to-resource mapping
-	// discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create discovery client: %w", err)
-	// }
+	// RESTMapper for efficient Kind-to-resource mapping
+
 	restMapper := mgr.GetRESTMapper()
-	// restMapper, err := apiutil.NewDynamicRESTMapper(mgr.GetConfig(), mgr.GetHTTPClient())
-	// if err != nil {
-	// 	return fmt.Errorf("failed to discover api rest mapper: %v", err)
-	// }
 
 	r := &RetainerController{
 		Client:     mgr.GetClient(),
@@ -100,7 +95,7 @@ func RegisterController(
 	}
 
 	ctr, err := controller.New("retain-controller", mgr, controller.Options{
-		MaxConcurrentReconciles: 5,
+		MaxConcurrentReconciles: MaxConcurrentReconciles,
 		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              r,
@@ -118,7 +113,8 @@ func RegisterController(
 			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
-			return false // No need to reconcile deleted Retainers
+			// No need to reconcile deleted Retainers
+			return false
 		},
 		GenericFunc: func(_ event.GenericEvent) bool {
 			return false
@@ -133,6 +129,7 @@ func RegisterController(
 			return false
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
+			// Reconcile related Retainers
 			return true
 		},
 		GenericFunc: func(_ event.GenericEvent) bool {
@@ -140,17 +137,18 @@ func RegisterController(
 		},
 	}
 
+	// Index spec.followObjectRef.namespace field for Retainer resources.
+	// Enables efficient lookup of Retainers linked to a specific namespace,
+	// useful for triggering reconciliations, when a referenced namespace is deleted.
 	err = mgr.GetFieldIndexer().IndexField(context.TODO(), &v1alpha1.Retainer{}, "spec.followObjectRef.namespace", func(obj client.Object) []string {
 		ret, ok := obj.(*v1alpha1.Retainer)
 		if !ok || ret.Spec.FollowObjectRef == nil {
 			return nil // No index
 		}
-
 		ns := ret.Spec.FollowObjectRef.Namespace
 		if ns == "" {
 			return nil
 		}
-
 		return []string{ns}
 	})
 	if err != nil {
@@ -276,13 +274,13 @@ func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer
 			"error", err)
 		return ctrl.Result{}, err
 	}
-	// Get the object using dynamic client
 	gvr := schema.GroupVersionResource{
 		Group:    gv.Group,
 		Version:  gv.Version,
 		Resource: resource,
 	}
 
+	// Get the object using dynamic client
 	obj, err := r.dyn.Resource(gvr).Namespace(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -430,7 +428,6 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 
 	ref := retainer.Spec.FollowObjectRef
 
-	// Parse APIVersion to get Group and Version
 	gv, err := schema.ParseGroupVersion(ref.APIVersion)
 	if err != nil {
 		base := retainer.DeepCopy()
