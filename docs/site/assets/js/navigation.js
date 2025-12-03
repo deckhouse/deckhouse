@@ -1,12 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
     const navigationContainer = document.querySelector('.navigation__container');
-    const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
-    let lastScroll = window.scrollY;
-    const headerHeight = document.querySelector('.header-container').offsetHeight;
-    const navigationHeight = navigationContainer.offsetHeight;
-    const newTop = headerHeight + navigationHeight;
 
     if(navigationContainer) {
+        const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
+        let lastScroll = window.scrollY;
+        const headerHeight = document.querySelector('.header-container').offsetHeight;
+        const navigationHeight = navigationContainer.offsetHeight;
+        const newTop = headerHeight + navigationHeight;
+        
         window.addEventListener('scroll', function() {
             const scrollWindowTop = window.scrollY;
             if(scrollWindowTop > lastScroll) {
