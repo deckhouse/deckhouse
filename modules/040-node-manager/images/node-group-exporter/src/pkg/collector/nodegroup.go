@@ -411,12 +411,15 @@ func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) {
 	defer c.mutex.Unlock()
 
 	nodeGroupData := ToNodeGroupMetricsData(nodegroup)
-	c.nodeGroups[nodegroup.Name] = &nodeGroupData
+	// Update if NodeGroup is different
+	if c.nodeGroups[nodegroup.Name] == nil || *c.nodeGroups[nodegroup.Name] != nodeGroupData {
+		c.nodeGroups[nodegroup.Name] = &nodeGroupData
+		c.updateMetrics()
+	}
 	c.logger.Debug("Add or Update NodeGroup",
 		slog.String("NodeGroup", nodegroup.Name),
 		slog.String("Type", nodeGroupData.NodeType),
 		slog.Int("Nodes", len(c.nodeGroups)))
-	c.updateMetrics()
 }
 
 func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup) {
@@ -434,13 +437,15 @@ func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
 	defer c.mutex.Unlock()
 
 	nodeData := ToNodeMetricsData(node)
-	if updated := c.ensureNodeInIndex(&nodeData); updated {
+	updated := c.ensureNodeInIndex(&nodeData)
+	if updated {
 		c.updateMetrics()
 	}
 	c.logger.Debug("Add or Updated Node",
 		slog.String("Node", node.Name),
 		slog.String("NodeGroup", nodeData.NodeGroup),
-		slog.Float64("Ready", nodeData.IsReady))
+		slog.Float64("Ready", nodeData.IsReady),
+		slog.Bool("Updated", updated))
 }
 
 func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
