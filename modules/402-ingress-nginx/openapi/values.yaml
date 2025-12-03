@@ -349,6 +349,10 @@ properties:
             default: []
             items:
               type: string
+      geoproxyReady:
+        type: boolean
+        default: false
+        description: Indicates that geoproxy StatefulSet is ready.
       effectiveStorageClass:
         default: false
         oneOf:
