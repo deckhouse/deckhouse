@@ -101,26 +101,42 @@ spec:
               packages:
                 properties:
                   discovered:
-                    type: integer
+                    items:
+                      properties:
+                        name:
+                          type: string
+                      type: object
+                    type: array
+                  failed:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        errors:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              error:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
                   processed:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                      type: object
+                    type: array
+                  processedOverall:
                     type: integer
                   total:
                     type: integer
                 type: object
-              packagesToProcess:
-                description: List of packages that need to be processed.
-                items:
-                  description: PackageRepositoryOperationStatusPackageQueue represents a package in the processing queue.
-                  properties:
-                    name:
-                      type: string
-                    type:
-                      type: string
-                  required:
-                  - name
-                  - type
-                  type: object
-                type: array
               phase:
                 type: string
               startTime:

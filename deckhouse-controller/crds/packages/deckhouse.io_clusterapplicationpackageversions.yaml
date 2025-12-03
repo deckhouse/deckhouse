@@ -37,10 +37,21 @@ spec:
             type: string
           metadata:
             type: object
+          spec:
+            type: object
+            properties:
+              packageName:
+                type: string
+              packageRepository:
+                type: string
+              version:
+                type: string
           status:
             description: Status of a ClusterApplicationPackageVersion.
             properties:
-              metadata:
+              packageName:
+                type: string
+              packageMetadata:
                 properties:
                   category:
                     type: string
@@ -56,9 +67,12 @@ spec:
                         type: array
                     type: object
                   description:
-                    additionalProperties:
-                      type: string
                     type: object
+                    properties:
+                      ru:
+                        type: string
+                      en:
+                        type: string
                   licensing:
                     properties:
                       editions:
@@ -116,10 +130,40 @@ spec:
                         type: object
                     type: object
                 type: object
-              packageName:
-                type: string
               version:
                 type: string
+              conditions:
+                x-kubernetes-patch-strategy: merge
+                x-kubernetes-patch-merge-key: type
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    lastProbeTime:
+                      format: date-time
+                      type: string
+              usedBy:
+                items:
+                  properties:
+                    namespace:
+                      type: string
+                    name:
+                      type: string
+                  type: object
+                type: array
+              usedByCount:
+                type: integer
             type: object
         type: object
     served: true

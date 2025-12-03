@@ -40,19 +40,21 @@ spec:
           status:
             description: Status of an ApplicationPackage.
             properties:
+              installed:
+                additionalProperties:
+                  items:
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  type: array
+                type: object
+              installedOverall:
+                type: integer
               availableRepositories:
                 items:
                   type: string
                 type: array
-              instances:
-                properties:
-                  count:
-                    type: integer
-                  namespaces:
-                    items:
-                      type: string
-                    type: array
-                type: object
             type: object
         type: object
     served: true

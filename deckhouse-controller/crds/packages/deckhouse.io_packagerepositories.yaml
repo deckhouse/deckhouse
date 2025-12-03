@@ -50,7 +50,6 @@ spec:
                   scheme:
                     type: string
                 required:
-                - dockerCfg
                 - repo
                 type: object
             required:
