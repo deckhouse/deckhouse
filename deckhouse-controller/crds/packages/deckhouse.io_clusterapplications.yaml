@@ -39,15 +39,18 @@ spec:
           spec:
             description: Spec defines the behavior of a ClusterApplication.
             properties:
-              releaseChannel:
+              packageName:
                 type: string
-              repository:
+              packageRepository:
+                type: string
+              version:
+                type: string
+              releaseChannel:
                 type: string
               settings:
                 x-kubernetes-preserve-unknown-fields: true
-              version:
-                type: string
             required:
+            - packageName
             - version
             type: object
           status:
