@@ -257,6 +257,9 @@ type KubeletMemorySwap struct {
 
 	// LimitedSwap contains configuration for limited swap mode
 	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
+
+	// Swappiness controls kernel's tendency to swap memory pages (0-100)
+	Swappiness *int `json:"swappiness,omitempty"`
 }
 
 // KubeletLimitedSwap contains settings for limited swap mode
