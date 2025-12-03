@@ -166,8 +166,10 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 	case "SecretExistsAndMCHasPriority":
 		// Secret and MC exist, and MC has priority (new logic); merging priority: MC > Secret > Default
 
+		settings := cniModuleConfigs[0].Spec.Settings.GetMap()
+
 		// masqueradeMode
-		if value, ok := cniModuleConfigs[0].Spec.Settings["masqueradeMode"]; ok && value != nil {
+		if value, ok := settings["masqueradeMode"]; ok && value != nil {
 			input.Values.Set("cniCilium.internal.masqueradeMode", value.(string))
 		} else if value := cniConfigurationSecrets[0].CniConfigFromSecret.MasqueradeMode; value != "" {
 			input.Values.Set("cniCilium.internal.masqueradeMode", value)
@@ -175,7 +177,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 			input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
 		}
 		// tunnelMode
-		if value, ok := cniModuleConfigs[0].Spec.Settings["tunnelMode"]; ok && value != nil {
+		if value, ok := settings["tunnelMode"]; ok && value != nil {
 			switch value.(string) {
 			case "VXLAN":
 				input.Values.Set("cniCilium.internal.mode", "VXLAN")
@@ -195,7 +197,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 			}
 		}
 		// createNodeRoutes
-		if value, ok := cniModuleConfigs[0].Spec.Settings["createNodeRoutes"]; ok && value != nil {
+		if value, ok := settings["createNodeRoutes"]; ok && value != nil {
 			if value.(bool) {
 				input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 			}

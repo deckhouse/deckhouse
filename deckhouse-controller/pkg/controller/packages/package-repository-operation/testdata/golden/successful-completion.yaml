@@ -29,8 +29,10 @@ status:
     status: "True"
     type: Processed
   packages:
-    discovered: 1
-    processed: 1
+    processed:
+    - name: v1.0.0
+      type: Application
+    processedOverall: 1
     total: 1
   phase: Completed
   startTime: "2025-10-31T12:00:00Z"
@@ -66,8 +68,6 @@ metadata:
   resourceVersion: "2"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: registry.example.com/test
 status:
   packages:

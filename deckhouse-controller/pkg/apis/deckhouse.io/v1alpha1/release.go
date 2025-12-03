@@ -46,8 +46,6 @@ type Release interface {
 	GetUpdateSpec() *UpdateSpec
 }
 
-type Changelog map[string]any
-
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {
 	case *DeckhouseRelease:

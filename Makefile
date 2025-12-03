@@ -492,6 +492,11 @@ generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-gene
 controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
 
+.PHONY: manifests 
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Generating CRDs..."
+	@$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases
+
 ## Generate clientset
 .PHONY: client-gen-generate
 client-gen-generate: client-gen

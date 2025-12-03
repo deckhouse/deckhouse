@@ -65,7 +65,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
+	cniMCYAML := func(cniName string, enabled *bool, settings map[string]any, creationTime *time.Time) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -78,7 +78,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: settings,
+				Settings: v1alpha1.MakeMappedFields(settings),
 				Enabled:  enabled,
 			},
 		}
@@ -167,7 +167,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "VXLAN",
 				}, nil),
 			}
@@ -185,7 +185,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "HostGW",
 				}, nil),
 			}
@@ -206,7 +206,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "HostGW",
 				}, nil),
 			}
@@ -227,7 +227,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "HostGW",
 				}, nil),
 			}
@@ -248,7 +248,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "VXLAN",
 				}, nil),
 			}
@@ -269,7 +269,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
 				}),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "VXLAN",
 				}, nil),
 			}
@@ -289,7 +289,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "HostGW",
 				}, nil),
 			}
@@ -309,7 +309,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"podNetworkMode": "HostGW",
 				}, nil),
 			}
@@ -327,7 +327,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), map[string]any{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -343,7 +343,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniMCYAML("cni-flannel", ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML("cni-flannel", ptr.To(true), map[string]any{
 					"podNetworkMode": "UnsupportedMode",
 				}, nil),
 			}
@@ -364,7 +364,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML("flannel", `{"podNetworkMode": ""}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML("cni-flannel", ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML("cni-flannel", ptr.To(true), map[string]any{
 					"podNetworkMode": "VXLAN",
 				}, nil),
 			}
@@ -385,7 +385,7 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: set_pod_network_mode", func
 				cniSecretYAML("flannel", `{"podNetworkMode": ""}`, nil, map[string]string{
 					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
 				}),
-				cniMCYAML("cni-flannel", ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML("cni-flannel", ptr.To(true), map[string]any{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
