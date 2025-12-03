@@ -187,7 +187,7 @@ func (c *NodeGroupCollector) Start(ctx context.Context) error {
 	}
 
 	if err := c.syncResources(ctx); err != nil {
-		c.logger.Error("Error during initial sync: ", log.Err(err))
+		c.logger.Error("Error during initial sync", log.Err(err))
 		return err
 	}
 
@@ -314,22 +314,26 @@ func (c *NodeGroupCollector) removeNodeFromIndex(node *NodeMetricsData) {
 	}
 }
 
-func (c *NodeGroupCollector) ensureNodeInIndex(node *NodeMetricsData) {
+func (c *NodeGroupCollector) ensureNodeInIndex(node *NodeMetricsData) bool {
 	if node.NodeGroup == "" {
-		return
+		return false
 	}
 
 	nodes := c.nodesByGroup[node.NodeGroup]
 	for i := range nodes {
 		if nodes[i].Name == node.Name {
-			// Update the reference to point to latest node
-			c.nodesByGroup[node.NodeGroup][i] = node
-			return
+			// Only Ready status can change
+			if nodes[i].IsReady != node.IsReady {
+				c.nodesByGroup[node.NodeGroup][i] = node
+				return true
+			}
+			return false
 		}
 	}
 
 	// Node not in index, add it
 	c.nodesByGroup[node.NodeGroup] = append(c.nodesByGroup[node.NodeGroup], node)
+	return true
 }
 
 func (c *NodeGroupCollector) updateMetrics() {
@@ -366,7 +370,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 		// Fallback for totalNodes if status is not available
 		if totalNodes == 0 && countNodes > 0 {
 			totalNodes = countNodes
-			c.logger.Warn("NodeGroup status.nodes is 0, using index count ",
+			c.logger.Warn("NodeGroup status.nodes is 0, using index count",
 				slog.String("NodeGroup", nodeGroup.Name),
 				slog.Int("Count", countNodes))
 		}
@@ -391,7 +395,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Standby))
 		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(nodeGroup.HasErrors)
 
-		c.logger.Debug("Metrics set for ",
+		c.logger.Debug("Metrics set for",
 			slog.String("NodeGroup", nodeGroup.Name),
 			slog.Int("TotalNodes", totalNodes),
 			slog.Int("ReadyNodes", readyNodes),
@@ -408,7 +412,7 @@ func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *ngv1.NodeGroup) {
 
 	nodeGroupData := ToNodeGroupMetricsData(nodegroup)
 	c.nodeGroups[nodegroup.Name] = &nodeGroupData
-	c.logger.Debug("Add or Update",
+	c.logger.Debug("Add or Update NodeGroup",
 		slog.String("NodeGroup", nodegroup.Name),
 		slog.String("Type", nodeGroupData.NodeType),
 		slog.Int("Nodes", len(c.nodeGroups)))
@@ -421,7 +425,8 @@ func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *ngv1.NodeGroup) {
 
 	delete(c.nodeGroups, nodegroup.Name)
 	c.updateMetrics()
-	c.logger.Debug("Deleted ", slog.String("NodeGroup", nodegroup.Name))
+	c.logger.Debug("Deleted NodeGroup",
+		slog.String("NodeGroup", nodegroup.Name))
 }
 
 func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
@@ -429,12 +434,13 @@ func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *v1.Node) {
 	defer c.mutex.Unlock()
 
 	nodeData := ToNodeMetricsData(node)
-	c.ensureNodeInIndex(&nodeData)
-	c.updateMetrics()
+	if updated := c.ensureNodeInIndex(&nodeData); updated {
+		c.updateMetrics()
+	}
 	c.logger.Debug("Add or Updated Node",
-		slog.String("node", node.Name),
-		slog.String("nodeGroup", nodeData.NodeGroup),
-		slog.Float64("ready", nodeData.IsReady))
+		slog.String("Node", node.Name),
+		slog.String("NodeGroup", nodeData.NodeGroup),
+		slog.Float64("Ready", nodeData.IsReady))
 }
 
 func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
@@ -444,7 +450,7 @@ func (c *NodeGroupCollector) OnNodeDelete(node *v1.Node) {
 	nodeData := ToNodeMetricsData(node)
 	c.removeNodeFromIndex(&nodeData)
 	c.updateMetrics()
-	c.logger.Debug("Deleted ",
+	c.logger.Debug("Deleted Node",
 		slog.String("Node", node.Name),
 		slog.String("NodeGroup", nodeData.NodeGroup))
 }
