@@ -148,8 +148,8 @@ func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
-	
-    // Lock deckhouse main queue while the control-plane is updating.
+
+	// Lock deckhouse main queue while the control-plane is updating.
 	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[daemonSetInfo](input.Snapshots, "cpm_ds")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
