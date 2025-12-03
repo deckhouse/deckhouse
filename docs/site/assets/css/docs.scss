@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  max-height: 200px;
+  // max-height: 200px;
   opacity: 1;
   margin: 0 0 25px;
   z-index: 50;
@@ -20,7 +20,7 @@
   &.hidden {
     top: 0 !important;
     opacity: 0;
-    max-height: 0;
+    // max-height: 0;
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -430,6 +430,11 @@
   overflow-x: hidden;
   overflow-y: auto;
   padding-top: 14px;
+  transition: top .15s ease-in-out;
+
+  &.top {
+    top: var(--scroll-top) !important;
+  }
 }
 
 .layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) .layout-sidebar__sidebar--guides :not(.layout-sidebar__sidebar_right) {
