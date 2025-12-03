@@ -64,6 +64,9 @@
   "cni-simple-bridge": [
     "network"
   ],
+  "managed-postgres": [
+    "database"  
+  ],
   "control-plane-manager": [
     "core"
   ],
