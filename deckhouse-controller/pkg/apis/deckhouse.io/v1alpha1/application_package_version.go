@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -158,17 +160,9 @@ func (a *ApplicationPackageVersion) AddInstalledApp(namespace string, appName st
 }
 
 func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
-	usedBy := make([]ApplicationPackageVersionStatusInstance, 0, len(a.Status.UsedBy))
-
-	for _, v := range a.Status.UsedBy {
-		if v.Namespace == namespace && v.Name == appName {
-			continue
-		}
-
-		usedBy = append(usedBy, v)
-	}
-
-	a.Status.UsedBy = usedBy
+	a.Status.UsedBy = slices.DeleteFunc(a.Status.UsedBy, func(v ApplicationPackageVersionStatusInstance) bool {
+		return v.Namespace == namespace && v.Name == appName
+	})
 
 	if a.Status.UsedByCount > 0 {
 		a.Status.UsedByCount--

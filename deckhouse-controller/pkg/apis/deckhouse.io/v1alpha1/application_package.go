@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -104,17 +106,11 @@ func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string
 		return a
 	}
 
-	installed := make([]ApplicationPackageStatusInstalled, 0, len(a.Status.Installed[NamespaceName(namespace)]))
+	newSlice := slices.DeleteFunc(a.Status.Installed[NamespaceName(namespace)], func(v ApplicationPackageStatusInstalled) bool {
+		return v.Name == appName
+	})
 
-	for _, pkg := range a.Status.Installed[NamespaceName(namespace)] {
-		if pkg.Name == appName {
-			continue
-		}
-
-		installed = append(installed, pkg)
-	}
-
-	a.Status.Installed[NamespaceName(namespace)] = installed
+	a.Status.Installed[NamespaceName(namespace)] = newSlice
 
 	if a.Status.InstalledOverall > 0 {
 		a.Status.InstalledOverall--
