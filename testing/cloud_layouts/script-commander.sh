@@ -236,6 +236,30 @@ function prepare_environment() {
     }"
     ;;
 
+  "DVP-cse")
+    cwd=$(pwd)/../testing/cloud_layouts/Static
+    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
+    ssh_user="altlinux"
+    bastion_host="185.11.73.171"
+    bastion_user="e2e-user"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
   "GCP")
     ssh_user="user"
     values="{
@@ -1334,13 +1358,13 @@ function run-test() {
   wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
-  if [[ "$PROVIDER" != "Static-cse" ]]; then
+  if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     wait_prom_rules_mutating_ready || return $?
   else
     echo "Use ${PROVIDER} provider, skipping prom_rules_mutating_ready check, continue..."
   fi
 
-  if [[ "$PROVIDER" != "Static-cse" ]]; then
+  if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   else
     testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
