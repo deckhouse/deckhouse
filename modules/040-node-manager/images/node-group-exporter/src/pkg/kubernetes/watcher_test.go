@@ -154,10 +154,9 @@ func TestWatcherStartWithKubernetesObjects(t *testing.T) {
 	assert.NoError(t, err)
 	defer w.Stop()
 
-	time.Sleep(200 * time.Millisecond)
-
-	assert.GreaterOrEqual(t, len(testHandler.nodes), 1, "Should have received at least one node from initial sync")
-	assert.GreaterOrEqual(t, len(testHandler.nodeGroups), 1, "Should have received at least one nodegroup from initial sync")
+	assert.Eventually(t, func() bool {
+		return len(testHandler.nodes) >= 1 && len(testHandler.nodeGroups) >= 1
+	}, 5*time.Second, 10*time.Millisecond, "Should have received initial sync events")
 
 	foundNode, exists := testHandler.nodes["test-node-1"]
 	assert.True(t, exists, "Should have found test-node-1")
@@ -186,9 +185,9 @@ func TestWatcherStartWithKubernetesObjects(t *testing.T) {
 		_, err := clientset.CoreV1().Nodes().Create(ctx, newNode, metav1.CreateOptions{})
 		assert.NoError(t, err)
 
-		time.Sleep(200 * time.Millisecond)
-
-		assert.Greater(t, len(testHandler.nodes), initialNodeCount, "Should have received new node event")
+		assert.Eventually(t, func() bool {
+			return len(testHandler.nodes) > initialNodeCount
+		}, 5*time.Second, 10*time.Millisecond, "Should have received new node event")
 
 		foundNewNode, exists := testHandler.nodes["test-node-2"]
 		assert.True(t, exists, "Should have found test-node-2")
@@ -209,9 +208,9 @@ func TestWatcherStartWithKubernetesObjects(t *testing.T) {
 		_, err := dynamicClient.Resource(NodeGroupGVR).Create(ctx, newNodeGroup, metav1.CreateOptions{})
 		assert.NoError(t, err)
 
-		time.Sleep(200 * time.Millisecond)
-
-		assert.Greater(t, len(testHandler.nodeGroups), initialNodeGroupCount, "Should have received new nodegroup event")
+		assert.Eventually(t, func() bool {
+			return len(testHandler.nodeGroups) > initialNodeGroupCount
+		}, 5*time.Second, 10*time.Millisecond, "Should have received new nodegroup event")
 
 		foundNewNodeGroup, exists := testHandler.nodeGroups["test-group-2"]
 		assert.True(t, exists, "Should have found test-group-2")
@@ -235,10 +234,12 @@ func TestWatcherStartWithKubernetesObjects(t *testing.T) {
 		_, err := dynamicClient.Resource(NodeGroupGVR).Create(ctx, errorNodeGroup, metav1.CreateOptions{})
 		assert.NoError(t, err)
 
-		time.Sleep(200 * time.Millisecond)
-
-		foundErrorNodeGroup, exists := testHandler.nodeGroups["test-group-error"]
-		assert.True(t, exists, "Should have found test-group-error")
+		var foundErrorNodeGroup *entity.NodeGroupData
+		assert.Eventually(t, func() bool {
+			var exists bool
+			foundErrorNodeGroup, exists = testHandler.nodeGroups["test-group-error"]
+			return exists
+		}, 5*time.Second, 10*time.Millisecond, "Should have found test-group-error")
 		assert.Equal(t, "test-group-error", foundErrorNodeGroup.Name)
 		assert.Equal(t, float64(1), foundErrorNodeGroup.HasErrors)
 	})
