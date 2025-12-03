@@ -153,29 +153,3 @@ echo "vm.swappiness=$SWAPPINESS" > "$SYSCTL_CONF"
 
 exit 0
 {{- end }}
-
-###############################################
-#  CASE 3: swapBehavior == UnlimitedSwap
-###############################################
-{{- if eq $swapBehavior "UnlimitedSwap" }}
-
-# For unlimited swap, just ensure swap is enabled
-# but don't manage swapfile ourselves
-if ! swapon --show | grep -q .; then
-  # No swap active, try to enable and check if successful
-  swapon -a || true
-  # If swap is now active, kubelet needs restart
-  if swapon --show | grep -q .; then
-    bb-flag-set kubelet-need-restart
-  fi
-fi
-
-# Configure swappiness
-SWAPPINESS="{{ $swappiness }}"
-sysctl -w vm.swappiness="$SWAPPINESS"
-mkdir -p /etc/sysctl.d
-echo "vm.swappiness=$SWAPPINESS" > "$SYSCTL_CONF"
-
-exit 0
-{{- end }}
-
