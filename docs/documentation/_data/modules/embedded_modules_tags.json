@@ -24,10 +24,12 @@
     "cloud"
   ],
   "cloud-provider-dvp": [
-    "virtualization"
+    "virtualization",
+    "cloud"
   ],
   "cloud-provider-dynamix": [
-    "bare-metal"
+    "bare-metal",
+    "cloud"
   ],
   "cloud-provider-gcp": [
     "cloud"
