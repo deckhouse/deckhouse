@@ -664,6 +664,20 @@ spec:
                           enum:
                             - NoSwap
                             - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Controls the kernel's tendency to swap memory pages.
+                            
+                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
+                            * `60` — default balanced behavior.
+                            * `100` — aggressive swapping.
+                            
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
                         limitedSwap:
                           type: object
                           description: |
@@ -1322,6 +1336,20 @@ spec:
                           enum:
                             - NoSwap
                             - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Controls the kernel's tendency to swap memory pages.
+                            
+                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
+                            * `60` — default balanced behavior.
+                            * `100` — aggressive swapping.
+                            
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
                         limitedSwap:
                           type: object
                           description: |
@@ -2353,6 +2381,20 @@ spec:
                           enum:
                             - NoSwap
                             - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Controls the kernel's tendency to swap memory pages.
+                            
+                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
+                            * `60` — default balanced behavior.
+                            * `100` — aggressive swapping.
+                            
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
                         limitedSwap:
                           type: object
                           description: |

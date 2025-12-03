@@ -402,19 +402,21 @@ const (
 )
 
 type KubeletMemorySwap struct {
-	SwapBehavior string `json:"swapBehavior" yaml:"swapBehavior"`
+	SwapBehavior string `json:"swapBehavior"`
 
-	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty" yaml:"limitedSwap,omitempty"`
+	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
+
+	Swappiness *int `json:"swappiness,omitempty"`
 }
 
 type KubeletLimitedSwap struct {
 	// Size of the swap file (e.g., "1Gi", "2Gi")
-	Size string `json:"size" yaml:"size"`
+	Size string `json:"size"`
 }
 
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
-		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil && k.MemorySwap == nil
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil && k.MemorySwap == nil && k.MemorySwap.Swappiness == nil
 }
 
 type Fencing struct {
