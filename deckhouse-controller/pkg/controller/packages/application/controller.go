@@ -247,9 +247,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !app.DeletionTimestamp.IsZero() {
-		r.handleDelete(ctx, app)
-
-		return res, nil
+		return r.handleDelete(ctx, app)
 	}
 
 	// handle create/update events
@@ -362,14 +360,54 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	return nil
 }
 
-func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) {
+func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	logger := r.logger.With(slog.String("name", app.Name))
+
+	logger.Debug("handling delete Application")
+
+	ap := new(v1alpha1.ApplicationPackage)
+	err := r.client.Get(ctx, types.NamespacedName{Name: app.Spec.PackageName}, ap)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logger.Warn("failed to get ApplicationPackage", slog.String("name", app.Spec.PackageName), log.Err(err))
+		return res, fmt.Errorf("get ApplicationPackage for %s: %w", app.Spec.PackageName, err)
+	}
+
+	if ap.Status.IsAppInstalled(app.Namespace, app.Name) {
+		original := ap.DeepCopy()
+
+		ap.Status = ap.Status.RemoveInstalledApp(app.Namespace, app.Name)
+
+		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
+		}
+	}
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	err = r.client.Get(ctx, types.NamespacedName{Name: v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)}, apv)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logger.Warn("failed to get ApplicationPackageVersion", slog.String("name", v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)), log.Err(err))
+		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version), err)
+	}
+
+	if apv.Status.IsAppInstalled(app.Namespace, app.Name) {
+		original := apv.DeepCopy()
+
+		apv.Status = apv.Status.RemoveInstalledApp(app.Namespace, app.Name)
+
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return res, fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
+		}
+	}
 
 	logger.Debug("deleting Application")
 
 	r.pm.RemoveApplication(ctx, app)
 
 	logger.Debug("delete Application complete")
+
+	return res, nil
 }
 
 func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
