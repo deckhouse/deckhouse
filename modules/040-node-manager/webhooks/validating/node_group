@@ -331,6 +331,36 @@ EOF
     fi
   fi
 
+  # Check memorySwap configuration requires Kubernetes >= 1.22
+  if context::jq -e -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior != null and .review.request.object.spec.kubelet.memorySwap.swapBehavior != ""' >/dev/null 2>&1; then
+    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior')"
+    if [[ "${swapBehavior}" != "NoSwap" ]]; then
+      # Helper functions
+      version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+      has_cgroup2() { [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]; }
+      
+      # Get Kubernetes version from cluster configuration
+      kubeVersion="$(kubectl version -o json | jq -r '.serverVersion.major + "." + .serverVersion.minor')"
+      requiredVersion="1.22"
+      
+      # Block if Kubernetes version is too old
+      if ! version_ge "$kubeVersion" "$requiredVersion"; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"memorySwap requires Kubernetes >= 1.22, current version is ${kubeVersion}"}
+EOF
+        return 0
+      fi
+
+      # Warn if control plane uses cgroup v1 (nodes from this NodeGroup may differ)
+      if ! has_cgroup2; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true, "warnings":["memorySwap requires cgroup v2. The control plane appears to use cgroup v1. Ensure your nodes from this NodeGroup use cgroup v2, otherwise swap configuration will be skipped on those nodes."]}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
