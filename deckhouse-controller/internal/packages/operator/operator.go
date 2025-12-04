@@ -31,15 +31,16 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/eventhandler"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/disable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/startup"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -62,6 +63,7 @@ type Operator struct {
 
 	manager     *manager.Manager
 	scheduler   *schedule.Scheduler
+	status      *status.Service
 	debugServer *debug.Server
 
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
@@ -69,7 +71,7 @@ type Operator struct {
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources
 
 	mu       sync.Mutex
-	packages map[string]*Package
+	packages map[string]*lifecyclePackage
 
 	logger *log.Logger
 }
@@ -97,13 +99,14 @@ type moduleManager interface {
 func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
-	o.packages = make(map[string]*Package)
+	o.packages = make(map[string]*lifecyclePackage)
 
 	// Initialize foundational services
 	o.logger = logger.Named(operatorTracer)
 	o.scheduleManager = cron.NewManager(o.logger)
 	o.queueService = queue.NewService(o.logger)
 	o.installer = installer.New(dc, o.logger)
+	o.status = status.NewService()
 
 	// Initialize scheduler with enabling/disabling callbacks
 	o.buildScheduler(moduleManager)
@@ -125,7 +128,7 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 
 	// Initialize package manager with all dependencies
 	o.manager = manager.New(manager.Config{
-		OnValuesChanged: func(ctx context.Context, name string) {
+		OnValuesChanged: func(name string) {
 			o.mu.Lock()
 			defer o.mu.Unlock()
 
@@ -133,11 +136,11 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 				return
 			}
 
-			if o.packages[name].status.Phase == Running {
-				o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
-			}
+			ctx := o.packages[name].renewContext(eventRerun)
+			o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 		},
 		NelmService:       o.nelmService,
+		Scheduler:         o.scheduler,
 		KubeObjectPatcher: o.objectPatcher,
 		ScheduleManager:   o.scheduleManager,
 		KubeEventsManager: o.kubeEventsManager,
@@ -179,6 +182,11 @@ func (o *Operator) registerDebugServer(sockerPath string) error {
 	})
 
 	return nil
+}
+
+// Status returns the status service
+func (o *Operator) Status() *status.Service {
+	return o.status
 }
 
 // Scheduler return the scheduler for external access
@@ -313,16 +321,8 @@ func (o *Operator) buildNelmService() error {
 	}
 
 	o.nelmService = nelm.NewService(cache, func(name string) {
-		o.mu.Lock()
-		defer o.mu.Unlock()
-
-		if _, ok := o.packages[name]; !ok {
-			return
-		}
-
-		if o.packages[name].status.Phase == Running {
-			o.queueService.Enqueue(context.Background(), name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
-		}
+		ctx := o.packages[name].renewContext(eventRerun)
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}, o.logger)
 
 	return nil
@@ -397,37 +397,30 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 	}
 
 	// onEnable transitions package from Loaded to Running by executing startup hooks
-	onEnable := func(ctx context.Context, name string) {
+	onEnable := func(name string) {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 
-		if o.packages[name].status.Phase == Loaded {
-			o.queueService.Enqueue(ctx, name, taskstartup.NewTask(name, o.manager, o.queueService, o.logger), queue.WithOnDone(func() {
-				o.mu.Lock()
-				defer o.mu.Unlock()
-
-				if _, ok := o.packages[name]; ok {
-					o.packages[name].status.Phase = Running
-				}
-			}), queue.WithUnique())
+		if _, ok := o.packages[name]; !ok {
+			return
 		}
+
+		ctx := o.packages[name].renewContext(eventStartup)
+		o.queueService.Enqueue(ctx, name, taskstartup.NewTask(name, o.status, o.manager, o.queueService, o.logger), queue.WithUnique())
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}
 
 	// onDisable stops package hooks and transitions from Running back to Loaded
-	onDisable := func(ctx context.Context, name string) {
+	onDisable := func(name string) {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 
-		if o.packages[name].status.Phase == Running {
-			o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger), queue.WithOnDone(func() {
-				o.mu.Lock()
-				defer o.mu.Unlock()
-
-				if _, ok := o.packages[name]; ok {
-					o.packages[name].status.Phase = Loaded
-				}
-			}), queue.WithUnique())
+		if _, ok := o.packages[name]; !ok {
+			return
 		}
+
+		ctx := o.packages[name].renewContext(eventDisable)
+		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger), queue.WithUnique())
 	}
 
 	o.scheduler = schedule.NewScheduler(

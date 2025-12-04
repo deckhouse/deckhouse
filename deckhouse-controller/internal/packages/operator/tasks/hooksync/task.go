@@ -82,7 +82,10 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 
 	// Unlock monitors to allow hook to process future Kubernetes events
-	t.logger.Debug("unlock kubernetes monitors", slog.String("name", t.packageName), slog.String("hook", t.hook))
+	t.logger.Debug("unlock kubernetes monitors",
+		slog.String("name", t.packageName),
+		slog.String("monitor", t.info.KubernetesBinding.Monitor.Metadata.MonitorId),
+		slog.String("hook", t.hook))
 	t.manager.UnlockKubernetesMonitors(t.packageName, t.hook, t.info.KubernetesBinding.Monitor.Metadata.MonitorId)
 
 	return nil

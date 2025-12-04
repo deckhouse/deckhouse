@@ -16,6 +16,8 @@ package apps
 
 import (
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 )
 
 // Definition represents application metadata.
@@ -44,4 +46,24 @@ type Dependency struct {
 type DisableOptions struct {
 	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+}
+
+func (r *Requirements) Checks() schedule.Checks {
+	if r == nil {
+		return schedule.Checks{}
+	}
+
+	deps := make(map[string]dependency.Dependency)
+	for module, dep := range r.Modules {
+		deps[module] = dependency.Dependency{
+			Constraint: dep.Constraints,
+			Optional:   dep.Optional,
+		}
+	}
+
+	return schedule.Checks{
+		Kubernetes: r.Kubernetes,
+		Deckhouse:  r.Deckhouse,
+		Modules:    deps,
+	}
 }

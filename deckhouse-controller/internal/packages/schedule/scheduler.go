@@ -15,7 +15,6 @@
 package schedule
 
 import (
-	"context"
 	"sync"
 	"sync/atomic"
 
@@ -41,8 +40,6 @@ type Scheduler struct {
 	onEnable  Callback // Called when package transitions to enabled state
 	onDisable Callback // Called when package transitions to disabled state
 
-	ctx context.Context
-
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	dependencyGetter       dependency.Getter   // Get dependencies
@@ -55,7 +52,7 @@ type Scheduler struct {
 }
 
 // Callback is invoked when package state changes.
-type Callback func(ctx context.Context, name string)
+type Callback func(name string)
 
 // Checks defines version constraints that must be satisfied for a package to be enabled.
 type Checks struct {
@@ -107,7 +104,6 @@ func WithOnDisable(callback Callback) Option {
 func NewScheduler(opts ...Option) *Scheduler {
 	sch := new(Scheduler)
 
-	sch.ctx = context.Background()
 	sch.nodes = make(map[string]*node)
 	sch.pause.Store(true) // Start paused - no state changes until Resume()
 
@@ -124,9 +120,9 @@ type State struct {
 	Reason  string `json:"reason,omitempty" yaml:"reason,omitempty"` // Reason for current state (typically set when disabled)
 }
 
-// State returns the current enable/disable state for a package.
+// GetState returns the current enable/disable state for a package.
 // Returns State{Enabled: false} if package is not registered.
-func (s *Scheduler) State(name string) State {
+func (s *Scheduler) GetState(name string) State {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -139,6 +135,36 @@ func (s *Scheduler) State(name string) State {
 		Enabled: n.enabled,
 		Reason:  n.reason,
 	}
+}
+
+func (s *Scheduler) Check(checks Checks) error {
+	var checkers []checker.Checker
+
+	// Add version constraint checkers (all are blockers)
+	if checks.Kubernetes != nil && s.kubeVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+	}
+
+	if checks.Deckhouse != nil && s.deckhouseVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+	}
+
+	if len(checks.Modules) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, checks.Modules))
+	}
+
+	// Add bootstrap condition as blocker (prevents enabling during startup)
+	if s.bootstrapCondition != nil {
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
+	}
+
+	for _, ch := range checkers {
+		if res := ch.Check(); !res.Enabled {
+			return newRequirementsErr(res.Reason, res.Message)
+		}
+	}
+
+	return nil
 }
 
 // Add registers a package with the scheduler and creates checkers based on its constraints.
@@ -179,10 +205,7 @@ func (s *Scheduler) Add(pkg Package) {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, "cluster not bootstrap yet"))
 	}
 
-	ctx, cancel := context.WithCancel(s.ctx)
 	s.nodes[pkg.GetName()] = &node{
-		ctx:      ctx,
-		cancel:   cancel,
 		name:     pkg.GetName(),
 		checkers: checkers,
 	}
@@ -239,30 +262,21 @@ func (s *Scheduler) schedule(n *node) {
 		return // No state change, nothing to do
 	}
 
-	// to cancel the current task
-	n.cancel()
-
-	// renew context
-	n.ctx, n.cancel = context.WithCancel(s.ctx)
-
 	// State changed - invoke appropriate callback
 	switch n.enabled {
 	case true:
 		if s.onEnable != nil {
-			s.onEnable(n.ctx, n.name)
+			s.onEnable(n.name)
 		}
 	case false:
 		if s.onDisable != nil {
-			s.onDisable(n.ctx, n.name)
+			s.onDisable(n.name)
 		}
 	}
 }
 
 // node represents a package with its enable/disable state and checkers.
 type node struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-
 	name     string            // Package name
 	enabled  bool              // Current enable/disable state
 	reason   string            // Reason for current state (set by failing checker)

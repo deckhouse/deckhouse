@@ -35,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
@@ -199,19 +198,7 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 
 // GetChecks return scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetChecks() schedule.Checks {
-	deps := make(map[string]dependency.Dependency)
-	for module, dep := range a.definition.Requirements.Modules {
-		deps[module] = dependency.Dependency{
-			Constraint: dep.Constraints,
-			Optional:   dep.Optional,
-		}
-	}
-
-	return schedule.Checks{
-		Kubernetes: a.definition.Requirements.Kubernetes,
-		Deckhouse:  a.definition.Requirements.Deckhouse,
-		Modules:    deps,
-	}
+	return a.definition.Requirements.Checks()
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.

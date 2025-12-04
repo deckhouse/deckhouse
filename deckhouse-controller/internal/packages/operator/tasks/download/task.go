@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package run
+package download
 
 import (
 	"context"
@@ -21,15 +21,16 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	taskTracer = "package-run"
+	taskTracer = "package-download"
 )
 
-type manager interface {
-	RunPackage(ctx context.Context, name string) error
+type downloader interface {
+	Download(ctx context.Context, reg registry.Registry, packageName, version string) error
 }
 
 type statusService interface {
@@ -38,40 +39,48 @@ type statusService interface {
 }
 
 type task struct {
+	instance    string
 	packageName string
+	version     string
+	registry    registry.Registry
 
-	manager manager
-	status  statusService
+	downloader downloader
+	status     statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name string, status statusService, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name, pack, version string, reg registry.Registry, status statusService, downloader downloader, logger *log.Logger) queue.Task {
 	return &task{
-		packageName: name,
-		manager:     manager,
+		instance:    name,
+		packageName: pack,
+		version:     version,
+		registry:    reg,
+		downloader:  downloader,
 		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return "Rerun"
+	return "Download"
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	// Run package lifecycle: beforeHelm hooks → Helm upgrade → afterHelm hooks
-	// Also starts Helm resource monitoring to detect drift/deletions
-	t.logger.Debug("run package", slog.String("name", t.packageName))
-	if err := t.manager.RunPackage(ctx, t.packageName); err != nil {
-		t.status.HandleError(t.packageName, err)
-		return fmt.Errorf("run package: %w", err)
+	logger := t.logger.With(
+		slog.String("name", t.instance),
+		slog.String("package", t.packageName),
+		slog.String("registry", t.registry.Name),
+		slog.String("version", t.version))
+
+	// Download package from repository
+	logger.Debug("download package")
+	if err := t.downloader.Download(ctx, t.registry, t.packageName, t.version); err != nil {
+		t.status.HandleError(t.instance, err)
+		return fmt.Errorf("download package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionHelmApplied)
-	t.status.SetConditionTrue(t.packageName, status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
-	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInCluster)
+	t.status.SetConditionTrue(t.instance, status.ConditionDownloaded)
 
 	return nil
 }
