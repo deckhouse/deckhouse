@@ -22,7 +22,7 @@ If Kubernetes components are not updated on the cluster node, the [NodeGroup](/m
    ```
 
    The number of nodes in the `UPTODATE` state must match the total number of nodes in each group.
-   
+
    Example output:
 
    ```console
