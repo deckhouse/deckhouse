@@ -85,3 +85,18 @@ harbor-offline-installer-v2.14.1.tgz                         100%[==============
 ```
 {% endofftopic %}
 
+{% offtopic title="Как скачать файл с помощью curl..." %}
+Выполните команду:
+```console
+curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
+```
+
+Пример выполнени команды:
+```text
+$ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+```
+{% endofftopic %}
+
