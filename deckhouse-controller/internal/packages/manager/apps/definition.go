@@ -16,6 +16,7 @@ package apps
 
 import (
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 )

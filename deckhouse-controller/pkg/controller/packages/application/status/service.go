@@ -28,18 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// | Condition            | Depends On                | Meaning                                     |
-//  |----------------------|---------------------------|---------------------------------------------|
-//  | Installed            | All 6 internal conditions | Initial installation completed successfully |
-//  | Ready                | ReadyInRuntime            | Currently operational and healthy           |
-//  | PartiallyDegraded    | !ReadyInRuntime           | Not fully operational                       |
-//  | Managed              | ReadyInRuntime            | Under active operator management            |
-//  | ConfigurationApplied | HelmApplied               | Helm config applied successfully            |
-
 const (
 	// ConditionTypeInstalled indicates the application completed its initial installation successfully
-	// True only if all internal conditions (Downloaded, ReadyOnFilesystem, RequirementsMet,
-	// ReadyInRuntime, HooksProcessed, HelmApplied) are true
+	// Once true, this condition stays true (sticky) - it never reverts to false
 	ConditionTypeInstalled = "Installed"
 
 	// ConditionTypeReady indicates the application is currently operational and healthy
@@ -49,6 +40,10 @@ const (
 	// ConditionTypePartiallyDegraded indicates the application is not fully operational
 	// Inverse of Ready - true when ReadyInRuntime is false
 	ConditionTypePartiallyDegraded = "PartiallyDegraded"
+
+	// ConditionTypeUpdateInstalled indicates whether an update to a new version succeeded or failed
+	// Only set when version changes after initial installation. True if update succeeds, false if it fails
+	ConditionTypeUpdateInstalled = "UpdateInstalled"
 
 	// ConditionTypeManaged indicates the application is under active operator management
 	// True when ReadyInRuntime is true, meaning the operator is successfully managing the package
@@ -66,7 +61,7 @@ type Service struct {
 	logger *log.Logger
 }
 
-type getter func(name string) *status.Status
+type getter func(name string) status.Status
 
 func NewService(client client.Client, getter getter, logger *log.Logger) *Service {
 	return &Service{
@@ -112,10 +107,6 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 
 	// Get the package status from the operator
 	packageStatus := s.getter(ev)
-	if packageStatus == nil {
-		logger.Warn("package status not found")
-		return
-	}
 
 	// Update the Application status with new conditions
 	original := app.DeepCopy()
@@ -178,15 +169,50 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 		internalConds[cond.Type] = cond
 	}
 
+	// Check if Installed was ever set to true (sticky flag for initial installation)
+	installedPreviously := s.getConditionStatus(app, ConditionTypeInstalled) == corev1.ConditionTrue
+
+	// Check if version changed (indicates update scenario)
+	versionChanged := app.Status.CurrentVersion != nil &&
+		app.Status.CurrentVersion.Current != "" &&
+		app.Spec.Version != app.Status.CurrentVersion.Current
+
+	// Find any failed condition
+	failedCond := s.findFailedCondition(internalConds)
+	allConditionsMet := failedCond == nil
+
+	// Compute Installed condition
+	// Once true, stays true forever (sticky)
+	if !installedPreviously {
+		// Initial installation - set based on conditions
+		if allConditionsMet {
+			s.setCondition(app, ConditionTypeInstalled, corev1.ConditionTrue, "", "", now)
+		} else {
+			s.setCondition(app, ConditionTypeInstalled, corev1.ConditionFalse, failedCond.Reason, failedCond.Message, now)
+		}
+	}
+	// If already installed, condition stays true (don't modify it)
+
+	// Compute UpdateInstalled condition (only relevant when version changes after initial install)
+	if installedPreviously && versionChanged {
+		if allConditionsMet {
+			s.setCondition(app, ConditionTypeUpdateInstalled, corev1.ConditionTrue, "", "", now)
+		} else {
+			s.setCondition(app, ConditionTypeUpdateInstalled, corev1.ConditionFalse, failedCond.Reason, failedCond.Message, now)
+		}
+	}
+
 	// Compute Ready, PartiallyDegraded, and Managed conditions (all depend on ReadyInRuntime)
+	// Only set detailed message on Ready condition to avoid duplication
 	if readyInRuntime, ok := internalConds[string(status.ConditionReadyInRuntime)]; ok && readyInRuntime.Status == corev1.ConditionTrue {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionTrue, "", "", now)
 		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionFalse, "", "", now)
 		s.setCondition(app, ConditionTypeManaged, corev1.ConditionTrue, "", "", now)
 	} else if ok {
+		// Only set reason/message on Ready to avoid duplication
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
-		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, readyInRuntime.Reason, readyInRuntime.Message, now)
-		s.setCondition(app, ConditionTypeManaged, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
+		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, "", "", now)
+		s.setCondition(app, ConditionTypeManaged, corev1.ConditionFalse, "", "", now)
 	} else {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, "", "", now)
 		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, "", "", now)
@@ -200,13 +226,6 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 		s.setCondition(app, ConditionTypeConfigurationApplied, corev1.ConditionFalse, helmApplied.Reason, helmApplied.Message, now)
 	} else {
 		s.setCondition(app, ConditionTypeConfigurationApplied, corev1.ConditionFalse, "", "", now)
-	}
-
-	// Compute Installed condition (all internal conditions must be true)
-	if failedCond := s.findFailedCondition(internalConds); failedCond != nil {
-		s.setCondition(app, ConditionTypeInstalled, corev1.ConditionFalse, failedCond.Reason, failedCond.Message, now)
-	} else {
-		s.setCondition(app, ConditionTypeInstalled, corev1.ConditionTrue, "", "", now)
 	}
 }
 
@@ -234,6 +253,16 @@ func (s *Service) findFailedCondition(internalConds map[string]v1alpha1.Applicat
 	}
 
 	return nil
+}
+
+// getConditionStatus retrieves the current status of a condition
+func (s *Service) getConditionStatus(app *v1alpha1.Application, condType string) corev1.ConditionStatus {
+	for _, cond := range app.Status.Conditions {
+		if cond.Type == condType {
+			return cond.Status
+		}
+	}
+	return corev1.ConditionUnknown
 }
 
 // setCondition creates or updates a condition in the application status

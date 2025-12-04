@@ -114,29 +114,6 @@ func NewScheduler(opts ...Option) *Scheduler {
 	return sch
 }
 
-// State represents the current enable/disable state of a package.
-type State struct {
-	Enabled bool   `json:"enabled" yaml:"enabled"`                   // Whether package is enabled
-	Reason  string `json:"reason,omitempty" yaml:"reason,omitempty"` // Reason for current state (typically set when disabled)
-}
-
-// GetState returns the current enable/disable state for a package.
-// Returns State{Enabled: false} if package is not registered.
-func (s *Scheduler) GetState(name string) State {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	n, ok := s.nodes[name]
-	if !ok {
-		return State{Enabled: false}
-	}
-
-	return State{
-		Enabled: n.enabled,
-		Reason:  n.reason,
-	}
-}
-
 func (s *Scheduler) Check(checks Checks) error {
 	var checkers []checker.Checker
 

@@ -97,7 +97,7 @@ func (t *task) Execute(ctx context.Context) error {
 				Name:    status.ConditionReadyInRuntime,
 				Status:  metav1.ConditionFalse,
 				Reason:  "WaitConverge",
-				Message: fmt.Sprintf("wait for converge done"),
+				Message: "wait for converge done",
 			},
 		},
 	})

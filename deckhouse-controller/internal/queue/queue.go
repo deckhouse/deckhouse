@@ -131,11 +131,14 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	}
 
 	wrapper := &taskWrapper{
-		ctx:        ctx,
-		wg:         opt.wg,
-		id:         uuid.New().String(),
-		task:       task,
-		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0), backoff.WithMaxInterval(time.Minute)),
+		ctx:  ctx,
+		wg:   opt.wg,
+		id:   uuid.New().String(),
+		task: task,
+		backoff: backoff.NewExponentialBackOff(
+			backoff.WithMaxElapsedTime(0),
+			backoff.WithMaxInterval(time.Minute),
+			backoff.WithInitialInterval(15*time.Second)),
 		nextRetry:  time.Now(),
 		enqueuedAt: time.Now(),
 		onDone:     opt.onDone,
@@ -248,10 +251,7 @@ func (q *queue) processOne() bool {
 	default:
 	}
 
-	q.logger.Debug("process task",
-		slog.String("id", t.id),
-		slog.String("name", t.task.String()),
-		slog.String("queue", q.name))
+	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
 
 	// Execute the task
 	if err := t.task.Execute(t.ctx); err != nil {

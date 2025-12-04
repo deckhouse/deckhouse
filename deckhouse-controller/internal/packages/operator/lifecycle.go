@@ -20,8 +20,6 @@ import (
 	"log/slog"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
@@ -32,7 +30,6 @@ import (
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/load"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/uninstall"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -79,16 +76,7 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository, inst Instance) {
-	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Update")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", inst.Name))
-	span.SetAttributes(attribute.String("namespace", inst.Namespace))
-	span.SetAttributes(attribute.String("package", inst.Definition.Name))
-	span.SetAttributes(attribute.String("version", inst.Definition.Version))
-	span.SetAttributes(attribute.String("repository", repo.Name))
-
+func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 	if inst.Namespace == "" {
 		inst.Namespace = "default"
 	}
@@ -112,7 +100,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		o.packages[name].settings = inst.Settings
 
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(eventVersionChanged)
+		ctx := o.packages[name].renewContext(eventVersionChanged)
 
 		packageName := inst.Definition.Name
 		packageVersion := inst.Definition.Version
@@ -130,7 +118,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 	if o.packages[name].settingsChanged(inst.Settings) {
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(eventSettingsChanged)
+		ctx := o.packages[name].renewContext(eventSettingsChanged)
 
 		o.logger.Debug("update package settings", slog.String("name", name))
 
@@ -146,13 +134,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 //  2. Clean up custom queues created by package hooks
 //  3. Uninstall package resources (taskuninstall)
 //  4. Remove package's main queue
-func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
-	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Remove")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", instance))
-	span.SetAttributes(attribute.String("namespace", namespace))
-
+func (o *Operator) Remove(namespace, instance string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -164,7 +146,7 @@ func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
 	// Capture queues before manager removes the app metadata
 	queues := o.manager.GetPackageQueues(name)
 
-	ctx = o.packages[name].renewContext(eventRemove)
+	ctx := o.packages[name].renewContext(eventRemove)
 	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
@@ -262,8 +244,7 @@ type dump struct {
 }
 
 type packageDump struct {
-	*status.Status
-	schedule.State
+	status.Status
 	apps.Info
 }
 
@@ -284,10 +265,9 @@ func (o *Operator) Dump() []byte {
 		Packages: make(map[string]packageDump),
 	}
 
-	for name, _ := range o.packages {
+	for name := range o.packages {
 		d.Packages[name] = packageDump{
 			o.status.GetStatus(name),
-			o.scheduler.GetState(name),
 			o.manager.GetAppInfo(name),
 		}
 	}

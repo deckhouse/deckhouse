@@ -217,7 +217,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		}
 	}
 
-	r.operator.Update(ctx, repo, packageoperator.Instance{
+	r.operator.Update(repo, packageoperator.Instance{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -250,7 +250,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger := r.logger.With(slog.String("name", app.Name))
 
 	logger.Debug("delete application")
-	r.operator.Remove(ctx, app.Namespace, app.Name)
+	r.operator.Remove(app.Namespace, app.Name)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerProcessed) {
