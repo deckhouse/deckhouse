@@ -28,7 +28,7 @@ memory: 25Mi
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
   {{- $setSysAdminCapability := $config.setSysAdminCapability | default false }}
-  {{- $additionalContainers := $config.additionalContainers }} 
+  {{- $additionalContainers := $config.additionalContainers }}
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $csiNodeLifecycle := $config.csiNodeLifecycle | default false }}
@@ -36,6 +36,7 @@ memory: 25Mi
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
+  {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiNodeDriverRegistrar" $kubernetesSemVer) }}
   {{- if $driverRegistrarImage }}
@@ -133,7 +134,7 @@ spec:
       hostNetwork: {{ $csiNodeHostNetwork }}
       hostPID: {{ $csiNodeHostPID }}
       {{- if eq $csiNodeHostNetwork "true" }}
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: {{ $dnsPolicy | quote }}
       {{- end }}
       containers:
       - name: node-driver-registrar
@@ -208,7 +209,7 @@ spec:
             port: {{ $livenessProbePort }}
           initialDelaySeconds: 5
           timeoutSeconds: 5
-      {{- end }}      
+      {{- end }}
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet

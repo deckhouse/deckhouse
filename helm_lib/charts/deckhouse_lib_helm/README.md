@@ -9,6 +9,8 @@
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
+| **Csi Controller** |
+| [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -39,7 +41,6 @@
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
 | [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
 | [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
-| [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Module Ingress Class** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
 | **Module Ingress Snippets** |
@@ -163,6 +164,23 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Kind name portion 
+
+## Csi Controller
+
+### helm_lib_csi_image_with_common_fallback
+
+ returns image name from storage foundation module if enabled, otherwise from common module 
+
+#### Usage
+
+`{{ include "helm_lib_csi_image_with_common_fallback" (list . "<raw-container-name>" "<semver>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container raw name 
+-  Kubernetes semantic version 
 
 ## Enable Ds Eviction
 
@@ -468,22 +486,6 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Container name 
-
-
-### helm_lib_csi_image_with_common_fallback
-
- returns image name from storage foundation module if enabled, otherwise from common module 
-
-#### Usage
-
-`{{ include "helm_lib_csi_image_with_common_fallback" (list . "<raw-container-name>" "<semver>") }} `
-
-#### Arguments
-
-list:
--  Template context with .Values, .Chart, etc 
--  Container raw name 
--  Kubernetes semantic version 
 
 ## Module Ingress Class
 
