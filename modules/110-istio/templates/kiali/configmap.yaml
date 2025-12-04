@@ -1,8 +1,5 @@
-{{- range $version := .Values.istio.internal.versionsToInstall }}
-  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- $revision := get $versionInfo "revision"}}
-  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
-  {{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -40,26 +37,24 @@ data:
           type: bearer
           use_kiali_token: true
       grafana:
-  {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
         internal_url: http://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
-  {{- end }}
         url: http://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}
       custom_dashboards:
         enabled: true
-  {{- if and .Values.istio.tracing.enabled .Values.istio.tracing.kiali }}
+{{- if and .Values.istio.tracing.enabled .Values.istio.tracing.kiali }}
       tracing:
         enabled: true
         url: {{ .Values.istio.tracing.kiali.jaegerURLForUsers }}
-    {{- if .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
+  {{- if .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         in_cluster_url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         use_grpc: true
-    {{- else }}
-        in_cluster_url: ""
-    {{- end }}
   {{- else }}
+        in_cluster_url: ""
+  {{- end }}
+{{- else }}
       tracing:
         enabled: false
-  {{- end }}
+{{- end }}
     identity: {}
     istio_namespace: d8-{{ $.Chart.Name }}
     api:
@@ -78,4 +73,3 @@ data:
       istio_annotation_action: false
       istio_injection_action: false
       istio_upgrade_action: false
-{{- end }}
