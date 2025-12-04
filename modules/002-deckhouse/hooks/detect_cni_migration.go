@@ -29,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cni_migrations",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "network.deckhouse.io/v1alpha1",
 			Kind:       "CNIMigration",
 			FilterFunc: applyCNIMigrationFilter,
 		},
