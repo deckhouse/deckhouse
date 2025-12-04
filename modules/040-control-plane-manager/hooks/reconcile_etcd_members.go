@@ -56,12 +56,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: reconcicleEtcdFilterNode,
 		},
 		{
-			Name:       "etcd_only_node",
+			Name:       "etcd_arbiter_node",
 			ApiVersion: "v1",
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"node-role.deckhouse.io/etcd-only": "",
+					"node.deckhouse.io/etcd-arbiter": "",
 				},
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
@@ -109,7 +109,7 @@ type recicleEtcdNode struct {
 
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	snapsM := input.Snapshots.Get("master_nodes")
-	snapsEO := input.Snapshots.Get("etcd_only_node")
+	snapsEO := input.Snapshots.Get("etcd_arbiter_node")
 	snaps := make([]pkg.Snapshot, 0, len(snapsM)+len(snapsEO))
 	snaps = append(snaps, snapsM...)
 	snaps = append(snaps, snapsEO...)

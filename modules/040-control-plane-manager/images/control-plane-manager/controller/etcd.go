@@ -68,14 +68,14 @@ func GetEtcdPerformanceParams() EtcdPerformanceParams {
 		ElectionTimeout:   1000,
 	}
 
-	etcdOnlyParams := EtcdPerformanceParams{
+	etcdArbiterParams := EtcdPerformanceParams{
 		HeartbeatInterval: 500,
 		ElectionTimeout:   5000,
 	}
 
-	if config.EtcdOnly {
-		log.Infof("using increased etcd timeouts for EtcdOnly mode: heartbeat=%dms, election=%dms", etcdOnlyParams.HeartbeatInterval, etcdOnlyParams.ElectionTimeout)
-		return etcdOnlyParams
+	if config.EtcdArbiter {
+		log.Infof("using increased etcd timeouts for EtcdArbiter mode: heartbeat=%dms, election=%dms", etcdArbiterParams.HeartbeatInterval, etcdArbiterParams.ElectionTimeout)
+		return etcdArbiterParams
 	}
 
 	return defaultParams
