@@ -67,16 +67,7 @@ func cleanupFlannel(ctx context.Context) error {
 	patterns := []string{
 		"FLANNEL-",
 		"CNI-",
-		"KUBE-EXTERNAL-SERVICES",
-		"KUBE-NODEPORTS",
-		"KUBE-POSTROUTING",
-		"KUBE-FORWARD",
-		"KUBE-MARK-MASQ",
-		"KUBE-PROXY-FIREWALL",
-		"KUBE-SERVICES",
-		"KUBE-PROXY-CANARY",
-		"KUBE-SVC-",
-		"KUBE-SEP-",
+		"KUBE-",
 	}
 	if err := cleanIptablesByPatterns(logger, patterns); err != nil {
 		logger.Error(err, "Failed to clean iptables rules for flannel")
@@ -135,18 +126,9 @@ func cleanupSimpleBridge(ctx context.Context) error {
 		logger.Error(err, "Failed to delete IPAM directory", "dir", ipamDir)
 	}
 
-	patterns := []string{ // TODO: check this list
+	patterns := []string{
 		"CNI-",
-		"KUBE-EXTERNAL-SERVICES",
-		"KUBE-NODEPORTS",
-		"KUBE-POSTROUTING",
-		"KUBE-FORWARD",
-		"KUBE-MARK-MASQ",
-		"KUBE-PROXY-FIREWALL",
-		"KUBE-SERVICES",
-		"KUBE-PROXY-CANARY",
-		"KUBE-SVC-",
-		"KUBE-SEP-",
+		"KUBE-",
 	}
 	if err := cleanIptablesByPatterns(logger, patterns); err != nil {
 		logger.Error(err, "Failed to clean iptables rules for simple-bridge")
@@ -175,31 +157,21 @@ func cleanIptablesByPatterns(logger logr.Logger, patterns []string) error {
 
 	lines := strings.Split(rules, "\n")
 	for _, line := range lines {
+		// Always keep table declarations, COMMITs, and comments.
+		// These lines start with '*', '#', or are exactly "COMMIT".
+		if strings.HasPrefix(line, "*") || line == "COMMIT" || strings.HasPrefix(line, "#") {
+			newRulesBuilder.WriteString(line)
+			newRulesBuilder.WriteString("\n")
+			continue
+		}
+
+		// For all other lines (chain declarations and actual rules),
+		// remove if they contain any of the patterns.
 		shouldRemove := false
-		// Keep comments, commits, tables
-		if strings.HasPrefix(line, "*") || strings.HasPrefix(line, ":") || line == "COMMIT" || strings.HasPrefix(line, "#") {
-			// Special case: if it is a chain declaration line (e.g. :KUBE-SERVICES - [0:0]),
-			// and we want to remove KUBE-SERVICES, we should skip it too, otherwise iptables-restore might recreate it empty.
-			// But iptables-restore usually requires chains to be declared.
-			// If we simply remove the rules jumping TO it, the chain becomes orphaned.
-			// If we want to fully delete the chain, we should not declare it.
-			if strings.HasPrefix(line, ":") {
-				chainName := strings.Fields(line)[0] // :ChainName
-				chainName = strings.TrimPrefix(chainName, ":")
-				for _, p := range patterns {
-					if strings.Contains(chainName, p) {
-						shouldRemove = true
-						break
-					}
-				}
-			}
-		} else {
-			// Rule lines
-			for _, p := range patterns {
-				if strings.Contains(line, p) {
-					shouldRemove = true
-					break
-				}
+		for _, p := range patterns {
+			if strings.Contains(line, p) {
+				shouldRemove = true
+				break
 			}
 		}
 

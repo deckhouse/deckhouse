@@ -28,7 +28,11 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- if .Values.global.internal.cniMigrationEnabled }}
+    failurePolicy: Ignore
+    {{- else }}
     failurePolicy: Fail
+    {{- end }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
