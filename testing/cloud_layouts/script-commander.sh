@@ -1173,7 +1173,10 @@ function run-test() {
   local response
   local cluster_id
 
-  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+  if [[ "$PROVIDER" == "Static" ]]; then
+    echo "Provider = $PROVIDER: switch registry"
+    registry_id=$(create_registry "${DECKHOUSE_E2E_DOCKERCFG}")
+  elif [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
     echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
     registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
   else
