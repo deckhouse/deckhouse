@@ -75,12 +75,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleSources().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("moduleupdatepolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleUpdatePolicies().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("objectkeepers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ObjectKeepers().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("packagerepositories"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositories().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("packagerepositoryoperations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositoryOperations().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("retainers"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().Retainers().Informer()}, nil
 
 		// Group=deckhouse.io, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("modulepulloverrides"):

@@ -29,58 +29,58 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// RetainerInformer provides access to a shared informer and lister for
-// Retainers.
-type RetainerInformer interface {
+// ObjectKeeperInformer provides access to a shared informer and lister for
+// ObjectKeepers.
+type ObjectKeeperInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() deckhouseiov1alpha1.RetainerLister
+	Lister() deckhouseiov1alpha1.ObjectKeeperLister
 }
 
-type retainerInformer struct {
+type objectKeeperInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewRetainerInformer constructs a new informer for Retainer type.
+// NewObjectKeeperInformer constructs a new informer for ObjectKeeper type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewRetainerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredRetainerInformer(client, resyncPeriod, indexers, nil)
+func NewObjectKeeperInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredObjectKeeperInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredRetainerInformer constructs a new informer for Retainer type.
+// NewFilteredObjectKeeperInformer constructs a new informer for ObjectKeeper type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredRetainerInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredObjectKeeperInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().Retainers().List(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ObjectKeepers().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().Retainers().Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ObjectKeepers().Watch(context.TODO(), options)
 			},
 		},
-		&apisdeckhouseiov1alpha1.Retainer{},
+		&apisdeckhouseiov1alpha1.ObjectKeeper{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *retainerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredRetainerInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *objectKeeperInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredObjectKeeperInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *retainerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.Retainer{}, f.defaultInformer)
+func (f *objectKeeperInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ObjectKeeper{}, f.defaultInformer)
 }
 
-func (f *retainerInformer) Lister() deckhouseiov1alpha1.RetainerLister {
-	return deckhouseiov1alpha1.NewRetainerLister(f.Informer().GetIndexer())
+func (f *objectKeeperInformer) Lister() deckhouseiov1alpha1.ObjectKeeperLister {
+	return deckhouseiov1alpha1.NewObjectKeeperLister(f.Informer().GetIndexer())
 }

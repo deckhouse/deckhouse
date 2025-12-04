@@ -28,19 +28,19 @@ import (
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.mode`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="FollowObject",type=string,JSONPath=`.spec.followObjectRef.name`
-type Retainer struct {
+type ObjectKeeper struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   RetainerSpec   `json:"spec"`
-	Status RetainerStatus `json:"status,omitempty"`
+	Spec   ObjectKeeperSpec   `json:"spec"`
+	Status ObjectKeeperStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-type RetainerList struct {
+type ObjectKeeperList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Retainer `json:"items"`
+	Items           []ObjectKeeper `json:"items"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -48,7 +48,7 @@ type RetainerList struct {
 // +kubebuilder:validation:XValidation:rule="self.mode in ['TTL','FollowObjectWithTTL'] ? has(self.ttl) : true",message="ttl is required when mode is TTL or FollowObjectWithTTL"
 // +kubebuilder:validation:XValidation:rule="self.mode == 'TTL' ? !has(self.followObjectRef) : true",message="followObjectRef must not be set when mode is TTL"
 // +kubebuilder:validation:XValidation:rule="self.mode == 'FollowObject' ? !has(self.ttl) : true",message="ttl must not be set when mode is FollowObject"
-type RetainerSpec struct {
+type ObjectKeeperSpec struct {
 	// Mode controls retention behavior
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=FollowObject;TTL;FollowObjectWithTTL
@@ -56,13 +56,13 @@ type RetainerSpec struct {
 
 	// FollowObjectRef references the namespaced object that controls retention
 	// Required when mode = FollowObject or FollowObjectWithTTL
-	// The Retainer will be garbage collected when the referenced object is deleted
+	// The ObjectKeeper will be garbage collected when the referenced object is deleted
 	// (or after TTL expires if mode = FollowObjectWithTTL)
 	FollowObjectRef *FollowObjectRef `json:"followObjectRef,omitempty"`
 
-	// TTL specifies how long the Retainer must live
+	// TTL specifies how long the ObjectKeeper must live
 	// Required when mode = TTL or FollowObjectWithTTL
-	// The Retainer will expire after this duration
+	// The ObjectKeeper will expire after this duration
 	// For FollowObjectWithTTL: TTL starts counting from object deletion time
 	TTL *metav1.Duration `json:"ttl,omitempty"`
 }
@@ -82,34 +82,34 @@ type FollowObjectRef struct {
 	Name string `json:"name"`
 
 	// UID of the object to follow (required for verification)
-	// Used by RetainerController to detect object deletion or recreation
+	// Used by ObjectKeeperController to detect object deletion or recreation
 	// +kubebuilder:validation:Required
 	UID string `json:"uid"`
 }
 
 // +kubebuilder:validation:Enum=Pending;Tracking;WaitingTTL
-type RetainerPhase string
+type ObjectKeeperPhase string
 
 const (
-	// PhasePending indicates that the Retainer cannot be processed yet,
+	// PhasePending indicates that the ObjectKeeper cannot be processed yet,
 	// most likely due to missing or invalid configuration (e.g., TTL or FollowObjectRef is not set).
-	PhasePending RetainerPhase = "Pending"
+	PhasePending ObjectKeeperPhase = "Pending"
 
-	// PhaseTracking means the Retainer is actively tracking the referenced object,
+	// PhaseTracking means the ObjectKeeper is actively tracking the referenced object,
 	// and the object exists with a matching UID.
-	PhaseTracking RetainerPhase = "Tracking"
+	PhaseTracking ObjectKeeperPhase = "Tracking"
 
-	// WaitingTTL indicates that the Retainer is waiting for the TTL to expire,
+	// WaitingTTL indicates that the ObjectKeeper is waiting for the TTL to expire,
 	// typically after the referenced object was deleted or its UID no longer matches.
-	PhaseWaitingTTL RetainerPhase = "WaitingTTL"
+	PhaseWaitingTTL ObjectKeeperPhase = "WaitingTTL"
 )
 
 // +k8s:deepcopy-gen=true
-type RetainerStatus struct {
-	// Phase of the retainer
-	Phase RetainerPhase `json:"phase,omitempty"`
+type ObjectKeeperStatus struct {
+	// Phase of the objectkeeper
+	Phase ObjectKeeperPhase `json:"phase,omitempty"`
 
-	// Conditions represent the latest available observations of the retainer state
+	// Conditions represent the latest available observations of the objectkeeper state
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// Message provides additional information about the status

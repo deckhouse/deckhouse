@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package retain_controller
+package objectkeeper
 
 import (
 	"context"
@@ -60,10 +60,10 @@ const (
 	ModeFollowObjectWithTTL = "FollowObjectWithTTL"
 )
 
-// RetainerController reconciles Retainer objects
-// This is a system controller that manages the lifecycle of Retainer resources
+// ObjectKeeperController reconciles ObjectKeeper objects
+// This is a system controller that manages the lifecycle of ObjectKeeper resources
 // It requires privileged access to GET any namespaced objects
-type RetainerController struct {
+type ObjectKeeperController struct {
 	client.Client
 	dc         dependency.Container
 	restMapper meta.RESTMapper
@@ -86,7 +86,7 @@ func RegisterController(
 
 	restMapper := mgr.GetRESTMapper()
 
-	r := &RetainerController{
+	r := &ObjectKeeperController{
 		Client:     mgr.GetClient(),
 		dc:         dc,
 		restMapper: restMapper,
@@ -94,7 +94,7 @@ func RegisterController(
 		logger:     logger,
 	}
 
-	ctr, err := controller.New("retain-controller", mgr, controller.Options{
+	ctr, err := controller.New("objectkeeper-controller", mgr, controller.Options{
 		MaxConcurrentReconciles: MaxConcurrentReconciles,
 		CacheSyncTimeout:        3 * time.Minute,
 		NeedLeaderElection:      ptr.To(false),
@@ -104,7 +104,7 @@ func RegisterController(
 		return err
 	}
 
-	retainerPredicate := predicate.Funcs{
+	objectkeeperPredicate := predicate.Funcs{
 		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
@@ -113,7 +113,7 @@ func RegisterController(
 			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
-			// No need to reconcile deleted Retainers
+			// No need to reconcile deleted ObjectKeepers
 			return false
 		},
 		GenericFunc: func(_ event.GenericEvent) bool {
@@ -129,7 +129,7 @@ func RegisterController(
 			return false
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
-			// Reconcile related Retainers
+			// Reconcile related ObjectKeepers
 			return true
 		},
 		GenericFunc: func(_ event.GenericEvent) bool {
@@ -137,11 +137,11 @@ func RegisterController(
 		},
 	}
 
-	// Index spec.followObjectRef.namespace field for Retainer resources.
-	// Enables efficient lookup of Retainers linked to a specific namespace,
+	// Index spec.followObjectRef.namespace field for ObjectKeeper resources.
+	// Enables efficient lookup of ObjectKeepers linked to a specific namespace,
 	// useful for triggering reconciliations, when a referenced namespace is deleted.
-	err = mgr.GetFieldIndexer().IndexField(context.TODO(), &v1alpha1.Retainer{}, "spec.followObjectRef.namespace", func(obj client.Object) []string {
-		ret, ok := obj.(*v1alpha1.Retainer)
+	err = mgr.GetFieldIndexer().IndexField(context.TODO(), &v1alpha1.ObjectKeeper{}, "spec.followObjectRef.namespace", func(obj client.Object) []string {
+		ret, ok := obj.(*v1alpha1.ObjectKeeper)
 		if !ok || ret.Spec.FollowObjectRef == nil {
 			return nil // No index
 		}
@@ -158,8 +158,8 @@ func RegisterController(
 	r.logger.Info("Controller started")
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.Retainer{},
-			builder.WithPredicates(retainerPredicate),
+		For(&v1alpha1.ObjectKeeper{},
+			builder.WithPredicates(objectkeeperPredicate),
 		).
 		Watches(
 			&corev1.Namespace{},
@@ -169,17 +169,17 @@ func RegisterController(
 					return nil
 				}
 
-				var retainersList v1alpha1.RetainerList
-				if err := r.List(ctx, &retainersList, client.MatchingFields{"spec.followObjectRef.namespace": ns.Name}); err != nil {
-					r.logger.Error("Failed to list Retainers for namespace cleanup", log.Err(err))
+				var objectkeepersList v1alpha1.ObjectKeeperList
+				if err := r.List(ctx, &objectkeepersList, client.MatchingFields{"spec.followObjectRef.namespace": ns.Name}); err != nil {
+					r.logger.Error("Failed to list ObjectKeepers for namespace cleanup", log.Err(err))
 					return nil
 				}
 
 				var reqs []reconcile.Request
-				for _, ret := range retainersList.Items {
+				for _, ret := range objectkeepersList.Items {
 					if ret.Spec.Mode == ModeFollowObject || ret.Spec.Mode == ModeFollowObjectWithTTL {
-						r.logger.Info("Requeue retainer due to namespace deletion",
-							"retainer", ret.Name,
+						r.logger.Info("Requeue objectkeeper due to namespace deletion",
+							"objectkeeper", ret.Name,
 							"namespace", ns.Name)
 						reqs = append(reqs, reconcile.Request{
 							NamespacedName: types.NamespacedName{Name: ret.Name},
@@ -192,11 +192,11 @@ func RegisterController(
 		).Complete(ctr)
 }
 
-func (r *RetainerController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Info("Reconciling Retainer", "name", req.Name)
+func (r *ObjectKeeperController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.logger.Info("Reconciling ObjectKeeper", "name", req.Name)
 
-	retainer := &v1alpha1.Retainer{}
-	if err := r.Get(ctx, req.NamespacedName, retainer); err != nil {
+	objectkeeper := &v1alpha1.ObjectKeeper{}
+	if err := r.Get(ctx, req.NamespacedName, objectkeeper); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -205,61 +205,61 @@ func (r *RetainerController) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Handle deletion
 	// No finalizer needed - GC handles cleanup via ownerReferences
-	if !retainer.DeletionTimestamp.IsZero() {
-		// Retainer is being deleted, nothing to do
+	if !objectkeeper.DeletionTimestamp.IsZero() {
+		// ObjectKeeper is being deleted, nothing to do
 		// GC will handle cleanup of dependent objects
 		return ctrl.Result{}, nil
 	}
 	// Process based on mode
-	switch retainer.Spec.Mode {
+	switch objectkeeper.Spec.Mode {
 	case ModeFollowObject:
-		return r.reconcileFollowObject(ctx, retainer)
+		return r.reconcileFollowObject(ctx, objectkeeper)
 	case ModeTTL:
-		return r.reconcileTTL(ctx, retainer)
+		return r.reconcileTTL(ctx, objectkeeper)
 	case ModeFollowObjectWithTTL:
-		return r.reconcileFollowObjectWithTTL(ctx, retainer)
+		return r.reconcileFollowObjectWithTTL(ctx, objectkeeper)
 	default:
 		// Should never happen: mode is validated at the API level(enum).
-		return ctrl.Result{}, fmt.Errorf("Unknown mode %v", retainer.Spec.Mode)
+		return ctrl.Result{}, fmt.Errorf("Unknown mode %v", objectkeeper.Spec.Mode)
 	}
 }
 
-// reconcileFollowObject handles Retainer in FollowObject mode
-func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer *v1alpha1.Retainer) (ctrl.Result, error) {
-	if retainer.Spec.FollowObjectRef == nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = "FollowObjectRef is required for FollowObject mode"
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+// reconcileFollowObject handles ObjectKeeper in FollowObject mode
+func (r *ObjectKeeperController) reconcileFollowObject(ctx context.Context, objectkeeper *v1alpha1.ObjectKeeper) (ctrl.Result, error) {
+	if objectkeeper.Spec.FollowObjectRef == nil {
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = "FollowObjectRef is required for FollowObject mode"
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "MissingFollowObjectRef",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
 
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
-	ref := retainer.Spec.FollowObjectRef
+	ref := objectkeeper.Spec.FollowObjectRef
 
 	// Parse APIVersion to get Group and Version
 	gv, err := schema.ParseGroupVersion(ref.APIVersion)
 	if err != nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = fmt.Sprintf("Invalid APIVersion: %s", ref.APIVersion)
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = fmt.Sprintf("Invalid APIVersion: %s", ref.APIVersion)
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "InvalidAPIVersion",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -284,19 +284,19 @@ func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer
 	obj, err := r.dyn.Resource(gvr).Namespace(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Object not found - delete Retainer
-			r.logger.Info("FollowObject not found - deleting Retainer",
-				"retainer", retainer.Name,
+			// Object not found - delete ObjectKeeper
+			r.logger.Info("FollowObject not found - deleting ObjectKeeper",
+				"objectkeeper", objectkeeper.Name,
 				"object", fmt.Sprintf("%s/%s/%s", ref.APIVersion, ref.Kind, ref.Name),
 				"namespace", ref.Namespace)
-			if err := r.Delete(ctx, retainer); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+			if err := r.Delete(ctx, objectkeeper); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 			}
 			return ctrl.Result{}, nil
 		}
 		// Other error - retry
 		r.logger.Error("Failed to get FollowObject",
-			"retainer", retainer.Name,
+			"objectkeeper", objectkeeper.Name,
 			"object", fmt.Sprintf("%s/%s/%s", ref.APIVersion, ref.Kind, ref.Name), log.Err(err))
 		return ctrl.Result{RequeueAfter: FollowObjectCheckInterval}, nil
 	}
@@ -304,29 +304,29 @@ func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer
 	// Verify UID matches
 	objUID := string(obj.GetUID())
 	if objUID != ref.UID {
-		// Object was recreated with different UID - delete Retainer
-		r.logger.Info("FollowObject UID mismatch - deleting Retainer",
-			"retainer", retainer.Name,
+		// Object was recreated with different UID - delete ObjectKeeper
+		r.logger.Info("FollowObject UID mismatch - deleting ObjectKeeper",
+			"objectkeeper", objectkeeper.Name,
 			"expectedUID", ref.UID,
 			"actualUID", objUID)
-		if err := r.Delete(ctx, retainer); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+		if err := r.Delete(ctx, objectkeeper); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// Object exists and UID matches - Retainer is active
-	base := retainer.DeepCopy()
-	retainer.Status.Phase = v1alpha1.PhaseTracking
-	retainer.Status.Message = fmt.Sprintf("Following object %s/%s/%s", ref.APIVersion, ref.Kind, ref.Name)
-	setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+	// Object exists and UID matches - ObjectKeeper is active
+	base := objectkeeper.DeepCopy()
+	objectkeeper.Status.Phase = v1alpha1.PhaseTracking
+	objectkeeper.Status.Message = fmt.Sprintf("Following object %s/%s/%s", ref.APIVersion, ref.Kind, ref.Name)
+	setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 		Type:               "Active",
 		Status:             metav1.ConditionTrue,
 		Reason:             "ObjectExists",
-		Message:            retainer.Status.Message,
+		Message:            objectkeeper.Status.Message,
 		LastTransitionTime: metav1.Now(),
 	})
-	if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+	if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -334,54 +334,54 @@ func (r *RetainerController) reconcileFollowObject(ctx context.Context, retainer
 	return ctrl.Result{RequeueAfter: FollowObjectCheckInterval}, nil
 }
 
-// reconcileTTL handles Retainer in TTL mode
-func (r *RetainerController) reconcileTTL(ctx context.Context, retainer *v1alpha1.Retainer) (ctrl.Result, error) {
-	if retainer.Spec.TTL == nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = "TTL is required for TTL mode"
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+// reconcileTTL handles ObjectKeeper in TTL mode
+func (r *ObjectKeeperController) reconcileTTL(ctx context.Context, objectkeeper *v1alpha1.ObjectKeeper) (ctrl.Result, error) {
+	if objectkeeper.Spec.TTL == nil {
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = "TTL is required for TTL mode"
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "MissingTTL",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
 	// Calculate expiration time
-	expiresAt := retainer.CreationTimestamp.Add(retainer.Spec.TTL.Duration)
+	expiresAt := objectkeeper.CreationTimestamp.Add(objectkeeper.Spec.TTL.Duration)
 	now := metav1.Now()
 
 	if now.After(expiresAt) {
-		// TTL expired - delete Retainer
-		r.logger.Info("TTL expired - deleting Retainer",
-			"retainer", retainer.Name,
-			"ttl", retainer.Spec.TTL.Duration.Round(time.Minute),
-			"created", retainer.CreationTimestamp,
+		// TTL expired - delete ObjectKeeper
+		r.logger.Info("TTL expired - deleting ObjectKeeper",
+			"objectkeeper", objectkeeper.Name,
+			"ttl", objectkeeper.Spec.TTL.Duration.Round(time.Minute),
+			"created", objectkeeper.CreationTimestamp,
 			"expired", expiresAt)
-		if err := r.Delete(ctx, retainer); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+		if err := r.Delete(ctx, objectkeeper); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// TTL not expired - Retainer is active
-	base := retainer.DeepCopy()
-	retainer.Status.Phase = v1alpha1.PhaseWaitingTTL
-	retainer.Status.Message = fmt.Sprintf("TTL expires at %v", expiresAt.Format(time.RFC3339))
-	setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+	// TTL not expired - ObjectKeeper is active
+	base := objectkeeper.DeepCopy()
+	objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+	objectkeeper.Status.Message = fmt.Sprintf("TTL expires at %v", expiresAt.Format(time.RFC3339))
+	setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 		Type:               "Active",
 		Status:             metav1.ConditionTrue,
 		Reason:             "TTLActive",
-		Message:            retainer.Status.Message,
+		Message:            objectkeeper.Status.Message,
 		LastTransitionTime: metav1.Now(),
 	})
-	if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+	if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -389,58 +389,58 @@ func (r *RetainerController) reconcileTTL(ctx context.Context, retainer *v1alpha
 	return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
 }
 
-// reconcileFollowObjectWithTTL handles Retainer in FollowObjectWithTTL mode
+// reconcileFollowObjectWithTTL handles ObjectKeeper in FollowObjectWithTTL mode
 // This is a hybrid mode: follows object, but if object disappears, starts TTL countdown
-func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, retainer *v1alpha1.Retainer) (ctrl.Result, error) {
-	if retainer.Spec.FollowObjectRef == nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = "FollowObjectRef is required for FollowObjectWithTTL mode"
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Context, objectkeeper *v1alpha1.ObjectKeeper) (ctrl.Result, error) {
+	if objectkeeper.Spec.FollowObjectRef == nil {
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = "FollowObjectRef is required for FollowObjectWithTTL mode"
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "MissingFollowObjectRef",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if retainer.Spec.TTL == nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = "TTL is required for FollowObjectWithTTL mode"
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+	if objectkeeper.Spec.TTL == nil {
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = "TTL is required for FollowObjectWithTTL mode"
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "MissingTTL",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
-	ref := retainer.Spec.FollowObjectRef
+	ref := objectkeeper.Spec.FollowObjectRef
 
 	gv, err := schema.ParseGroupVersion(ref.APIVersion)
 	if err != nil {
-		base := retainer.DeepCopy()
-		retainer.Status.Phase = v1alpha1.PhasePending
-		retainer.Status.Message = fmt.Sprintf("Invalid APIVersion: %s", ref.APIVersion)
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.Phase = v1alpha1.PhasePending
+		objectkeeper.Status.Message = fmt.Sprintf("Invalid APIVersion: %s", ref.APIVersion)
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "Active",
 			Status:             metav1.ConditionFalse,
 			Reason:             "InvalidAPIVersion",
-			Message:            retainer.Status.Message,
+			Message:            objectkeeper.Status.Message,
 			LastTransitionTime: metav1.Now(),
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -468,48 +468,48 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 		if errors.IsNotFound(err) {
 			// Set LostAt and start TTL countdown
 			now := metav1.Now()
-			if retainer.Status.LostAt == nil {
-				base := retainer.DeepCopy()
-				retainer.Status.LostAt = &now
-				retainer.Status.Phase = v1alpha1.PhaseWaitingTTL
-				retainer.Status.Message = "FollowObject not found; starting TTL countdown"
-				setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+			if objectkeeper.Status.LostAt == nil {
+				base := objectkeeper.DeepCopy()
+				objectkeeper.Status.LostAt = &now
+				objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+				objectkeeper.Status.Message = "FollowObject not found; starting TTL countdown"
+				setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 					Type:               "TTLActive",
 					Status:             metav1.ConditionFalse,
 					Reason:             "MissingFollowObject",
-					Message:            fmt.Sprintf("TTL expires at %v", now.Add(retainer.Spec.TTL.Duration).Format(time.RFC3339)),
+					Message:            fmt.Sprintf("TTL expires at %v", now.Add(objectkeeper.Spec.TTL.Duration).Format(time.RFC3339)),
 					LastTransitionTime: now,
 				})
-				if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+				if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 					return ctrl.Result{RequeueAfter: TTLCheckInterval}, err
 				}
 			}
 
 			// Calculate expiration time if LostAt exist
-			expiresAt := retainer.Status.LostAt.Add(retainer.Spec.TTL.Duration)
+			expiresAt := objectkeeper.Status.LostAt.Add(objectkeeper.Spec.TTL.Duration)
 			// Object not found - wait TTL before deleting objects
-			r.logger.Info("FollowObject not found - will delete Retainer after TTL expiration",
-				"retainer", retainer.Name,
+			r.logger.Info("FollowObject not found - will delete ObjectKeeper after TTL expiration",
+				"objectkeeper", objectkeeper.Name,
 				"object", fmt.Sprintf("%s/%s/%s", ref.APIVersion, ref.Kind, ref.Name),
 				"namespace", ref.Namespace,
 				"expired", expiresAt.Format(time.RFC3339))
 
 			if now.After(expiresAt) {
-				// TTL expired and FollowObject notFound - delete Retainer
-				r.logger.Info("TTL expired - deleting Retainer",
-					"retainer", retainer.Name,
-					"ttl", retainer.Spec.TTL.Duration.Round(time.Minute),
-					"lostAt", retainer.Status.LostAt,
+				// TTL expired and FollowObject notFound - delete ObjectKeeper
+				r.logger.Info("TTL expired - deleting ObjectKeeper",
+					"objectkeeper", objectkeeper.Name,
+					"ttl", objectkeeper.Spec.TTL.Duration.Round(time.Minute),
+					"lostAt", objectkeeper.Status.LostAt,
 					"expired", expiresAt.Format(time.RFC3339))
-				if err := r.Delete(ctx, retainer); err != nil {
-					return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+				if err := r.Delete(ctx, objectkeeper); err != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 				}
 			}
 			return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
 		}
 		// Other error - retry
 		r.logger.Error("Failed to get FollowObject",
-			"retainer", retainer.Name,
+			"objectkeeper", objectkeeper.Name,
 			"object", fmt.Sprintf("%s/%s/%s", ref.APIVersion, ref.Kind, ref.Name), log.Err(err))
 		return ctrl.Result{RequeueAfter: FollowObjectCheckInterval}, nil
 	}
@@ -517,76 +517,76 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 	// Object exists - verify UID matches
 	objUID := string(obj.GetUID())
 	if objUID != ref.UID {
-		if retainer.Status.LostAt == nil {
+		if objectkeeper.Status.LostAt == nil {
 			now := metav1.Now()
-			base := retainer.DeepCopy()
-			retainer.Status.LostAt = &now
-			retainer.Status.Phase = v1alpha1.PhaseWaitingTTL
-			retainer.Status.Message = "FollowObject not found; starting TTL countdown"
-			setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+			base := objectkeeper.DeepCopy()
+			objectkeeper.Status.LostAt = &now
+			objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+			objectkeeper.Status.Message = "FollowObject not found; starting TTL countdown"
+			setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 				Type:               "TTLActive",
 				Status:             metav1.ConditionFalse,
 				Reason:             "MissingFollowObject",
-				Message:            fmt.Sprintf("TTL expires at %v", now.Add(retainer.Spec.TTL.Duration).Format(time.RFC3339)),
+				Message:            fmt.Sprintf("TTL expires at %v", now.Add(objectkeeper.Spec.TTL.Duration).Format(time.RFC3339)),
 				LastTransitionTime: now,
 			})
-			if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+			if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 
-		// Object was recreated with different UID - treat as deletion, delete Retainer after TTL
-		expiresAt := retainer.Status.LostAt.Add(retainer.Spec.TTL.Duration)
+		// Object was recreated with different UID - treat as deletion, delete ObjectKeeper after TTL
+		expiresAt := objectkeeper.Status.LostAt.Add(objectkeeper.Spec.TTL.Duration)
 		now := metav1.Now()
-		base := retainer.DeepCopy()
-		retainer.Status.LostAt = &now
-		retainer.Status.Phase = v1alpha1.PhaseWaitingTTL
-		retainer.Status.Message = "FollowObject UID mismatch - will delete Retainer after TTL expiration"
-		setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+		base := objectkeeper.DeepCopy()
+		objectkeeper.Status.LostAt = &now
+		objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+		objectkeeper.Status.Message = "FollowObject UID mismatch - will delete ObjectKeeper after TTL expiration"
+		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "TTLActive",
 			Status:             metav1.ConditionFalse,
 			Reason:             "MissingFollowObjectRef",
 			Message:            fmt.Sprintf("TTL expires at %v", expiresAt.Format(time.RFC3339)),
 			LastTransitionTime: now,
 		})
-		if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+		if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 
 		if now.After(expiresAt) {
-			// TTL expired and FollowObject notFound - delete Retainer
-			r.logger.Info("TTL expired - deleting Retainer",
-				"retainer", retainer.Name,
-				"ttl", retainer.Spec.TTL.Duration.Round(time.Minute),
-				"created", retainer.CreationTimestamp,
+			// TTL expired and FollowObject notFound - delete ObjectKeeper
+			r.logger.Info("TTL expired - deleting ObjectKeeper",
+				"objectkeeper", objectkeeper.Name,
+				"ttl", objectkeeper.Spec.TTL.Duration.Round(time.Minute),
+				"created", objectkeeper.CreationTimestamp,
 				"expired", expiresAt)
-			if err := r.Delete(ctx, retainer); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+			if err := r.Delete(ctx, objectkeeper); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 			}
 		}
-		r.logger.Info("FollowObject UID mismatch (recreated) - deleting Retainer immediately",
-			"retainer", retainer.Name,
+		r.logger.Info("FollowObject UID mismatch (recreated) - deleting ObjectKeeper immediately",
+			"objectkeeper", objectkeeper.Name,
 			"expectedUID", ref.UID,
 			"actualUID", objUID)
-		if err := r.Delete(ctx, retainer); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to delete Retainer: %w", err)
+		if err := r.Delete(ctx, objectkeeper); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// Object exists and UID matches - Retainer is active
-	base := retainer.DeepCopy()
-	retainer.Status.Phase = v1alpha1.PhaseTracking
-	retainer.Status.Message = fmt.Sprintf("Following object %s/%s/%s", ref.APIVersion, ref.Kind, ref.Name)
-	setSingleCondition(&retainer.Status.Conditions, metav1.Condition{
+	// Object exists and UID matches - ObjectKeeper is active
+	base := objectkeeper.DeepCopy()
+	objectkeeper.Status.Phase = v1alpha1.PhaseTracking
+	objectkeeper.Status.Message = fmt.Sprintf("Following object %s/%s/%s", ref.APIVersion, ref.Kind, ref.Name)
+	setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 		Type:               "Active",
 		Status:             metav1.ConditionTrue,
 		Reason:             "ObjectExists",
-		Message:            retainer.Status.Message,
+		Message:            objectkeeper.Status.Message,
 		LastTransitionTime: metav1.Now(),
 	})
 
-	if err := r.Status().Patch(ctx, retainer, client.MergeFrom(base)); err != nil {
+	if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -595,7 +595,7 @@ func (r *RetainerController) reconcileFollowObjectWithTTL(ctx context.Context, r
 }
 
 // kindToResource converts Kind to resource name using RESTMapper
-func (r *RetainerController) kindToResource(kind string, gv schema.GroupVersion) (string, error) {
+func (r *ObjectKeeperController) kindToResource(kind string, gv schema.GroupVersion) (string, error) {
 	gvk := schema.GroupVersionKind{
 		Group:   gv.Group,
 		Version: gv.Version,

@@ -73,16 +73,16 @@ func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePoli
 	return newFakeModuleUpdatePolicies(c)
 }
 
+func (c *FakeDeckhouseV1alpha1) ObjectKeepers() v1alpha1.ObjectKeeperInterface {
+	return newFakeObjectKeepers(c)
+}
+
 func (c *FakeDeckhouseV1alpha1) PackageRepositories() v1alpha1.PackageRepositoryInterface {
 	return newFakePackageRepositories(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) PackageRepositoryOperations() v1alpha1.PackageRepositoryOperationInterface {
 	return newFakePackageRepositoryOperations(c)
-}
-
-func (c *FakeDeckhouseV1alpha1) Retainers() v1alpha1.RetainerInterface {
-	return newFakeRetainers(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

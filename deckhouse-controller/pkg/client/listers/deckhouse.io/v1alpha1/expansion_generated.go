@@ -67,6 +67,10 @@ type ModuleSourceListerExpansion interface{}
 // ModuleUpdatePolicyLister.
 type ModuleUpdatePolicyListerExpansion interface{}
 
+// ObjectKeeperListerExpansion allows custom methods to be added to
+// ObjectKeeperLister.
+type ObjectKeeperListerExpansion interface{}
+
 // PackageRepositoryListerExpansion allows custom methods to be added to
 // PackageRepositoryLister.
 type PackageRepositoryListerExpansion interface{}
@@ -74,7 +78,3 @@ type PackageRepositoryListerExpansion interface{}
 // PackageRepositoryOperationListerExpansion allows custom methods to be added to
 // PackageRepositoryOperationLister.
 type PackageRepositoryOperationListerExpansion interface{}
-
-// RetainerListerExpansion allows custom methods to be added to
-// RetainerLister.
-type RetainerListerExpansion interface{}

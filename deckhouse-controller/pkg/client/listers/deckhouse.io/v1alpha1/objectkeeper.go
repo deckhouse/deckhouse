@@ -22,24 +22,24 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// RetainerLister helps list Retainers.
+// ObjectKeeperLister helps list ObjectKeepers.
 // All objects returned here must be treated as read-only.
-type RetainerLister interface {
-	// List lists all Retainers in the indexer.
+type ObjectKeeperLister interface {
+	// List lists all ObjectKeepers in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.Retainer, err error)
-	// Get retrieves the Retainer from the index for a given name.
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.ObjectKeeper, err error)
+	// Get retrieves the ObjectKeeper from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*deckhouseiov1alpha1.Retainer, error)
-	RetainerListerExpansion
+	Get(name string) (*deckhouseiov1alpha1.ObjectKeeper, error)
+	ObjectKeeperListerExpansion
 }
 
-// retainerLister implements the RetainerLister interface.
-type retainerLister struct {
-	listers.ResourceIndexer[*deckhouseiov1alpha1.Retainer]
+// objectKeeperLister implements the ObjectKeeperLister interface.
+type objectKeeperLister struct {
+	listers.ResourceIndexer[*deckhouseiov1alpha1.ObjectKeeper]
 }
 
-// NewRetainerLister returns a new RetainerLister.
-func NewRetainerLister(indexer cache.Indexer) RetainerLister {
-	return &retainerLister{listers.New[*deckhouseiov1alpha1.Retainer](indexer, deckhouseiov1alpha1.Resource("retainer"))}
+// NewObjectKeeperLister returns a new ObjectKeeperLister.
+func NewObjectKeeperLister(indexer cache.Indexer) ObjectKeeperLister {
+	return &objectKeeperLister{listers.New[*deckhouseiov1alpha1.ObjectKeeper](indexer, deckhouseiov1alpha1.Resource("objectkeeper"))}
 }

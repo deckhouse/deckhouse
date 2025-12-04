@@ -21,24 +21,26 @@ import (
 	gentype "k8s.io/client-go/gentype"
 )
 
-// fakeRetainers implements RetainerInterface
-type fakeRetainers struct {
-	*gentype.FakeClientWithList[*v1alpha1.Retainer, *v1alpha1.RetainerList]
+// fakeObjectKeepers implements ObjectKeeperInterface
+type fakeObjectKeepers struct {
+	*gentype.FakeClientWithList[*v1alpha1.ObjectKeeper, *v1alpha1.ObjectKeeperList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-func newFakeRetainers(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.RetainerInterface {
-	return &fakeRetainers{
-		gentype.NewFakeClientWithList[*v1alpha1.Retainer, *v1alpha1.RetainerList](
+func newFakeObjectKeepers(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ObjectKeeperInterface {
+	return &fakeObjectKeepers{
+		gentype.NewFakeClientWithList[*v1alpha1.ObjectKeeper, *v1alpha1.ObjectKeeperList](
 			fake.Fake,
 			"",
-			v1alpha1.SchemeGroupVersion.WithResource("retainers"),
-			v1alpha1.SchemeGroupVersion.WithKind("Retainer"),
-			func() *v1alpha1.Retainer { return &v1alpha1.Retainer{} },
-			func() *v1alpha1.RetainerList { return &v1alpha1.RetainerList{} },
-			func(dst, src *v1alpha1.RetainerList) { dst.ListMeta = src.ListMeta },
-			func(list *v1alpha1.RetainerList) []*v1alpha1.Retainer { return gentype.ToPointerSlice(list.Items) },
-			func(list *v1alpha1.RetainerList, items []*v1alpha1.Retainer) {
+			v1alpha1.SchemeGroupVersion.WithResource("objectkeepers"),
+			v1alpha1.SchemeGroupVersion.WithKind("ObjectKeeper"),
+			func() *v1alpha1.ObjectKeeper { return &v1alpha1.ObjectKeeper{} },
+			func() *v1alpha1.ObjectKeeperList { return &v1alpha1.ObjectKeeperList{} },
+			func(dst, src *v1alpha1.ObjectKeeperList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ObjectKeeperList) []*v1alpha1.ObjectKeeper {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ObjectKeeperList, items []*v1alpha1.ObjectKeeper) {
 				list.Items = gentype.FromPointerSlice(items)
 			},
 		),
