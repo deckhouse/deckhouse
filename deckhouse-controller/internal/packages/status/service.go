@@ -107,20 +107,20 @@ func (s *Service) GetCh() <-chan string {
 
 // GetStatus retrieves a copy of the current status for a package by name ("namespace.name")
 // Returns a copy to prevent race conditions with concurrent modifications
-func (s *Service) GetStatus(name string) *Status {
+func (s *Service) GetStatus(name string) Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	status, ok := s.statuses[name]
 	if !ok {
-		return nil
+		return *newStatus()
 	}
 
 	// Return a deep copy to prevent race conditions
 	condsCopy := make([]Condition, len(status.Conditions))
 	copy(condsCopy, status.Conditions)
 
-	return &Status{
+	return Status{
 		Conditions: condsCopy,
 	}
 }
