@@ -1506,6 +1506,10 @@ Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing
 Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
 {% endalert %}
 
+{% alert level="info" %}
+NVIDIA Container Toolkit supports the following platforms — see [official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+{% endalert %}
+
 To add a GPU node to the cluster, perform the following steps:
 
 1. Create a NodeGroup for GPU nodes.

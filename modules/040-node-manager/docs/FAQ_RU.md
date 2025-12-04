@@ -1507,6 +1507,10 @@ metadata:
 Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
 {% endalert %}
 
+{% alert level="info" %}
+NVIDIA Container Toolkit поддерживает следующие платформы — см. [официальную документацию](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+{% endalert %}
+
 Чтобы добавить GPU-узел в кластер, выполните следующие действия:
 
 1. Создайте NodeGroup для GPU-узлов.
