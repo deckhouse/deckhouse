@@ -40,7 +40,7 @@ If the Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods in
 
    Pod events contain key information about problems (e.g., planning errors, image loading errors, etc.). When analyzing events, pay special attention to those with the `Warning` type.
 
-   Output example:
+   Example output:
 
    ```console
    Type     Reason     Age                      From     Message
@@ -58,7 +58,7 @@ To view the list of releases, use the command:
 d8 k get deckhousereleases.deckhouse.io
 ```
 
-Output example:
+Example output:
 
 ```console
 NAME       PHASE        TRANSITIONTIME   MESSAGE
