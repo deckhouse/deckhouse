@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 28a4c965f7..5e2c9b8252 100644
+index 28a4c965f7..485ca51cbf 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -31,6 +31,15 @@ index 28a4c965f7..5e2c9b8252 100644
  	google.golang.org/grpc v1.65.0
  	google.golang.org/protobuf v1.34.2
  	k8s.io/api v0.29.14
+@@ -37,7 +37,7 @@ require (
+ 	k8s.io/cloud-provider v0.29.14
+ 	k8s.io/component-base v0.29.14
+ 	k8s.io/klog/v2 v2.120.1
+-	k8s.io/kubernetes v1.29.14
++	k8s.io/kubernetes v1.29.12
+ 	k8s.io/mount-utils v0.29.14
+ 	k8s.io/pod-security-admission v0.0.0
+ 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 @@ -48,6 +48,7 @@ require (
  )
  
@@ -78,7 +87,7 @@ index 28a4c965f7..5e2c9b8252 100644
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20240709173604-40e1e62336c5 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 99592de82a..b8d172a692 100644
+index 99592de82a..dd0c63edb5 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -598,6 +598,8 @@ cloud.google.com/go/workflows v1.7.0/go.mod h1:JhSrZuVZWuiDfKEFxU0/F1PQjmpnpcoIS
@@ -220,3 +229,14 @@ index 99592de82a..b8d172a692 100644
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+@@ -2012,8 +2016,8 @@ k8s.io/kubectl v0.29.14 h1:aNsAv4S8s6ldP8pPejkgPdNBBTeL/9vnl6j72F3b1z4=
+ k8s.io/kubectl v0.29.14/go.mod h1:/fKgBbMs87f5iWI2s2K4IFofr9tpYZ8kE9Q2m6zA4OY=
+ k8s.io/kubelet v0.29.14 h1:kkjpSJ6W+jrzr2AwOpVrOMY7iu3uim7RO+EC2zBVOzY=
+ k8s.io/kubelet v0.29.14/go.mod h1:4FD4VXVnoCxXv0VnI3LKTYYtGtmWL3UEI/Q6/Y1hskk=
+-k8s.io/kubernetes v1.29.14 h1:mbk5M/WaJr/AX7p3p2/7eJjrtI+I3AKu7IEjI8+Ny/U=
+-k8s.io/kubernetes v1.29.14/go.mod h1:L6/pfKQZ6Tv2O8gyT4OxhGZp+nNsjV54xtNodRoup9k=
++k8s.io/kubernetes v1.29.12 h1:w7vXdXGxWDV/Y0tl+H4XRWeORb/b2IfZfmEnJZ/tLRs=
++k8s.io/kubernetes v1.29.12/go.mod h1:L6/pfKQZ6Tv2O8gyT4OxhGZp+nNsjV54xtNodRoup9k=
+ k8s.io/mount-utils v0.29.14 h1:0ml7abObwEB8YsAlnBOxlBw6FfaWL7mQNikrjNk1WPQ=
+ k8s.io/mount-utils v0.29.14/go.mod h1:SHUMR9n3b6tLgEmlyT36cL6fV6Sjwa5CJhc0guCXvb0=
+ k8s.io/pod-security-admission v0.29.14 h1:+Uz4T4wcOnhpb1ZligimcymYk7ZV7W2JwxK91Nkcm4A=
