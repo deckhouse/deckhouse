@@ -1,0 +1,7 @@
+docs:
+  fixes:
+    - summary: Fixed typo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16704
+    - summary: Fixed the logic of generating the revision table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16681
+
