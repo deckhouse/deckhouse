@@ -82,6 +82,11 @@ func RegisterController(
 
 	r.init.Add(1)
 
+	// add preflight to set the cluster UUID
+	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
+		return fmt.Errorf("add preflight: %w", err)
+	}
+
 	r.status = status.NewService(r.client, operator.Status().GetStatus, r.logger)
 	r.status.Start(context.Background(), operator.Status().GetCh())
 
