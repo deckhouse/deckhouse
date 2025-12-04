@@ -19,7 +19,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 const (
