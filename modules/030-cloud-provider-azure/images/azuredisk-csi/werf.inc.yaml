@@ -1,11 +1,11 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.azure }}
-    {{- $src_version := toString $value.csi.azure }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $src_version $path }}
+      {{- if contains $version $path }}
         {{- $patch = true }}
       {{- end }}
     {{- end }}
@@ -32,7 +32,7 @@ final: false
 fromImage: common/src-artifact
 {{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $src_version }}
+- add: {{ $patches }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
