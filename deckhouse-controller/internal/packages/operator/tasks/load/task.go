@@ -39,7 +39,6 @@ type manager interface {
 }
 
 type statusService interface {
-	ClearConditions(name string)
 	SetConditionTrue(name string, conditionName status.ConditionName)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)

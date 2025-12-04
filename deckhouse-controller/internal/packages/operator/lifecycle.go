@@ -107,7 +107,7 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 
 		o.logger.Debug("update package", slog.String("name", name), slog.String("version", packageVersion))
 
-		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
+		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger))
 		o.queueService.Enqueue(ctx, name, taskdownload.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
@@ -146,7 +146,7 @@ func (o *Operator) Remove(namespace, instance string) {
 	queues := o.manager.GetPackageQueues(name)
 
 	ctx := o.packages[name].renewContext(eventRemove)
-	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
+	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
 			o.queueService.Remove(fmt.Sprintf("%s/%s", name, q))
