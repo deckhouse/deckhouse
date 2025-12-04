@@ -137,7 +137,7 @@ k8s:
       openstack: v1.34.1
       aws: v1.34.1
       vsphere: v1.34.0
-      azure: v1.34.3
+      azure: v1.34.1
       gcp: ccm/v34.0.0
     csi:
       aws: v1.53.0
