@@ -169,8 +169,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		}
 		if hasRegistrySettings {
 			mc.Spec.Settings["registry"] = registrySettings
-		} else {
-			delete(mc.Spec.Settings, "registry")
 		}
 	}
 

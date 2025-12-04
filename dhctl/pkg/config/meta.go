@@ -26,6 +26,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 
@@ -99,7 +100,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	// Prepare registry config
-	if err := m.PrepareRegistry(); err != nil {
+	if err := m.prepareRegistry(); err != nil {
 		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
@@ -136,21 +137,21 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 }
 
-func (m *MetaConfig) PrepareRegistry() error {
+func (m *MetaConfig) prepareRegistry() error {
 	var (
-		cri               string
+		defaultCRI        string
 		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
 		registrySettings  *registry_moduleconfig.RegistrySettings
 	)
 
-	// Get defaultCRI
+	// Extract defaultCRI
 	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-		if err := json.Unmarshal(rawCRI, &cri); err != nil {
+		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
 			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
 		}
 	}
 
-	// Settings from initConfig
+	// Extract configuration from initConfig
 	if m.DeckhouseConfig.ImagesRepo != "" ||
 		m.DeckhouseConfig.RegistryDockerCfg != "" ||
 		m.DeckhouseConfig.RegistryCA != "" {
@@ -160,45 +161,67 @@ func (m *MetaConfig) PrepareRegistry() error {
 			RegistryCA:        m.DeckhouseConfig.RegistryCA,
 			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
 		}
+
 		settings, err := initConfig.ToRegistrySettings()
 		if err != nil {
-			return fmt.Errorf("get registry settings from initConfig: %w", err)
+			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
 		registrySettings = &settings
 	}
 
-	// Settings from moduleConfig
+	// Extract configuration from moduleConfig/deckhouse
 	for _, mc := range m.ModuleConfigs {
 		if mc.GetName() != "deckhouse" {
 			continue
 		}
+
 		settings, ok := mc.Spec.Settings["registry"]
 		if !ok {
 			break
 		}
+
+		// Check configuration conflict
+		if registrySettings != nil {
+			return fmt.Errorf(
+				"duplicate registry configuration detected: " +
+					"registry is configured in both 'initConfiguration.deckhouse' " +
+					"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+					"Please specify registry settings in only one location.",
+			)
+		}
+
+		// Check module enable
+		if !registry_const.ModuleEnabled(defaultCRI) {
+			return fmt.Errorf(
+				"registry module cannot be started with defaultCRI '%s'. "+
+					"Please either configure registry in 'initConfiguration.deckhouse', "+
+					"or use a supported defaultCRI type with the existing configuration in "+
+					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
+				defaultCRI,
+				registry_const.ModuleEnabledCRI,
+			)
+		}
+
 		raw, err := json.Marshal(settings)
 		if err != nil {
-			return fmt.Errorf("get registry settings from moduleConfig/deckhouse: %w", err)
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 		var decoded registry_moduleconfig.DeckhouseSettings
 		if err := json.Unmarshal(raw, &decoded); err != nil {
-			return fmt.Errorf("get registry settings from moduleConfig/deckhouse: %w", err)
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 		deckhouseSettings = &decoded
 		break
 	}
 
 	switch {
-	case deckhouseSettings != nil && registrySettings != nil:
-		return fmt.Errorf(
-			"duplicate registry configuration detected in initConfiguration.deckhouse " +
-				"and moduleConfig/deckhouse.spec.settings.registry. Please specify registry settings in only one location.")
 	case deckhouseSettings != nil:
-		return m.Registry.FromDeckhouseSettings(*deckhouseSettings, cri)
+		return m.Registry.FromDeckhouseSettings(*deckhouseSettings, defaultCRI)
 	case registrySettings != nil:
-		return m.Registry.FromRegistrySettings(*registrySettings, cri)
+		return m.Registry.FromRegistrySettings(*registrySettings, defaultCRI)
+	default:
+		return m.Registry.FromDefault(defaultCRI)
 	}
-	return m.Registry.FromDefault(cri)
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
