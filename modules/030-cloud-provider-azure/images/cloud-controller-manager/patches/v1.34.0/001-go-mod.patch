@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 933ec1413a..431e2c36a7 100644
+index d729306db7..6d8e612388 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -27,9 +27,9 @@ require (
@@ -31,7 +31,7 @@ index 933ec1413a..431e2c36a7 100644
  	google.golang.org/genproto/googleapis/api v0.0.0-20250826171959-ef028d996bc1 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 diff --git a/go.sum b/go.sum
-index 496b802b1d..4dc0f76ea3 100644
+index af340348e4..1ac7f4df02 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -274,8 +274,8 @@ go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
