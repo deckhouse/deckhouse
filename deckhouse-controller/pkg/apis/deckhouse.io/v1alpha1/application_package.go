@@ -75,7 +75,7 @@ type ApplicationPackageStatusInstalled struct {
 }
 
 func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bool {
-	if a.Status.Installed == nil {
+	if len(a.Status.Installed) == 0 {
 		return false
 	}
 
@@ -91,9 +91,11 @@ func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bo
 func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string) *ApplicationPackage {
 	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
 
-	if a.Status.Installed == nil {
+	// initialize map if it is nil or empty
+	if len(a.Status.Installed) == 0 {
 		a.Status.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
 	}
+
 	a.Status.Installed[NamespaceName(namespace)] = append(a.Status.Installed[NamespaceName(namespace)], apStatusInstalledApp)
 
 	a.Status.InstalledOverall++
@@ -102,7 +104,7 @@ func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string) *
 }
 
 func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string) *ApplicationPackage {
-	if a.Status.Installed == nil {
+	if len(a.Status.Installed) == 0 {
 		return a
 	}
 

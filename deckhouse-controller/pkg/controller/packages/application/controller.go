@@ -263,16 +263,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.Application) error {
-	logger := r.logger.With(slog.String("name", app.Name))
+	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
 	logger.Debug("handle Application")
 	defer logger.Debug("handle Application complete")
 
 	original := app.DeepCopy()
 
+	logger.Debug("checking ApplicationPackage exists", slog.String("ap_name", app.Spec.PackageName))
+
 	// check if application package exists
 	ap := new(v1alpha1.ApplicationPackage)
 	if err := r.client.Get(ctx, types.NamespacedName{Name: app.Spec.PackageName}, ap); err != nil {
+		logger.Debug("application package not found", slog.String("ap_name", app.Spec.PackageName), log.Err(err))
+
 		r.SetConditionFalse(
 			app,
 			v1alpha1.ApplicationConditionTypeProcessed,
@@ -289,9 +293,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	}
 
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	logger.Debug("checking ApplicationPackageVersion exists", slog.String("apv_name", apvName))
+
+	// check if application package version exists
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	err := r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
 	if err != nil {
+		logger.Debug("application package version not found", slog.String("apv_name", apvName), log.Err(err))
+
 		r.SetConditionFalse(
 			app,
 			v1alpha1.ApplicationConditionTypeProcessed,
@@ -307,7 +316,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get ApplicationPackageVersion for %s: %w", app.Name, err)
 	}
 
+	// check if application package version is not draft
 	if apv.IsDraft() {
+		logger.Debug("application package version is draft", slog.String("apv_name", apvName))
+
 		app = r.SetConditionFalse(
 			app,
 			v1alpha1.ApplicationConditionTypeProcessed,
@@ -323,25 +335,38 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("applicationPackageVersion %s is draft", apvName)
 	}
 
+	logger.Debug("checking if application is installed to ApplicationPackageVersion", slog.String("apv_name", apv.Name))
+
 	if !apv.IsAppInstalled(app.Namespace, app.Name) {
-		original := apv.DeepCopy()
+		logger.Debug("application is not installed to ApplicationPackageVersion, installing it", slog.String("apv_name", apv.Name))
+
+		patch := client.MergeFrom(apv.DeepCopy())
 
 		apv = apv.AddInstalledApp(app.Namespace, app.Name)
 
-		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
 			return fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
 
+	logger.Debug("checking if application is installed to ApplicationPackage", slog.String("ap_name", ap.Name))
+
 	if !ap.IsAppInstalled(app.Namespace, app.Name) {
-		original := ap.DeepCopy()
+		logger.Debug("application is not installed to ApplicationPackage, installing it", slog.String("ap_name", ap.Name))
+
+		patch := client.MergeFrom(ap.DeepCopy())
 
 		ap = ap.AddInstalledApp(app.Namespace, app.Name)
 
-		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
+		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
 			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
+
+	logger.Debug("adding application to PackageOperator")
+
+	// call PackageOperator method (PackageAdder interface)
+	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
@@ -352,18 +377,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
-		original = app.DeepCopy()
+		logger.Debug("adding finalizer to application")
+
+		patch := client.MergeFrom(app.DeepCopy())
 
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
 
-		err = r.client.Patch(ctx, app, client.MergeFrom(original))
+		err = r.client.Patch(ctx, app, patch)
 		if err != nil {
 			return fmt.Errorf("patch application %s: %w", app.Name, err)
 		}
 	}
-
-	// call PackageOperator method (maybe PackageAdder interface)
-	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	return nil
 }
@@ -371,9 +395,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	logger := r.logger.With(slog.String("name", app.Name))
+	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
 	logger.Debug("handling delete Application")
+	defer logger.Debug("handling delete Application complete")
+
+	logger.Debug("checking if ApplicationPackage exists", slog.String("ap_name", app.Spec.PackageName))
 
 	ap := new(v1alpha1.ApplicationPackage)
 	err := r.client.Get(ctx, types.NamespacedName{Name: app.Spec.PackageName}, ap)
@@ -383,42 +410,56 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	}
 
 	if ap.IsAppInstalled(app.Namespace, app.Name) {
-		original := ap.DeepCopy()
+		logger.Debug("application is installed to ApplicationPackage, removing it", slog.String("ap_name", ap.Name))
+
+		patch := client.MergeFrom(ap.DeepCopy())
 
 		ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 
-		if err := r.client.Status().Patch(ctx, ap, client.MergeFrom(original)); err != nil {
+		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
 			return res, fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
 
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	logger.Debug("checking if ApplicationPackageVersion exists", slog.String("apv_name", apvName))
+
 	apv := new(v1alpha1.ApplicationPackageVersion)
-	err = r.client.Get(ctx, types.NamespacedName{Name: v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)}, apv)
+	err = r.client.Get(ctx, types.NamespacedName{Name: apvName}, apv)
 	if err != nil && !apierrors.IsNotFound(err) {
-		logger.Warn("failed to get ApplicationPackageVersion", slog.String("name", v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)), log.Err(err))
-		return res, fmt.Errorf("get ApplicationPackageVersion for %s: %w", v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version), err)
+		logger.Warn("failed to get ApplicationPackageVersion", slog.String("name", apvName), log.Err(err))
+		return res, fmt.Errorf("get ApplicationPackageVersion: %w", err)
 	}
 
 	if apv.IsAppInstalled(app.Namespace, app.Name) {
-		original := apv.DeepCopy()
+		logger.Debug("application is installed to ApplicationPackageVersion, removing it", slog.String("apv_name", apv.Name))
+
+		patch := client.MergeFrom(apv.DeepCopy())
 
 		apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 
-		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
 			return res, fmt.Errorf("patch ApplicationPackageVersion status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
 
 	logger.Debug("deleting Application")
 
+	patch := client.MergeFrom(app.DeepCopy())
+
+	// call PackageOperator method (PackageRemover interface)
 	r.pm.RemoveApplication(ctx, app)
 
-	// remove finalizer
+	// remove finalizer if it is set
 	if controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
+		logger.Debug("removing finalizer from application")
 		controllerutil.RemoveFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
 	}
 
-	logger.Debug("delete Application complete")
+	err = r.client.Patch(ctx, app, patch)
+	if err != nil {
+		return res, fmt.Errorf("patch application %s: %w", app.Name, err)
+	}
 
 	return res, nil
 }

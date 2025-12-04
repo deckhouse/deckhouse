@@ -140,6 +140,10 @@ func (a *ApplicationPackageVersion) IsDraft() bool {
 }
 
 func (a *ApplicationPackageVersion) IsAppInstalled(namespace string, appName string) bool {
+	if len(a.Status.UsedBy) == 0 {
+		return false
+	}
+
 	for _, v := range a.Status.UsedBy {
 		if v.Namespace == namespace && v.Name == appName {
 			return true
