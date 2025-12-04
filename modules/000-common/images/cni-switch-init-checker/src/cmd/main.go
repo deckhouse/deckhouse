@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -87,6 +88,13 @@ func run() error {
 	}
 
 	myCNI := os.Getenv("CNI_NAME")
+	// Parse CNI_NAME as a comma-separated list
+	allowedCNIs := make(map[string]bool)
+	if myCNI != "" {
+		for _, c := range strings.Split(myCNI, ",") {
+			allowedCNIs[strings.TrimSpace(c)] = true
+		}
+	}
 
 	// 2. Watch/Poll the CNIMigration resource.
 	migrationName := list.Items[0].GetName()
@@ -117,10 +125,10 @@ func run() error {
 				continue
 			}
 
-			// Check if we are the current CNI
+			// Check if we are one of the current CNIs
 			currentCNI, found, _ := unstructured.NestedString(status, "currentCNI")
-			if found && myCNI != "" && currentCNI == myCNI {
-				slog.Info("Current CNI matches my CNI. Starting agent.", "currentCNI", currentCNI)
+			if found && allowedCNIs[currentCNI] {
+				slog.Info("Current CNI matches one of the allowed CNIs. Starting agent.", "currentCNI", currentCNI)
 				return nil
 			}
 
