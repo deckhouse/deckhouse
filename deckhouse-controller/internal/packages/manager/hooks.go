@@ -70,7 +70,7 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 	oldChecksum := app.GetValuesChecksum()
 	if err := app.RunHookByName(ctx, hook, bctx, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return newEventHookErr(err)
 	}
 
 	if m.onValuesChanged != nil && oldChecksum != app.GetValuesChecksum() {

@@ -163,6 +163,14 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	}
 }
 
+// ClearConditions set all condition to unknown
+func (s *Service) ClearConditions(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.statuses[name] = newStatus()
+}
+
 // HandleError processes an error and extracts status conditions from it
 // Notifies listeners if any conditions changed
 func (s *Service) HandleError(name string, err error) {
