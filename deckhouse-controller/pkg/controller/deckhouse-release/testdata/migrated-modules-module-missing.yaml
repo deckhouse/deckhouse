@@ -48,11 +48,13 @@ status:
       status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
+kind: Module
 metadata:
-  name: test-module-1
-spec:
-  enabled: true
+  name: test-module-missing
+status:
+  conditions:
+    - type: EnabledByModuleManager
+      status: "True"
 ---
 apiVersion: apps/v1
 kind: Deployment

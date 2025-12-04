@@ -1149,7 +1149,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("Module missing", func() {
-			suite.setupController("module-missing.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-module-missing.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
