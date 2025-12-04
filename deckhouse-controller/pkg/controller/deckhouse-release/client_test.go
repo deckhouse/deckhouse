@@ -94,7 +94,7 @@ func setupControllerSettings(
 	cl := fake.NewClientBuilder().
 		WithScheme(sc).
 		WithObjects(initObjects...).
-		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
+		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}, &v1alpha1.Module{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
 	metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
@@ -142,6 +142,8 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 		res = unmarshalRelease[corev1.ConfigMap](obj, t)
 	case "ModuleSource":
 		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
+	case "Module":
+		res = unmarshalRelease[v1alpha1.Module](obj, t)
 
 	default:
 		require.Fail(t, "unknown Kind:"+typ.Kind)

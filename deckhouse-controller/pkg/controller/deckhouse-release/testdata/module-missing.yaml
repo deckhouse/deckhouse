@@ -26,6 +26,15 @@ status:
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-missing
+status:
+  conditions:
+    - type: EnabledByModuleManager
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   name: deckhouse
