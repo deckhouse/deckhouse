@@ -28,22 +28,35 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// | Condition            | Depends On                | Meaning                                     |
+//  |----------------------|---------------------------|---------------------------------------------|
+//  | Installed            | All 6 internal conditions | Initial installation completed successfully |
+//  | Ready                | ReadyInRuntime            | Currently operational and healthy           |
+//  | PartiallyDegraded    | !ReadyInRuntime           | Not fully operational                       |
+//  | Managed              | ReadyInRuntime            | Under active operator management            |
+//  | ConfigurationApplied | HelmApplied               | Helm config applied successfully            |
+
 const (
-	// ConditionTypeInstalled means it is the first installing process(installed was unknown or false before),
-	// It gets True only if all internal conditions are true, its gets false at Download, ReadyOnFilesystem and ReadyInRuntime
+	// ConditionTypeInstalled indicates the application completed its initial installation successfully
+	// True only if all internal conditions (Downloaded, ReadyOnFilesystem, RequirementsMet,
+	// ReadyInRuntime, HooksProcessed, HelmApplied) are true
 	ConditionTypeInstalled = "Installed"
 
-	// ConditionTypeReady means the current state, it only relies on the ReadyInRuntime internal condition
+	// ConditionTypeReady indicates the application is currently operational and healthy
+	// Relies on the ReadyInRuntime internal condition
 	ConditionTypeReady = "Ready"
 
-	// ConditionTypePartiallyDegraded for now the opposite of ready
-	ConditionTypePartiallyDegraded string = "PartiallyDegraded"
+	// ConditionTypePartiallyDegraded indicates the application is not fully operational
+	// Inverse of Ready - true when ReadyInRuntime is false
+	ConditionTypePartiallyDegraded = "PartiallyDegraded"
 
-	// ConditionTypeOperated for now the same as ready
-	ConditionTypeOperated string = "Operated"
+	// ConditionTypeManaged indicates the application is under active operator management
+	// True when ReadyInRuntime is true, meaning the operator is successfully managing the package
+	ConditionTypeManaged = "Managed"
 
-	// ConditionTypeConfigurationApplied determines whether helm applied successfully
-	ConditionTypeConfigurationApplied string = "ConfigurationApplied"
+	// ConditionTypeConfigurationApplied indicates Helm configuration was successfully applied
+	// Relies on the HelmApplied internal condition
+	ConditionTypeConfigurationApplied = "ConfigurationApplied"
 )
 
 type Service struct {
@@ -152,7 +165,7 @@ func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []sta
 
 	app.Status.InternalConditions = applied
 
-	// Compute public conditions (Installed and Ready) from internal conditions
+	// Compute public conditions from internal conditions
 	s.computeConditions(app)
 }
 
@@ -165,19 +178,31 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 		internalConds[cond.Type] = cond
 	}
 
-	// Compute and update Ready condition (depends only on ReadyInRuntime)
+	// Compute Ready, PartiallyDegraded, and Managed conditions (all depend on ReadyInRuntime)
 	if readyInRuntime, ok := internalConds[string(status.ConditionReadyInRuntime)]; ok && readyInRuntime.Status == corev1.ConditionTrue {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionTrue, "", "", now)
 		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionFalse, "", "", now)
+		s.setCondition(app, ConditionTypeManaged, corev1.ConditionTrue, "", "", now)
 	} else if ok {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
 		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, readyInRuntime.Reason, readyInRuntime.Message, now)
+		s.setCondition(app, ConditionTypeManaged, corev1.ConditionFalse, readyInRuntime.Reason, readyInRuntime.Message, now)
 	} else {
 		s.setCondition(app, ConditionTypeReady, corev1.ConditionFalse, "", "", now)
 		s.setCondition(app, ConditionTypePartiallyDegraded, corev1.ConditionTrue, "", "", now)
+		s.setCondition(app, ConditionTypeManaged, corev1.ConditionFalse, "", "", now)
 	}
 
-	// Compute and update Installed condition (all internal conditions must be true)
+	// Compute ConfigurationApplied condition (depends on HelmApplied)
+	if helmApplied, ok := internalConds[string(status.ConditionHelmApplied)]; ok && helmApplied.Status == corev1.ConditionTrue {
+		s.setCondition(app, ConditionTypeConfigurationApplied, corev1.ConditionTrue, "", "", now)
+	} else if ok {
+		s.setCondition(app, ConditionTypeConfigurationApplied, corev1.ConditionFalse, helmApplied.Reason, helmApplied.Message, now)
+	} else {
+		s.setCondition(app, ConditionTypeConfigurationApplied, corev1.ConditionFalse, "", "", now)
+	}
+
+	// Compute Installed condition (all internal conditions must be true)
 	if failedCond := s.findFailedCondition(internalConds); failedCond != nil {
 		s.setCondition(app, ConditionTypeInstalled, corev1.ConditionFalse, failedCond.Reason, failedCond.Message, now)
 	} else {

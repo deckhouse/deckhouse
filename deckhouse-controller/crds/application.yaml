@@ -133,6 +133,9 @@ spec:
       - jsonPath: .status.conditions[?(@.type=='Ready')].status
         name: Ready
         type: string
+      - jsonPath: .status.conditions[?(@.type=='Installed')].status
+        name: Installed
+        type: string
       - name: Age
         type: date
         jsonPath: .metadata.creationTimestamp
