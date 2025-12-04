@@ -114,11 +114,11 @@ func (c Config) ToContext() Context {
 	}
 
 	for key, hosts := range c.Hosts {
-		rh := ContextHosts{
+		host := ContextHosts{
 			Mirrors: make([]ContextMirrorHost, 0, len(hosts.Mirrors)),
 		}
 		for _, m := range hosts.Mirrors {
-			mh := ContextMirrorHost{
+			mirror := ContextMirrorHost{
 				Host:   m.Host,
 				Scheme: m.Scheme,
 				CA:     m.CA,
@@ -129,11 +129,11 @@ func (c Config) ToContext() Context {
 				},
 			}
 			for _, rw := range m.Rewrites {
-				mh.Rewrites = append(mh.Rewrites, ContextRewrite(rw))
+				mirror.Rewrites = append(mirror.Rewrites, ContextRewrite(rw))
 			}
-			rh.Mirrors = append(rh.Mirrors, mh)
+			host.Mirrors = append(host.Mirrors, mirror)
 		}
-		ret.Hosts[key] = rh
+		ret.Hosts[key] = host
 	}
 	return ret
 }

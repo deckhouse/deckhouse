@@ -291,11 +291,12 @@ func CreateDeckhouseManifests(
 	}
 
 	// Registry secrets
-	registryManifest := cfg.Registry.Manifest()
-	deckhouseRegistrySecretData, err := registryManifest.DeckhouseRegistrySecretData(
-		func() (registry.PKI, error) {
-			return registry.GetPKI(ctx, kubeCl)
-		})
+	deckhouseRegistrySecretData, err := cfg.Registry.
+		Manifest().
+		DeckhouseRegistrySecretData(
+			func() (registry.PKI, error) {
+				return registry.GetPKI(ctx, kubeCl)
+			})
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
 	}
@@ -319,7 +320,9 @@ func CreateDeckhouseManifests(
 		},
 	})
 
-	isExist, registryBashibleConfigSecretData, err := registryManifest.RegistryBashibleConfigSecretData()
+	isExist, registryBashibleConfigSecretData, err := cfg.Registry.
+		Manifest().
+		RegistryBashibleConfigSecretData()
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible config secret data: %w", err)
 	}

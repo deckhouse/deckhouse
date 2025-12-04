@@ -60,7 +60,6 @@ func (s ModeSettings) ToModel() ModeModel {
 
 func (s ModeSettings) directModel() ModeModel {
 	return ModeModel{
-		ModuleRequired:      true,
 		Mode:                constant.ModeDirect,
 		InClusterImagesRepo: constant.HostWithPath,
 		RemoteImagesRepo:    s.Remote.ImagesRepo,
@@ -70,7 +69,6 @@ func (s ModeSettings) directModel() ModeModel {
 
 func (s ModeSettings) unmanagedModel() ModeModel {
 	return ModeModel{
-		ModuleRequired:      false,
 		Mode:                constant.ModeUnmanaged,
 		InClusterImagesRepo: s.Remote.ImagesRepo,
 		RemoteImagesRepo:    s.Remote.ImagesRepo,
@@ -79,7 +77,6 @@ func (s ModeSettings) unmanagedModel() ModeModel {
 }
 
 type ModeModel struct {
-	ModuleRequired      bool
 	Mode                constant.ModeType
 	InClusterImagesRepo string
 	RemoteImagesRepo    string
