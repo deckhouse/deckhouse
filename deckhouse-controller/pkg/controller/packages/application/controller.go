@@ -365,15 +365,15 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	logger.Debug("adding application to PackageOperator")
 
-	// call PackageOperator method (PackageAdder interface)
-	r.pm.AddApplication(ctx, app, &apv.Status)
-
 	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
+
+	// call PackageOperator method (PackageAdder interface), it may patch application object
+	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {

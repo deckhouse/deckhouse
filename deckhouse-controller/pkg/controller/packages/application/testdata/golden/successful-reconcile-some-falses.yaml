@@ -4,7 +4,7 @@ kind: Application
 metadata:
   creationTimestamp: null
   finalizers:
-  - application.deckhouse.io/finalizer
+  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
   resourceVersion: "4"
