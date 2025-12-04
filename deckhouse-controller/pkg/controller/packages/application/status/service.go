@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -36,7 +36,14 @@ const (
 	// ConditionTypeReady means the current state, it only relies on the ReadyInRuntime internal condition
 	ConditionTypeReady = "Ready"
 
+	// ConditionTypePartiallyDegraded for now the opposite of ready
 	ConditionTypePartiallyDegraded string = "PartiallyDegraded"
+
+	// ConditionTypeOperated for now the same as ready
+	ConditionTypeOperated string = "Operated"
+
+	// ConditionTypeConfigurationApplied determines whether helm applied successfully
+	ConditionTypeConfigurationApplied string = "ConfigurationApplied"
 )
 
 type Service struct {
@@ -100,6 +107,13 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 	// Update the Application status with new conditions
 	original := app.DeepCopy()
 	s.applyInternalConditions(app, packageStatus.Conditions)
+
+	if app.Status.CurrentVersion == nil {
+		app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{}
+	}
+
+	app.Status.CurrentVersion.Current = packageStatus.Version
+
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
 	}

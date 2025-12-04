@@ -20,7 +20,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -68,7 +68,7 @@ func (t *task) Execute(_ context.Context) error {
 		return fmt.Errorf("apply settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
+	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 
 	return nil
 }

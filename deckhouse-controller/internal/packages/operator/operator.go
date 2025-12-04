@@ -36,11 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/eventhandler"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/disable"
-	taskrerun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/rerun"
+	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/startup"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -137,7 +137,7 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 			}
 
 			ctx := o.packages[name].renewContext(eventRerun)
-			o.queueService.Enqueue(ctx, name, taskrerun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
+			o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 		},
 		NelmService:       o.nelmService,
 		Scheduler:         o.scheduler,
@@ -322,7 +322,7 @@ func (o *Operator) buildNelmService() error {
 
 	o.nelmService = nelm.NewService(cache, func(name string) {
 		ctx := o.packages[name].renewContext(eventRerun)
-		o.queueService.Enqueue(ctx, name, taskrerun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}, o.logger)
 
 	return nil
@@ -407,6 +407,7 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 
 		ctx := o.packages[name].renewContext(eventStartup)
 		o.queueService.Enqueue(ctx, name, taskstartup.NewTask(name, o.status, o.manager, o.queueService, o.logger), queue.WithUnique())
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}
 
 	// onDisable stops package hooks and transitions from Running back to Loaded

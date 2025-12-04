@@ -23,8 +23,8 @@ import (
 	bindingctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hooksync"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -35,7 +35,6 @@ const (
 
 type manager interface {
 	StartupPackage(ctx context.Context, name string) error
-	RunPackage(ctx context.Context, name string) error
 	InitializeHooks(ctx context.Context, name string) (map[string][]hookcontroller.BindingExecutionInfo, error)
 
 	UnlockKubernetesMonitors(name, hook string, monitors ...string)
@@ -115,21 +114,12 @@ func (t *task) Execute(ctx context.Context) error {
 	// This ensures critical hooks run before startup hooks
 	wg.Wait()
 
-	// Step 3: Run package startup hooks (onStartup binding) and initial run
+	// Step 3: Run package startup hooks (onStartup binding)
 	t.logger.Debug("run package startup hooks", slog.String("name", t.packageName))
 	if err = t.manager.StartupPackage(ctx, t.packageName); err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("startup package: %w", err)
 	}
-
-	if err = t.manager.RunPackage(ctx, t.packageName); err != nil {
-		t.status.HandleError(t.packageName, err)
-		return fmt.Errorf("initial run package: %w", err)
-	}
-
-	t.status.SetConditionTrue(t.packageName, status.ConditionHelmApplied)
-	t.status.SetConditionTrue(t.packageName, status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
 
 	return nil
 }

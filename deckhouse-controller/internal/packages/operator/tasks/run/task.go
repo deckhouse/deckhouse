@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rerun
+package run
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -67,6 +67,11 @@ func (t *task) Execute(ctx context.Context) error {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("run package: %w", err)
 	}
+
+	t.status.SetConditionTrue(t.packageName, status.ConditionHelmApplied)
+	t.status.SetConditionTrue(t.packageName, status.ConditionHooksProcessed)
+	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
+	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInCluster)
 
 	return nil
 }

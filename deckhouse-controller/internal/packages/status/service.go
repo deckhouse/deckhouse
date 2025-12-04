@@ -34,6 +34,10 @@ const (
 	ConditionHooksProcessed ConditionName = "HooksProcessed"
 	// ConditionHelmApplied indicates Helm release was successfully applied
 	ConditionHelmApplied ConditionName = "HelmApplied"
+	// ConditionReadyInCluster checks the resources are ready
+	ConditionReadyInCluster ConditionName = "ReadyInCluster"
+	// ConditionSettingsValid checks the settings passed openAPI validation
+	ConditionSettingsValid ConditionName = "SettingsValid"
 )
 
 // Error wraps an error with associated status conditions
@@ -61,6 +65,7 @@ type Service struct {
 
 // Status represents the current state of a package
 type Status struct {
+	Version    string      `json:"version"`
 	Conditions []Condition `json:"conditions" yaml:"conditions"`
 }
 
@@ -89,6 +94,8 @@ func newStatus() *Status {
 			{Name: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
 			{Name: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
 			{Name: ConditionHelmApplied, Status: metav1.ConditionUnknown},
+			{Name: ConditionReadyInCluster, Status: metav1.ConditionUnknown},
+			{Name: ConditionSettingsValid, Status: metav1.ConditionUnknown},
 		},
 	}
 }
@@ -116,6 +123,19 @@ func (s *Service) GetStatus(name string) *Status {
 	return &Status{
 		Conditions: condsCopy,
 	}
+}
+
+// SetVersion sets the current version of package
+func (s *Service) SetVersion(name string, version string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	status.Version = version
 }
 
 // Delete removes a package status from tracking

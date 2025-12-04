@@ -25,14 +25,15 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/disable"
+	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/download"
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/load"
-	taskrerun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/rerun"
+	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -120,6 +121,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		o.logger.Debug("update package", slog.String("name", name), slog.String("version", packageVersion))
 
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
+		o.queueService.Enqueue(ctx, name, taskdownload.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
 
@@ -133,7 +135,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		o.logger.Debug("update package settings", slog.String("name", name))
 
 		o.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(name, inst.Settings, o.status, o.manager, o.logger))
-		o.queueService.Enqueue(ctx, name, taskrerun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}
 }
 
@@ -178,6 +180,8 @@ func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
 		o.mu.Lock()
 		delete(o.packages, name)
 		o.mu.Unlock()
+
+		o.status.Delete(name)
 	}))
 }
 

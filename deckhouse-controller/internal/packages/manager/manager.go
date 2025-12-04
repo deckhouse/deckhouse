@@ -94,7 +94,8 @@ func New(conf Config, logger *log.Logger) *Manager {
 
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
-func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) error {
+// It returns the loaded version
+func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
@@ -105,7 +106,7 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	app, err := m.loader.Load(ctx, registry, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newLoadFailedErr(err)
+		return "", newLoadFailedErr(err)
 	}
 
 	m.mu.Lock()
@@ -113,7 +114,7 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	m.scheduler.Add(app)
 	m.mu.Unlock()
 
-	return nil
+	return app.GetVersion(), nil
 }
 
 // ApplySettings validates and apply setting to application
@@ -265,14 +266,18 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	schHooks := app.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range schHooks {
 		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
-		hook.GetHookController().DisableScheduleBindings()
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
 	}
 
 	// Stop all Kubernetes event monitors
 	kubeHooks := app.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
 		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
-		hook.GetHookController().StopMonitors()
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
 	}
 
 	m.scheduler.Remove(name)

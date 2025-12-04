@@ -15,11 +15,15 @@
 package manager
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 const (
+	// SettingValid reasons
+	ConditionReasonValidationFailed = "ValidationFailed"
+
 	// HooksProcessed reasons
 	ConditionReasonStartupHooksFailed    status.ConditionReason = "StartupHookFailed"
 	ConditionReasonBeforeHelmHooksFailed status.ConditionReason = "BeforeHelmHooksFailed"
@@ -38,6 +42,12 @@ func newApplySettingsErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
+				Name:    status.ConditionSettingsValid,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonValidationFailed,
+				Message: err.Error(),
+			},
+			{
 				Name:    status.ConditionReadyInRuntime,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonApplySettings,
@@ -53,6 +63,12 @@ func newHelmUpgradeErr(err error) error {
 		Conditions: []status.Condition{
 			{
 				Name:    status.ConditionReadyInRuntime,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonHelmUpgradeFailed,
+				Message: err.Error(),
+			},
+			{
+				Name:    status.ConditionReadyInCluster,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHelmUpgradeFailed,
 				Message: err.Error(),
