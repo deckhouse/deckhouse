@@ -1,3 +1,43 @@
+{{- /* Usage: {{ include "helm_lib_csi_image_with_common_fallback" (list . "<raw-container-name>" "<semver>") }} */ -}}
+{{- /* returns image name from storage foundation module if enabled, otherwise from common module */ -}}
+{{- define "helm_lib_csi_image_with_common_fallback" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $rawContainerName := index . 1 | trimAll "\"" }} {{- /* Container raw name */ -}}
+  {{- $kubernetesSemVer := index . 2 }} {{- /* Kubernetes semantic version */ -}}
+  {{- $imageDigest := "" }}
+  {{- $registryBase := $context.Values.global.modulesImages.registry.base }}
+  {{- /* Try to get from storage foundation module if enabled */}}
+  {{- if $context.Values.global.enabledModules | has "storage-foundation" }}
+    {{- $registryBase = join "/" (list $registryBase "modules" "storage-foundation" ) }}
+    {{- $storageFoundationDigests := index $context.Values.global.modulesImages.digests "storageFoundation" | default dict }}
+    {{- $currentMinor := int $kubernetesSemVer.Minor }}
+    {{- $kubernetesMajor := int $kubernetesSemVer.Major }}
+    {{- /* Iterate from currentMinor down to 0: use offset from 0 to currentMinor, then calculate minorVersion = currentMinor - offset */}}
+    {{- range $offset := until (int (add $currentMinor 1)) }}
+      {{- if not $imageDigest }}
+        {{- $minorVersion := int (sub $currentMinor $offset) }}
+        {{- $containerName := join "" (list $rawContainerName "ForK8SGE" $kubernetesMajor $minorVersion) }}
+        {{- $digest := index $storageFoundationDigests $containerName | default "" }}
+        {{- if $digest }}
+          {{- $imageDigest = $digest }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- /* Fallback to base container name if no versioned image found (when minor reached 0) */}}
+    {{- if not $imageDigest }}
+      {{- $imageDigest = index $storageFoundationDigests $rawContainerName | default "" }}
+    {{- end }}
+  {{- /* Fallback to common module if storage foundation module is not enabled */}}
+  {{- else }}
+    {{- $containerName := join "" (list $rawContainerName $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+    {{- $imageDigest = index $context.Values.global.modulesImages.digests "common" $containerName | default "" }}
+  {{- end }}
+  {{- if $imageDigest }}
+    {{- printf "%s@%s" $registryBase $imageDigest }}
+  {{- end }}
+{{- end }}
+
+
 {{- define "attacher_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -74,26 +114,22 @@ memory: 50Mi
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $forceCsiControllerPrivilegedContainer := $config.forceCsiControllerPrivilegedContainer | default false }}
+  {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
-  {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $provisionerImage := include "helm_lib_module_common_image_no_fail" (list $context $provisionerImageName) }}
+  {{- $provisionerImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalProvisioner" $kubernetesSemVer) }}
 
-  {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $attacherImage := include "helm_lib_module_common_image_no_fail" (list $context $attacherImageName) }}
+  {{- $attacherImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalAttacher" $kubernetesSemVer) }}
 
-  {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $resizerImage := include "helm_lib_module_common_image_no_fail" (list $context $resizerImageName) }}
+  {{- $resizerImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalResizer" $kubernetesSemVer) }}
 
   {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
 
-  {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $snapshotterImage := include "helm_lib_module_common_image_no_fail" (list $context $snapshotterImageName) }}
+  {{- $snapshotterImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalSnapshotter" $kubernetesSemVer) }}
 
-  {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $livenessprobeImage := include "helm_lib_module_common_image_no_fail" (list $context $livenessprobeImageName) }}
+  {{- $livenessprobeImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiLivenessprobe" $kubernetesSemVer) }}
 
   {{- if $provisionerImage }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -217,7 +253,7 @@ spec:
       hostNetwork: {{ $csiControllerHostNetwork }}
       hostPID: {{ $csiControllerHostPID }}
       {{- if eq $csiControllerHostNetwork "true" }}
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: {{ $dnsPolicy | quote }}
       {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
