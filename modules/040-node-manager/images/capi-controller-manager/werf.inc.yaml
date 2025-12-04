@@ -26,7 +26,6 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cluster-api.git /src
   - cd /src
-  - rm -rf hack/tools
   - git apply /patches/*.patch --verbose
   - rm -rf .git hack test
 ---
