@@ -13,6 +13,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+git:
+  - add: {{ $.ModulePath }}/{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -20,6 +26,7 @@ shell:
   install:
   - git clone --depth 1 --branch v1.25.3 $(cat /run/secrets/SOURCE_REPO)/aws/aws-node-termination-handler.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
