@@ -42,7 +42,7 @@ import (
 
 const (
 	yandexTestLayout    = "without-nat"
-	yandexPluginVersion = "0.173.0"
+	yandexPluginVersion = "0.174.0"
 
 	gcpTestLayout    = "without-nat"
 	gcpPluginVersion = "3.48.0"
