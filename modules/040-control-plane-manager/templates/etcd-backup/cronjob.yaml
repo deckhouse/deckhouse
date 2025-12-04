@@ -18,8 +18,8 @@ memory: 40Mi
     {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
       {{- $nodes := list }}
       {{- $nodes = concat $nodes .Values.controlPlaneManager.internal.mastersNode }}
-      {{- if $.Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
-        {{- $nodes = append $nodes "etcd-only" }}
+      {{- if $.Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+        {{- $nodes = append $nodes "etcd-arbiter" }}
       {{- end }}
       {{- range $node := $nodes }}
 ---
@@ -43,8 +43,8 @@ spec:
           {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 10 }}
           {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 10 }}
           nodeSelector:
-            {{- if eq $node "etcd-only" }}
-            node-role.deckhouse.io/etcd-only: ""
+            {{- if eq $node "etcd-arbiter" }}
+            node.deckhouse.io/etcd-arbiter: ""
             {{- else }}
             kubernetes.io/hostname: {{ $node }}
             {{- end }}

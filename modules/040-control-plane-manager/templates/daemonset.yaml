@@ -9,8 +9,8 @@ memory: 10Mi
 {{- end }}
 
 {{- $profiles := list "main" }}
-{{- if .Values.controlPlaneManager.internal.hasEtcdOnlyNode }}
-  {{- $profiles = append $profiles "etcd-only" }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
 {{- end }}
 
 {{- $kubeImageRepoSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "-" }}
@@ -174,10 +174,10 @@ data:
   {{- include "control_plane_config" (list . $tpl_context) | nindent 2 }}
 ---
 {{- range $profile := $profiles }}
-{{- $dsMode := ternary "d8-control-plane-manager" "d8-control-plane-manager-etcd-only" (eq $profile "main") }}
+{{- $dsMode := ternary "d8-control-plane-manager" "d8-control-plane-manager-etcd-arbiter" (eq $profile "main") }}
 {{- $profileImages := $images }}
 {{- $profileImageHolders := $imageHolders }}
-{{- if eq $profile "etcd-only" }}
+{{- if eq $profile "etcd-arbiter" }}
   {{- $profileImages = pick $images "etcd" }}
   {{- $profileImageHolders = pick $imageHolders "etcd" }}
 {{- end }}
@@ -238,7 +238,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       {{- else }}
       nodeSelector:
-        node-role.deckhouse.io/etcd-only: ""
+        node.deckhouse.io/etcd-arbiter: ""
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -290,8 +290,8 @@ spec:
           value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
-        {{- if eq $profile "etcd-only" }}
-        - name: ETCD_ONLY
+        {{- if eq $profile "etcd-arbiter" }}
+        - name: ETCD_ARBITER
           value: "true"
         {{- end }}
         livenessProbe:

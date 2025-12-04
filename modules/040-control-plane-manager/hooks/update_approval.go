@@ -51,14 +51,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updateApprovalFilterNode,
 		},
 		{
-			Name:                   "etcd_only_nodes",
+			Name:                   "etcd_arbiter_nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			WaitForSynchronization: ptr.To(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "node-role.deckhouse.io/etcd-only",
+						Key:      "node.deckhouse.io/etcd-arbiter",
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
@@ -177,10 +177,10 @@ func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 		nodeMap[node.Name] = node
 	}
 
-	snaps = input.Snapshots.Get("etcd_only_nodes")
+	snaps = input.Snapshots.Get("etcd_arbiter_nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'etcd_only_nodes' snapshots: %v", err)
+			return fmt.Errorf("failed to iterate over 'etcd_arbiter_nodes' snapshots: %v", err)
 		}
 
 		nodeMap[node.Name] = node

@@ -41,7 +41,7 @@ properties:
         type: integer
         minimum: 0
         x-examples: [3]
-      hasEtcdOnlyNode:
+      hasEtcdArbiterNode:
         type: boolean
         default: false
         x-examples: [false]

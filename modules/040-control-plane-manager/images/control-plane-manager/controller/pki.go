@@ -79,11 +79,11 @@ func renewCertificates() error {
 	log.Info("phase: renew certificates")
 	components := make(map[string]string, 7)
 	
-	if config.EtcdOnly {
+	if config.EtcdArbiter {
 		components["etcd-server"] = "etcd/server"
 		components["etcd-peer"] = "etcd/peer"
 		components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
-		log.Info("ETCD_ONLY mode: renewing only etcd certificates")
+		log.Info("ETCD_ARBITER mode: renewing only etcd certificates")
 	} else {
 		components["apiserver"] = "apiserver"
 		components["apiserver-kubelet-client"] = "apiserver-kubelet-client"

@@ -76,17 +76,17 @@ func main() {
 	runPhase(checkKubeletConfig())
 	runPhase(installKubeadmConfig())
 	runPhase(installBasePKIfiles())
-	if config.EtcdOnly {
+	if config.EtcdArbiter {
 		runPhase(generateEtcdPerformancePatch())
 	}
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
 	
-	if !config.EtcdOnly {
+	if !config.EtcdArbiter {
 		runPhase(renewKubeconfigs())
 		runPhase(updateRootKubeconfig())
 	} else {
-		log.Info("ETCD_ONLY mode: creating only admin.conf for kubeadm")
+		log.Info("ETCD_ARBITER mode: creating only admin.conf for kubeadm")
 		runPhase(renewAdminKubeconfig())
 	}
 	

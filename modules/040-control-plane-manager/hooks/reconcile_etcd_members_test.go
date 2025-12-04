@@ -148,9 +148,9 @@ status:
 			})
 		})
 	})
-	Context("Etcd-only node support", func() {
+	Context("Etcd-arbiter node support", func() {
 		BeforeEach(func() {
-			reconcileEtcdMembersWithEtcdOnly := []*etcdserverpb.Member{
+			reconcileEtcdMembersWithEtcdArbiter := []*etcdserverpb.Member{
 				{
 					ID:       111,
 					PeerURLs: []string{"https://192.168.1.1:2379"},
@@ -164,11 +164,11 @@ status:
 				{
 					ID:       333,
 					PeerURLs: []string{"https://10.10.10.10:2379"},
-					Name:     "etcd-only-0",
+					Name:     "etcd-arbiter-0",
 				},
 			}
 
-			testHelperSetETCDMembers(reconcileEtcdMembersWithEtcdOnly)
+			testHelperSetETCDMembers(reconcileEtcdMembersWithEtcdArbiter)
 
 			f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + `
 ---
@@ -197,9 +197,9 @@ status:
 apiVersion: v1
 kind: Node
 metadata:
-  name: etcd-only-0
+  name: etcd-arbiter-0
   labels:
-    node-role.deckhouse.io/etcd-only: ""
+    node.deckhouse.io/etcd-arbiter: ""
 status:
   addresses:
     - address: 10.10.10.10
@@ -209,7 +209,7 @@ status:
 			f.RunHook()
 		})
 
-		It("Hook should include etcd-only node and keep it in cluster", func() {
+		It("Hook should include etcd-arbiter node and keep it in cluster", func() {
 			Expect(f).Should(ExecuteSuccessfully())
 
 			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
@@ -224,7 +224,7 @@ status:
 
 			Expect(names).To(ContainElement("main-master-0"))
 			Expect(names).To(ContainElement("main-master-1"))
-			Expect(names).To(ContainElement("etcd-only-0"))
+			Expect(names).To(ContainElement("etcd-arbiter-0"))
 		})
 	})
 })

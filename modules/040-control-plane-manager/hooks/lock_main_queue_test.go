@@ -208,17 +208,17 @@ spec:
 
 	})
 
-	Context("Cluster with both main and etcd-only DaemonSets, all pods ready", func() {
+	Context("Cluster with both main and etcd-arbiter DaemonSets, all pods ready", func() {
 		const (
-			etcdOnlyReadyPods = `
+			etcdArbiterReadyPods = `
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: d8-control-plane-manager-etcd-only
+    app: d8-control-plane-manager-etcd-arbiter
     component: control-plane-manager
     pod-template-generation: "50"
-  name: d8-control-plane-manager-etcd-only-a
+  name: d8-control-plane-manager-etcd-arbiter-a
   namespace: kube-system
 spec:
   nodeName: etcd-0
@@ -228,25 +228,25 @@ status:
     status: 'True'
 ---
 `
-			etcdOnlyDaemonSet = `
+			etcdArbiterDaemonSet = `
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   generation: 50
-  name: d8-control-plane-manager-etcd-only
+  name: d8-control-plane-manager-etcd-arbiter
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
 spec:
   selector:
     matchLabels:
-      app: d8-control-plane-manager-etcd-only
+      app: d8-control-plane-manager-etcd-arbiter
 ---
 `
 		)
 
 		BeforeEach(func() {
-			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdOnlyReadyPods + etcdOnlyDaemonSet)
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterReadyPods + etcdArbiterDaemonSet)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
@@ -256,17 +256,17 @@ spec:
 		})
 	})
 
-	Context("Cluster with etcd-only DaemonSet but pods not ready", func() {
+	Context("Cluster with etcd-arbiter DaemonSet but pods not ready", func() {
 		const (
-			etcdOnlyNotReadyPods = `
+			etcdArbiterNotReadyPods = `
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: d8-control-plane-manager-etcd-only
+    app: d8-control-plane-manager-etcd-arbiter
     component: control-plane-manager
     pod-template-generation: "50"
-  name: d8-control-plane-manager-etcd-only-a
+  name: d8-control-plane-manager-etcd-arbiter-a
   namespace: kube-system
 spec:
   nodeName: etcd-0
@@ -276,25 +276,25 @@ status:
     status: 'False'
 ---
 `
-			etcdOnlyDaemonSet = `
+			etcdArbiterDaemonSet = `
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   generation: 50
-  name: d8-control-plane-manager-etcd-only
+  name: d8-control-plane-manager-etcd-arbiter
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
 spec:
   selector:
     matchLabels:
-      app: d8-control-plane-manager-etcd-only
+      app: d8-control-plane-manager-etcd-arbiter
 ---
 `
 		)
 
 		BeforeEach(func() {
-			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdOnlyNotReadyPods + etcdOnlyDaemonSet)
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterNotReadyPods + etcdArbiterDaemonSet)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
@@ -304,17 +304,17 @@ spec:
 		})
 	})
 
-	Context("Cluster with etcd-only DaemonSet rolled out but pods not updated", func() {
+	Context("Cluster with etcd-arbiter DaemonSet rolled out but pods not updated", func() {
 		const (
-			etcdOnlyOldPods = `
+			etcdArbiterOldPods = `
 apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: d8-control-plane-manager-etcd-only
+    app: d8-control-plane-manager-etcd-arbiter
     component: control-plane-manager
     pod-template-generation: "49"
-  name: d8-control-plane-manager-etcd-only-a
+  name: d8-control-plane-manager-etcd-arbiter-a
   namespace: kube-system
 spec:
   nodeName: etcd-0
@@ -324,25 +324,25 @@ status:
     status: 'True'
 ---
 `
-			etcdOnlyDaemonSet = `
+			etcdArbiterDaemonSet = `
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   generation: 50
-  name: d8-control-plane-manager-etcd-only
+  name: d8-control-plane-manager-etcd-arbiter
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
 spec:
   selector:
     matchLabels:
-      app: d8-control-plane-manager-etcd-only
+      app: d8-control-plane-manager-etcd-arbiter
 ---
 `
 		)
 
 		BeforeEach(func() {
-			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdOnlyOldPods + etcdOnlyDaemonSet)
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterOldPods + etcdArbiterDaemonSet)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})

@@ -37,7 +37,7 @@ import (
 Description:
 
 	locks deckhouse main queue while control-plane-manager Pods will be rolled out and become ready
-	Checks DaemonSets: d8-control-plane-manager and d8-control-plane-manager-etcd-only (if exists)
+	Checks DaemonSets: d8-control-plane-manager and d8-control-plane-manager-etcd-arbiter (if exists)
 	Checks Pod readiness for both DaemonSets
 */
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

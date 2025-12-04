@@ -81,7 +81,7 @@ func renewKubeconfigs() error {
 }
 
 func renewAdminKubeconfig() error {
-	log.Info("phase: renew admin kubeconfig for etcd-only mode")
+	log.Info("phase: renew admin kubeconfig for etcd-arbiter mode")
 	return renewKubeconfig("admin")
 }
 
