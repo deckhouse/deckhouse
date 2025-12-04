@@ -58,3 +58,30 @@ layout: sidebar-guides
 
 Подключитель к вашему бастиону по SSH и скачайте файл любым удобным вам способом.
 
+{% offtopic title="Как скачать файл с помощью wget..." %}
+Выполните команду:
+```console
+wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
+```
+
+Пример выполнени команды:
+```text
+$ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
+--2025-12-04 12:38:42--  https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
+Resolving github.com (github.com)... 140.82.121.4
+Connecting to github.com (github.com)|140.82.121.4|:443... connected.
+HTTP request sent, awaiting response... 302 Found
+Location: https://release-assets.githubusercontent.com/github-production-release-asset/50613991/01508bef-5c2c-40bb-bc66-f40e34ad2cae?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-12-04T13%3A28%3A53Z&rscd=attachment%3B+filename%3Dharbor-offline-installer-v2.14.1.tgz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2025-12-04T12%3A28%3A27Z&ske=2025-12-04T13%3A28%3A53Z&sks=b&skv=2018-11-09&sig=bUJ%2Bo6Bx7brkGAvaf2Pq9cXHah1aPJi9PDlc7G3WwS0%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc2NDg1NTUyMiwibmJmIjoxNzY0ODUxOTIyLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.DHH2Fz_xRutTNEnN5p3uxxG_T03dhqppICQhc0gJQq0&response-content-disposition=attachment%3B%20filename%3Dharbor-offline-installer-v2.14.1.tgz&response-content-type=application%2Foctet-stream [following]
+--2025-12-04 12:38:42--  https://release-assets.githubusercontent.com/github-production-release-asset/50613991/01508bef-5c2c-40bb-bc66-f40e34ad2cae?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-12-04T13%3A28%3A53Z&rscd=attachment%3B+filename%3Dharbor-offline-installer-v2.14.1.tgz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2025-12-04T12%3A28%3A27Z&ske=2025-12-04T13%3A28%3A53Z&sks=b&skv=2018-11-09&sig=bUJ%2Bo6Bx7brkGAvaf2Pq9cXHah1aPJi9PDlc7G3WwS0%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc2NDg1NTUyMiwibmJmIjoxNzY0ODUxOTIyLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.DHH2Fz_xRutTNEnN5p3uxxG_T03dhqppICQhc0gJQq0&response-content-disposition=attachment%3B%20filename%3Dharbor-offline-installer-v2.14.1.tgz&response-content-type=application%2Foctet-stream
+Resolving release-assets.githubusercontent.com (release-assets.githubusercontent.com)... 185.199.108.133, 185.199.109.133, 185.199.110.133, ...
+Connecting to release-assets.githubusercontent.com (release-assets.githubusercontent.com)|185.199.108.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 680961237 (649M) [application/octet-stream]
+Saving to: ‘harbor-offline-installer-v2.14.1.tgz’
+
+harbor-offline-installer-v2.14.1.tgz                         100%[=============================================================================================================================================>] 649.42M  77.2MB/s    in 8.2s
+
+2025-12-04 12:38:50 (79.4 MB/s) - ‘harbor-offline-installer-v2.14.1.tgz’ saved [680961237/680961237]
+```
+{% endofftopic %}
+
