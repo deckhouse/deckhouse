@@ -75,6 +75,10 @@ metallb:
         ru: Удалите все элементы `addressPool` с протоколом `layer2`.
       conversions:
         - .
+monitoring-kubernetes:
+    - version: 2
+      conversions:
+        - del(.ebpfExporterEnabled)
 node-manager:
     - version: 2
       description:
