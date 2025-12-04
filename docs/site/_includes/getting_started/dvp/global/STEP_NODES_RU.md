@@ -8,7 +8,7 @@
 
 - Подготовьте сервер, который будет worker-узлом кластера.
 
-- Создайте [NodeGroup](/modules/node-manager/cr.html#nodegroup) `worker`. Для этого выполните на **master-узле** следующую команду:
+- Создайте [NodeGroup](/modules/node-manager/cr.html#nodegroup) с именем `worker`, выполнив на **master-узле** следующую команду:
 
   ```shell
   sudo -i d8 k create -f - << EOF
@@ -46,25 +46,6 @@
   EOF
   ```
 
-- Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на **master-узле** следующую команду, указав IP-адрес добавляемого узла:
-
-  ```shell
-  export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
-  sudo -i d8 k create -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
-  kind: StaticInstance
-  metadata:
-    name: dvp-worker
-    labels:
-      role: worker
-  spec:
-    address: "$NODE"
-    credentialsRef:
-      kind: SSHCredentials
-      name: caps
-  EOF
-  ```
-
 - Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
 
   ```shell
@@ -89,6 +70,25 @@
 
   ```shell
   pdpl-user -i 63 caps
+  ```
+
+- Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на **master-узле** следующую команду, указав IP-адрес добавляемого узла:
+
+  ```shell
+  export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
+  sudo -i d8 k create -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: StaticInstance
+  metadata:
+    name: dvp-worker
+    labels:
+      role: worker
+  spec:
+    address: "$NODE"
+    credentialsRef:
+      kind: SSHCredentials
+      name: caps
+  EOF
   ```
 
 - Дождитесь пока все узлы кластера перейдут в состояние `Ready`.
