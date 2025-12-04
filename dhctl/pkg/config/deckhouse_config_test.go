@@ -112,7 +112,7 @@ internalNetworkCIDRs:
 	}
 	t.Run("Registry", func(t *testing.T) {
 
-		t.Run("Registry with module disable", func(t *testing.T) {
+		t.Run("Module disable", func(t *testing.T) {
 			tplCtx := map[string]interface{}{
 				"moduleEnable": false,
 			}
@@ -123,7 +123,7 @@ internalNetworkCIDRs:
 			assert(t, tplCtx, expect)
 		})
 
-		t.Run("Registry with module enable", func(t *testing.T) {
+		t.Run("Module enable", func(t *testing.T) {
 			t.Run("From default (CE edition config)", func(t *testing.T) {
 				tplCtx := map[string]interface{}{
 					"moduleEnable": true,
