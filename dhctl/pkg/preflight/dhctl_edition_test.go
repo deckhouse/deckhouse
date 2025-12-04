@@ -36,7 +36,7 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("test.registry.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),
@@ -64,7 +64,7 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("test.registry.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),
@@ -92,7 +92,7 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("test.registry.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),

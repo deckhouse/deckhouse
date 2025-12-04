@@ -23,7 +23,7 @@ type TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
 type TestConfigUpdateModuleEnabled func() bool
 type TestConfigUpdateMode func() constant.ModeType
 
-func NewTestConfig(opts ...interface{}) Config {
+func TestConfigBuilder(opts ...interface{}) Config {
 	registrySettings := module_config.RegistrySettings{
 		ImagesRepo: constant.CEImagesRepo,
 		Scheme:     constant.CEScheme,

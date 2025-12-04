@@ -179,7 +179,7 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &config.DeckhouseInstaller{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
 			registry_config.WithModuleDisable(),
 		),

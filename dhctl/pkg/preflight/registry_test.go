@@ -72,7 +72,7 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),
@@ -98,7 +98,7 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),
@@ -123,7 +123,7 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
 			registry_config.WithSchemeHTTPS(),
 		),
@@ -258,13 +258,13 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
 						registry_config.WithSchemeHTTPS(),
 					),
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
 						registry_config.WithSchemeHTTPS(),
 					),

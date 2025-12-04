@@ -36,7 +36,7 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
 	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
 			registry_config.WithSchemeHTTPS(),
 		),

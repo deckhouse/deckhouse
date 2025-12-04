@@ -55,7 +55,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Empty config",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -70,7 +70,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Double install",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -81,7 +81,7 @@ func TestDeckhouseInstall(t *testing.T) {
 					return err
 				}
 				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -96,7 +96,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With docker cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -123,7 +123,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With bashible cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleEnable(),
 					),
@@ -149,7 +149,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Without bashible cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -171,7 +171,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With secrets",
 			func() error {
 				conf := config.DeckhouseInstaller{
-					Registry: registry_config.NewTestConfig(
+					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
 						registry_config.WithModuleDisable(),
 					),
@@ -219,7 +219,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 	fakeClient := client.NewFakeKubernetesClient()
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
 			registry_config.WithModuleDisable(),
 		),
@@ -260,7 +260,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 	})
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
 			registry_config.WithModuleDisable(),
 		),
@@ -324,7 +324,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	})
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.NewTestConfig(
+		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
 			registry_config.WithModuleDisable(),
 		),
@@ -370,7 +370,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.NewTestConfig(
+				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
 					registry_config.WithModuleDisable(),
 				),
@@ -413,7 +413,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.NewTestConfig(
+				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
 					registry_config.WithModuleDisable(),
 				),
@@ -448,7 +448,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.NewTestConfig(
+				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
 					registry_config.WithModuleDisable(),
 				),
@@ -493,7 +493,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.NewTestConfig(
+				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
 					registry_config.WithModuleDisable(),
 				),
