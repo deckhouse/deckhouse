@@ -16,6 +16,7 @@ package status
 
 import (
 	"errors"
+	"slices"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -163,12 +164,35 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	}
 }
 
-// ClearConditions set all condition to unknown
-func (s *Service) ClearConditions(name string) {
+// ClearRuntimeConditions set runtime conditions to unknown
+func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.statuses[name] = newStatus()
+	if _, ok := s.statuses[name]; !ok {
+		return
+	}
+
+	runtimeConditions := []ConditionName{
+		ConditionRequirementsMet,
+		ConditionSettingsValid,
+		ConditionHelmApplied,
+		ConditionHooksProcessed,
+		ConditionReadyInCluster,
+		ConditionReadyInRuntime,
+	}
+
+	for _, condition := range s.statuses[name].Conditions {
+		if !slices.Contains(runtimeConditions, condition.Name) {
+			continue
+		}
+
+		condition.Status = metav1.ConditionUnknown
+		condition.Reason = ""
+		condition.Message = ""
+	}
+
+	s.ch <- name
 }
 
 // HandleError processes an error and extracts status conditions from it

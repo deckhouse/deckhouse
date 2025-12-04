@@ -420,7 +420,7 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 		}
 
 		ctx := o.packages[name].renewContext(eventDisable)
-		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger), queue.WithUnique())
+		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger), queue.WithUnique())
 	}
 
 	o.scheduler = schedule.NewScheduler(

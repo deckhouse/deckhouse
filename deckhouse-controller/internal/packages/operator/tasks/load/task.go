@@ -39,7 +39,6 @@ type manager interface {
 }
 
 type statusService interface {
-	ClearConditions(name string)
 	SetConditionTrue(name string, conditionName status.ConditionName)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
@@ -88,7 +87,6 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 
-	t.status.ClearConditions(t.packageName)
 	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 	t.status.SetVersion(t.packageName, version)
 
