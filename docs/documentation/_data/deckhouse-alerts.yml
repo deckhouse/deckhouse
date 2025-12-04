@@ -2432,7 +2432,7 @@ alerts:
       description: |
         The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
 
-        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 65536` is currently configured).
 
         Affected node: `{{$labels.node}}`
       summary: |
@@ -2447,7 +2447,7 @@ alerts:
       description: |
         The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
 
-        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 120000` is currently configured), or traffic patterns changed.
 
         Affected node: `{{$labels.node}}`
       summary: |
@@ -2473,10 +2473,10 @@ alerts:
       edition: be
       description: |
         The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
-        exceeded 300 milliseconds over the last 5 minutes.
+        exceeded 300 milliseconds over the last 5 minutes while handling more than 0.1 QPS.
         This may indicate slow upstreams, network issues, or DNS overload on this node.
       summary: |
-        High DNS request latency in kubeforward (p95 &gt; 300ms).
+        High DNS request latency in kubeforward (p95 &gt; 300ms under load).
       severity: "4"
       markupFormat: default
     - name: D8NodeLocalDNSUpstreamHealthcheckFailed
