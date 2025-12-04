@@ -239,6 +239,13 @@ spec:
       {{- else }}
       nodeSelector:
         node-role.deckhouse.io/etcd-only: ""
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
       {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "any-node" "uninitialized") | nindent 6 }}
