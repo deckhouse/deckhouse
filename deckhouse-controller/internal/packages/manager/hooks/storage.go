@@ -30,7 +30,6 @@ import (
 // Thread Safety: All methods use RWMutex for concurrent access.
 type Storage struct {
 	mu        sync.RWMutex                                // Protects all fields
-	init      bool                                        // Whether hooks inited
 	byBinding map[shtypes.BindingType][]*hooks.ModuleHook // Hooks grouped by binding type
 	byName    map[string]*hooks.ModuleHook                // Hooks indexed by name
 }
@@ -54,20 +53,6 @@ func (s *Storage) Add(hook *hooks.ModuleHook) {
 	for _, binding := range hook.GetHookConfig().Bindings() {
 		s.byBinding[binding] = append(s.byBinding[binding], hook)
 	}
-}
-
-func (s *Storage) HooksInitialized() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.init
-}
-
-func (s *Storage) SetHooksInitialized() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.init = true
 }
 
 // GetHooks returns all hooks in storage in arbitrary order.
