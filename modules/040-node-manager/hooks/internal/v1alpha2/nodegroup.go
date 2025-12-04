@@ -264,7 +264,7 @@ type KubeletMemorySwap struct {
 
 // KubeletLimitedSwap contains settings for limited swap mode
 type KubeletLimitedSwap struct {
-	// Size of the swap file (e.g., "1Gi", "2Gi")
+	// Size of the swap file (e.g., "1G", "2G")
 	Size string `json:"size"`
 }
 

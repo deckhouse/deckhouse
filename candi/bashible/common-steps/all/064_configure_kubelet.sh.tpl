@@ -323,9 +323,6 @@ featureGates:
 {{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
   DynamicResourceAllocation: true
 {{- end }}
-{{- if and (ne $swapBehavior "") (semverCompare ">= 1.22" .kubernetesVersion) (semverCompare "< 1.34" .kubernetesVersion) }}
-  NodeSwap: true
-{{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
 {{- end }}

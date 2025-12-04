@@ -687,12 +687,12 @@ spec:
                           properties:
                             size:
                               type: string
-                              pattern: '^\d+[KMGT]i?$'
+                              pattern: '^\d+G$'
                               description: |
-                                Size of the swap file to create (e.g., "1Gi", "2Gi", "512Mi").
+                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
                                 
                                 Must be a valid Kubernetes byte size format.
-                              x-doc-example: "1Gi"
+                              x-doc-example: "1G"
     - name: v1alpha2
       served: true
       storage: false
@@ -1359,12 +1359,12 @@ spec:
                           properties:
                             size:
                               type: string
-                              pattern: '^\d+[KMGT]i?$'
+                              pattern: '^\d+G$'
                               description: |
-                                Size of the swap file to create (e.g., "1Gi", "2Gi", "512Mi").
+                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
                                 
                                 Must be a valid Kubernetes byte size format.
-                              x-doc-example: "1Gi"
+                              x-doc-example: "1G"
     - name: v1
       served: true
       storage: true
@@ -2404,12 +2404,12 @@ spec:
                           properties:
                             size:
                               type: string
-                              pattern: '^\d+[KMGT]i?$'
+                              pattern: '^\d+G$'
                               description: |
-                                Size of the swap file to create (e.g., "1Gi", "2Gi", "512Mi").
+                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
                                 
                                 Must be a valid Kubernetes byte size format.
-                              x-doc-example: "1Gi"
+                              x-doc-example: "1G"
                 update:
                   type: object
                   properties:
