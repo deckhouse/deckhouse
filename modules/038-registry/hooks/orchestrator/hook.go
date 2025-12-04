@@ -294,9 +294,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	// Process the state with init config
 	if initSecret.IsExist && !initSecret.Applied {
-		err = values.State.processInit(input.Logger, inputs)
+		err = values.State.initialize(input.Logger, inputs)
 		if err != nil {
-			return fmt.Errorf("cannot process: %w", err)
+			return fmt.Errorf("cannot initialize state from init secret: %w", err)
 		}
 	}
 

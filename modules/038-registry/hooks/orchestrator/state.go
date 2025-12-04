@@ -100,7 +100,7 @@ func (state *State) clearConditions() {
 	state.Conditions = nil
 }
 
-func (state *State) processInit(log go_hook.Logger, inputs Inputs) error {
+func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	// Process PKI
 	if inputs.InitSecret.CA != nil {
 		state.PKI.CA = &pki.CertModel{}
