@@ -94,7 +94,6 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 			o.status.HandleError(name, err)
 			return
 		}
-
 		o.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 		o.packages[name].settings = inst.Settings
@@ -150,7 +149,7 @@ func (o *Operator) Remove(namespace, instance string) {
 	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
-			o.queueService.Remove(fmt.Sprintf("%s.%s", name, q))
+			o.queueService.Remove(fmt.Sprintf("%s/%s", name, q))
 		}
 	}))
 

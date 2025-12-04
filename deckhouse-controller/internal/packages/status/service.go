@@ -121,6 +121,7 @@ func (s *Service) GetStatus(name string) Status {
 	copy(condsCopy, status.Conditions)
 
 	return Status{
+		Version:    status.Version,
 		Conditions: condsCopy,
 	}
 }
@@ -160,6 +161,14 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	if s.statuses[name].setCondition(Condition{Name: condition, Status: metav1.ConditionTrue}) {
 		s.ch <- name
 	}
+}
+
+// ClearConditions set all condition to unknown
+func (s *Service) ClearConditions(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.statuses[name] = newStatus()
 }
 
 // HandleError processes an error and extracts status conditions from it

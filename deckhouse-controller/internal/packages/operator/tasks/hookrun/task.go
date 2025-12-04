@@ -21,6 +21,7 @@ import (
 
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -33,6 +34,11 @@ type manager interface {
 	RunPackageHook(ctx context.Context, name, hook string, bctx []bctx.BindingContext) error
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type task struct {
 	packageName string
 	hook        string
@@ -40,16 +46,18 @@ type task struct {
 	bctx []bctx.BindingContext
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name, hook string, bctx []bctx.BindingContext, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name, hook string, bctx []bctx.BindingContext, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		hook:        hook,
 		bctx:        bctx,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -61,6 +69,7 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("run hook", slog.String("hook", t.hook), slog.String("name", t.packageName))
 	if err := t.manager.RunPackageHook(ctx, t.packageName, t.hook, t.bctx); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("run hook '%s': %w", t.hook, err)
 	}
 

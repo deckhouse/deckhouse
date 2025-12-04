@@ -22,6 +22,7 @@ import (
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookctrl "github.com/flant/shell-operator/pkg/hook/controller"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -35,6 +36,11 @@ type manager interface {
 	UnlockKubernetesMonitors(name, hook string, monitors ...string)
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type task struct {
 	packageName string
 	hook        string
@@ -42,16 +48,18 @@ type task struct {
 	info hookctrl.BindingExecutionInfo
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name, hook string, info hookctrl.BindingExecutionInfo, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name, hook string, info hookctrl.BindingExecutionInfo, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		hook:        hook,
 		info:        info,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -76,6 +84,7 @@ func (t *task) Execute(ctx context.Context) error {
 	if err := t.manager.RunPackageHook(ctx, t.packageName, t.hook, t.info.BindingContext); err != nil {
 		// If AllowFailure=true, log warning and continue
 		if !t.info.AllowFailure {
+			t.status.HandleError(t.packageName, err)
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)
 		}
 		t.logger.Warn("hook failed", slog.String("name", t.packageName), slog.String("hook", t.hook), log.Err(err))

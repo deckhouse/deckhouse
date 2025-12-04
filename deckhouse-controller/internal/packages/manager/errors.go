@@ -28,6 +28,7 @@ const (
 	ConditionReasonStartupHooksFailed    status.ConditionReason = "StartupHookFailed"
 	ConditionReasonBeforeHelmHooksFailed status.ConditionReason = "BeforeHelmHooksFailed"
 	ConditionReasonAfterHelmHooksFailed  status.ConditionReason = "AfterHelmHooksFailed"
+	ConditionReasonEventHookFailed       status.ConditionReason = "EventHookFailed"
 
 	// ReadyInRuntime reasons
 	ConditionReasonHooksFailed       status.ConditionReason = "HooksFailed"
@@ -159,6 +160,26 @@ func newAfterHelmHookErr(err error) error {
 				Name:    status.ConditionReadyInRuntime,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonHooksFailed,
+				Message: err.Error(),
+			},
+		},
+	}
+}
+
+func newEventHookErr(err error) error {
+	return &status.Error{
+		Err: err,
+		Conditions: []status.Condition{
+			{
+				Name:    status.ConditionHooksProcessed,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonEventHookFailed,
+				Message: err.Error(),
+			},
+			{
+				Name:    status.ConditionReadyInRuntime,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonEventHookFailed,
 				Message: err.Error(),
 			},
 		},
