@@ -365,15 +365,15 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	logger.Debug("adding application to PackageOperator")
 
-	app = r.SetConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
+	// call PackageOperator method (PackageAdder interface), it may patch application object
+	r.pm.AddApplication(ctx, app, &apv.Status)
+
+	app = r.SetResourceConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
 
 	err = r.client.Status().Patch(ctx, app, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status application %s: %w", app.Name, err)
 	}
-
-	// call PackageOperator method (PackageAdder interface), it may patch application object
-	r.pm.AddApplication(ctx, app, &apv.Status)
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -483,6 +483,34 @@ func (r *reconciler) SetConditionTrue(app *v1alpha1.Application, condType string
 	}
 
 	app.Status.Conditions = append(app.Status.Conditions, v1alpha1.ApplicationStatusCondition{
+		Type:               condType,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      time,
+		LastTransitionTime: time,
+	})
+
+	return app
+}
+
+func (r *reconciler) SetResourceConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
+	time := metav1.NewTime(r.dc.GetClock().Now())
+
+	for idx, cond := range app.Status.ResourceConditions {
+		if cond.Type == condType {
+			app.Status.ResourceConditions[idx].LastProbeTime = time
+			if cond.Status != corev1.ConditionTrue {
+				app.Status.ResourceConditions[idx].LastTransitionTime = time
+				app.Status.ResourceConditions[idx].Status = corev1.ConditionTrue
+			}
+
+			app.Status.ResourceConditions[idx].Reason = ""
+			app.Status.ResourceConditions[idx].Message = ""
+
+			return app
+		}
+	}
+
+	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationResourceStatusCondition{
 		Type:               condType,
 		Status:             corev1.ConditionTrue,
 		LastProbeTime:      time,

@@ -23,6 +23,11 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: UpdateNotified
+  resourceConditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
