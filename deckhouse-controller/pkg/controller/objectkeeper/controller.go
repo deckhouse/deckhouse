@@ -564,14 +564,7 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 				return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 			}
 		}
-		r.logger.Info("FollowObject UID mismatch (recreated) - deleting ObjectKeeper immediately",
-			"objectkeeper", objectkeeper.Name,
-			"expectedUID", ref.UID,
-			"actualUID", objUID)
-		if err := r.Delete(ctx, objectkeeper); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
-		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
 	}
 
 	// Object exists and UID matches - ObjectKeeper is active
