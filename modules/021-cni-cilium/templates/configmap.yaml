@@ -171,7 +171,11 @@ data:
 
   write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
 
-  cni-exclusive: {{ .Values.cniCilium.internal.exclusiveCNIPlugin | quote }}
+  {{- if or .Values.cniCilium.exclusiveCNIPlugin (has "sdn" .Values.global.enabledModules) (has "istio" .Values.global.enabledModules) }}
+  cni-exclusive: "true"
+  {{- else }}
+  cni-exclusive: "false"
+  {{- end }}
 
   skip-crd-creation: "true"
 
