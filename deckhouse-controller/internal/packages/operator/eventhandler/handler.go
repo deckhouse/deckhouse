@@ -29,6 +29,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -45,6 +46,7 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	PackageManager    *packagemanager.Manager
 	QueueService      *queue.Service
+	StatusService     *status.Service
 }
 
 // Handler manages the event processing loop for Kubernetes and schedule events.
@@ -73,6 +75,7 @@ type Handler struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	packageManager    *packagemanager.Manager
 	queueService      *queue.Service
+	status            *status.Service
 
 	logger *log.Logger
 }
@@ -94,6 +97,7 @@ func New(conf Config, logger *log.Logger) *Handler {
 		scheduleManager:   conf.ScheduleManager,
 		kubeEventsManager: conf.KubeEventsManager,
 		packageManager:    conf.PackageManager,
+		status:            conf.StatusService,
 
 		logger: logger.Named("kube-event-handler"),
 	}
@@ -192,7 +196,7 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 		// queue = <name>/<queue>
 		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
-		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.status, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildKubeTasks(ctx, kubeEvent, builder)
@@ -211,7 +215,7 @@ func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[s
 		// queue = <name>/<queue>
 		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
-		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.status, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildScheduleTasks(ctx, crontab, builder)
