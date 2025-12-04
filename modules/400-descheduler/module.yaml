@@ -2,8 +2,6 @@ name: descheduler
 subsystems:
   - infrastructure
 namespace: d8-descheduler
-description: |
-  The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
 descriptions:
   en: The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
 stage: General Availability

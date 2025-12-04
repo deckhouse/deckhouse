@@ -1,3 +1,5 @@
 name: deckhouse-tools
 namespace: d8-system
+descriptions:
+  en: Deckhouse tools module
 stage: General Availability
