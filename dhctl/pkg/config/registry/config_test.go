@@ -114,6 +114,7 @@ func TestConfig_FromRegistrySettings(t *testing.T) {
 		cri              constant.CRIType
 	}
 	type output struct {
+		mode   constant.ModeType
 		err    bool
 		errMsg string
 	}
@@ -124,7 +125,7 @@ func TestConfig_FromRegistrySettings(t *testing.T) {
 		output output
 	}{
 		{
-			name: "containerd: v1 -> Unmanaged",
+			name: "containerd: v1 -> Direct",
 			input: input{
 				registrySettings: module_config.RegistrySettings{
 					ImagesRepo: "registry.example.com",
@@ -133,7 +134,8 @@ func TestConfig_FromRegistrySettings(t *testing.T) {
 				cri: constant.CRIContainerdV1,
 			},
 			output: output{
-				err: false,
+				mode: constant.ModeDirect,
+				err:  false,
 			},
 		},
 		{
@@ -146,7 +148,8 @@ func TestConfig_FromRegistrySettings(t *testing.T) {
 				cri: constant.CRIType("unknown"),
 			},
 			output: output{
-				err: false,
+				mode: constant.ModeUnmanaged,
+				err:  false,
 			},
 		},
 	}
@@ -164,7 +167,7 @@ func TestConfig_FromRegistrySettings(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, config)
-				assert.Equal(t, constant.ModeUnmanaged, config.Settings.Mode)
+				assert.Equal(t, tt.output.mode, config.Settings.Mode)
 			}
 		})
 	}
@@ -175,6 +178,7 @@ func TestConfig_FromDefault(t *testing.T) {
 		cri constant.CRIType
 	}
 	type output struct {
+		mode   constant.ModeType
 		err    bool
 		errMsg string
 	}
@@ -185,12 +189,13 @@ func TestConfig_FromDefault(t *testing.T) {
 		output output
 	}{
 		{
-			name: "containerd: v1 -> Unmanaged",
+			name: "containerd: v1 -> Direct",
 			input: input{
 				cri: constant.CRIContainerdV1,
 			},
 			output: output{
-				err: false,
+				mode: constant.ModeDirect,
+				err:  false,
 			},
 		},
 		{
@@ -199,7 +204,8 @@ func TestConfig_FromDefault(t *testing.T) {
 				cri: constant.CRIType("unknown"),
 			},
 			output: output{
-				err: false,
+				mode: constant.ModeUnmanaged,
+				err:  false,
 			},
 		},
 	}
@@ -217,7 +223,7 @@ func TestConfig_FromDefault(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, config)
-				assert.Equal(t, constant.ModeUnmanaged, config.Settings.Mode)
+				assert.Equal(t, tt.output.mode, config.Settings.Mode)
 			}
 		})
 	}

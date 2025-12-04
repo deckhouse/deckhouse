@@ -46,13 +46,13 @@ func (c *Config) FromRegistrySettings(
 		Unmanaged: &userRegistrySettings,
 	}
 
-	// TODO:
-	// moduleEnabled := constant.ModuleEnabled(cri)
-	// if moduleEnabled {
-	// 	userSettings = module_config.DeckhouseSettings{
-	// 	Mode:      constant.ModeDirect,
-	// 	Direct: &userRegistrySettings,
-	// }
+	moduleEnabled := constant.ModuleEnabled(cri)
+	if moduleEnabled {
+		userSettings = module_config.DeckhouseSettings{
+			Mode:   constant.ModeDirect,
+			Direct: &userRegistrySettings,
+		}
+	}
 	return c.FromDeckhouseSettings(
 		userSettings,
 		cri,

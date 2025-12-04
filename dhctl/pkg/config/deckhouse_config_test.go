@@ -103,46 +103,49 @@ internalNetworkCIDRs:
 	{{- end }}
 {{- end }}
 `
+	assert := func(t *testing.T, tplCtx map[string]interface{}, expect map[string]interface{}) {
+		metaConfig := generateMetaConfig(t, tpl, tplCtx, false)
+		installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.NoError(t, err)
+		require.Len(t, installConfig.ModuleConfigs, 1)
+		assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, expect)
+	}
 	t.Run("Registry", func(t *testing.T) {
 
 		t.Run("Registry with module disable", func(t *testing.T) {
-			data := map[string]interface{}{
+			tplCtx := map[string]interface{}{
 				"moduleEnable": false,
 			}
-			metaConfig := generateMetaConfig(t, tpl, data, false)
-			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
-			require.NoError(t, err)
-			require.Len(t, installConfig.ModuleConfigs, 1)
-			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
+			expect := map[string]interface{}{
 				"bundle":   "Default",
 				"logLevel": "Info",
-			})
-		})
-		t.Run("Registry from default (CE edition config)", func(t *testing.T) {
-			data := map[string]interface{}{
-				"moduleEnable": true,
 			}
-			metaConfig := generateMetaConfig(t, tpl, data, false)
-			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
-			require.NoError(t, err)
-			require.Len(t, installConfig.ModuleConfigs, 1)
-			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
-				"bundle":   "Default",
-				"logLevel": "Info",
-				"registry": map[string]interface{}{
-					"mode": "Unmanaged",
-					"unmanaged": map[string]interface{}{
-						"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
-						"scheme":     "HTTPS",
-					},
-				},
-			})
+			assert(t, tplCtx, expect)
 		})
 
-		t.Run("Registry from init configuration", func(t *testing.T) {
-			data := map[string]interface{}{
-				"moduleEnable": true,
-				"manifests": []string{`
+		t.Run("Registry with module enable", func(t *testing.T) {
+			t.Run("From default (CE edition config)", func(t *testing.T) {
+				tplCtx := map[string]interface{}{
+					"moduleEnable": true,
+				}
+				expect := map[string]interface{}{
+					"bundle":   "Default",
+					"logLevel": "Info",
+					"registry": map[string]interface{}{
+						"mode": "Direct",
+						"direct": map[string]interface{}{
+							"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
+							"scheme":     "HTTPS",
+						},
+					},
+				}
+				assert(t, tplCtx, expect)
+			})
+
+			t.Run("From init configuration", func(t *testing.T) {
+				tplCtx := map[string]interface{}{
+					"moduleEnable": true,
+					"manifests": []string{`
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -152,32 +155,29 @@ deckhouse:
   registryCA: "-----BEGIN CERTIFICATE-----"
   registryScheme: HTTPS
 `,
-				},
-			}
-			metaConfig := generateMetaConfig(t, tpl, data, false)
-			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
-			require.NoError(t, err)
-			require.Len(t, installConfig.ModuleConfigs, 1)
-			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
-				"bundle":   "Default",
-				"logLevel": "Info",
-				"registry": map[string]interface{}{
-					"mode": "Unmanaged",
-					"unmanaged": map[string]interface{}{
-						"imagesRepo": "r.example.com/test",
-						"username":   "test-user",
-						"password":   "test-password",
-						"scheme":     "HTTPS",
-						"ca":         "-----BEGIN CERTIFICATE-----",
 					},
-				},
+				}
+				expect := map[string]interface{}{
+					"bundle":   "Default",
+					"logLevel": "Info",
+					"registry": map[string]interface{}{
+						"mode": "Direct",
+						"direct": map[string]interface{}{
+							"imagesRepo": "r.example.com/test",
+							"username":   "test-user",
+							"password":   "test-password",
+							"scheme":     "HTTPS",
+							"ca":         "-----BEGIN CERTIFICATE-----",
+						},
+					},
+				}
+				assert(t, tplCtx, expect)
 			})
-		})
 
-		t.Run("Registry from deckhouse moduleConfig", func(t *testing.T) {
-			data := map[string]interface{}{
-				"moduleEnable": true,
-				"manifests": []string{`
+			t.Run("From moduleConfig", func(t *testing.T) {
+				tplCtx := map[string]interface{}{
+					"moduleEnable": true,
+					"manifests": []string{`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -188,8 +188,8 @@ spec:
     bundle: Default
     logLevel: Info
     registry:
-      mode: Direct
-      direct:
+      mode: Unmanaged
+      unmanaged:
         imagesRepo: r.example.com/test/
         username: test-user
         password: test-password
@@ -197,25 +197,23 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `,
-				},
-			}
-			metaConfig := generateMetaConfig(t, tpl, data, false)
-			installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
-			require.NoError(t, err)
-			require.Len(t, installConfig.ModuleConfigs, 1)
-			assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, map[string]interface{}{
-				"bundle":   "Default",
-				"logLevel": "Info",
-				"registry": map[string]interface{}{
-					"mode": "Direct",
-					"direct": map[string]interface{}{
-						"imagesRepo": "r.example.com/test",
-						"username":   "test-user",
-						"password":   "test-password",
-						"scheme":     "HTTPS",
-						"ca":         "-----BEGIN CERTIFICATE-----",
 					},
-				},
+				}
+				expect := map[string]interface{}{
+					"bundle":   "Default",
+					"logLevel": "Info",
+					"registry": map[string]interface{}{
+						"mode": "Unmanaged",
+						"unmanaged": map[string]interface{}{
+							"imagesRepo": "r.example.com/test",
+							"username":   "test-user",
+							"password":   "test-password",
+							"scheme":     "HTTPS",
+							"ca":         "-----BEGIN CERTIFICATE-----",
+						},
+					},
+				}
+				assert(t, tplCtx, expect)
 			})
 		})
 	})
@@ -342,8 +340,8 @@ spec:
 			"bundle":   "Minimal",
 			"logLevel": "Debug",
 			"registry": map[string]interface{}{
-				"mode": "Unmanaged",
-				"unmanaged": map[string]interface{}{
+				"mode": "Direct",
+				"direct": map[string]interface{}{
 					"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
 					"scheme":     "HTTPS",
 				},

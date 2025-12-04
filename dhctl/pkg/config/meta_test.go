@@ -233,36 +233,37 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 
 // Registry
 func TestPrepareRegistry(t *testing.T) {
-	t.Run("Registry from default (CE edition config)", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
-		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-		registry := cfg.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Password, "")
-		require.Equal(t, registry.Username, "")
-		require.Equal(t, registry.CA, "")
-	})
-
-	t.Run("Registry from init configuration", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"initConfiguration": map[string]interface{}{
-				"imagesRepo":        "r.example.com/test/",
-				"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
-			},
+	t.Run("Module enable", func(t *testing.T) {
+		t.Run("From default (CE edition config)", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+			require.Equal(t, cfg.Registry.ModuleEnabled, true)
+			require.Equal(t, cfg.Registry.Settings.Mode, "Direct")
+			registry := cfg.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Password, "")
+			require.Equal(t, registry.Username, "")
+			require.Equal(t, registry.CA, "")
 		})
-		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-		registry := cfg.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "a")
-		require.Equal(t, registry.Password, "b")
-		require.Equal(t, registry.CA, "")
-	})
-
-	t.Run("Registry from deckhouse moduleConfig", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"manifests": []string{`
+		t.Run("From initConfig", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+				"initConfiguration": map[string]interface{}{
+					"imagesRepo":        "r.example.com/test/",
+					"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
+				},
+			})
+			require.Equal(t, cfg.Registry.ModuleEnabled, true)
+			require.Equal(t, cfg.Registry.Settings.Mode, "Direct")
+			registry := cfg.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "a")
+			require.Equal(t, registry.Password, "b")
+			require.Equal(t, registry.CA, "")
+		})
+		t.Run("From moduleConfig", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+				"manifests": []string{`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -280,15 +281,17 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `,
-			},
+				},
+			})
+			require.Equal(t, cfg.Registry.ModuleEnabled, true)
+			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+			registry := cfg.Registry.Settings.Remote
+			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
+			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Username, "test-user")
+			require.Equal(t, registry.Password, "test-password")
+			require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
 		})
-		require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-		registry := cfg.Registry.Settings.Remote
-		require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-		require.Equal(t, registry.Scheme, "HTTPS")
-		require.Equal(t, registry.Username, "test-user")
-		require.Equal(t, registry.Password, "test-password")
-		require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
 	})
 }
 
