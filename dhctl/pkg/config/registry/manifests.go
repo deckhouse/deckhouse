@@ -21,9 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
-	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 func newManifestBuilder(modeModel ModeModel, moduleEnable bool) *ManifestBuilder {
@@ -67,7 +65,7 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][
 		return false, nil, nil
 	}
 
-	_, cfg, err := b.bashibleContextAndConfig()
+	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return true, nil, err
 	}
@@ -91,12 +89,15 @@ func (b *ManifestBuilder) KubeadmTplCtx() map[string]interface{} {
 }
 
 func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]interface{}, error) {
-	bashibleCtx, _, err := b.bashibleContextAndConfig()
+	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	mapCtx, err := bashibleCtx.ToMap()
+	ctx := cfg.ToContext()
+	ctx.RegistryModuleEnable = b.moduleEnabled
+
+	mapCtx, err := ctx.ToMap()
 	if err != nil {
 		return nil, err
 	}
@@ -106,47 +107,6 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 		return nil, fmt.Errorf("get PKI: %w", err)
 	}
 
-	mapInitCfg, err := initCfg.ToMap()
-	if err != nil {
-		return nil, err
-	}
-
-	mapCtx["init"] = mapInitCfg
+	mapCtx["init"] = initCfg.ToMap()
 	return mapCtx, nil
-}
-
-func (b *ManifestBuilder) bashibleContextAndConfig() (bashible.Context, bashible.Config, error) {
-	ctxMirrors, cfgMirrors, err := b.modeModel.BashibleMirrors()
-	if err != nil {
-		return bashible.Context{}, bashible.Config{}, err
-	}
-
-	bashibleCtx := bashible.Context{
-		Mode:                 b.modeModel.Mode,
-		ImagesBase:           b.modeModel.InClusterImagesRepo,
-		RegistryModuleEnable: b.moduleEnabled,
-		Hosts:                ctxMirrors,
-	}
-
-	bashibleCfg := bashible.Config{
-		Mode:       b.modeModel.Mode,
-		ImagesBase: b.modeModel.InClusterImagesRepo,
-		Hosts:      cfgMirrors,
-	}
-
-	version, err := pki.ComputeHash(&bashibleCfg)
-	if err != nil {
-		return bashible.Context{}, bashible.Config{}, fmt.Errorf("compute version: %w", err)
-	}
-
-	bashibleCfg.Version = version
-	bashibleCtx.Version = version
-
-	if err := bashibleCfg.Validate(); err != nil {
-		return bashible.Context{}, bashible.Config{}, err
-	}
-	if err := bashibleCtx.Validate(); err != nil {
-		return bashible.Context{}, bashible.Config{}, err
-	}
-	return bashibleCtx, bashibleCfg, nil
 }

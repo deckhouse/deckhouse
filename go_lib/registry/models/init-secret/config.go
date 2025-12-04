@@ -16,11 +16,6 @@ limitations under the License.
 
 package initsecret
 
-import (
-	"encoding/json"
-	"fmt"
-)
-
 type CertKey struct {
 	Cert string `json:"cert" yaml:"cert"`
 	Key  string `json:"key" yaml:"key"`
@@ -30,15 +25,22 @@ type Config struct {
 	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
 }
 
-func (c Config) ToMap() (map[string]interface{}, error) {
-	data, err := json.Marshal(c)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal Config: %w", err)
-	}
+func (c Config) ToMap() map[string]interface{} {
+	result := make(map[string]interface{})
 
-	var result map[string]interface{}
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal Config into map: %w", err)
+	if c.CA != nil {
+		if c.CA.Cert != "" || c.CA.Key != "" {
+			caMap := make(map[string]interface{})
+
+			if c.CA.Cert != "" {
+				caMap["cert"] = c.CA.Cert
+			}
+			if c.CA.Key != "" {
+				caMap["key"] = c.CA.Key
+			}
+
+			result["ca"] = caMap
+		}
 	}
-	return result, nil
+	return result
 }
