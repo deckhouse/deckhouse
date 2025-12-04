@@ -14,12 +14,12 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-#git:
-#- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-#  to: /patches
-#  stageDependencies:
-#    install:
-#    - '**/*'
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -27,7 +27,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ .TF.yandex.version }} $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/terraform-provider-yandex.git /src
   - cd /src
-#  - git apply /patches/*.patch --verbose
+  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: terraform-provider-yandex
