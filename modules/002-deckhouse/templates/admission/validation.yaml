@@ -28,7 +28,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.global.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.modules.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
