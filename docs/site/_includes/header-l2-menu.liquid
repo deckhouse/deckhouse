@@ -21,7 +21,8 @@
       {%- endif %}
       <span>{{ productName }}</span>
     </div>
-    <ul class="nav header__nav">
+    <div class="nav__trigger"></div>
+    <ul id="bottom-header-nav" class="nav header__nav">
       {%- for item in productMenuData.items %}
         {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.title == "Возможности" %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
         <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>

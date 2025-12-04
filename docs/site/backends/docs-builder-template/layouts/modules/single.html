@@ -41,23 +41,25 @@
 {{- $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
 
 <div class="navigation__container">
-  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
-    <div>
-      <strong>{{ T "channel_or_version" }}:</strong>
-    </div>
+  <div class="navigation__container--left">
+    <div class="version">
+      <div>
+        <strong>{{ T "channel_or_version" }}:</strong>
+      </div>
 
-    <div id="doc-versions-menu" class="channel-menu submenu-parent">
-      {{- if $.IsPage }}
-        {{- if and $currentModuleName $currentModuleChannel }}
-          {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+      <div id="doc-versions-menu" class="channel-menu submenu-parent">
+        {{- if $.IsPage }}
+          {{- if and $currentModuleName $currentModuleChannel }}
+            {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+          {{- end }}
         {{- end }}
-      {{- end }}
+      </div>
     </div>
-  </div>
-  <div class="breadcrumbs__container">
-    <ol class="breadcrumbs">
-      {{- partial "breadcrumbs" . }}
-    </ol>
+    <div class="breadcrumbs__container">
+      <ol class="breadcrumbs">
+        {{- partial "breadcrumbs" . }}
+      </ol>
+    </div>
   </div>
 
   <!--start search-->

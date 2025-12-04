@@ -11,11 +11,74 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  max-height: 200px;
+  opacity: 1;
   margin: 0 0 25px;
   z-index: 50;
   height: 69px;
   background-color: #fff;
   transition: top .15s ease-in-out;
+
+  @include breakpoints.max-w(l) {
+    justify-content: space-between;
+  }
+
+  &--left {
+    display: flex;
+    align-items: center;
+
+    @media screen and (max-width: 600px) {
+      flex-direction: column;
+      align-items: start;
+    }
+
+    .version {
+      display: flex; 
+      justify-content: start; 
+      margin-right: 60px;
+      padding-top: 20px; 
+      padding-bottom: 25px; 
+      gap: 25px;
+      min-width: 297px;
+
+      @include breakpoints.max-w(xl) {
+        min-width: 250px;
+        margin-right: 40px;
+        gap: 15px;
+      }
+
+      @include breakpoints.max-w(l) {
+        min-width: 220px;
+        padding-top: 15px; 
+        padding-bottom: 20px;
+        margin-right: 30px;
+      }
+
+      @include breakpoints.max-w(m) {
+        gap: 10px;
+      }
+
+      strong {
+        @include breakpoints.max-w(m) {
+          font-size: 12px;
+        }
+      }
+
+      .channel-menu > a {
+        @include breakpoints.max-w(m) {
+          font-size: 12px;
+        }
+      }
+    }
+
+    .breadcrumbs {
+      @include breakpoints.max-w(m) {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+    }
+  }
 
   &.hidden {
     top: 0 !important;
@@ -24,11 +87,8 @@
   }
 
   .searchV3 {
-    position: absolute;
-    top: 20px;
-    right: 0;
-    width: 300px;
-    z-index: 100;
+    position: static;
+    min-width: 270px;
   }
 }
 .breadcrumbs-container {
@@ -416,14 +476,13 @@
 .layout-sidebar__sidebar,
 .layout-sidebar__sidebar_right {
   position: relative;
-  // width: 297px;
-  // min-width: 297px;
-  max-width: 297px;
-  min-width: 240px;
+  width: 297px;
+  min-width: 297px;
 
-  // @include breakpoints.max-w(xxl) {
-  //   display: none;
-  // }
+  @include breakpoints.max-w(xl) {
+    width: 250px;
+    min-width: 250px;
+  }
 
   @include breakpoints.max-w(l) {
     display: none;
@@ -1416,10 +1475,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
             }
         }
 
-        @include breakpoints.max-w(xl) {
-          width: 20px;
-          height: 20px;
-        }
+        // @include breakpoints.max-w(xl) {
+        //   width: 20px;
+        //   height: 20px;
+        // }
 
         @include breakpoints.max-w(xs) {
           width: 16px;

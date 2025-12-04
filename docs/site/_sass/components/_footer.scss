@@ -240,6 +240,7 @@ body {
             height: 60%;
             @include mixins.bg-color(mixins.$ntrl-300);
           }
+        }
       }
 
       a {
@@ -331,5 +332,4 @@ body {
     text-decoration: none;
     transition: .2s;
   }
-}
 }

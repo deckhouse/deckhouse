@@ -23,8 +23,8 @@ font-family: 'Noto Sans', sans-serif;
 
 &__content {
   display: flex;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  padding-top: .75rem;
+  padding-bottom: .75rem;
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
@@ -100,23 +100,6 @@ font-family: 'Noto Sans', sans-serif;
   }
 
   .header__navigation-item {
-
-    &.active {
-    position: relative;
-
-      &::before {
-        content: '';
-        position: absolute;
-        padding: .375rem .75rem;
-        top: -.375rem;
-        left: -.75rem;
-        width: 100%;
-        height: 100%;
-        background-color: mixins.$primary-100;
-        border-radius: 2rem;
-      }
-    }
-
 
     > a {
       font-size: .875em;
@@ -593,25 +576,25 @@ font-family: 'Noto Sans', sans-serif;
             left: 1rem;
             right: auto;
           }
+        }
 
-          @include breakpoints.max-w(l) {
-            align-items: flex-start;
-            background: #fff;
-            border-radius: .25rem;
-            box-shadow: 0 4px 8px -2px rgba(16, 24, 40, .1), 0 2px 4px -2px rgba(16, 24, 40, .06);
-            display: none;
-            flex-direction: column;
-            list-style: none;
-            margin-top: .75rem;
-            min-width: 254px;
-            padding: 1.25rem;
-            position: absolute;
-            right: 1rem;
-            row-gap: 1.25rem;
-            top: 100%;
-            width: max-content;
-            z-index: 40;
-          }
+        @include breakpoints.max-w(l) {
+          align-items: flex-start;
+          background: #fff;
+          border-radius: .25rem;
+          box-shadow: 0 4px 8px -2px rgba(16, 24, 40, .1), 0 2px 4px -2px rgba(16, 24, 40, .06);
+          display: none;
+          flex-direction: column;
+          list-style: none;
+          margin-top: .75rem;
+          min-width: 254px;
+          padding: 1.25rem;
+          position: absolute;
+          right: 1rem;
+          row-gap: 1.25rem;
+          top: 100%;
+          width: max-content;
+          z-index: 40;
         }
 
         li {
@@ -661,22 +644,18 @@ font-family: 'Noto Sans', sans-serif;
   }
 }
 .header__sidebar {
-  display: none;
   left: 0;
-  padding-top: 130px;
   background: #fff;
   box-sizing: border-box;
   height: 100%;
   overflow: auto;
   position: fixed;
-  top: 0;
   transform: translateX(-100%);
   width: 280px;
   z-index: 80;
   transition: .2s;
 
   &.show {
-    display: block;
     transform: translateX(0);
   }
 
