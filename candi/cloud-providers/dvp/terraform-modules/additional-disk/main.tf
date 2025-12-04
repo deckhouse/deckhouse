@@ -20,6 +20,13 @@ resource "kubernetes_manifest" "additional_disk" {
       "name"        = local.disk_name
       "namespace"   = var.namespace
       "annotations" = local.disk_annotations
+      "ownerReferences" = [
+        {
+          "apiVersion"         = var.api_version
+          "kind"               = "VirtualMachine"
+          "name"               = "test"
+        }
+      ]
     }
     "spec" = {
       "persistentVolumeClaim" = merge(

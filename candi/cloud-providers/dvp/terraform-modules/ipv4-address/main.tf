@@ -20,6 +20,14 @@ resource "kubernetes_manifest" "ipv4_address" {
     "metadata" = {
       "name"      = local.ip_address_name
       "namespace" = var.namespace
+      "ownerReferences" = [
+        {
+          "apiVersion"         = var.api_version
+          "blockOwnerDeletion" = true
+          "kind"               = "VirtualMachine"
+          "name"               = "test"
+        }
+      ]
     }
     "spec" = {
       "staticIP" = local.ipv4_address
