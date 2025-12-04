@@ -126,6 +126,7 @@ openssl genrsa -out ca.key 4096
 -key ca.key \
 -out ca.crt
 
+
 openssl
 genrsa -out harbor.local.key 4096
 openssl
@@ -135,22 +136,26 @@ req -sha512 -new\
 -key harbor.local.key \
 -out harbor.local.csr
 
+
 cat > v3.ext
 authorityKeyIdentifier=keyid, issuer basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
+
 [alt_names]
 IP.1=10.128.0.30
 DNS.1=harbor.local
 EOF
+
 
 openssl x509 -req -sha512 -days 3650 \
 -extfile v3.ext \
 -CA ca.crt -CAkey ca.key -CAcreateserial \
 -in harbor.local.csr \
 -out harbor.local.crt
+
 
 openssl x509 -inform PEM -in harbor.local.crt -out harbor.local.cert
 ```
