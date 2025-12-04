@@ -100,3 +100,11 @@ $ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-of
 ```
 {% endofftopic %}
 
+Распауйте скачанный файл:
+
+```console
+tar -zxf ./harbor-offline-installer-v2.14.1.tgz
+```
+
+
+
