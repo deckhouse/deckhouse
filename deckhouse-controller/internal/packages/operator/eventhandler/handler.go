@@ -29,7 +29,6 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -37,6 +36,7 @@ import (
 
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	taskhookrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hookrun"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
