@@ -182,14 +182,14 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		ConditionReadyInRuntime,
 	}
 
-	for _, condition := range s.statuses[name].Conditions {
+	for idx, condition := range s.statuses[name].Conditions {
 		if !slices.Contains(runtimeConditions, condition.Name) {
 			continue
 		}
 
-		condition.Status = metav1.ConditionUnknown
-		condition.Reason = ""
-		condition.Message = ""
+		s.statuses[name].Conditions[idx].Status = metav1.ConditionUnknown
+		s.statuses[name].Conditions[idx].Message = ""
+		s.statuses[name].Conditions[idx].Reason = ""
 	}
 
 	s.ch <- name
