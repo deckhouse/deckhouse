@@ -18,7 +18,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.24.0 $(cat /run/secrets/SOURCE_REPO)/aws/aws-node-termination-handler.git /src
+  - git clone --depth 1 --branch v1.25.3 $(cat /run/secrets/SOURCE_REPO)/aws/aws-node-termination-handler.git /src
   - cd /src
   - rm -rf .git vendor
 ---
