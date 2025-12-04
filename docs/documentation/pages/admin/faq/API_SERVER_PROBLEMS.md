@@ -5,8 +5,8 @@ permalink: en/faq-common/api-server-overloaded.html
 
 The following signs may indicate problems with API server load and memory consumption:
 
-- kubectl (d8) responds slowly or does not respond at all (commands are executed slowly or not at all),
-- pods are recreated in the cluster for no apparent reason.
+- `kubectl (d8)` responds slowly or does not respond at all (commands are executed slowly or not at all).
+- Pods are recreated in the cluster for no apparent reason.
 
 If these signs are present, perform the following actions:
 
@@ -16,9 +16,9 @@ If these signs are present, perform the following actions:
    d8 k -n kube-system top po -l component=kube-apiserver
    ```
 
-   Pay attention to memory consumption (`MEMORY`) and `CPU`.
+   Pay attention to `MEMORY` consumption and `CPU`.
 
-   Output example
+   Example output:
 
    ```console
    NAME                               CPU(cores)   MEMORY(bytes)
