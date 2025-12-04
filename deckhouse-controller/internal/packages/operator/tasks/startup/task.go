@@ -94,7 +94,7 @@ func (t *task) Execute(ctx context.Context) error {
 	wg := new(sync.WaitGroup)
 	for hook, info := range infos {
 		for _, hookInfo := range info {
-			syncTask := taskhooksync.NewTask(t.packageName, hook, hookInfo, t.manager, t.logger)
+			syncTask := taskhooksync.NewTask(t.packageName, hook, hookInfo, t.status, t.manager, t.logger)
 
 			// queue = <name>/<queue>
 			queueName := fmt.Sprintf("%s/%s", t.packageName, hookInfo.QueueName)

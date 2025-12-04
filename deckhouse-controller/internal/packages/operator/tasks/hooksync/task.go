@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookctrl "github.com/flant/shell-operator/pkg/hook/controller"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

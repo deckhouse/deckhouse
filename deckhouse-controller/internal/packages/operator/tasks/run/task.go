@@ -56,7 +56,7 @@ func NewTask(name string, status statusService, manager manager, logger *log.Log
 }
 
 func (t *task) String() string {
-	return "Rerun"
+	return "Run"
 }
 
 func (t *task) Execute(ctx context.Context) error {

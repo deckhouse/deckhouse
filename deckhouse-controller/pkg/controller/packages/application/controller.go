@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -48,26 +50,37 @@ const (
 )
 
 type reconciler struct {
+	init     *sync.WaitGroup
 	client   client.Client
 	operator *packageoperator.Operator
 	status   *status.Service
 
-	dc     dependency.Container
-	logger *log.Logger
+	moduleManager moduleManager
+	dc            dependency.Container
+	logger        *log.Logger
+}
+
+type moduleManager interface {
+	AreModulesInited() bool
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	operator *packageoperator.Operator,
+	moduleManager moduleManager,
 	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		client:   runtimeManager.GetClient(),
-		operator: operator,
-		dc:       dc,
-		logger:   logger,
+		init:          new(sync.WaitGroup),
+		client:        runtimeManager.GetClient(),
+		operator:      operator,
+		moduleManager: moduleManager,
+		dc:            dc,
+		logger:        logger,
 	}
+
+	r.init.Add(1)
 
 	r.status = status.NewService(r.client, operator.Status().GetStatus, r.logger)
 	r.status.Start(context.Background(), operator.Status().GetCh())
@@ -83,6 +96,22 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
 		Complete(applicationController)
+}
+
+func (r *reconciler) preflight(ctx context.Context) error {
+	defer r.init.Done()
+
+	// wait until module manager init
+	r.logger.Debug("wait until module manager is inited")
+	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
+		return r.moduleManager.AreModulesInited(), nil
+	}); err != nil {
+		return fmt.Errorf("init module manager: %w", err)
+	}
+
+	r.logger.Debug("controller is ready")
+
+	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
