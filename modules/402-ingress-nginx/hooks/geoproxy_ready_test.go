@@ -26,6 +26,17 @@ import (
 var _ = Describe("ingress-nginx :: hooks :: geoproxy_ready ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"internal":{}}}`, "")
 
+	Context("An empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set()
+			f.RunHook()
+		})
+
+		It("hook must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
 	Context("geoproxy not ready", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(statefulSetNotReady))

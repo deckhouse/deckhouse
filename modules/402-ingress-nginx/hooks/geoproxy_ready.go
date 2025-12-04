@@ -87,8 +87,8 @@ func handleMaxMindSettings(_ context.Context, input *gohook.HookInput) error {
 	}
 
 	// Once geoproxy is ready, keep the flag true to avoid flapping.
-	existingReady := input.Values.Get("ingressNginx.internal.geoproxyReady").Bool()
-	input.Values.Set("ingressNginx.internal.geoproxyReady", ready || existingReady)
+	wasReadyBefore := input.Values.Get("ingressNginx.internal.geoproxyReady").Bool()
+	input.Values.Set("ingressNginx.internal.geoproxyReady", ready || wasReadyBefore)
 
 	return nil
 }
