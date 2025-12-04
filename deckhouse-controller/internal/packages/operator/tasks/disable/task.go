@@ -31,11 +31,16 @@ type manager interface {
 	DisablePackage(ctx context.Context, name string, keep bool) error
 }
 
-func NewTask(name string, manager manager, keep bool, logger *log.Logger) queue.Task {
+type statusService interface {
+	ClearRuntimeConditions(name string)
+}
+
+func NewTask(name string, status statusService, manager manager, keep bool, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		keep:        keep,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -45,6 +50,7 @@ type task struct {
 	keep        bool
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
@@ -59,6 +65,8 @@ func (t *task) Execute(ctx context.Context) error {
 	if err := t.manager.DisablePackage(ctx, t.packageName, t.keep); err != nil {
 		return fmt.Errorf("disable package '%s': %w", t.packageName, err)
 	}
+
+	t.status.ClearRuntimeConditions(t.packageName)
 
 	return nil
 }

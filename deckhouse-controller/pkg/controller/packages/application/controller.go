@@ -115,6 +115,8 @@ func (r *reconciler) preflight(ctx context.Context) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.init.Wait()
+
 	res := ctrl.Result{}
 
 	r.logger.Debug("reconcile application",

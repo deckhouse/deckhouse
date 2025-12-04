@@ -88,7 +88,6 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 
-	t.status.ClearConditions(t.packageName)
 	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 	t.status.SetVersion(t.packageName, version)
 
