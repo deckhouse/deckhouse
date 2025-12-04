@@ -59,12 +59,12 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
-	retain "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/retain-controller"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -325,7 +325,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
-	err = retain.RegisterController(runtimeManager, dc, logger.Named("retain-controller"))
+	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register retain controller: %w", err)
 	}
