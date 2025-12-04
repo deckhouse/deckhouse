@@ -165,6 +165,7 @@ func (a *Application) GetNamespace() string {
 	return a.namespace
 }
 
+// GetVersion return the package version
 func (a *Application) GetVersion() string {
 	return a.definition.Version
 }
