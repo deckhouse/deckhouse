@@ -3,13 +3,13 @@ title: How to check the Kubernetes version in use?
 permalink: en/faq-common/check-kubernetes-version.html
 ---
 
-To check the version of Kubernetes version in use, run the command:
+To check the Kubernetes version in use, run the command:
 
 ```shell
 d8 k get nodes
 ```
 
-Output example:
+Example output:
 
 ```console
 NAME                   STATUS   ROLES                  AGE    VERSION

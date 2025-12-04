@@ -11,7 +11,7 @@ To view the status of all Deckhouse job queues, run the following command:
 d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
-Example of the output (queues are empty):
+Example output (queues are empty):
 
 ```console
 Summary:
@@ -28,13 +28,13 @@ To view the status of the Deckhouse `main` task queue, run the following command
 d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
 ```
 
-Example of the output (38 tasks in the `main` queue):
+Example output (38 tasks in the `main` queue):
 
 ```console
 Queue 'main': length 38, status: 'run first task'
 ```
 
-Example of the output (the `main` queue is empty):
+Example output (the `main` queue is empty):
 
 ```console
 Queue 'main': length 0, status: 'waiting for task 0s'

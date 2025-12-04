@@ -14,7 +14,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
-   Example of the output (queues are empty):
+   Example output (queues are empty):
 
    ```console
    Summary:

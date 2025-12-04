@@ -5,8 +5,8 @@ permalink: en/faq-common/dex-problems.html
 
 If you have changed the DexProvider settings in the `user-authn` module and one of the following problems occurs:
 
-1. No changes are visible (settings are not applied).
-1. When attempting to log in to the platform's web interface (Console) with any type of authorization, a `500 Internal Server Error` occurs without a detailed description.
+- No changes are visible (settings are not applied).
+- When attempting to log in to the platform's web interface with any type of authorization, a `500 Internal Server Error` occurs without a detailed description.
 
 Perform the following steps:
 
@@ -16,7 +16,7 @@ Perform the following steps:
    d8 k -n d8-user-authn get pod
    ```
 
-   Output example:
+   Example output:
 
    ```shell
    NAME                                    READY   STATUS    RESTARTS   AGE
@@ -24,7 +24,7 @@ Perform the following steps:
    kubeconfig-generator-7c46977b9f-5kdmc   1/1     Running   0          20h
    ```
 
-   If the module is functioning properly and the correct configuration is specified in DexProvider, all pods will have the status `Running`. If there is a problem, one or more pods will have a status other than `Running`, and it will be impossible to log into the platform's web interface with any type of authorization.
+   If the module is functioning properly and the correct configuration is specified in [DexProvider](/modules/user-authn/cr.html#dexprovider), all pods will have the status `Running`. If there is a problem, one or more pods will have a status other than `Running`, and it will be impossible to log into the platform's web interface with any type of authorization.
 
 1. Check the logs for the problematic pod:
 
@@ -32,4 +32,4 @@ Perform the following steps:
    d8 k -n d8-user-authn logs dex-<pod-name>
    ```
 
-   Based on the information from the logs, correct the configuration in the DexProvider resource and wait for the dex pods to restart. Within a few minutes, the pods will restart automatically, and the platform's web interface (located at `console.<CLUSTER_NAME_TEMPLATE>`) will become available and will reflect the changes made to the DexProvider resource.
+   Based on the information from the logs, correct the configuration in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource and wait for the dex pods to restart. Within a few minutes, the pods will restart automatically, and the platform's web interface (located at `console.<CLUSTER_NAME_TEMPLATE>`) will become available and will reflect the changes made to the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
