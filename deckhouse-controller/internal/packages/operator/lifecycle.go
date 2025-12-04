@@ -76,7 +76,7 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository, inst Instance) {
+func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 	if inst.Namespace == "" {
 		inst.Namespace = "default"
 	}
@@ -100,7 +100,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 		o.packages[name].settings = inst.Settings
 
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(eventVersionChanged)
+		ctx := o.packages[name].renewContext(eventVersionChanged)
 
 		packageName := inst.Definition.Name
 		packageVersion := inst.Definition.Version
@@ -118,7 +118,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 
 	if o.packages[name].settingsChanged(inst.Settings) {
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(eventSettingsChanged)
+		ctx := o.packages[name].renewContext(eventSettingsChanged)
 
 		o.logger.Debug("update package settings", slog.String("name", name))
 
@@ -134,7 +134,7 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 //  2. Clean up custom queues created by package hooks
 //  3. Uninstall package resources (taskuninstall)
 //  4. Remove package's main queue
-func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
+func (o *Operator) Remove(namespace, instance string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -146,7 +146,7 @@ func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
 	// Capture queues before manager removes the app metadata
 	queues := o.manager.GetPackageQueues(name)
 
-	ctx = o.packages[name].renewContext(eventRemove)
+	ctx := o.packages[name].renewContext(eventRemove)
 	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))

@@ -152,7 +152,7 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	}
 
 	logger.Debug("verify package")
-	if err = i.verifyPackage(ctx, name, version, rootHash); err == nil {
+	if err = i.verifyPackage(ctx, reg.Name, name, version, rootHash); err == nil {
 		logger.Debug("package verified")
 
 		return nil
@@ -244,15 +244,15 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 }
 
 // verifyPackage checks that the image and hash exist and verified
-func (i *Installer) verifyPackage(_ context.Context, pack, version, _ string) error {
-	// /deckhouse/downloaded/<package>
-	packagePath := filepath.Join(i.downloaded, pack)
+func (i *Installer) verifyPackage(_ context.Context, registry, pack, version, _ string) error {
+	// /deckhouse/downloaded/<registry>/<package>
+	packagePath := filepath.Join(i.downloaded, registry, pack)
 	// <version>.erofs
 	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<package>/<version>.erofs
+	// /deckhouse/downloaded/<registry>/<package>/<version>.erofs
 	imagePath := filepath.Join(packagePath, image)
 
-	// /deckhouse/downloaded/<package>/<version>.erofs
+	// /deckhouse/downloaded/<registry>/<package>/<version>.erofs
 	if _, err := os.Stat(imagePath); err != nil {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
