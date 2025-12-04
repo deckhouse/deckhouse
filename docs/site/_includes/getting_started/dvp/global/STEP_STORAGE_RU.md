@@ -1,6 +1,6 @@
 {% alert level="warning" %}
 На этом этапе приведен пример настройки хранилища на основе внешнего NFS-сервера с установленным дистрибутивом на основе Debian/Ubuntu.
-Если вы хотите использовать другой типа хранилища, ознакомьтесь с разделом [«Настройка хранилища»](../../documentation/admin/install/steps/storage.html).
+Если вы хотите использовать хранилище другого типа, ознакомьтесь с разделом [«Настройка хранилища»](../../documentation/admin/install/steps/storage.html).
 {% endalert %}
 
 Настройте хранилище, которое будет использоваться для хранения метрик компонентов кластера и дисков виртуальных машин.
@@ -26,13 +26,13 @@
    sudo chown -R nobody:nogroup /srv/nfs/dvp
    ```
 
-1. Экспортируйте каталог с правами, позволяющими доступ root-клиентам. Для Linux-сервера это делается через опцию `no_root_squash`, например:
+1. Экспортируйте каталог с правами, позволяющими доступ root-клиентам. Для Linux-сервера это делается через опцию `no_root_squash`. Добавьте следующую строку в файл `/etc/exports`:
 
    ```bash
    echo "/srv/nfs/dvp <SubnetCIDR>(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
    ```
 
-   Замените `<SubnetCIDR>` на подсеть, в которой находятся master- и worker-узлы. 
+   Замените `<SubnetCIDR>` на подсеть, в которой находятся master- и worker-узлы (например, `192.168.1.0/24`). 
    
 1. Примените изменения конфигурации:
 
@@ -41,23 +41,19 @@
    ```
 
 1. Перезапустите службу NFS:
-   
-   **Для дистрибутивов на основе Debian/Ubuntu:**
+
    ```bash
    sudo systemctl restart nfs-kernel-server
-   ```
-   
-   **Для дистрибутивов на основе CentOS/RHEL:**
-   ```bash
-   sudo systemctl restart nfs-server
    ```
 
 1. Выполните следующие команды на master- и worker-узлах, чтобы убедиться в успешном монтировании каталога:
 
    ```bash
-   sudo -i mount -t nfs4 <IP-адрес-NFS-сервера>:/srv/nfs/dvp /mnt
-   sudo -i umount /mnt
+   sudo mount -t nfs4 <IP-адрес-NFS-сервера>:/srv/nfs/dvp /mnt
+   sudo umount /mnt
    ```
+
+   Замените `<IP-адрес-NFS-сервера>` на IP-адрес вашего NFS-сервера.
 
 ## Настройка модуля csi-nfs
 
@@ -104,13 +100,27 @@
    Параметры, которые нужно заменить:
 
    - `<IP-адрес-NFS-сервера>` — IP-адрес NFS-сервера, доступный из кластера;
-   - `share` — экспортируемый каталог на NFS-сервере (в примере /srv/nfs/dvp).
+   - `share` — экспортируемый каталог на NFS-сервере (в примере `/srv/nfs/dvp`).
 
-1. Установите созданный StorageClass как используемый по умолчанию для кластера (укажите имя StorageClass):
+1. Проверьте, что NFSStorageClass создан успешно:
+
+   ```bash
+   sudo -i d8 k get nfsstorageclass
+   ```
+
+1. Установите созданный StorageClass как используемый по умолчанию для кластера:
 
    ```bash
    DEFAULT_STORAGE_CLASS=nfs-storage-class
    sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
-   ``` 
+   ```
+
+1. Проверьте, что StorageClass установлен как используемый по умолчанию:
+
+   ```bash
+   sudo -i d8 k get storageclass
+   ```
+
+   В колонке `DEFAULT` у `nfs-storage-class` должна быть отметка.
 
 После этого все новые PVC, для которых не указан `storageClassName`, будут автоматически создаваться на NFS-хранилище.
