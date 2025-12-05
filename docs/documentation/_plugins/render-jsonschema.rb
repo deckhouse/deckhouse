@@ -665,6 +665,125 @@ module JSONSchemaRenderer
             
         end
 
+        # Render patternProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('patternProperties')
+            attributes['patternProperties'].each do |pattern, patternSchema|
+                if patternSchema.is_a?(Hash)
+                    # Get language data for pattern
+                    patternLangData = {}
+                    if primaryLanguage and primaryLanguage.is_a?(Hash) and primaryLanguage.has_key?('patternProperties')
+                        indexedLangData = get_hash_value(primaryLanguage, 'patternProperties', pattern)
+                        if indexedLangData and indexedLangData.is_a?(Hash)
+                            patternLangData = indexedLangData
+                        end
+                    end
+                    patternFallbackLangData = {}
+                    if fallbackLanguage and fallbackLanguage.is_a?(Hash) and fallbackLanguage.has_key?('patternProperties')
+                        indexedLangData = get_hash_value(fallbackLanguage, 'patternProperties', pattern)
+                        if indexedLangData and indexedLangData.is_a?(Hash)
+                            patternFallbackLangData = indexedLangData
+                        end
+                    end
+                    patternRequired = get_hash_value(patternSchema, 'required')
+                    
+                    # Use pattern in path and display - ADD SLASHES FOR REGEX
+                    patternName = pattern
+                    patternNameQuoted = "`/#{pattern}/`"
+                    patternNameForPath = "/#{pattern}/"
+                    
+                    # Handle objects with properties
+                    if patternSchema.has_key?('properties') and (not patternSchema.has_key?('type') or patternSchema['type'] == 'object')
+                        # Prepare the description with special text for patternProperties object
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-map-key-name')
+                        patternPropertyNameLang = get_i18n_term('pattern_property_name')
+                        
+                        if mapKeyName
+                            specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
+                        else
+                            specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
+                        end
+                        
+                        # Get existing description if any
+                        existingDescription = ''
+                        if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
+                            existingDescription = patternLangData['description']
+                        elsif patternSchema.has_key?('description')
+                            existingDescription = patternSchema['description']
+                        end
+                        
+                        # Combine special text with existing description
+                        finalDescription = specialDescriptionText
+                        if existingDescription and existingDescription.length > 0
+                            finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                        end
+                        
+                        # Create modified data with updated description
+                        modifiedPatternSchema = patternSchema.dup
+                        modifiedPatternSchema['description'] = finalDescription
+                        if patternLangData.is_a?(Hash) and patternLangData.length > 0
+                            modifiedPatternLangData = patternLangData.dup
+                            modifiedPatternLangData['description'] = finalDescription
+                            patternLangData = modifiedPatternLangData
+                        else
+                            patternLangData = { 'description' => finalDescription }
+                        end
+                        
+                        result.push('<ul>')
+                        result.push(format_schema(patternNameForPath, modifiedPatternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                        result.push('</ul>')
+                    # Handle arrays - always render arrays
+                    elsif patternSchema['type'] == 'array' or patternSchema.has_key?('items')
+                        result.push('<ul>')
+                        result.push(format_schema(patternNameForPath, patternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                        result.push('</ul>')
+                    # Handle primitive types and objects without properties
+                    else
+                        # Prepare the description with special text for patternProperties primitive
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-map-key-name')
+                        patternPropertyNameLang = get_i18n_term('pattern_property_name')
+                        
+                        if mapKeyName
+                            specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
+                        else
+                            specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
+                        end
+                        
+                        # Get existing description if any
+                        existingDescription = ''
+                        if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
+                            existingDescription = patternLangData['description']
+                        elsif patternSchema.has_key?('description')
+                            existingDescription = patternSchema['description']
+                        end
+                        
+                        # Combine special text with existing description
+                        finalDescription = specialDescriptionText
+                        if existingDescription and existingDescription.length > 0
+                            finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                        end
+                        
+                        # Create modified data with updated description
+                        modifiedPatternSchema = patternSchema.dup
+                        modifiedPatternSchema['description'] = finalDescription
+                        if patternLangData.is_a?(Hash) and patternLangData.length > 0
+                            modifiedPatternLangData = patternLangData.dup
+                            modifiedPatternLangData['description'] = finalDescription
+                            patternLangData = modifiedPatternLangData
+                        else
+                            patternLangData = { 'description' => finalDescription }
+                        end
+                        
+                        keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'x-doc-examples', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength', 'type']
+                        if (modifiedPatternSchema.keys & keysToShow).length > 0
+                            result.push('<ul>')
+                            result.push(format_schema(patternNameForPath, modifiedPatternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                            result.push('</ul>')
+                        end
+                    end
+                end
+            end
+        end
+
         if parameterTitle != ''
             result.push('</li>')
         end

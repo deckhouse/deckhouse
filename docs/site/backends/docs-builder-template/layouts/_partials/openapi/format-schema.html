@@ -13,7 +13,7 @@
 {{- $description :=  "" }}
 
 {{- if reflect.IsMap $data }}
-  {{- if $langData.description }}
+  {{- if and (reflect.IsMap $langData) $langData.description }}
     {{- $description = $langData.description | markdownify }}
   {{- else }}
     {{- $description =  $data.description | markdownify }}
@@ -186,6 +186,129 @@
       </ul>
     {{- end }}
 
+{{- end }}
+
+{{/* Render patternProperties if they exist */}}
+{{- if and (reflect.IsMap $data) $data.patternProperties }}
+  {{- range $pattern, $patternSchema := $data.patternProperties }}
+    {{- if reflect.IsMap $patternSchema }}
+      {{- $patternLangData := dict }}
+      {{- if and (reflect.IsMap $langData) $langData.patternProperties }}
+        {{- $indexedLangData := index $langData.patternProperties $pattern }}
+        {{- if reflect.IsMap $indexedLangData }}
+          {{- $patternLangData = $indexedLangData }}
+        {{- end }}
+      {{- end }}
+      {{- $patternRequired := $patternSchema.required }}
+      
+      {{- /* Use pattern in path and display - ADD SLASHES FOR REGEX */}}
+      {{- $patternName := $pattern }}
+      {{- $patternNameQuoted := printf "`/%s/`" $pattern }}
+      {{- $patternNameForPath := printf "/%s/" $pattern }}
+      
+      {{- /* Handle objects with properties */}}
+      {{- if and ($patternSchema.properties) (or (not $patternSchema.type) (eq $patternSchema.type "object")) }}
+        {{- /* Prepare the description with special text for patternProperties object */}}
+        {{- $mapKeyName := index $patternSchema "x-doc-map-key-name" }}
+        {{- $specialDescriptionText := "" }}
+        {{- if $mapKeyName }}
+          {{- if eq site.Language.Lang "ru" }}
+            {{- $specialDescriptionText = printf "%s — %s" $patternNameQuoted $mapKeyName }}
+          {{- else }}
+            {{- $specialDescriptionText = printf "%s — %s" $patternNameQuoted $mapKeyName }}
+          {{- end }}
+        {{- else }}
+          {{- if eq site.Language.Lang "ru" }}
+            {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
+          {{- else }}
+            {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
+          {{- end }}
+        {{- end }}
+        
+        {{- /* Get existing description if any */}}
+        {{- $existingDescription := "" }}
+        {{- if and (reflect.IsMap $patternLangData) $patternLangData.description }}
+          {{- $existingDescription = $patternLangData.description }}
+        {{- else if $patternSchema.description }}
+          {{- $existingDescription = $patternSchema.description }}
+        {{- end }}
+        
+        {{- /* Combine special text with existing description */}}
+        {{- $finalDescription := $specialDescriptionText }}
+        {{- if $existingDescription }}
+          {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
+        {{- end }}
+        
+        {{- /* Create modified data with updated description */}}
+        {{- $modifiedPatternSchema := $patternSchema | merge (dict "description" $finalDescription) }}
+        {{- if and (reflect.IsMap $patternLangData) (gt (len $patternLangData) 0) }}
+          {{- $modifiedPatternLangData := $patternLangData | merge (dict "description" $finalDescription) }}
+          {{- $patternLangData = $modifiedPatternLangData }}
+        {{- else }}
+          {{- $patternLangData = dict "description" $finalDescription }}
+        {{- end }}
+        
+        <ul>
+          {{- partial "openapi/format-schema" ( dict "name" $patternNameForPath "data" $modifiedPatternSchema "langData" $patternLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $patternRequired "type" $type) }}
+        </ul>
+      {{- else if or (eq $patternSchema.type "array") $patternSchema.items }}
+        {{- /* Handle arrays - always render arrays */}}
+        <ul>
+          {{- partial "openapi/format-schema" ( dict "name" $patternNameForPath "data" $patternSchema "langData" $patternLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
+        </ul>
+      {{- else }}
+        {{- /* Handle primitive types and objects without properties */}}
+        {{- /* Prepare the description with special text for patternProperties primitive */}}
+        {{- $mapKeyName := index $patternSchema "x-doc-map-key-name" }}
+        {{- $specialDescriptionText := "" }}
+        {{- if $mapKeyName }}
+          {{- if eq site.Language.Lang "ru" }}
+            {{- $specialDescriptionText = printf "%s — %s" $patternNameQuoted $mapKeyName }}
+          {{- else }}
+            {{- $specialDescriptionText = printf "%s — %s" $patternNameQuoted $mapKeyName }}
+          {{- end }}
+        {{- else }}
+          {{- if eq site.Language.Lang "ru" }}
+            {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
+          {{- else }}
+            {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
+          {{- end }}
+        {{- end }}
+        
+        {{- /* Get existing description if any */}}
+        {{- $existingDescription := "" }}
+        {{- if and (reflect.IsMap $patternLangData) $patternLangData.description }}
+          {{- $existingDescription = $patternLangData.description }}
+        {{- else if $patternSchema.description }}
+          {{- $existingDescription = $patternSchema.description }}
+        {{- end }}
+        
+        {{- /* Combine special text with existing description */}}
+        {{- $finalDescription := $specialDescriptionText }}
+        {{- if $existingDescription }}
+          {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
+        {{- end }}
+        
+        {{- /* Create modified data with updated description */}}
+        {{- $modifiedPatternSchema := $patternSchema | merge (dict "description" $finalDescription) }}
+        {{- if and (reflect.IsMap $patternLangData) (gt (len $patternLangData) 0) }}
+          {{- $modifiedPatternLangData := $patternLangData | merge (dict "description" $finalDescription) }}
+          {{- $patternLangData = $modifiedPatternLangData }}
+        {{- else }}
+          {{- $patternLangData = dict "description" $finalDescription }}
+        {{- end }}
+        
+        {{- $keysToShow := slice "description" "example" "x-examples" "x-doc-example" "x-doc-examples" "enum" "default" "x-doc-default" "minimum" "maximum" "pattern" "minLength" "maxLength" "type" }}
+        {{- $keysToShowIsExist := false }}
+        {{- range $key, $val := $modifiedPatternSchema }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
+        {{- if $keysToShowIsExist }}
+          <ul>
+            {{- partial "openapi/format-schema" ( dict "name" $patternNameForPath "data" $modifiedPatternSchema "langData" $patternLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
+          </ul>
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{- if gt ($parameterTitle | len ) 0 }}
