@@ -331,6 +331,26 @@ EOF
     fi
   fi
 
+  # Check memorySwap configuration requires cgroup v2
+  if context::jq -e -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior != null and .review.request.object.spec.kubelet.memorySwap.swapBehavior != ""' >/dev/null 2>&1; then
+    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior')"
+    if [[ "${swapBehavior}" != "NoSwap" ]]; then
+      # Block if NodeGroup contains nodes without cgroup v2 support
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
+      unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
+        .snapshots.nodes_without_containerd_support[]
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | .filterResult.nodeName
+      ')"
+      if [[ -n "${unsupportedNodes}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes that do not support it. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
