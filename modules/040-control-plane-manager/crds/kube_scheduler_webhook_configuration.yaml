@@ -28,6 +28,7 @@ spec:
           properties:
             webhooks:
               type: array
+              maxItems: 15
               items:
                 type: object
                 required: ['weight', 'clientConfig']
@@ -61,27 +62,27 @@ spec:
                               Service name.
                             pattern: '^[0-9a-z\-]+$'
                             minLength: 1
-                            maxlength: 255
+                            maxLength: 255
                           namespace:
                             type: string
                             description: |
                               Service namespace.
                             pattern: '^[0-9a-z\-]+$'
                             minLength: 1
-                            maxlength: 255
+                            maxLength: 255
                           port:
                             type: integer
                             description: |
                               Service port.
-                            minimal: 1
-                            maximal: 65535
+                            minimum: 1
+                            maximum: 65535
                           path:
                             type: string
                             description: |
                               URI path.
                             pattern: '^[0-9a-zA-Z._\/-]+$'
                             minLength: 1
-                            maxlength: 255
+                            maxLength: 255
                             x-kubernetes-validations:
                             - message: check uri format
                               rule: 'isURL(self)'
@@ -96,8 +97,8 @@ spec:
                     description: |
                       Webhook timeout in seconds.
                     default: 10
-                    minimal: 1
-                    maximal: 60
+                    minimum: 1
+                    maximum: 60
                   filterVerb:
                     type: string
                     default: "filter"
