@@ -110,6 +110,10 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 
 Прежде чем разворачивать хранилище нужно сгенерировать сертификаты, т.к. в закрытом окружении невозможно получить сертификаты от Let's Encrypt (он не сможет достучаться до внутренний ресурсов при проверке доступности).
 
+{% alert level="info" %}
+Способов для генерации существует несколько, мы для примера выбрали один из них. Вы можете следовать своему пути.
+{% endalert %}
+
 Создадим каталог `certs` в каталоге `harbor`:
 
 ```bash
@@ -168,10 +172,21 @@ openssl x509 -inform PEM -in harbor.local.crt -out harbor.local.cert
 ls -la
 ```
 
-Пример вывода команды:
+{% offtopic title="Пример вывода команды..." %}
 ```bash
+$ ls -la
+total 40
+drwxrwxr-x 2 ubuntu ubuntu 4096 Dec  5 14:58 .
+drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
+-rw-rw-r-- 1 ubuntu ubuntu 2037 Dec  5 14:57 ca.crt
+-rw------- 1 ubuntu ubuntu 3272 Dec  5 14:57 ca.key
+-rw-rw-r-- 1 ubuntu ubuntu   41 Dec  5 14:58 ca.srl
+-rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.local.cert
+-rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.local.crt
+-rw-rw-r-- 1 ubuntu ubuntu 1704 Dec  5 14:57 harbor.local.csr
+-rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.local.key
+-rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
-
-
+{% endofftopic %}
 
 
