@@ -44,27 +44,27 @@ spec:
             properties:
               followObjectRef:
                 description: |-
-                  FollowObjectRef references the namespaced object that controls retention
-                  Required when mode = FollowObject or FollowObjectWithTTL
+                  References the namespaced object that controls retention.
+                  Required when mode = FollowObject or FollowObjectWithTTL.
                   The ObjectKeeper will be controller deleted when the referenced object is deleted
-                  (or after TTL expires if mode = FollowObjectWithTTL)
+                  (or after TTL expires if mode = FollowObjectWithTTL).
                 properties:
                   apiVersion:
-                    description: APIVersion of the object to follow
+                    description: APIVersion of the object to follow.
                     type: string
                   kind:
-                    description: Kind of the object to follow
+                    description: Kind of the object to follow.
                     type: string
                   name:
-                    description: Name of the object to follow
+                    description: Name of the object to follow.
                     type: string
                   namespace:
-                    description: Namespace of the object to follow
+                    description: Namespace of the object to follow.
                     type: string
                   uid:
                     description: |-
-                      UID of the object to follow (required for verification)
-                      Used by ObjectKeeperController to detect object deletion or recreation
+                      UID of the object to follow (required for verification).
+                      Used by ObjectKeeperController to detect object deletion or recreation.
                     type: string
                 required:
                 - apiVersion

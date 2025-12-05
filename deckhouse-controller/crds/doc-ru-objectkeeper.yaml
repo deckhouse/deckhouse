@@ -28,16 +28,16 @@ spec:
                   Объект ObjectKeeper будет удалён после удаления отслеживаемого объекта.
                 properties:
                   apiVersion:
-                    description: Версия API отслеживаемого объекта
+                    description: Версия API отслеживаемого объекта.
                     type: string
                   kind:
-                    description: Тип отслеживаемого объекта
+                    description: Тип отслеживаемого объекта.
                     type: string
                   name:
-                    description: Имя отслеживаемого объекта
+                    description: Имя отслеживаемого объекта.
                     type: string
                   namespace:
-                    description: Пространство имён отслеживаемого объекта
+                    description: Пространство имён отслеживаемого объекта.
                     type: string
                   uid:
                     description: |-
