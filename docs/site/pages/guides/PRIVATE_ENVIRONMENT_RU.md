@@ -124,7 +124,7 @@ openssl genrsa -out ca.key 4096
 ```
 
 ```bash
-openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST-Moscow/L=Moscow/O=example/OU=Personal/CN-myca.local" -key ca.key -out ca.crt
+openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
 
 Сгенерируем сертификаты для внутреннего доменного имени `harbor.local`, чтобы внутри приватной сети обращаться к бастиону также по защищённому соединению:
@@ -134,7 +134,7 @@ openssl genrsa -out harbor.local.key 4096
 ```
 
 ```bash
-openssl req -sha512 -new -subj "/C-RU/ST-Moscow/L=Moscow/0=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
+openssl req -sha512 -new -subj "/C-RU/ST=Moscow/L=Moscow/0=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
 ```
 
 ```bash
