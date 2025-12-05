@@ -7,11 +7,7 @@ clientConfig:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
-{{- if .Values.deckhouse.internal.cniMigrationEnabled }}
-failurePolicy: Ignore
-{{- else }}
 failurePolicy: Fail
-{{- end }}
 matchPolicy: Exact
 sideEffects: None
 objectSelector: {}
@@ -64,6 +60,11 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: d8-admission-policy-engine-config
+  {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+  failurePolicy: Ignore
+  {{- else }}
+  failurePolicy: Fail
+  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 webhooks:
   {{- if include "trivy.provider.enabled" . }}
@@ -102,6 +103,11 @@ webhooks:
 
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
+  {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+  failurePolicy: Ignore
+  {{- else }}
+  failurePolicy: Fail
+  {{- end }}
   namespaceSelector:
     matchExpressions:
     - key: heritage
@@ -149,6 +155,11 @@ webhooks:
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: security-policy-exception.admission-policy-engine.deckhouse.io
+  {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+  failurePolicy: Ignore
+  {{- else }}
+  failurePolicy: Fail
+  {{- end }}
   namespaceSelector:
     matchExpressions:
     - key: security.deckhouse.io/enable-security-policy-check
