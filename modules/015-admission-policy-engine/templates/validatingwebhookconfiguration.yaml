@@ -124,6 +124,24 @@ webhooks:
   {{- include "validating.webhook.config" . | nindent 2 }}
 {{- end }}
 
+{{/* Webhook for deny-exec in system namespaces (heritage: deckhouse) - the main webhook excludes these */}}
+{{- if ne .Values.global.deckhouseVersion "dev" }}
+- name: deny-exec-heritage.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: In
+      values:
+        - deckhouse
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" . | nindent 2 }}
+{{- end }}
+
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: security-policy-exception.admission-policy-engine.deckhouse.io
