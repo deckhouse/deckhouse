@@ -113,6 +113,46 @@ func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 	}
 }
 
+func createModule(name string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha1.ModuleStatus{
+			Conditions: []v1alpha1.ModuleCondition{
+				{
+					Type:   v1alpha1.ModuleConditionEnabledByModuleManager,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+}
+
+func createDisabledModule(name string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha1.ModuleStatus{
+			Conditions: []v1alpha1.ModuleCondition{
+				{
+					Type:   v1alpha1.ModuleConditionEnabledByModuleManager,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+}
+
 func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -198,9 +238,11 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 		},
 		{
 			name:           "reject approved release with migrated modules not found",
-			enabledModules: []string{"module1", "module2"},
+			enabledModules: []string{"module1", "module2", "non-existent-module"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("non-existent-module"),
+				createModule("non-existent-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -274,6 +316,8 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				createClusterConfigSecret("1.28.0"),
 				createModuleConfig("enabled-module"),
 				createDisabledModuleConfig("disabled-module"),
+				createModule("enabled-module"),
+				createDisabledModule("disabled-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -289,8 +333,10 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleConfig("cert-manager"),
+				createModule("cert-manager"),
 				createModuleConfig("prometheus"),
-				createModuleSource("test-source", []string{"cert-manager", "prometheus"}),
+				createModule("prometheus"),
+				createModuleSource("test-source", []string{"cert-manager"}),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -319,6 +365,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleConfig("module-y"),
+				createModule("module-y"),
 				createModuleSource("src", []string{}),
 			},
 			operation:   "CREATE",
@@ -353,7 +400,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Absent ModuleConfig falls back to ModuleSource and passes",
 		},
 		{
-			name:           "reject when no in ModuleConfig and not in ModuleSource",
+			name:           "allow when no in ModuleConfig and not in ModuleSource",
 			enabledModules: []string{"module-a2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -361,9 +408,9 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			},
 			operation:   "CREATE",
 			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-a2"}),
-			wantAllowed: false,
-			wantMessage: "requirements not met",
-			description: "Absent ModuleConfig and absence in ModuleSource rejects",
+			wantAllowed: true,
+			wantMessage: "",
+			description: "Absent ModuleConfig and absence in ModuleSource allows",
 		},
 	}
 
@@ -483,6 +530,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleConfig("available-module"),
+				createModule("available-module"),
 			},
 			wantAllowed: false,
 			description: "DeckhouseRelease with partially available migratedModules should be rejected",

@@ -39,6 +39,15 @@ status:
       pullError: "failed to pull module"
   modulesCount: 1
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-1
+status:
+  conditions:
+    - type: EnabledByModuleManager
+      status: "True"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
