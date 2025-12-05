@@ -31,6 +31,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -126,12 +128,10 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigration *cniswitcherv1alpha1.CNIMigration, cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// Check if preparation is already done for this node
-	for _, cond := range cniNodeMigration.Status.Conditions {
-		if cond.Type == "PreparationSucceeded" && cond.Status == metav1.ConditionTrue {
-			logger.Info("Preparation already completed for this node")
-			return ctrl.Result{}, nil
-		}
+	// If the node is already prepared or failed, skip this phase.
+	if cniNodeMigration.Status.Phase == "Prepared" || cniNodeMigration.Status.Phase == "Failed" {
+		logger.Info("CNINodeMigration is already in a terminal state for Prepare phase", "Phase", cniNodeMigration.Status.Phase)
+		return ctrl.Result{}, nil
 	}
 
 	logger.Info("Starting Prepare phase for node")
@@ -181,26 +181,28 @@ func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigrat
 
 	logger.Info("Finished annotating pods", "AnnotatedCount", podsAnnotated)
 
-	// Refetch the object to get the latest resourceVersion before updating status
-	if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-		logger.Error(err, "Failed to re-fetch CNINodeMigration before status update")
-		return ctrl.Result{}, err
-	}
+	// Update status to reflect completion using RetryOnConflict
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Refetch the object inside the retry loop
+		if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
+			return err
+		}
 
-	// Update status to reflect completion
-	cniNodeMigration.Status.Phase = "Prepared"
-	cniNodeMigration.Status.PodsToRestartCount = totalPodsToProcess
-	cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-		Type:               "PreparationSucceeded",
-		Status:             metav1.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             "PodsAnnotated",
-		Message: fmt.Sprintf("%d pods on the node are subject to migration.",
-			totalPodsToProcess),
+		cniNodeMigration.Status.Phase = "Prepared"
+		cniNodeMigration.Status.PodsToRestartCount = totalPodsToProcess
+		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
+			Type:               "PreparationSucceeded",
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "PodsAnnotated",
+			Message: fmt.Sprintf("%d pods on the node are subject to migration.",
+				totalPodsToProcess),
+		})
+
+		return r.Status().Update(ctx, cniNodeMigration)
 	})
-
-	if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
-		logger.Error(err, "Failed to update CNINodeMigration")
+	if err != nil {
+		logger.Error(err, "Failed to update CNINodeMigration status with retry")
 		return ctrl.Result{}, err
 	}
 
@@ -210,6 +212,12 @@ func (r *CNIMigrationReconciler) reconcilePrepare(ctx context.Context, cniMigrat
 
 func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigration *cniswitcherv1alpha1.CNIMigration, cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
+	// If the node is already succeeded or failed, skip this phase.
+	if cniNodeMigration.Status.Phase == "Succeeded" || cniNodeMigration.Status.Phase == "Failed" {
+		logger.Info("CNINodeMigration is already in a terminal state for Migrate phase", "Phase", cniNodeMigration.Status.Phase)
+		return ctrl.Result{}, nil
+	}
 
 	// Step 1: Run node cleanup
 	cleanupCompleted := false
@@ -228,20 +236,22 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 		}
 
 		logger.Info("Node cleanup successful")
-		if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-			logger.Error(err, "Failed to re-fetch CNINodeMigration before cleanup status update")
-			return ctrl.Result{}, err
-		}
-		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-			Type:               "CleanupSucceeded",
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             "OldCNIArtifactsRemoved",
-			Message:            fmt.Sprintf("Artifacts for CNI '%s' were successfully removed.", cniMigration.Status.CurrentCNI),
+		// Update status to reflect completion using RetryOnConflict
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
+				return err
+			}
+			cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
+				Type:               "CleanupSucceeded",
+				Status:             metav1.ConditionTrue,
+				LastTransitionTime: metav1.Now(),
+				Reason:             "OldCNIArtifactsRemoved",
+				Message:            fmt.Sprintf("Artifacts for CNI '%s' were successfully removed.", cniMigration.Status.CurrentCNI),
+			})
+			return r.Status().Update(ctx, cniNodeMigration)
 		})
-
-		if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
-			logger.Error(err, "Failed to update CNINodeMigration status after cleanup")
+		if err != nil {
+			logger.Error(err, "Failed to update CNINodeMigration status after cleanup with retry")
 			return ctrl.Result{}, err
 		}
 		// Requeue to proceed to the next step (pod restart)
@@ -270,14 +280,17 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 	for _, cond := range cniNodeMigration.Status.Conditions {
 		if cond.Type == "PodsRestarted" && cond.Status == metav1.ConditionTrue {
 			logger.Info("Pods have already been restarted on this node")
-			if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-				logger.Error(err, "Failed to re-fetch CNINodeMigration before final success status update")
-				return ctrl.Result{}, err
-			}
-			// Final step, migration on this node is complete
-			cniNodeMigration.Status.Phase = "Succeeded"
-			if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
-				logger.Error(err, "Failed to update CNINodeMigration status to Succeeded")
+			// Update status to reflect completion using RetryOnConflict
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
+					return err
+				}
+				// Final step, migration on this node is complete
+				cniNodeMigration.Status.Phase = "Succeeded"
+				return r.Status().Update(ctx, cniNodeMigration)
+			})
+			if err != nil {
+				logger.Error(err, "Failed to update CNINodeMigration status to Succeeded with retry")
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -294,8 +307,11 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 	for _, pod := range podList.Items {
 		if pod.Annotations[EffectiveCNIAnnotation] == cniMigration.Status.CurrentCNI {
 			if err := r.Delete(ctx, &pod); err != nil {
-				logger.Error(err, "Failed to delete pod for restart", "Pod", pod.Name)
-				return r.updateNodeStatusWithError(ctx, cniNodeMigration, "PodDeletionFailed", err)
+				if !errors.IsNotFound(err) {
+					logger.Error(err, "Failed to delete pod for restart", "Pod", pod.Name)
+					return r.updateNodeStatusWithError(ctx, cniNodeMigration, "PodDeletionFailed", err)
+				}
+				// If not found, it's already deleted, which is what we want.
 			}
 			podsDeleted++
 		}
@@ -303,22 +319,22 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 
 	logger.Info("Finished deleting pods", "DeletedCount", podsDeleted)
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-		logger.Error(err, "Failed to re-fetch CNINodeMigration before pod restart status update")
-		return ctrl.Result{}, err
-	}
-
-	// Update status to reflect pod restart completion
-	cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-		Type:               "PodsRestarted",
-		Status:             metav1.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             "OldPodsDeleted",
-		Message:            fmt.Sprintf("%d pods with old CNI annotation were deleted.", podsDeleted),
+	// Update status to reflect pod restart completion using RetryOnConflict
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
+			return err
+		}
+		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
+			Type:               "PodsRestarted",
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "OldPodsDeleted",
+			Message:            fmt.Sprintf("%d pods with old CNI annotation were deleted.", podsDeleted),
+		})
+		return r.Status().Update(ctx, cniNodeMigration)
 	})
-
-	if err := r.Status().Update(ctx, cniNodeMigration); err != nil {
-		logger.Error(err, "Failed to update CNINodeMigration status after pod deletion")
+	if err != nil {
+		logger.Error(err, "Failed to update CNINodeMigration status after pod deletion with retry")
 		return ctrl.Result{}, err
 	}
 
@@ -327,24 +343,31 @@ func (r *CNIMigrationReconciler) reconcileMigrate(ctx context.Context, cniMigrat
 }
 
 func (r *CNIMigrationReconciler) updateNodeStatusWithError(ctx context.Context, cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration, reason string, err error) (ctrl.Result, error) {
-	if getErr := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); getErr != nil {
-		logger := log.FromContext(ctx)
-		logger.Error(getErr, "Failed to re-fetch CNINodeMigration before error status update")
-		// Try to continue with the old object, though it will likely fail
-	}
+	// Use RetryOnConflict to update status
+	updateErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Refetch the object inside the retry loop
+		if getErr := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); getErr != nil {
+			// If we can't refetch, there's a deeper issue or the object might be gone.
+			// Log and return the original error.
+			logger := log.FromContext(ctx)
+			logger.Error(getErr, "Failed to re-fetch CNINodeMigration before error status update in retry loop")
+			return getErr
+		}
 
-	cniNodeMigration.Status.Phase = "Failed"
-	cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-		Type:               "Failed",
-		Status:             metav1.ConditionTrue,
-		LastTransitionTime: metav1.Now(),
-		Reason:             reason,
-		Message:            err.Error(),
+		cniNodeMigration.Status.Phase = "Failed"
+		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
+			Type:               "Failed",
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             reason,
+			Message:            err.Error(),
+		})
+		return r.Status().Update(ctx, cniNodeMigration)
 	})
 
-	if updateErr := r.Status().Update(ctx, cniNodeMigration); updateErr != nil {
+	if updateErr != nil {
 		logger := log.FromContext(ctx)
-		logger.Error(updateErr, "Failed to update CNINodeMigration status with error")
+		logger.Error(updateErr, "Failed to update CNINodeMigration status with error using retry")
 		// Return the original error and the update error
 		return ctrl.Result{}, fmt.Errorf("original error: %w, update error: %w", err, updateErr)
 	}
