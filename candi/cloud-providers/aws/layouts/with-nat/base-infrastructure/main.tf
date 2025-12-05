@@ -27,6 +27,7 @@ module "security-groups" {
   vpc_id = module.vpc.id
   tags = local.tags
   ssh_allow_list = local.ssh_allow_list
+  public_network_allow_list = local.public_network_allow_list
   disable_default_security_group = local.disable_default_sg
 }
 
