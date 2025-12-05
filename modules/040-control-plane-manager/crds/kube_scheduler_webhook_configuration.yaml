@@ -100,20 +100,20 @@ spec:
                     maximal: 60
                   filterVerb:
                     type: string
+                    default: "filter"
                     #description: | ???
                     #pattern:
+                  filterVerbStatus:
+                    type: bool
+                    default: true
                   prioritizeVerb:
                     type: string
+                    default: "prioritize"
                     #description: | ???
                     #pattern:
-                  preemptVerb:
-                    type: string
-                    #description: | ???
-                    #pattern:
-                  bindVerb:
-                    type: string
-                    #description: | ???
-                    #pattern:
+                  prioritizeVerbStatus:
+                    type: bool
+                    default: true
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name
