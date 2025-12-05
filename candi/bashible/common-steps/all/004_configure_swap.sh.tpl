@@ -41,8 +41,29 @@ disruptive_approve_and_drain() {
   bb-deckhouse-get-disruptive-update-approval
 
   bb-log-info "Disruption approved, cordoning and draining node $node"
-  kubectl --kubeconfig="$kubeconfig" cordon "$node"
-  kubectl --kubeconfig="$kubeconfig" drain "$node" --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --timeout=900s
+  # kubectl --kubeconfig="$kubeconfig" cordon "$node"
+
+  attempts=30
+  while true; do
+    if [[ $attempts == 0 ]]; then
+      bb-log-error "Out of attempts while waiting for node drain annotations."
+      exit 1
+    fi
+
+    DRAINING_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig="$kubeconfig" get no "$node" -o json | jq -r '.metadata.annotations."update.node.deckhouse.io/draining"' )"
+    DRAINED_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig="$kubeconfig" get no "$node" -o json | jq -r '.metadata.annotations."update.node.deckhouse.io/drained"' )"
+
+    if [[ $DRAINED_ANNOTATION != "null" ]]; then
+      bb-log-info "Node $node is drained."
+      break
+    else
+      if [[ $DRAINING_ANNOTATION == "null" ]]; then
+        kubectl --request-timeout 60s --kubeconfig="$kubeconfig" annotate node "$node" update.node.deckhouse.io/draining=bashible
+      fi
+    fi
+    sleep 20
+    attempts=$(( attempts - 1 ))
+  done
 }
 
 
