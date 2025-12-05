@@ -215,9 +215,9 @@ func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM strin
 	if transport.TLSClientConfig == nil {
 		transport.TLSClientConfig = &tls.Config{}
 	}
-	transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 
 	if caPEM != "" {
+		// Prefer explicit CA over insecureSkipVerify when both are set.
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil || rootCAs == nil {
 			rootCAs = x509.NewCertPool()
@@ -228,6 +228,8 @@ func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM strin
 		}
 
 		transport.TLSClientConfig.RootCAs = rootCAs
+	} else {
+		transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
 	}
 
 	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
