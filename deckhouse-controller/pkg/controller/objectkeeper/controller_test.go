@@ -196,11 +196,16 @@ func (suite *ObjectKeeperControllerTestSuite) fetchResults() []byte {
 	err := suite.kubeClient.List(context.TODO(), &retList)
 	require.NoError(suite.T(), err)
 	for _, item := range retList.Items {
+		shouldUpdateMessage := item.Status.Phase == v1alpha1.PhaseExpiring
 		if item.Status.LostAt != nil {
 			item.Status.LostAt =  &constantTime
 		}
 		for i := range item.Status.Conditions {
-			item.Status.Conditions[i].LastTransitionTime = constantTime
+			cond := &item.Status.Conditions[i]
+			cond.LastTransitionTime = constantTime
+			if shouldUpdateMessage {
+				cond.Message = "TTL expires at 2099-01-01T20:00:00" // fix flaky test
+			}
 		}
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")

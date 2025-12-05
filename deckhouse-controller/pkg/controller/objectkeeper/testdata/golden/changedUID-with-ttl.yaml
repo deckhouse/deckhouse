@@ -17,7 +17,7 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2024-01-01T15:00:00Z"
-    message: TTL expires at 2099-01-01T20:00:00+04:00
+    message: TTL expires at 2099-01-01T20:00:00
     reason: MissingFollowObjectRef
     status: "False"
     type: TTLActive
