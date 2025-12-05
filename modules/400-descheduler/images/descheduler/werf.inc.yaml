@@ -4,43 +4,43 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
-  - id: SOURCE_REPO
-    value: {{ .SOURCE_REPO }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/descheduler.git /src
-    - cd /src
-    - git checkout {{ $version }}
-    - git apply /patches/*.patch --verbose
-    - rm -rf .git
+  - git clone $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/descheduler.git /src
+  - cd /src
+  - git checkout {{ $version }}
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
 ---
 image: {{ .ModuleName }}/build-artifact
 final: false
 fromImage: builder/golang-alpine
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-    add: /src
-    to: /src
-    before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  {{ include "mount points for golang builds" . }}
+{{ include "mount points for golang builds" . }}
 secrets:
-  - id: GOPROXY
-    value: {{ .GOPROXY }}
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - cd /src
-    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-    - go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
-    - chown 64535:64535 /descheduler
-    - chmod 0700 /descheduler
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
+  - chown 64535:64535 /descheduler
+  - chmod 0700 /descheduler
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: base/distroless
@@ -50,7 +50,7 @@ import:
     to: /descheduler
     before: setup
 git:
-  {{- include "image mount points" . }}
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/descheduler"]
