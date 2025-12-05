@@ -18,8 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	ssh "github.com/deckhouse/lib-gossh"
 	"sigs.k8s.io/yaml"
+
+	ssh "github.com/deckhouse/lib-gossh"
 )
 
 const (

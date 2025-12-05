@@ -30,6 +30,7 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
@@ -47,14 +48,16 @@ const (
 
 	configSnapName           = "config"
 	stateSnapName            = "state"
+	initSnapName             = "init"
 	registrySecretSnapName   = "registry-secret"
 	pkiSnapName              = "pki"
-	secretsSnapName          = "secrets"
 	usersSnapName            = "users"
 	inClusterProxySnapName   = "incluster-proxy"
 	registryServiceSnapName  = "registry-service"
 	bashibleSnapName         = "bashible"
 	registrySwitcherSnapName = "registry-switcher"
+
+	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -98,7 +101,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &secret)
 				if err != nil {
-					return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert state secret to struct: %v", err)
 				}
 
 				stateData, ok := secret.Data["state"]
@@ -107,6 +110,35 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 				}
 
 				return stateData, nil
+			},
+		},
+		{
+			Name:       initSnapName,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-init"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert init secret to struct: %v", err)
+				}
+
+				_, applied := secret.Annotations[initSecretAppliedAnnotation]
+				ret := InitSecretSnap{
+					IsExist: true,
+					Applied: applied,
+					Config:  secret.Data["config"],
+				}
+				return ret, nil
 			},
 		},
 		{
@@ -155,6 +187,22 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		inputs Inputs
 		err    error
 	)
+
+	var initConfig init_secret.Config
+	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
+	if err == nil {
+		input.Logger.Info("Init secret snapshot found, trying to load init config")
+		if err = yaml.Unmarshal(initSecret.Config, &initConfig); err != nil {
+			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
+		}
+		inputs.InitSecret = initConfig
+	}
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+		input.Logger.Warn(
+			"Cannot get init config, the state will be processed without it",
+			"error", err,
+		)
+	}
 
 	if values.State.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
@@ -233,7 +281,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	inputs.CheckerStatus = checker.GetStatus(ctx, input)
 
-	values.Hash, err = helpers.ComputeHash(inputs)
+	values.Hash, err = registry_pki.ComputeHash(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
@@ -243,6 +291,14 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	// Load checker params
 	values.State.CheckerParams = checker.GetParams(ctx, input)
+
+	// Process the state with init config
+	if initSecret.IsExist && !initSecret.Applied {
+		err = values.State.initialize(input.Logger, inputs)
+		if err != nil {
+			return fmt.Errorf("cannot initialize state from init secret: %w", err)
+		}
+	}
 
 	// Process the state and update internal values
 	err = values.State.process(input.Logger, inputs)
@@ -260,9 +316,24 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Generate expected RegistrySecret. Apply patch to update
 	newRegistrySecret := values.State.RegistrySecret.Config
 	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
+		input.Logger.Info("Applying new registry configuration to deckhouse")
 		input.PatchCollector.PatchWithMerge(
-			map[string]any{"data": newRegistrySecret.ToBase64SecretData()},
+			map[string]any{"data": newRegistrySecret.ToBase64Map()},
 			"v1", "Secret", "d8-system", "deckhouse-registry")
+	}
+
+	// Patch init secret
+	if initSecret.IsExist && !initSecret.Applied {
+		input.Logger.Debug("Marking init secret as applied by setting annotation")
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					initSecretAppliedAnnotation: "",
+				},
+			},
+		}
+		input.PatchCollector.PatchWithMerge(
+			patch, "v1", "Secret", "d8-system", "registry-init")
 	}
 	return nil
 }

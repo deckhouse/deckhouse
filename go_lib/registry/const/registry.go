@@ -18,6 +18,7 @@ package constant
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -26,17 +27,20 @@ const (
 	Path       = "/system/deckhouse"
 	PathRegexp = "^system/deckhouse"
 	Scheme     = "https"
-)
 
-const (
-	UnknownVersion = "unknown"
+	UnknownVersion  = "unknown"
+	LicenseUsername = "license-token"
+	CEImagesRepo    = "registry.deckhouse.io/deckhouse/ce"
+	CEScheme        = SchemeHTTPS
 )
 
 var (
-	Host      = fmt.Sprintf("registry.d8-system.svc:%d", Port)
-	ProxyHost = fmt.Sprintf("127.0.0.1:%d", Port)
-
+	Host         = fmt.Sprintf("registry.d8-system.svc:%d", Port)
+	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
+
+	ModuleEnabledCRI     = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
 
 func NodeRegistryAddr(addr string) string {
@@ -49,4 +53,12 @@ func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", ip, Port))
 	}
 	return proxyEndpoints
+}
+
+func ModuleEnabled(cri CRIType) bool {
+	return slices.Contains(ModuleEnabledCRI, cri)
+}
+
+func ModuleRequired(mode ModeType) bool {
+	return slices.Contains(ModesRequiringModule, mode)
 }

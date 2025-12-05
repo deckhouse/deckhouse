@@ -17,30 +17,13 @@ limitations under the License.
 package helpers
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	"strings"
 )
 
-func ComputeHash(values ...any) (string, error) {
-	if len(values) == 0 {
-		return "", nil
+func SplitAddressAndPath(ref string) (string, string) {
+	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(ref, "/")), "/", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
 	}
-
-	hash := sha256.New()
-
-	for _, value := range values {
-		buf, err := json.Marshal(value)
-		if err != nil {
-			return "", fmt.Errorf("marshal error: %w", err)
-		}
-
-		hash.Write(buf)
-	}
-
-	hashBytes := hash.Sum([]byte{})
-	ret := hex.EncodeToString(hashBytes)
-
-	return ret, nil
+	return parts[0], "/" + parts[1]
 }
