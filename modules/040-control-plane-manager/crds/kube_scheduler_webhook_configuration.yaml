@@ -104,7 +104,7 @@ spec:
                     #description: | ???
                     #pattern:
                   filterVerbStatus:
-                    type: bool
+                    type: boolean
                     default: true
                   prioritizeVerb:
                     type: string
@@ -112,7 +112,7 @@ spec:
                     #description: | ???
                     #pattern:
                   prioritizeVerbStatus:
-                    type: bool
+                    type: boolean
                     default: true
                 x-kubernetes-validations:
                   - rule: "self.filterVerb != self.prioritizeVerb"
