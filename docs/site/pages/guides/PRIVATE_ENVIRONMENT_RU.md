@@ -134,7 +134,7 @@ openssl genrsa -out harbor.local.key 4096
 ```
 
 ```bash
-openssl req -sha512 -new -subj "/C-RU/ST=Moscow/L=Moscow/0=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
+openssl req -sha512 -new -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
 ```
 
 ```bash
