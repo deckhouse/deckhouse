@@ -46,7 +46,7 @@ spec:
                 description: |-
                   References the namespaced object that controls retention.
                   Required when mode = FollowObject or FollowObjectWithTTL.
-                  The ObjectKeeper will be controller deleted when the referenced object is deleted
+                  The ObjectKeeper will be automatically deleted when the referenced object is deleted
                   (or after TTL expires if mode = FollowObjectWithTTL).
                 properties:
                   apiVersion:
