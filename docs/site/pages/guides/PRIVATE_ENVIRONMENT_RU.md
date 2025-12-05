@@ -189,4 +189,20 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 ```
 {% endofftopic %}
 
+Следующим шагом нужно настроить Docker на работу с нашим новым приватным container registry, обращение к которому будет по SSL. Для этого создадим каталог:
 
+```bash
+sudo mkdir -p /etc/docker/certs.d/harbor.local
+```
+
+> Ключик `-p` здесь указывает утилите mkdir, что нужно создать и сам каталог `certs.d`, если он отсутствует.
+
+И затем скопируем в него созданные сертификаты:
+
+```bash
+$ cp ca.crt /etc/docker/certs.d/harbor.local/
+$ cp harbor.local.cert /etc/docker/certs.d/harbor.local/
+$ cp harbor.local.key /etc/docker/certs.d/harbor.local/
+```
+
+Эти сертификаты будут использоваться при обращении к regitry по доменному имени `harbor.local`.
