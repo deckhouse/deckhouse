@@ -79,6 +79,14 @@ rules:
       - nodes/status
     verbs:
       - get
+  - apiGroups:
+      - network.deckhouse.io
+    resources:
+      - cnimigrations
+    verbs:
+      - get
+      - list
+      - watch
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
