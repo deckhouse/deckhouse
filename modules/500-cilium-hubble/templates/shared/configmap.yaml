@@ -1,0 +1,17 @@
+{{- $cfg := dict
+        "extendedMetrics" (default dict .Values.ciliumHubble.extendedMetrics)
+        "flowLogs"      (default dict .Values.ciliumHubble.flowLogs)
+-}}
+
+{{- if or .Values.ciliumHubble.extendedMetrics.enabled .Values.ciliumHubble.flowLogs.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-agent-hubble-settings
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble")) | nindent 2 }}
+data:
+  settings.yaml: |
+    {{ $cfg | toYaml | nindent 4 }}
+{{- end }}

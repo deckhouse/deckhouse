@@ -74,3 +74,71 @@ properties:
               Имя Secret в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса Hubble.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  extendedMetrics:
+    description: |
+      Конфигурация для экспорта расширенных метрик с агентов Cilium.
+      Расширенные метрики позволяют получить более глубокое понимание поведения сети кластера.
+
+      > **Внимание.** Изменение этого параметра приведет к перезапуску агентов Cilium.
+
+      Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics).
+    properties:
+      enabled:
+        description: |
+          Включает экспорт расширенных метрик с агентов Cilium.
+      collectors:
+        description: |
+          Список расширенных метрик Hubble для экспорта. Каждый коллектор представляет собой определённый тип метрики.
+          Доступные метрики включают `DNS`, `Drop`, `Flow`, `FlowsToWorld`, `HTTP`, `HTTPv2`, `ICMP`, `Kafka` и `TCP`.
+
+          Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
+        items:
+          properties:
+            name:
+              description: Название расширенной метрики для экспорта.
+            contextOptions:
+              description: |
+                Необязательные параметры контекста для метрик Hubble.
+                Параметры контекста позволяют настраивать поведение сбора метрик.
+
+                > **Внимание.** Большое количество меток в метриках может привести к снижению производительности Prometheus.
+
+                Для получения дополнительной информации о поддерживаемых параметрах смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#context-options).
+  flowLogs:
+    description: |
+      Конфигурация для экспорта журналов событий с агентов Cilium.
+      Журналы событий предоставляют детальную информацию о сетевых событиях Cilium.
+
+      > **Внимание.** Изменение этого параметра приведет к перезапуску агентов Cilium.
+
+      Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#configuring-hubble-exporter).
+    properties:
+      enabled:
+        description: |
+          Включает ведение журналов событий для агентов Cilium.
+          Файл журнала расположен на файловой системе узла по пути `/var/run/cilium/hubble/events.log`.
+      allowList:
+        description: |
+          Список разрешённых фильтров для ведения журналов событий.
+          Экспортироваться будут только события, соответствующие этим фильтрам.
+
+          > **Внимание.** Заполняйте этот список внимательно — некорректное значение фильтра может привести к тому, что агент Cilium не запустится.
+
+          Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+      denyList:
+        description: |
+          Список запрещённых фильтров для ведения журналов событий.
+          События, соответствующие этим фильтрам, будут исключены из экспорта.
+
+          > **Внимание.** Заполняйте этот список внимательно — некорректное значение фильтра может привести к тому, что агент Cilium не запустится.
+
+          Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+      fieldMaskList:
+        description: |
+          Список полей, которые должны отображаться в событиях.
+
+          > **Внимание.** Заполняйте этот список внимательно — некорректное значение фильтра может привести к тому, что агент Cilium не запустится.
+
+          Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#field-mask).
+      fileMaxSizeMb:
+        description: Размер в МБ, при достижении которого будет выполняться ротация файла экспорта Hubble.

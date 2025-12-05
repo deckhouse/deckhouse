@@ -71,6 +71,16 @@ internal:
         ca: CA
         key: KEY
         cert: CERT
+    settings:
+      extendedMetrics:
+        enabled: false
+        collectors: []
+      flowLogs:
+        enabled: false
+        allowList: []
+        denyList: []
+        fieldMaskList: []
+        fileMaxSizeMb: 10
   egressGatewaysMap:
     myeg:
       name: myeg
