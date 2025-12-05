@@ -83,10 +83,10 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
+			instanceScope.Logger.V(1).Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
-			instanceScope.Logger.Info("using gossh")
+			instanceScope.Logger.V(1).Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 		if err != nil {
@@ -104,6 +104,6 @@ func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
 		c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
 		return true
 	}
-	instanceScope.Logger.Info("Cleaning is not finished yet, waiting...")
+	instanceScope.Logger.V(1).Info("Cleaning is not finished yet, waiting...")
 	return false
 }

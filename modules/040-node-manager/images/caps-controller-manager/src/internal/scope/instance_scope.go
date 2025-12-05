@@ -62,11 +62,15 @@ func NewInstanceScope(
 
 	scope.PatchHelper = patchHelper
 
-	return &InstanceScope{
+	instanceScope := &InstanceScope{
 		Scope:         scope,
 		Instance:      staticInstance,
 		SSHLegacyMode: true,
-	}, nil
+	}
+
+	instanceScope.setLoggerContext()
+
+	return instanceScope, nil
 }
 
 // LoadSSHCredentials loads the SSHCredentials for the InstanceScope.
@@ -95,6 +99,11 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	return nil
 }
 
+func (i *InstanceScope) AttachMachineScope(machineScope *MachineScope) {
+	i.MachineScope = machineScope
+	i.setLoggerContext()
+}
+
 // GetPhase returns the current phase of the static instance.
 func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatusPhase {
 	if i.Instance.Status.CurrentStatus == nil {
@@ -106,12 +115,19 @@ func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatus
 
 // SetPhase sets the current phase of the static instance.
 func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) {
+	prevPhase := i.GetPhase()
+
 	if i.Instance.Status.CurrentStatus == nil {
 		i.Instance.Status.CurrentStatus = &deckhousev1.StaticInstanceStatusCurrentStatus{}
 	}
 
 	i.Instance.Status.CurrentStatus.Phase = phase
 	i.Instance.Status.CurrentStatus.LastUpdateTime = metav1.NewTime(time.Now().UTC())
+	i.setLoggerContext()
+
+	if prevPhase != phase {
+		i.Logger.Info("StaticInstance phase changed", "from", prevPhase, "to", phase)
+	}
 }
 
 // Patch updates the StaticInstance resource.
@@ -143,6 +159,7 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	i.Instance.Status.MachineRef = nil
 	i.Instance.Status.NodeRef = nil
 	i.Instance.Status.CurrentStatus = nil
+	i.setLoggerContext()
 
 	conditions.MarkFalse(i.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
 
@@ -159,4 +176,13 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 // Close the InstanceScope by updating the instance spec and status.
 func (i *InstanceScope) Close(ctx context.Context) error {
 	return i.Patch(ctx)
+}
+
+func (i *InstanceScope) setLoggerContext() {
+	phase := "unknown"
+	if i.Instance.Status.CurrentStatus != nil && i.Instance.Status.CurrentStatus.Phase != "" {
+		phase = string(i.Instance.Status.CurrentStatus.Phase)
+	}
+
+	i.Logger = i.Scope.Logger.WithValues("phase", phase)
 }
