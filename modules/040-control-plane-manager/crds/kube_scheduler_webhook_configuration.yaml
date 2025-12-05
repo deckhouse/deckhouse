@@ -114,6 +114,9 @@ spec:
                   prioritizeVerbStatus:
                     type: bool
                     default: true
+                x-kubernetes-validations:
+                  - rule: "self.filterVerb != self.prioritizeVerb"
+                    message: "filterVerb and prioritizeVerb must be different"
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name

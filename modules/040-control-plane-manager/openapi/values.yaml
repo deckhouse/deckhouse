@@ -82,8 +82,12 @@ properties:
               type: string
             filterVerb:
               type: string
+            filterVerbStatus:
+              type: boolean
             prioritizeVerb:
               type: string
+            prioritizeVerbStatus:
+              type: boolean
             preemptVerb:
               type: string
             bindVerb:

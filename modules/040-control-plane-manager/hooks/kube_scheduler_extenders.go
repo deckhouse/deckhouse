@@ -60,14 +60,13 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 
 	type extenderConfig struct {
-		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
-		Weight         int    `yaml:"weight" json:"weight"`
-		Timeout        int    `yaml:"timeout" json:"timeout"`
-		Ignorable      bool   `yaml:"ignorable" json:"ignorable"`
-		CAData         string `yaml:"caData" json:"caData"`
-		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
-		FilterVerbStatus bool `yaml:"filterVerbStatus" json:"filterVerbStatus"`
-		PrioritizeVerb string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+		URLPrefix            string `yaml:"urlPrefix" json:"urlPrefix"`
+		Weight               int    `yaml:"weight" json:"weight"`
+		Timeout              int    `yaml:"timeout" json:"timeout"`
+		Ignorable            bool   `yaml:"ignorable" json:"ignorable"`
+		CAData               string `yaml:"caData" json:"caData"`
+		FilterVerb           string `yaml:"filterVerb" json:"filterVerb"`
+		PrioritizeVerb       string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
 	}
 	extenders := make([]extenderConfig, 0)
 
@@ -88,6 +87,12 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 			urlPrefix, err := url.JoinPath(fmt.Sprintf("https://%s.%s.svc.%s:%d", config.ClientConfig.Service.Name, config.ClientConfig.Service.Namespace, clusterDomain, config.ClientConfig.Service.Port), config.ClientConfig.Service.Path)
 			if err != nil {
 				return err
+			}
+			if !config.FilterVerbStatus {
+				config.FilterVerb = ""
+			}
+			if !config.PrioritizeVerbStatus {
+				config.PrioritizeVerb = ""
 			}
 			newExtender := extenderConfig{
 				URLPrefix:      urlPrefix,
