@@ -107,7 +107,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 
 		It("Operator trivy has proper tolerations and nodeSelector", func() {
-			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
+			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"node.deckhouse.io/etcd-arbiter"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
 			deployTolerations := `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-trivy"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
 			nodeSelector := `{"node-role.deckhouse.io/system":""}`
 			checkTrivyOperatorCM(f, MatchJSON(cmTolerations), MatchJSON(nodeSelector))
@@ -126,7 +126,7 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 
 		It("Operator trivy has proper tolerations and nodeSelector", func() {
-			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
+			cmTolerations := `[{"key":"node-role.kubernetes.io/master"},{"key":"node-role.kubernetes.io/control-plane"},{"key":"node.deckhouse.io/etcd-arbiter"},{"key":"dedicated.deckhouse.io","operator":"Exists"},{"key":"dedicated","operator":"Exists"},{"key":"DeletionCandidateOfClusterAutoscaler"},{"key":"ToBeDeletedByClusterAutoscaler"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
 			deployTolerations := `[{"effect":"NoSchedule","key":"key1","operator":"Equal","value":"value1"},{"key":"drbd.linbit.com/lost-quorum"},{"key":"drbd.linbit.com/force-io-error"},{"key":"drbd.linbit.com/ignore-fail-over"}]`
 			nodeSelector := `{"test-label":"test-value"}`
 			checkTrivyOperatorCM(f, MatchJSON(cmTolerations), MatchJSON(nodeSelector))

@@ -41,12 +41,10 @@ import (
 
 type etcdNode struct {
 	Memory int64
-	// IsDedicated indicates that node is dedicated for control-plane or etcd workload.
-	// Node is considered dedicated if it has taint with effect NoSchedule and key:
-	//   - node-role.kubernetes.io/control-plane, or
-	//   - node.deckhouse.io/etcd-arbiter
-	// For dedicated nodes, etcd quota is calculated based on available memory.
-	// For non-dedicated nodes, quota calculation is skipped to avoid resource constraints.
+	// isDedicated - indicate that node has taint
+	//   - effect: NoSchedule
+	//    key: node-role.kubernetes.io/control-plane
+	// it means that on node can be scheduled only control-plane components
 	IsDedicated bool
 }
 
@@ -69,17 +67,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"node-role.kubernetes.io/control-plane": "",
-				},
-			},
-			FilterFunc: etcdQuotaFilterNode,
-		},
-		{
-			Name:       "etcd_arbiter_node",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node.deckhouse.io/etcd-arbiter": "",
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
@@ -125,7 +112,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		if (taint.Key == "node-role.kubernetes.io/control-plane" || taint.Key == "node.deckhouse.io/etcd-arbiter") && taint.Effect == corev1.TaintEffectNoSchedule {
+		if taint.Key == "node-role.kubernetes.io/control-plane" && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
 		}
@@ -194,12 +181,12 @@ func getCurrentEtcdQuotaBytes(_ context.Context, input *go_hook.HookInput) (int6
 
 func getNodeWithMinimalMemory(snapshots []pkg.Snapshot) (*etcdNode, error) {
 	if len(snapshots) == 0 {
-		return nil, fmt.Errorf("'master_nodes' and 'etcd_arbiter_node' snapshots are empty")
+		return nil, fmt.Errorf("'master_nodes' snapshot is empty")
 	}
 	var nodeWithMinimalMemory *etcdNode
 	for node, err := range sdkobjectpatch.SnapshotIter[etcdNode](snapshots) {
 		if err != nil {
-			return nil, fmt.Errorf("cannot iterate over 'master_nodes' and 'etcd_arbiter_node' snapshots: %w", err)
+			return nil, fmt.Errorf("cannot iterate over 'master_nodes' snapshot: %w", err)
 		}
 
 		if nodeWithMinimalMemory == nil {
@@ -255,13 +242,8 @@ func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) in
 	input.Logger.Debug("Current etcd quota. Getting from node with max quota", slog.Int64("quota", currentQuotaBytes), slog.String("from", nodeWithMaxQuota))
 
 	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
-	etcdArbiterNodeSnapshots := input.Snapshots.Get("etcd_arbiter_node")
 
-	allNodesSnapshots := make([]pkg.Snapshot, 0, len(masterNodeSnapshots)+len(etcdArbiterNodeSnapshots))
-	allNodesSnapshots = append(allNodesSnapshots, masterNodeSnapshots...)
-	allNodesSnapshots = append(allNodesSnapshots, etcdArbiterNodeSnapshots...)
-
-	node, err := getNodeWithMinimalMemory(allNodesSnapshots)
+	node, err := getNodeWithMinimalMemory(masterNodeSnapshots)
 	if err != nil {
 		input.Logger.Warn("Cannot get node with minimal memory", log.Err(err))
 		return currentQuotaBytes

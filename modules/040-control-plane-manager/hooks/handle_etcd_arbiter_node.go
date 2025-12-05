@@ -64,13 +64,10 @@ func handleCheckEtcdArbiterNode(_ context.Context, input *go_hook.HookInput) err
 	etcdArbiterNodes := input.Snapshots.Get("etcd_arbiter_node")
 
 	if len(etcdArbiterNodes) > 1 {
-		return fmt.Errorf("etcd-arbiter label must be present on at most one node, found %d nodes", len(etcdArbiterNodes))
+		return fmt.Errorf("etcd-arbiter label must be present only for one node, found %d nodes", len(etcdArbiterNodes))
 	}
 
-	hasEtcdArbiterNode := len(masterNodes) >= 2 && len(etcdArbiterNodes) == 1
-
-	input.Values.Set("controlPlaneManager.internal.hasEtcdArbiterNode", hasEtcdArbiterNode)
+	input.Values.Set("controlPlaneManager.internal.hasEtcdArbiterNode", len(etcdArbiterNodes) == 1)
 
 	return nil
 }
-
