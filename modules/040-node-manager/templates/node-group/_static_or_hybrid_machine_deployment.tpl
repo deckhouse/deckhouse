@@ -22,9 +22,4 @@ spec:
         namespace: d8-cloud-instance-manager
         name: {{ $ng.name }}
   selector: {}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
 {{- end }}
