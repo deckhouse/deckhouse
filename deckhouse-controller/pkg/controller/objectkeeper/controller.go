@@ -385,8 +385,9 @@ func (r *ObjectKeeperController) reconcileTTL(ctx context.Context, objectkeeper 
 		return ctrl.Result{}, err
 	}
 
+	remaining := expiresAt.Sub(now.Time)
 	// Requeue for periodic check
-	return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
+	return ctrl.Result{RequeueAfter: remaining}, nil
 }
 
 // reconcileFollowObjectWithTTL handles ObjectKeeper in FollowObjectWithTTL mode
@@ -480,8 +481,12 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 					Message:            fmt.Sprintf("TTL expires at %v", now.Add(objectkeeper.Spec.TTL.Duration).Format(time.RFC3339)),
 					LastTransitionTime: now,
 				})
+
+				// Calculate expiration time after set LostAt
+				expiresAt := objectkeeper.Status.LostAt.Add(objectkeeper.Spec.TTL.Duration)
+				remaining := expiresAt.Sub(now.Time)
 				if err := r.Status().Patch(ctx, objectkeeper, client.MergeFrom(base)); err != nil {
-					return ctrl.Result{RequeueAfter: TTLCheckInterval}, err
+					return ctrl.Result{RequeueAfter: remaining}, err
 				}
 			}
 
@@ -505,7 +510,8 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 					return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 				}
 			}
-			return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
+			remaining := expiresAt.Sub(now.Time)
+			return ctrl.Result{RequeueAfter: remaining}, nil
 		}
 		// Other error - retry
 		r.logger.Error("Failed to get FollowObject",
@@ -539,7 +545,6 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 		expiresAt := objectkeeper.Status.LostAt.Add(objectkeeper.Spec.TTL.Duration)
 		now := metav1.Now()
 		base := objectkeeper.DeepCopy()
-		objectkeeper.Status.LostAt = &now
 		objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
 		objectkeeper.Status.Message = "FollowObject UID mismatch - will delete ObjectKeeper after TTL expiration"
 		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
@@ -564,7 +569,8 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 				return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 			}
 		}
-		return ctrl.Result{RequeueAfter: TTLCheckInterval}, nil
+		remaining := expiresAt.Sub(now.Time)
+		return ctrl.Result{RequeueAfter: remaining}, nil
 	}
 
 	// Object exists and UID matches - ObjectKeeper is active
