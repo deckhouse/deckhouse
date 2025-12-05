@@ -18,11 +18,13 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -104,9 +106,7 @@ func NewProvider(params ProviderParams) *Provider {
 
 func (p *Provider) generateRootDir(tmpDir string) {
 	id := fmt.Sprintf("%s/%s/%s/%s", p.prefix, p.uuid, p.name, p.layout)
-	hash := stringsutil.Sha256Encode(id)
-
-	first16Runes := fmt.Sprintf("%.16s", hash)
+	first16Runes := stringsutil.Sha256EncodeWithFirstLettersOfHash(id, 16)
 
 	p.rootDir = filepath.Join(tmpDir, "infra", first16Runes)
 }
@@ -152,24 +152,28 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 		return nil, err
 	}
 
+	executorID := p.executorID()
+
 	if !p.settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform output executor for %s\n", p.String())
+		p.logger.LogDebugF("Create terraform output executor for %s with id %s\n", p.String(), executorID)
 		return terraform.NewOutputExecutor(terraform.OutputExecutorParams{
 			RunExecutorParams: terraform.RunExecutorParams{
 				RootDir:          rootDir,
 				TerraformBinPath: infraUtilDestination,
+				ExecutorID:       executorID,
 			},
-		}, logger), nil
+		}, logger)
 	}
 
-	p.logger.LogDebugF("Create opentofu output executor for %s\n", p.String())
+	p.logger.LogDebugF("Create opentofu output executor for %s with id %s\n", p.String(), executorID)
 
 	return tofu.NewOutputExecutor(tofu.OutputExecutorParams{
 		RunExecutorParams: tofu.RunExecutorParams{
 			RootDir:     rootDir,
 			TofuBinPath: infraUtilDestination,
+			ExecutorID:  executorID,
 		},
-	}, logger), nil
+	}, logger)
 }
 
 func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logger log.Logger) (infrastructure.Executor, error) {
@@ -234,21 +238,24 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 
 	p.logRootDir()
 
+	executorID := p.executorID()
+
 	if !p.settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform executor for %s with step %s\n", p.String(), step)
+		p.logger.LogDebugF("Create terraform executor for %s with step %s with id %s\n", p.String(), step, executorID)
 		return terraform.NewExecutor(terraform.ExecutorParams{
 			WorkingDir: stepDir,
 			PluginsDir: pluginsDir,
 			RunExecutorParams: terraform.RunExecutorParams{
 				RootDir:          infraRootDir,
 				TerraformBinPath: infraUtilDestination,
+				ExecutorID:       executorID,
 			},
 			Step:           step,
-			VmChangeTester: p.IsVMChange,
-		}, logger), nil
+			VMChangeTester: p.IsVMChange,
+		}, logger)
 	}
 
-	p.logger.LogDebugF("Create opentofu executor for %s with step %s\n", p.String(), step)
+	p.logger.LogDebugF("Create opentofu executor for %s with step %s with id %s\n", p.String(), step, executorID)
 
 	return tofu.NewExecutor(tofu.ExecutorParams{
 		WorkingDir: stepDir,
@@ -256,10 +263,17 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		RunExecutorParams: tofu.RunExecutorParams{
 			RootDir:     infraRootDir,
 			TofuBinPath: infraUtilDestination,
+			ExecutorID:  executorID,
 		},
 		Step:           step,
 		VMChangeTester: p.IsVMChange,
-	}, logger), nil
+	}, logger)
+}
+
+func (p *Provider) executorID() string {
+	i := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	strForHash := fmt.Sprintf("%s/%s/%s/%s/%d", p.prefix, p.uuid, p.name, p.layout, i)
+	return stringsutil.Sha256EncodeWithFirstLettersOfHash(strForHash, 10)
 }
 
 func (p *Provider) logRootDir() {
