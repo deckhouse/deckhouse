@@ -69,6 +69,12 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	config := ctrl.GetConfigOrDie()
+	setupLog.Info("Kubernetes connection details",
+		"Host", config.Host,
+		"KUBERNETES_SERVICE_HOST", os.Getenv("KUBERNETES_SERVICE_HOST"),
+		"KUBERNETES_SERVICE_PORT", os.Getenv("KUBERNETES_SERVICE_PORT"))
+
 	if mode == "webhook" {
 		setupLog.Info("starting in webhook mode")
 		if err := startWebhookServer(probeAddr); err != nil {
@@ -78,7 +84,7 @@ func main() {
 		return
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,

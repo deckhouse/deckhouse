@@ -65,6 +65,11 @@ func run() error {
 		}
 	}
 
+	slog.Info("Kubernetes connection details",
+		"Host", config.Host,
+		"KUBERNETES_SERVICE_HOST", os.Getenv("KUBERNETES_SERVICE_HOST"),
+		"KUBERNETES_SERVICE_PORT", os.Getenv("KUBERNETES_SERVICE_PORT"))
+
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("unable to create dynamic client: %w", err)

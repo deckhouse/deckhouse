@@ -7,7 +7,11 @@ clientConfig:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
+{{- if .Values.global.internal.cniMigrationEnabled }}
+failurePolicy: Ignore
+{{- else }}
 failurePolicy: Fail
+{{- end }}
 matchPolicy: Exact
 sideEffects: None
 objectSelector: {}
@@ -64,11 +68,6 @@ metadata:
 webhooks:
   {{- if include "trivy.provider.enabled" . }}
 - name: trivy-provider.deckhouse.io
-  {{- if .Values.global.internal.cniMigrationEnabled }}
-  failurePolicy: Ignore
-  {{- else }}
-  failurePolicy: Fail
-  {{- end }}
   namespaceSelector:
     matchLabels:
       security.deckhouse.io/trivy-provider: ""
@@ -103,11 +102,6 @@ webhooks:
 
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
-  {{- if .Values.global.internal.cniMigrationEnabled }}
-  failurePolicy: Ignore
-  {{- else }}
-  failurePolicy: Fail
-  {{- end }}
   namespaceSelector:
     matchExpressions:
     - key: heritage
@@ -155,11 +149,6 @@ webhooks:
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: security-policy-exception.admission-policy-engine.deckhouse.io
-  {{- if .Values.global.internal.cniMigrationEnabled }}
-  failurePolicy: Ignore
-  {{- else }}
-  failurePolicy: Fail
-  {{- end }}
   namespaceSelector:
     matchExpressions:
     - key: security.deckhouse.io/enable-security-policy-check
