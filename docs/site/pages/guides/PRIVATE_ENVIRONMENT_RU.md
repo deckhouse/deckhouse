@@ -117,11 +117,17 @@ cd harbor/
 mkdir certs
 ``` 
 
-Сгенерируем сертификаты командами:
+Сгенерируем сертификаты командами для внешнего доступа:
 
 ```bash
-openssl genrsa -out ca.key 4096 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST-Moscow/L=Moscow/O=example/OU=Personal/CN-myca. local" -key ca.key -out ca.crt
+openssl genrsa -out ca.key 4096
 ```
+
+```bash
+openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST-Moscow/L=Moscow/O=example/OU=Personal/CN-myca.local" -key ca.key -out ca.crt
+```
+
+Сгенерируем сертификаты для внутреннего доменного имени `harbor.local`, чтобы внутри приватной сети обращаться к бастиону также по защищённому соединению:
 
 ```bash
 openssl genrsa -out harbor.local.key 4096
@@ -132,19 +138,20 @@ openssl req -sha512 -new -subj "/C-RU/ST-Moscow/L=Moscow/0=example/OU=Personal/C
 ```
 
 ```bash
-cat > v3.ext
-authorityKeyIdentifier=keyid, issuer basicConstraints=CA:FALSE
+cat > v3.ext <<-EOF
+authorityKeyIdentifier=keyid, issuer
+basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
 [alt_names]
-IP.1=10.128.0.30
+IP.1=<INTERNAL_IP_ADDRESS>
 DNS.1=harbor.local
 EOF
 ```
 
-**Важно!** Не забудьте заменить в этой команде `IP.1` на свой внутренниый серый IP-адрес. По нему будет происходить обращение к container-registry изнутри закрытого контура. С этим же адресом будет связано доменное имя `harbor.local`.
+**Важно!** Не забудьте заменить в этой команде `<INTERNAL_IP_ADDRESS>` на внутренниый серый IP-адрес бастиона. По нему будет происходить обращение к container registry изнутри закрытого контура. С этим же адресом будет связано доменное имя `harbor.local`.
 
 
 ```bash
