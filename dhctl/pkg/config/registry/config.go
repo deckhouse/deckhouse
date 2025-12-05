@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
@@ -27,39 +28,53 @@ type Config struct {
 	ModuleEnabled     bool
 }
 
-func (c *Config) FromDefault(
-	cri constant.CRIType,
-) error {
-	userRegistrySettings := module_config.RegistrySettings{}
-	return c.FromRegistrySettings(
-		userRegistrySettings,
-		cri,
-	)
-}
-
-func (c *Config) FromRegistrySettings(
-	userRegistrySettings module_config.RegistrySettings,
+// UseDefault configures the registry with default CE settings.
+// When no registry configuration is provided:
+// - If Direct mode is supported (based on CRI type), uses Direct mode
+// - Otherwise, falls back to Unmanaged mode
+// - All parameters are populated with default values for the CE registry
+func (c *Config) UseDefault(
 	cri constant.CRIType,
 ) error {
 	userSettings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &userRegistrySettings,
+		Unmanaged: &module_config.RegistrySettings{},
 	}
-
-	moduleEnabled := constant.ModuleEnabled(cri)
-	if moduleEnabled {
+	if constant.ModuleEnabled(cri) {
 		userSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
-			Direct: &userRegistrySettings,
+			Direct: &module_config.RegistrySettings{},
 		}
 	}
-	return c.FromDeckhouseSettings(
+	return c.UseDeckhouseSettings(
 		userSettings,
 		cri,
 	)
 }
 
-func (c *Config) FromDeckhouseSettings(
+// UseInitConfig configures registry using legacy initConfiguration.
+// Note: This method maintains backward compatibility and only supports Unmanaged mode.
+func (c *Config) UseInitConfig(
+	initConfig init_config.Config,
+	cri constant.CRIType,
+) error {
+	userRegistrySettings, err := initConfig.ToRegistrySettings()
+	if err != nil {
+		return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+	}
+	userSettings := module_config.DeckhouseSettings{
+		Mode:      constant.ModeUnmanaged,
+		Unmanaged: &userRegistrySettings,
+	}
+	return c.UseDeckhouseSettings(
+		userSettings,
+		cri,
+	)
+}
+
+// UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
+// The operation mode (Direct/Unmanaged) is determined from the user configuration.
+func (c *Config) UseDeckhouseSettings(
 	userSettings module_config.DeckhouseSettings,
 	cri constant.CRIType,
 ) error {

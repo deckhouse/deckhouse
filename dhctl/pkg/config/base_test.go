@@ -200,7 +200,7 @@ spec:
 	// Registry
 	t.Run("Registry", func(t *testing.T) {
 		t.Run("Module disable", func(t *testing.T) {
-			t.Run("From default (CE edition config)", func(t *testing.T) {
+			t.Run("Use default (CE edition config) -> Unmanaged", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
@@ -212,7 +212,7 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
-			t.Run("From init configuration", func(t *testing.T) {
+			t.Run("Use init configuration -> always Unmanaged", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
@@ -224,9 +224,32 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
+			t.Run("Use deckhouse moduleConfig -> error", func(t *testing.T) {
+				deckhouseMC := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test/
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`
+				_, err := ParseConfigFromData(context.TODO(), deckhouseMC, DummyPreparatorProvider())
+				require.Error(t, err)
+			})
 		})
 		t.Run("Module enable", func(t *testing.T) {
-			t.Run("From default (CE edition config)", func(t *testing.T) {
+			t.Run("Use default (CE edition config) -> Direct", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
@@ -238,11 +261,11 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
-			t.Run("From init configuration", func(t *testing.T) {
+			t.Run("Use init configuration -> always Unmanaged", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
+				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
 				registry := metaConfig.Registry.Settings.Remote
 				require.Equal(t, registry.ImagesRepo, "test")
 				require.Equal(t, registry.Scheme, "HTTPS")
@@ -250,7 +273,7 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
-			t.Run("From deckhouse moduleConfig", func(t *testing.T) {
+			t.Run("Use deckhouse moduleConfig", func(t *testing.T) {
 				deckhouseMC := `
 ---
 apiVersion: deckhouse.io/v1alpha1

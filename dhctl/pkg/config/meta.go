@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 
@@ -141,7 +142,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	var (
 		defaultCRI        string
 		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
-		registrySettings  *registry_moduleconfig.RegistrySettings
+		initConfig        *initconfig.Config
 	)
 
 	// Extract defaultCRI
@@ -155,18 +156,12 @@ func (m *MetaConfig) prepareRegistry() error {
 	if m.DeckhouseConfig.ImagesRepo != "" ||
 		m.DeckhouseConfig.RegistryDockerCfg != "" ||
 		m.DeckhouseConfig.RegistryCA != "" {
-		initConfig := registry_initconfig.Config{
+		initConfig = &registry_initconfig.Config{
 			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
 			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
 			RegistryCA:        m.DeckhouseConfig.RegistryCA,
 			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
 		}
-
-		settings, err := initConfig.ToRegistrySettings()
-		if err != nil {
-			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
-		}
-		registrySettings = &settings
 	}
 
 	// Extract configuration from moduleConfig/deckhouse
@@ -181,7 +176,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 
 		// Check configuration conflict
-		if registrySettings != nil {
+		if initConfig != nil {
 			return fmt.Errorf(
 				"duplicate registry configuration detected: " +
 					"registry is configured in both 'initConfiguration.deckhouse' " +
@@ -216,11 +211,20 @@ func (m *MetaConfig) prepareRegistry() error {
 
 	switch {
 	case deckhouseSettings != nil:
-		return m.Registry.FromDeckhouseSettings(*deckhouseSettings, defaultCRI)
-	case registrySettings != nil:
-		return m.Registry.FromRegistrySettings(*registrySettings, defaultCRI)
+		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings, defaultCRI); err != nil {
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+		return nil
+	case initConfig != nil:
+		if err := m.Registry.UseInitConfig(*initConfig, defaultCRI); err != nil {
+			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+		return nil
 	default:
-		return m.Registry.FromDefault(defaultCRI)
+		if err := m.Registry.UseDefault(defaultCRI); err != nil {
+			return fmt.Errorf("get default registry settings: %w", err)
+		}
+		return nil
 	}
 }
 

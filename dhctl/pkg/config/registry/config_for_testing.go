@@ -63,7 +63,7 @@ func TestConfigBuilder(opts ...interface{}) Config {
 	}
 
 	config := Config{}
-	if err := config.FromDeckhouseSettings(
+	if err := config.UseDeckhouseSettings(
 		deckhouseSettings,
 		cri,
 	); err != nil {

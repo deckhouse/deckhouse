@@ -112,7 +112,7 @@ internalNetworkCIDRs:
 	}
 	t.Run("Registry", func(t *testing.T) {
 
-		t.Run("Module disable", func(t *testing.T) {
+		t.Run("Module disable -> empty settings", func(t *testing.T) {
 			tplCtx := map[string]interface{}{
 				"moduleEnable": false,
 			}
@@ -123,8 +123,8 @@ internalNetworkCIDRs:
 			assert(t, tplCtx, expect)
 		})
 
-		t.Run("Module enable", func(t *testing.T) {
-			t.Run("From default (CE edition config)", func(t *testing.T) {
+		t.Run("Module enable -> not empty settings", func(t *testing.T) {
+			t.Run("Use default (CE edition config) -> Direct", func(t *testing.T) {
 				tplCtx := map[string]interface{}{
 					"moduleEnable": true,
 				}
@@ -142,7 +142,7 @@ internalNetworkCIDRs:
 				assert(t, tplCtx, expect)
 			})
 
-			t.Run("From init configuration", func(t *testing.T) {
+			t.Run("Use init configuration -> always Unmanaged", func(t *testing.T) {
 				tplCtx := map[string]interface{}{
 					"moduleEnable": true,
 					"manifests": []string{`
@@ -161,8 +161,8 @@ deckhouse:
 					"bundle":   "Default",
 					"logLevel": "Info",
 					"registry": map[string]interface{}{
-						"mode": "Direct",
-						"direct": map[string]interface{}{
+						"mode": "Unmanaged",
+						"unmanaged": map[string]interface{}{
 							"imagesRepo": "r.example.com/test",
 							"username":   "test-user",
 							"password":   "test-password",
@@ -174,7 +174,7 @@ deckhouse:
 				assert(t, tplCtx, expect)
 			})
 
-			t.Run("From moduleConfig", func(t *testing.T) {
+			t.Run("Use deckhouse moduleConfig", func(t *testing.T) {
 				tplCtx := map[string]interface{}{
 					"moduleEnable": true,
 					"manifests": []string{`
