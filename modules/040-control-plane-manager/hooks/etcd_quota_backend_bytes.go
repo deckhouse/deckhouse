@@ -243,7 +243,7 @@ func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) in
 
 	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
 	node, err := getNodeWithMinimalMemory(masterNodeSnapshots)
-	
+
 	if err != nil {
 		input.Logger.Warn("Cannot get node with minimal memory", log.Err(err))
 		return currentQuotaBytes
