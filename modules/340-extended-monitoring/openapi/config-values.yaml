@@ -12,6 +12,17 @@ properties:
         default: true
         description: |
           Enables imageAvailabilityExporter.
+      imageCheckInterval:
+        type: string 
+        description: |
+          Interval for checking container registries for image availability.
+          Supports Go-style duration format (e.g. "10s", "10m", "10h").
+          If not specified, the default value is "60s".
+      defaultRegistry:
+        type: string
+        description: |
+          Default registry to use when an image name is not fully qualified.
+          If not set, index.docker.io is used by default.
       ignoredImages:
         type: array
         x-examples:
@@ -64,8 +75,28 @@ properties:
           properties:
             original:
               type: string
+      mirrorsSchemes:
+        type: array
+        x-examples:
+        - - mirror: mirror.gcr.io
+            scheme: HTTP
+          - mirror: mirror.internal-registry.com
+            scheme: HTTPS
+        items:
+          type: object
+          required:
+          - mirror
+          - scheme
+          properties:
             mirror:
               type: string
+            scheme:
+              type: string
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+        description: |
+          Scheme for checking availability of image from this mirror.
+          If extendedMonitoring.imageAvailability.registry.scheme is setted to HTTP than this scheme will be used for all checks.
       forceCheckDisabledControllers:
         type: array
         x-examples:
