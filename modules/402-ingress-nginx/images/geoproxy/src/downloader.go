@@ -22,6 +22,8 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/md5"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -180,7 +182,7 @@ func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, lic
 	}
 
 	skipTLS := account.Mirror.InsecureSkipVerify || account.LegacySkipTLS
-	dataDB, err := downloadDB(ctx, url, skipTLS)
+	dataDB, err := downloadDB(ctx, url, skipTLS, account.Mirror.CA)
 	if err != nil {
 		incrementError(err)
 		return fmt.Errorf("download data: %w", err)
@@ -207,10 +209,26 @@ func (d *Downloader) updateEditionState(edition, newMD5 string) {
 	d.md5[edition] = newMD5
 }
 
-func downloadDB(ctx context.Context, url string, skipTLSverify bool) (io.ReadCloser, error) {
+func downloadDB(ctx context.Context, url string, skipTLSverify bool, caPEM string) (io.ReadCloser, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
+	if transport.TLSClientConfig == nil {
+		transport.TLSClientConfig = &tls.Config{}
+	}
 	transport.TLSClientConfig.InsecureSkipVerify = skipTLSverify
+
+	if caPEM != "" {
+		rootCAs, err := x509.SystemCertPool()
+		if err != nil || rootCAs == nil {
+			rootCAs = x509.NewCertPool()
+		}
+
+		if ok := rootCAs.AppendCertsFromPEM([]byte(caPEM)); !ok {
+			return nil, fmt.Errorf("append ca: failed to parse certificate")
+		}
+
+		transport.TLSClientConfig.RootCAs = rootCAs
+	}
 
 	client := &http.Client{Transport: transport, Timeout: time.Second * 3}
 

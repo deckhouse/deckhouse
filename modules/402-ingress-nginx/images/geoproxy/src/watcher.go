@@ -39,6 +39,7 @@ import (
 //     "editions": ["GeoLite2-City", "GeoLite2-ASN"],
 //     "maxmindMirror": {
 //       "url": "https://mirror.local",
+//       "ca": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
 //       "insecureSkipVerify": true
 //     }
 //   }
@@ -57,6 +58,7 @@ type Account struct {
 type Mirror struct {
 	URL                string `json:"url,omitempty"`
 	InsecureSkipVerify bool   `json:"insecureSkipVerify,omitempty"`
+	CA                 string `json:"ca,omitempty"`
 }
 
 // UnmarshalJSON supports both legacy string values and the new nested structure.

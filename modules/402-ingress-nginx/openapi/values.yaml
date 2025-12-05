@@ -220,6 +220,8 @@ properties:
                       properties:
                         url:
                           type: string
+                        ca:
+                          type: string
                         insecureSkipVerify:
                           type: boolean
                     maxmindLicenseKey:

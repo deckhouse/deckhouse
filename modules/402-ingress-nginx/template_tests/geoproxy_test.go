@@ -31,6 +31,7 @@ type (
 	mirrorInfo struct {
 		URL                string `json:"url"`
 		InsecureSkipVerify bool   `json:"insecureSkipVerify"`
+		CA                 string `json:"ca"`
 	}
 
 	licenseInfo struct {
@@ -49,6 +50,10 @@ const (
       maxmindMirror:
         url: https://mirror.shared
         insecureSkipVerify: true
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          shared
+          -----END CERTIFICATE-----
       maxmindEditionIDs:
         - GeoLite2-City
         - GeoLite2-ASN
@@ -73,6 +78,10 @@ const (
       maxmindMirror:
         url: https://mirror.com
         insecureSkipVerify: false
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          another
+          -----END CERTIFICATE-----
       maxmindAccountID: 888
       maxmindEditionIDs:
         - GeoLite2-ISP
@@ -96,6 +105,10 @@ const (
     geoIP2:
       maxmindMirror:
         url: https://mirror-only.local
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          mirror-only
+          -----END CERTIFICATE-----
       maxmindEditionIDs:
         - GeoLite2-City
 `
@@ -138,6 +151,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 		Expect(shared.Mirror).To(Equal(mirrorInfo{
 			URL:                "https://mirror.shared",
 			InsecureSkipVerify: true,
+			CA: `-----BEGIN CERTIFICATE-----
+shared
+-----END CERTIFICATE-----
+`,
 		}))
 
 		another := licenseMap["another-license"]
@@ -146,6 +163,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 		Expect(another.Mirror).To(Equal(mirrorInfo{
 			URL:                "https://mirror.com",
 			InsecureSkipVerify: false,
+			CA: `-----BEGIN CERTIFICATE-----
+another
+-----END CERTIFICATE-----
+`,
 		}))
 	})
 
@@ -180,6 +201,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: geoproxy helper", 
 		Expect(licenseMap).To(HaveKey("mirror:e17d2092"))
 		mirrorEntry := licenseMap["mirror:e17d2092"]
 		Expect(mirrorEntry.Mirror.URL).To(Equal("https://mirror-only.local"))
+		Expect(mirrorEntry.Mirror.CA).To(Equal(`-----BEGIN CERTIFICATE-----
+mirror-only
+-----END CERTIFICATE-----
+`))
 		Expect(mirrorEntry.AccountID).To(Equal(0))
 		Expect(mirrorEntry.Editions).To(ConsistOf("GeoLite2-City"))
 	})

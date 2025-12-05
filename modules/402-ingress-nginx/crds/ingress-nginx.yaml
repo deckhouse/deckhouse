@@ -1021,6 +1021,15 @@ spec:
                           type: string
                           description: The URL for downloading GeoIP databases.
                           x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
+                        ca:
+                          type: string
+                          description: |
+                            Custom CA certificate in PEM format for verifying TLS connections to the mirror.
+                          x-doc-examples:
+                          - |
+                            -----BEGIN CERTIFICATE-----
+                            ...
+                            -----END CERTIFICATE-----
                         insecureSkipVerify:
                           type: boolean
                           description: |
