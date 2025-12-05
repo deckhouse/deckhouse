@@ -37,6 +37,7 @@ data:
           type: bearer
           use_kiali_token: true
       grafana:
+        internal_url: http://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
         url: http://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}
       custom_dashboards:
         enabled: true
