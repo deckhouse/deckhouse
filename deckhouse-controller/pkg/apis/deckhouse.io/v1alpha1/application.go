@@ -33,10 +33,11 @@ const (
 	ApplicationConditionReplicasAvailable      = "ReplicasAvailable"
 
 	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeProcessed                = "Processed"
-	ApplicationConditionReasonVersionNotFound        = "VersionNotFound"
-	ApplicationConditionReasonVersionIsDraft         = "VersionIsDraft"
-	ApplicationConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
+	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
+	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
+	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
+	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
 
 	// Application condition types
 	ApplicationConditionInstalled            = "Installed"
@@ -62,6 +63,8 @@ const (
 	ApplicationConditionPartiallyDegradedReasonScalingInProgress                = "ScalingInProgress"
 	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
 	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
+
+	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 )
 
 var (
@@ -114,6 +117,7 @@ type ApplicationStatus struct {
 	Status             string                               `json:"status,omitempty"`
 	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	ResourceConditions []ApplicationResourceStatusCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
@@ -133,6 +137,15 @@ type ApplicationStatusCondition struct {
 type ApplicationInternalStatusCondition struct {
 	Type               string                 `json:"type"`
 	Status             corev1.ConditionStatus `json:"status"`
+	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
+	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+}
+
+type ApplicationResourceStatusCondition struct {
+	Type               string                 `json:"type"`
+	Status             corev1.ConditionStatus `json:"status"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
 	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }

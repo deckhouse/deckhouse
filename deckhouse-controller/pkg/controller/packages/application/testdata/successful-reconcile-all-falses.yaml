@@ -38,6 +38,16 @@ status:
   version: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  labels:
+    heritage: deckhouse
+  name: test
+status:
+  availableRepositories:
+    - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   name: deckhouse
