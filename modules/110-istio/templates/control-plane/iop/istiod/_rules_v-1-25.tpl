@@ -198,13 +198,18 @@
   - ""
   resources:
   - secrets
+  resourceNames:
+  - cacets
+  - d8-istio-sidecar-registry
+  - d8-remote-clusters-public-metadata
+  - deckhouse-registry
   verbs:
   - create
   - update
   - delete
   - get
-  - watch
   - list
+  - watch
 - apiGroups:
   - multicluster.x-k8s.io
   resources:
