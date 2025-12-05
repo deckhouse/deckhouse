@@ -67,19 +67,15 @@ add_node_annotation registry.deckhouse.io/version={{ .registry.version | quote }
 {{- if eq .nodeGroup.name "master" }} 
 converger_user_annotation="$(bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json | jq -r '.metadata.annotations."node.deckhouse.io/has-converger-nodeuser"')"
 if grep -qP "^d8-dhctl-converger" /etc/passwd; then
-  converger_user_exists=1
+  converger_user_exists="1"
   else
-    converger_user_exists=0
+    converger_user_exists="0"
 fi
 
-if [[ $converger_user_annotation != "null" ]]
-  then
-    if [[ "$converger_user_exists" == 0 ]]; then
-      remove_node_annotation "node.deckhouse.io/has-converger-nodeuser"
-    fi
-  else
-    if [[ "$converger_user_exists" == 1 ]]; then
-      add_node_annotation "node.deckhouse.io/has-converger-nodeuser=true" "--overwrite"
-    fi
+if [[ "$converger_user_annotation" != "null" && "$converger_user_exists" == "0" ]]; then
+  remove_node_annotation "node.deckhouse.io/has-converger-nodeuser"
+else if [[ "$converger_user_annotation" == "null" && "$converger_user_exists" == "1" ]]; then
+  add_node_annotation "node.deckhouse.io/has-converger-nodeuser=true" "--overwrite"
+  fi
 fi
 {{- end }}
