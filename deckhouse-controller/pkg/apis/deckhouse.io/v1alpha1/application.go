@@ -27,6 +27,8 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
+	ApplicationFinalizerProcessed = "packages.deckhouse.io/processed"
+
 	ApplicationConditionRequirementsMet        = "RequirementsMet"
 	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
 	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
@@ -133,6 +135,8 @@ type ApplicationStatusCondition struct {
 type ApplicationInternalStatusCondition struct {
 	Type               string                 `json:"type"`
 	Status             corev1.ConditionStatus `json:"status"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
 	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
