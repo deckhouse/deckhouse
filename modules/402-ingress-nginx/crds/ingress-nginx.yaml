@@ -1021,6 +1021,7 @@ spec:
                           type: string
                           description: The URL for downloading GeoIP databases.
                           x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
+                          pattern: '^https?://.+$'
                         ca:
                           type: string
                           description: |
@@ -1034,8 +1035,10 @@ spec:
                           type: boolean
                           description: |
                             Skip TLS certificate verification for the mirror, for example when using self-signed certificates.
+                      required: ['url']
                     maxmindAccountID:
                       type: integer
+                      minimum: 1
                       description: |
                         MaxMind Account ID used to authenticate GeoIP2 database downloads.
 

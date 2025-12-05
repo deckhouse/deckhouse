@@ -217,9 +217,11 @@ properties:
                   properties:
                     maxmindMirror:
                       type: object
+                      required: ["url"]
                       properties:
                         url:
                           type: string
+                          pattern: '^https?://.+$'
                         ca:
                           type: string
                         insecureSkipVerify:
@@ -232,6 +234,7 @@ properties:
                         type: string
                     maxmindAccountID:
                       type: integer
+                      minimum: 1
                 legacySSL:
                   type: boolean
                 disableHTTP2:
