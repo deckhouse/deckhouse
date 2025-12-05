@@ -149,6 +149,7 @@ tolerations:
 {{- define "_helm_lib_any_node_tolerations" }}
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: "Exists"
 - key: dedicated
