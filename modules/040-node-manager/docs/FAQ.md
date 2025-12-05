@@ -1507,7 +1507,7 @@ Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is no
 {% endalert %}
 
 {% alert level="info" %}
-NVIDIA Container Toolkit supports the following platforms — see [official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+For the list of platforms supported by NVIDIA Container Toolkit, see [the official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:
