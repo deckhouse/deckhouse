@@ -65,7 +65,7 @@ func NewTask(name, hook string, info hookctrl.BindingExecutionInfo, status statu
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Hook:%s:Sync", t.packageName, t.hook)
+	return fmt.Sprintf("%s:%s:Sync", t.packageName, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {

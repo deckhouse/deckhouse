@@ -151,6 +151,7 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 		KubeEventsManager: o.kubeEventsManager,
 		ScheduleManager:   o.scheduleManager,
 		PackageManager:    o.manager,
+		StatusService:     o.status,
 		QueueService:      o.queueService,
 	}, o.logger).Start()
 
