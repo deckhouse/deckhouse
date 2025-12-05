@@ -37,8 +37,8 @@ const (
 	ConditionHelmApplied ConditionName = "HelmApplied"
 	// ConditionReadyInCluster checks the resources are ready
 	ConditionReadyInCluster ConditionName = "ReadyInCluster"
-	// ConditionSettingsValid checks the settings passed openAPI validation
-	ConditionSettingsValid ConditionName = "SettingsValid"
+	// ConditionSettingsIsValid checks the settings passed openAPI validation
+	ConditionSettingsIsValid ConditionName = "SettingsIsValid"
 )
 
 // Error wraps an error with associated status conditions
@@ -96,7 +96,7 @@ func newStatus() *Status {
 			{Name: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
 			{Name: ConditionHelmApplied, Status: metav1.ConditionUnknown},
 			{Name: ConditionReadyInCluster, Status: metav1.ConditionUnknown},
-			{Name: ConditionSettingsValid, Status: metav1.ConditionUnknown},
+			{Name: ConditionSettingsIsValid, Status: metav1.ConditionUnknown},
 		},
 	}
 }
@@ -175,7 +175,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 
 	runtimeConditions := []ConditionName{
 		ConditionRequirementsMet,
-		ConditionSettingsValid,
+		ConditionSettingsIsValid,
 		ConditionHelmApplied,
 		ConditionHooksProcessed,
 		ConditionReadyInCluster,

@@ -63,7 +63,7 @@ func NewTask(name, hook string, bctx []bctx.BindingContext, status statusService
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Package:%s:Hook:%s:Run", t.packageName, t.hook)
+	return fmt.Sprintf("%s:%s:Run", t.packageName, t.hook)
 }
 
 func (t *task) Execute(ctx context.Context) error {

@@ -113,7 +113,7 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 	s.applyInternalConditions(app, packageStatus.Conditions)
 
 	if app.Status.CurrentVersion == nil {
-		app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{}
+		app.Status.CurrentVersion = new(v1alpha1.ApplicationStatusVersion)
 	}
 
 	app.Status.CurrentVersion.Current = packageStatus.Version
