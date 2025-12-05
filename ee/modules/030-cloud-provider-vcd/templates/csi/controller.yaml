@@ -104,6 +104,7 @@ checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" "Default" }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}
