@@ -202,10 +202,15 @@
   - ""
   resources:
   - secrets
+  resourceNames:
+  - cacerts
+  - d8-istio-sidecar-registry
+  - d8-remote-clusters-public-metadata
+  - deckhouse-registry
   verbs:
   - get
-  - watch
   - list
+  - watch
 - apiGroups:
   - multicluster.x-k8s.io
   resources:

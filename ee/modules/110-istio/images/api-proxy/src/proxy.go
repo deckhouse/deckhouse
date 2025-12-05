@@ -16,12 +16,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/go-jose/go-jose/v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"math/big"
 	"net"
 	"net/http"
@@ -29,6 +23,13 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-jose/go-jose/v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 type Proxy struct {
@@ -249,15 +250,12 @@ func (p *Proxy) CheckAuthn(header http.Header, scope string) error {
 }
 
 func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
-
-
 	proxyDirector := func(req *http.Request) {
 		// impersonate as current ServiceAccount
 		saToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 		if err != nil {
 			logger.Printf("[api-proxy] Error reading SA token: %v", err)
 		}
-		
 		req.Header.Del("Authorization")
 		req.Header.Add("Authorization", "Bearer "+string(saToken))
 		req.URL.Scheme = "https"
