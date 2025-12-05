@@ -113,8 +113,8 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 Создадим каталог `certs` в каталоге `harbor`:
 
 ```console
-$ cd harbor/
-$ mkdir certs
+cd harbor/
+mkdir certs
 ``` 
 
 Сгенерируем сертификаты командами:
