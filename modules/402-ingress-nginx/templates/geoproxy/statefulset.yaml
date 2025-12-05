@@ -84,6 +84,7 @@ spec:
                   fieldPath: metadata.namespace
             - name: INTERVAL_UPDATE
               value: "24h"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
