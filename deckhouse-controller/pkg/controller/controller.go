@@ -327,7 +327,7 @@ func NewDeckhouseController(
 
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("register retain controller: %w", err)
+		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
 	// Package system controllers (feature flag)
