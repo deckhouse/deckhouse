@@ -120,22 +120,15 @@ $ mkdir certs
 Сгенерируем сертификаты командами:
 
 ```console
-openssl genrsa -out ca.key 4096
--new -nodes -sha512 -days 3650 \
--subj "/C=RU/ST-Moscow/L=Moscow/O=example/OU=Personal/CN-myca. local" \
--key ca.key \
--out ca.crt
+openssl genrsa -out ca.key 4096 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST-Moscow/L=Moscow/O=example/OU=Personal/CN-myca. local" -key ca.key -out ca.crt
 ```
 
 ```console
-openssl
-genrsa -out harbor.local.key 4096
-openssl
-req -sha512 -new\
--subj
-"/C-RU/ST-Moscow/L=Moscow/0=example/OU=Personal/CN=harbor.local" \
--key harbor.local.key \
--out harbor.local.csr
+openssl genrsa -out harbor.local.key 4096
+```
+
+```console
+openssl req -sha512 -new -subj "/C-RU/ST-Moscow/L=Moscow/0=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
 ```
 
 ```console
@@ -155,11 +148,7 @@ EOF
 
 
 ```console
-openssl x509 -req -sha512 -days 3650 \
--extfile v3.ext \
--CA ca.crt -CAkey ca.key -CAcreateserial \
--in harbor.local.csr \
--out harbor.local.crt
+openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.local.csr -out harbor.local.crt
 ```
 
 ```console
