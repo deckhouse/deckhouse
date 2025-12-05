@@ -18,8 +18,11 @@ spec:
     - expression: |
         request.userInfo.username.startsWith("system:serviceaccount:d8-")
         || ! has(object.metadata.labels)
-        || ! ("node.deckhouse.io/etcd-arbiter" in object.metadata.labels)
-        || ("node.deckhouse.io/etcd-arbiter" in oldObject.metadata.labels)
+        || ! has(oldObject.metadata.labels)
+        || (("node.deckhouse.io/etcd-arbiter" in object.metadata.labels)
+            && ("node.deckhouse.io/etcd-arbiter" in oldObject.metadata.labels)
+            && object.metadata.labels["node.deckhouse.io/etcd-arbiter"]
+               == oldObject.metadata.labels["node.deckhouse.io/etcd-arbiter"])
       reason: Forbidden
       messageExpression: "'Adding the `node.deckhouse.io/etcd-arbiter` label on nodes is forbidden'"
 ---
