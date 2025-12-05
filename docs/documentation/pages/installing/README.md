@@ -397,7 +397,12 @@ List of checks performed by the installer before starting Deckhouse installation
      - at least 60 GB of disk space with 400+ IOPS performance;
      - Linux kernel version 5.8 or newer;
      - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
-     - access to standard OS package repositories.
+     - access to standard OS package repositories;
+     - **When using `ContainerdV2`** as the default container runtime on cluster nodes:
+        - Support for `CgroupsV2`;
+        - Systemd version `244`;
+        - Support for the `erofs` kernel module.
+     - **When using `Containerd`** as the default container runtime on cluster nodes and if **module integrity control support** is required, the `erofs` module is enabled.
    - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.
