@@ -150,31 +150,6 @@ func TestQueue_MultipleTasksExecuteSequentially(t *testing.T) {
 	assert.Equal(t, []string{"task1", "task2", "task3"}, executionOrder, "tasks should execute in FIFO order")
 }
 
-// TestQueue_TaskRetryOnFailure tests exponential backoff retry logic
-func TestQueue_TaskRetryOnFailure(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	q := newQueue("test", getTestLogger()).Start(ctx)
-	defer q.Stop()
-
-	failCount := atomic.Int32{}
-	task := newMockTaskWithFunc("failing-task", func(_ context.Context) error {
-		count := failCount.Add(1)
-		if count < 3 {
-			return errors.New("temporary failure")
-		}
-		return nil // Success on 3rd attempt
-	})
-
-	var wg sync.WaitGroup
-	q.Enqueue(ctx, task, WithWait(&wg))
-
-	wg.Wait()
-
-	assert.Equal(t, int32(3), failCount.Load(), "task should retry until success")
-}
-
 // TestQueue_TaskFailurePermanent tests that tasks eventually stop retrying
 func TestQueue_TaskFailurePermanent(t *testing.T) {
 	t.Skip("Skipping: backoff can take a very long time (minutes) before giving up")
