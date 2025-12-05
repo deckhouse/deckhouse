@@ -87,7 +87,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/test-es-dest-pods": {
+    "destination/cluster/test-es-dest-pods/KubernetesPods": {
       "type": "elasticsearch",
       "inputs": [
         "transform/destination/test-es-dest-pods/02_del_parsed_data"
