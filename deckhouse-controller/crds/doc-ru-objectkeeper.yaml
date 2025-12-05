@@ -1,0 +1,80 @@
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    kind: ObjectKeeper
+    listKind: ObjectKeeperList
+    plural: objectkeepers
+    singular: objectkeeper
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Определяет конфигурацию ресурса ObjectKeeper.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              followObjectRef:
+                description: |-
+                  FollowObjectRef — параметры отслеживаемого объекта.
+                  Параметр обязателен, если mode = FollowObject или FollowObjectWithTTL.
+                  Объект ObjectKeeper будет удалён после удаления отслеживаемого объекта.
+                properties:
+                  apiVersion:
+                    description: Версия API отслеживаемого объекта
+                    type: string
+                  kind:
+                    description: Тип отслеживаемого объекта
+                    type: string
+                  name:
+                    description: Имя отслеживаемого объекта
+                    type: string
+                  namespace:
+                    description: Пространство имён отслеживаемого объекта
+                    type: string
+                  uid:
+                    description: |-
+                      UID отслеживаемого объекта.
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                - namespace
+                - uid
+                type: object
+              mode:
+                description: Режим управления временем жизни объекта
+                enum:
+                - FollowObject
+                - TTL
+                - FollowObjectWithTTL
+                type: string
+              ttl:
+                description: |-
+                  TTL — продолжительность жизни ObjectKeeper.
+                  Обязательно, если mode = TTL или FollowObjectWithTTL.
+                  Объект будет удалён после указанного времени.
+                  При FollowObjectWithTTL — отсчёт начинается после удаления связанного объекта.
+                type: string
+            required:
+            - mode
+            type: object
+            x-kubernetes-validations:
+            - message: followObjectRef is required when mode is FollowObject or FollowObjectWithTTL
+              rule: 'self.mode in [''FollowObject'',''FollowObjectWithTTL''] ? has(self.followObjectRef)
+                : true'
+            - message: ttl is required when mode is TTL or FollowObjectWithTTL
+              rule: 'self.mode in [''TTL'',''FollowObjectWithTTL''] ? has(self.ttl)
+                : true'
+            - message: followObjectRef must not be set when mode is TTL
+              rule: 'self.mode == ''TTL'' ? !has(self.followObjectRef) : true'
+            - message: ttl must not be set when mode is FollowObject
+              rule: 'self.mode == ''FollowObject'' ? !has(self.ttl) : true'

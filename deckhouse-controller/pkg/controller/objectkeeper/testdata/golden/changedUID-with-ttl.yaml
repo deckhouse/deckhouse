@@ -23,4 +23,4 @@ status:
     type: TTLActive
   lostAt: "2024-01-01T15:00:00Z"
   message: FollowObject UID mismatch - will delete ObjectKeeper after TTL expiration
-  phase: WaitingTTL
+  phase: Expiring

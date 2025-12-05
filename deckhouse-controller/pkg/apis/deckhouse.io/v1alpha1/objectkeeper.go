@@ -87,7 +87,7 @@ type FollowObjectRef struct {
 	UID string `json:"uid"`
 }
 
-// +kubebuilder:validation:Enum=Pending;Tracking;WaitingTTL
+// +kubebuilder:validation:Enum=Pending;Tracking;Expiring
 type ObjectKeeperPhase string
 
 const (
@@ -99,9 +99,9 @@ const (
 	// and the object exists with a matching UID.
 	PhaseTracking ObjectKeeperPhase = "Tracking"
 
-	// WaitingTTL indicates that the ObjectKeeper is waiting for the TTL to expire,
+	// Expiring indicates that the ObjectKeeper is waiting for the TTL to expire,
 	// typically after the referenced object was deleted or its UID no longer matches.
-	PhaseWaitingTTL ObjectKeeperPhase = "WaitingTTL"
+	PhaseExpiring ObjectKeeperPhase = "Expiring"
 )
 
 // +k8s:deepcopy-gen=true

@@ -46,9 +46,7 @@ import (
 
 const (
 	// FollowObjectCheckInterval is the interval for checking FollowObject status
-	FollowObjectCheckInterval = 2 * time.Minute
-	// TTLCheckInterval is the interval for checking TTL expiration
-	TTLCheckInterval = 1 * time.Minute
+	FollowObjectCheckInterval = 1 * time.Minute
 
 	MaxConcurrentReconciles = 5
 
@@ -372,7 +370,7 @@ func (r *ObjectKeeperController) reconcileTTL(ctx context.Context, objectkeeper 
 
 	// TTL not expired - ObjectKeeper is active
 	base := objectkeeper.DeepCopy()
-	objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+	objectkeeper.Status.Phase = v1alpha1.PhaseExpiring
 	objectkeeper.Status.Message = fmt.Sprintf("TTL expires at %v", expiresAt.Format(time.RFC3339))
 	setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 		Type:               "Active",
@@ -472,7 +470,7 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 			if objectkeeper.Status.LostAt == nil {
 				base := objectkeeper.DeepCopy()
 				objectkeeper.Status.LostAt = &now
-				objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+				objectkeeper.Status.Phase = v1alpha1.PhaseExpiring
 				objectkeeper.Status.Message = "FollowObject not found; starting TTL countdown"
 				setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 					Type:               "TTLActive",
@@ -527,7 +525,7 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 			now := metav1.Now()
 			base := objectkeeper.DeepCopy()
 			objectkeeper.Status.LostAt = &now
-			objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+			objectkeeper.Status.Phase = v1alpha1.PhaseExpiring
 			objectkeeper.Status.Message = "FollowObject not found; starting TTL countdown"
 			setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 				Type:               "TTLActive",
@@ -545,7 +543,7 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 		expiresAt := objectkeeper.Status.LostAt.Add(objectkeeper.Spec.TTL.Duration)
 		now := metav1.Now()
 		base := objectkeeper.DeepCopy()
-		objectkeeper.Status.Phase = v1alpha1.PhaseWaitingTTL
+		objectkeeper.Status.Phase = v1alpha1.PhaseExpiring
 		objectkeeper.Status.Message = "FollowObject UID mismatch - will delete ObjectKeeper after TTL expiration"
 		setSingleCondition(&objectkeeper.Status.Conditions, metav1.Condition{
 			Type:               "TTLActive",

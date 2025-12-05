@@ -33,17 +33,10 @@ spec:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -53,7 +46,7 @@ spec:
                 description: |-
                   FollowObjectRef references the namespaced object that controls retention
                   Required when mode = FollowObject or FollowObjectWithTTL
-                  The ObjectKeeper will be garbage collected when the referenced object is deleted
+                  The ObjectKeeper will be controller deleted when the referenced object is deleted
                   (or after TTL expires if mode = FollowObjectWithTTL)
                 properties:
                   apiVersion:
@@ -112,7 +105,7 @@ spec:
             properties:
               conditions:
                 description: Conditions represent the latest available observations
-                  of the objectkeeper state
+                  of the objectkeeper state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -132,8 +125,6 @@ spec:
                     observedGeneration:
                       description: |-
                         observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
@@ -142,8 +133,6 @@ spec:
                         reason contains a programmatic identifier indicating the reason for the condition's last transition.
                         Producers of specific condition types may define expected values and meanings for this field,
                         and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -153,7 +142,7 @@ spec:
                       enum:
                       - "True"
                       - "False"
-                      - Unknown
+                      - "Unknown"
                       type: string
                     type:
                       description: type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -169,23 +158,25 @@ spec:
                   type: object
                 type: array
               message:
-                description: Message provides additional information about the status
+                description: Message provides additional information about the status.
                 type: string
               phase:
                 description: Phase of the objectkeeper
                 enum:
                 - Pending
                 - Tracking
-                - WaitingTTL
+                - Expiring
                 type: string
               lostAt:
-                description: Timestamp when the referenced object was no longer found
+                description: Timestamp when the referenced object was no longer found.
                 format: date-time
                 type: string
             type: object
         required:
         - spec
         type: object
+        description: |
+          Defines the configuration of an ObjectKeeper resource.
     served: true
     storage: true
     subresources:
