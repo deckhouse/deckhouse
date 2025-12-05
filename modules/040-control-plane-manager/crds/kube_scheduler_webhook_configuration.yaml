@@ -98,6 +98,22 @@ spec:
                     default: 10
                     minimal: 1
                     maximal: 60
+                  filterVerb:
+                    type: string
+                    #description: | ???
+                    #pattern:
+                  prioritizeVerb:
+                    type: string
+                    #description: | ???
+                    #pattern:
+                  preemptVerb:
+                    type: string
+                    #description: | ???
+                    #pattern:
+                  bindVerb:
+                    type: string
+                    #description: | ???
+                    #pattern:
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name

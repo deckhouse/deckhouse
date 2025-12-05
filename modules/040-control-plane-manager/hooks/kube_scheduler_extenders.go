@@ -58,12 +58,17 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return extenderCR.Webhooks, err
 }
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
+
 	type extenderConfig struct {
-		URLPrefix string `yaml:"urlPrefix" json:"urlPrefix"`
-		Weight    int    `yaml:"weight" json:"weight"`
-		Timeout   int    `yaml:"timeout" json:"timeout"`
-		Ignorable bool   `yaml:"ignorable" json:"ignorable"`
-		CAData    string `yaml:"caData" json:"caData"`
+		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
+		Weight         int    `yaml:"weight" json:"weight"`
+		Timeout        int    `yaml:"timeout" json:"timeout"`
+		Ignorable      bool   `yaml:"ignorable" json:"ignorable"`
+		CAData         string `yaml:"caData" json:"caData"`
+		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
+		PrioritizeVerb string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+		PreemptVerb    string `yaml:"preemptVerb" json:"preemptVerb"`
+		BindVerb       string `yaml:"bindVerb" json:"bindVerb"`
 	}
 	extenders := make([]extenderConfig, 0)
 
@@ -86,11 +91,15 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 				return err
 			}
 			newExtender := extenderConfig{
-				URLPrefix: urlPrefix,
-				Weight:    config.Weight,
-				Timeout:   config.TimeoutSeconds,
-				Ignorable: config.FailurePolicy == "Ignore",
-				CAData:    config.ClientConfig.CABundle,
+				URLPrefix:      urlPrefix,
+				Weight:         config.Weight,
+				Timeout:        config.TimeoutSeconds,
+				Ignorable:      config.FailurePolicy == "Ignore",
+				CAData:         config.ClientConfig.CABundle,
+				FilterVerb:     config.FilterVerb,
+				PrioritizeVerb: config.PrioritizeVerb,
+				PreemptVerb:    config.PreemptVerb,
+				BindVerb:       config.BindVerb,
 			}
 			extenders = append(extenders, newExtender)
 		}
@@ -119,6 +128,10 @@ type KubeSchedulerWebhook struct {
 	FailurePolicy  string                           `json:"failurePolicy" yaml:"failurePolicy"`
 	ClientConfig   KubeSchedulerWebhookClientConfig `json:"clientConfig" yaml:"clientConfig"`
 	TimeoutSeconds int                              `json:"timeoutSeconds" yaml:"timeoutSeconds"`
+	FilterVerb     string                           `yaml:"filterVerb" json:"filterVerb"`
+	PrioritizeVerb string                           `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+	PreemptVerb    string                           `yaml:"preemptVerb" json:"preemptVerb"`
+	BindVerb       string                           `yaml:"bindVerb" json:"bindVerb"`
 }
 
 type KubeSchedulerWebhookClientConfig struct {

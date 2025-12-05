@@ -80,6 +80,14 @@ properties:
               type: boolean
             caData:
               type: string
+            filterVerb:
+              type: string
+            prioritizeVerb:
+              type: string
+            preemptVerb:
+              type: string
+            bindVerb:
+              type: string
         default: []
       allowedFeatureGates:
         type: object

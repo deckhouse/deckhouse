@@ -26,10 +26,15 @@ profiles:
         whenUnsatisfiable: ScheduleAnyway
   {{- if .scheduler.extenders }}
 extenders:
+// TODO sort like in kub doc
     {{- range $extender := .scheduler.extenders }}
 - urlPrefix: {{ $extender.urlPrefix }}
-  filterVerb: filter
-  prioritizeVerb: prioritize
+  {{- if $extender.filterVerb }}
+  filterVerb: {{ $extender.filterVerb}}
+  {{- end }}
+  {{- if $extender.prioritizeVerb }}
+  prioritizeVerb: {{ $extender.prioritizeVerb}}
+  {{- end }}
   weight: {{ $extender.weight }}
   enableHTTPS: true
   httpTimeout: {{ $extender.timeout }}s
