@@ -44,9 +44,9 @@ func detectCNIMigration(_ context.Context, input *go_hook.HookInput) error {
 	hasMigration := len(input.Snapshots.Get("cni_migrations")) > 0
 
 	if hasMigration {
-		input.Values.Set("deckhouse.internal.cniMigrationEnabled", true)
+		input.Values.Set("global.internal.cniMigrationEnabled", true)
 	} else {
-		input.Values.Remove("deckhouse.internal.cniMigrationEnabled")
+		input.Values.Remove("global.internal.cniMigrationEnabled")
 	}
 
 	return nil

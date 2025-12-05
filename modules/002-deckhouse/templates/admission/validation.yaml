@@ -28,7 +28,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -81,7 +81,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -107,7 +107,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -142,7 +142,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -177,7 +177,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -212,7 +212,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail
@@ -240,7 +240,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
-    {{- if .Values.deckhouse.internal.cniMigrationEnabled }}
+    {{- if .Values.global.internal.cniMigrationEnabled }}
     failurePolicy: Ignore
     {{- else }}
     failurePolicy: Fail

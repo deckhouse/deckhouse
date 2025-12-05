@@ -18,9 +18,6 @@ properties:
       chrootMode:
         type: boolean
         default: false
-      cniMigrationEnabled:
-        type: boolean
-        default: false
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:
