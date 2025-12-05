@@ -379,14 +379,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
 		logger.Debug("adding finalizer to application")
 
-		patch := client.MergeFrom(app.DeepCopy())
-
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
+	}
 
-		err = r.client.Patch(ctx, app, patch)
-		if err != nil {
-			return fmt.Errorf("patch application %s: %w", app.Name, err)
-		}
+	app = r.addOwnerReferencesIfNotSet(app, apv, ap)
+
+	err = r.client.Patch(ctx, app, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 
 	return nil
@@ -546,6 +546,52 @@ func (r *reconciler) SetConditionFalse(app *v1alpha1.Application, condType strin
 		LastProbeTime:      time,
 		LastTransitionTime: time,
 	})
+
+	return app
+}
+
+func (r *reconciler) addOwnerReferencesIfNotSet(app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion, ap *v1alpha1.ApplicationPackage) *v1alpha1.Application {
+	ownerRefs := app.GetOwnerReferences()
+	trueLink := &[]bool{true}[0]
+
+	isAPVRefSet := false
+	isAPRefSet := false
+
+	// check which owner references are not set
+	for _, ref := range ownerRefs {
+		if ref.Kind == v1alpha1.ApplicationPackageVersionKind {
+			isAPVRefSet = true
+			continue
+		}
+
+		if ref.Kind == v1alpha1.ApplicationPackageKind {
+			isAPRefSet = true
+			continue
+		}
+	}
+
+	// add owner references if they are not set
+	if !isAPVRefSet {
+		ownerRefs = append(ownerRefs, metav1.OwnerReference{
+			APIVersion: v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
+			Kind:       v1alpha1.ApplicationPackageVersionKind,
+			Name:       apv.Name,
+			UID:        apv.UID,
+			Controller: trueLink,
+		})
+	}
+
+	if !isAPRefSet {
+		ownerRefs = append(ownerRefs, metav1.OwnerReference{
+			APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
+			Kind:       v1alpha1.ApplicationPackageKind,
+			Name:       ap.Name,
+			UID:        ap.UID,
+			Controller: trueLink,
+		})
+	}
+
+	app.SetOwnerReferences(ownerRefs)
 
 	return app
 }
