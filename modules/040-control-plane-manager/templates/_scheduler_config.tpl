@@ -26,7 +26,6 @@ profiles:
         whenUnsatisfiable: ScheduleAnyway
   {{- if .scheduler.extenders }}
 extenders:
-// TODO sort like in kub doc
     {{- range $extender := .scheduler.extenders }}
 - urlPrefix: {{ $extender.urlPrefix }}
   {{- if $extender.filterVerb }}
