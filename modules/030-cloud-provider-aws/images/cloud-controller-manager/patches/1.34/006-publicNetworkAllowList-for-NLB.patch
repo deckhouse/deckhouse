@@ -1,19 +1,8 @@
-From 19085753f2fcb4f144816eaf466cf9bbf7cb98c4 Mon Sep 17 00:00:00 2001
-From: Vladislav Denisov <vlad144denisov@gmail.com>
-Date: Fri, 5 Dec 2025 16:24:23 +0300
-Subject: [PATCH] Feature: add publicNetworkAllowList for NLB
-
----
- pkg/providers/v1/aws.go              | 19 ++++++++++++++++++-
- pkg/providers/v1/aws_loadbalancer.go |  4 ++++
- pkg/providers/v1/config/config.go    |  3 ++-
- 3 files changed, 24 insertions(+), 2 deletions(-)
-
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index 89b1d742..8e4a66e2 100644
+index e1070eec..372fff19 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
-@@ -404,7 +404,8 @@ type Cloud struct {
+@@ -373,7 +373,8 @@ type Cloud struct {
  	region   string
  	vpcID    string
  
@@ -23,7 +12,7 @@ index 89b1d742..8e4a66e2 100644
  
  	// The AWS instance that we are running on
  	// Note that we cache some state in awsInstance (mountpoints), so we must preserve the instance
-@@ -615,6 +616,22 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
+@@ -584,6 +585,22 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
  		deleteTagsBatcher:       newDeleteTagsBatcher(ctx, ec2),
  		describeInstanceBatcher: newdescribeInstanceBatcher(ctx, ec2),
  	}
@@ -47,10 +36,10 @@ index 89b1d742..8e4a66e2 100644
  	awsCloud.zoneCache.cloud = awsCloud
  	awsCloud.instanceTopologyManager = NewInstanceTopologyManager(ec2, &cfg)
 diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
-index f9dd5984..199488e1 100644
+index ca95a3ab..baf2e23a 100644
 --- a/pkg/providers/v1/aws_loadbalancer.go
 +++ b/pkg/providers/v1/aws_loadbalancer.go
-@@ -959,6 +959,10 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(ctx context.Context, lbName s
+@@ -793,6 +793,10 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(ctx context.Context, lbName s
  		return nil
  	}
  
@@ -62,19 +51,16 @@ index f9dd5984..199488e1 100644
  	if err != nil {
  		return fmt.Errorf("error querying for tagged security groups: %q", err)
 diff --git a/pkg/providers/v1/config/config.go b/pkg/providers/v1/config/config.go
-index 557a125a..d940ef93 100644
+index 6dd65a20..4a08ab83 100644
 --- a/pkg/providers/v1/config/config.go
 +++ b/pkg/providers/v1/config/config.go
-@@ -108,7 +108,8 @@ type CloudConfig struct {
- 
- 		// NLBSecurityGroupMode determines if the controller manages, creates, and attaches the security group when a service of type LoadBalancer (NLB) is created.
- 		// Supported value is `Managed`.
--		NLBSecurityGroupMode string `json:"nlbSecurityGroupMode,omitempty" yaml:"nlbSecurityGroupMode,omitempty"`
-+		NLBSecurityGroupMode   string `json:"nlbSecurityGroupMode,omitempty" yaml:"nlbSecurityGroupMode,omitempty"`
+@@ -75,7 +75,8 @@ type CloudConfig struct {
+ 		//AWS has a hard limit of 500 security groups. For large clusters creating a security group for each ELB
+ 		//can cause the max number of security groups to be reached. If this is set instead of creating a new
+ 		//Security group for each ELB this security group will be used instead.
+-		ElbSecurityGroup string
++		ElbSecurityGroup       string
 +		PublicNetworkAllowList string `json:"publicNetworkAllowList,omitempty" yaml:"publicNetworkAllowList,omitempty"`
- 	}
- 	// [ServiceOverride "1"]
- 	//  Service = s3
--- 
-2.48.1
-
+ 
+ 		// NodeIPFamilies determines which IP addresses are added to node objects and their ordering.
+ 		NodeIPFamilies []string
