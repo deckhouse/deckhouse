@@ -7,6 +7,17 @@ metadata:
   - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.1
+    uid: ""
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ApplicationPackage
+    name: test
+    uid: ""
   resourceVersion: "4"
 spec:
   packageName: test
