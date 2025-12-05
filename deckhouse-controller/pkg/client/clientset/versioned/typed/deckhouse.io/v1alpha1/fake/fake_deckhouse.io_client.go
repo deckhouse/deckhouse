@@ -73,6 +73,10 @@ func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePoli
 	return newFakeModuleUpdatePolicies(c)
 }
 
+func (c *FakeDeckhouseV1alpha1) ObjectKeepers() v1alpha1.ObjectKeeperInterface {
+	return newFakeObjectKeepers(c)
+}
+
 func (c *FakeDeckhouseV1alpha1) PackageRepositories() v1alpha1.PackageRepositoryInterface {
 	return newFakePackageRepositories(c)
 }

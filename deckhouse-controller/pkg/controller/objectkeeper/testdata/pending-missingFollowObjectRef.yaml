@@ -1,0 +1,6 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: missing-follow-objref
+spec:
+  mode: FollowObject
