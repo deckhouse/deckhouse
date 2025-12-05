@@ -19,11 +19,51 @@
 SWAPFILE="/var/lib/swapfile"
 SYSCTL_CONF="/etc/sysctl.d/99-swap.conf"
 
+# Shared helpers
+mem_available_bytes() {
+  awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo
+}
+
+total_swap_used_bytes() {
+  swapon --show=USED --bytes --noheadings 2>/dev/null | awk '{sum+=$1} END {if (sum=="") print 0; else print sum}'
+}
+
+buffer_bytes() {
+  # Extra size
+  echo $((1024 * 1024 * 1024))
+}
+
+disruptive_approve_and_drain() {
+  # Approval -> cordon + drain
+  local kubeconfig="/etc/kubernetes/kubelet.conf"
+  local node="${D8_NODE_HOSTNAME:-$(hostname)}"
+
+  bb-deckhouse-get-disruptive-update-approval
+
+  bb-log-info "Disruption approved, cordoning and draining node $node"
+  kubectl --kubeconfig="$kubeconfig" cordon "$node"
+  kubectl --kubeconfig="$kubeconfig" drain "$node" --ignore-daemonsets --delete-emptydir-data --force --grace-period=30 --timeout=900s
+}
+
 
 {{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
 ###############################################
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
+
+# If we are about to disable swap, ensure enough RAM or perform cordon+drain
+TOTAL_SWAP_USED=$(total_swap_used_bytes)
+if [ "$TOTAL_SWAP_USED" -gt 0 ]; then
+  AVAILABLE=$(mem_available_bytes)
+  BUFFER=$(buffer_bytes "$TOTAL_SWAP_USED")
+  REQUIRED=$((TOTAL_SWAP_USED + BUFFER))
+  if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
+    bb-log-warning "Not enough free memory to disable swap safely (available=${AVAILABLE}B, needed>=$REQUIRED B). Requesting disruptive approval and draining node."
+    disruptive_approve_and_drain
+  else
+    bb-log-info "Sufficient memory to disable swap in-place (available=${AVAILABLE}B, swap_used=${TOTAL_SWAP_USED}B)."
+  fi
+fi
 
 # Stop and mask systemd swap units
 for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
@@ -97,6 +137,21 @@ fi
 
 # Recreate swapfile if size differs or doesn't exist
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
+  # If swap is in use and memory is tight, require disruptive approval and drain
+  SWAP_USED=$(swapon --show=NAME,USED --bytes --noheadings 2>/dev/null | awk -v f="$SWAPFILE" '$1==f {print $2}')
+  SWAP_USED=${SWAP_USED:-0}
+  if [ "$SWAP_USED" -gt 0 ]; then
+    AVAILABLE=$(mem_available_bytes)
+    BUFFER=$(buffer_bytes "$SWAP_USED")
+    REQUIRED=$((SWAP_USED + BUFFER))
+    if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
+      bb-log-warning "Not enough free memory to resize swap safely (available=${AVAILABLE}B, swap_used=${SWAP_USED}B). Requesting disruptive approval and draining node."
+      disruptive_approve_and_drain
+    else
+      bb-log-info "Sufficient memory to resize swap in-place (available=${AVAILABLE}B, swap_used=${SWAP_USED}B)."
+    fi
+  fi
+
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
   swapoff "$SWAPFILE" 2>/dev/null || true
   rm -f "$SWAPFILE"
