@@ -7,7 +7,6 @@ documentationEnabled: true
 deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
-flowSchemaEnabled: true
 ingressNginxEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
@@ -21,7 +20,6 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-snapshotControllerEnabled: true
 upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true
