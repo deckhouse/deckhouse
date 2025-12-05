@@ -232,15 +232,9 @@ func (r *StaticInstanceReconciler) getStaticMachine(
 	// Fetch the static machine.
 	err := r.Get(ctx, staticMachineNamespacedName, staticMachine)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.V(1).Info("No StaticMachine is associated with StaticInstance")
+		logger.Info("No StaticMachine is associated with StaticInstance")
 
-			return nil, nil
-		}
-
-		logger.Error(err, "failed to get StaticMachine for StaticInstance")
-
-		return nil, errors.Wrap(err, "failed to get StaticMachine")
+		return nil, nil
 	}
 
 	var ok bool
