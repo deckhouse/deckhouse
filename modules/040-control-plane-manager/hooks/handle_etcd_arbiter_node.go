@@ -31,17 +31,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "master_nodes",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/control-plane": "",
-				},
-			},
-			FilterFunc: applyNodeFilter,
-		},
-		{
 			Name:       "etcd_arbiter_node",
 			ApiVersion: "v1",
 			Kind:       "Node",
@@ -60,7 +49,6 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func handleCheckEtcdArbiterNode(_ context.Context, input *go_hook.HookInput) error {
-	masterNodes := input.Snapshots.Get("master_nodes")
 	etcdArbiterNodes := input.Snapshots.Get("etcd_arbiter_node")
 
 	if len(etcdArbiterNodes) > 1 {
