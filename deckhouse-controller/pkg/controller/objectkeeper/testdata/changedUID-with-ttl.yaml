@@ -12,7 +12,7 @@ spec:
     uid: befc4950-0348-494d-af5e-94d65ad0d03e
   ttl: 1h
 status:
-  lostAt: 2099-01-01T15:00:00Z
+  lostAt: 2099-01-01T15:00:00Z  # Far future date to simulate unexpired TTL countdown
 ---
 apiVersion: v1
 kind: Pod
