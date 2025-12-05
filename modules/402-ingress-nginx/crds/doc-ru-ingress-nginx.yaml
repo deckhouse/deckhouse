@@ -637,6 +637,29 @@ spec:
                   description: |
                     Опции для включения GeoIP2.
                   properties:
+                    maxmindMirror:
+                      description: |
+                        Настройки зеркала для скачивания баз GeoIP. 
+                        Если параметр не указан или имеет пустое значение, то по умолчанию будет использоваться `https://download.maxmind.com`.
+
+                        Пример корректного URL: https://mirror.local/GeoLite2-City.tar.gz.
+
+                        Если зеркало используется для хранения предзагруженных архивов, параметр `licenseKey` можно не указывать.
+                      properties:
+                        url:
+                          description: URL для скачивания баз GeoIP.
+                        ca:
+                          description: |
+                            Пользовательский корневой сертификат в формате PEM для проверки TLS-соединения с зеркалом.
+                        insecureSkipVerify:
+                          description: |
+                            Отключает проверку TLS сертификатов зеркала, например, если используется самоподписанный сертификат.
+                    maxmindAccountID:
+                      minimum: 1
+                      description: |
+                        Идентификатор учетной записи MaxMind, используемый для аутентификации загрузки базы данных GeoIP2.
+
+                        Требуется, когда указан `maxmindLicenseKey`. Если задан `maxmindAccountID`, загрузка выполняется официальной библиотекой `geoipupdate`, что позволяет пропускать неизменённые обновления и экономить лимит лицензии.
                     maxmindLicenseKey:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.

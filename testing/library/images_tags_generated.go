@@ -293,6 +293,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller112":            "imageHash-ingressNginx-controller112",
 		"controller19":             "imageHash-ingressNginx-controller19",
 		"failoverCleaner":          "imageHash-ingressNginx-failoverCleaner",
+		"geoproxy":                 "imageHash-ingressNginx-geoproxy",
 		"init":                     "imageHash-ingressNginx-init",
 		"iptablesWrapperInit":      "imageHash-ingressNginx-iptablesWrapperInit",
 		"kruise":                   "imageHash-ingressNginx-kruise",

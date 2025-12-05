@@ -1,0 +1,44 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/*.sum'
+    - '**/*.mod'
+---
+image: {{ .ModuleName }}/geoproxy-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{- include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /geoproxy cmd/main.go
+  - chown 64535:64535 /geoproxy
+  - chmod 755 /geoproxy
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/geoproxy-artifact
+  add: /geoproxy
+  to: /geoproxy
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/geoproxy"]

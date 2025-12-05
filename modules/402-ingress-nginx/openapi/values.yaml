@@ -215,12 +215,26 @@ properties:
                 geoIP2:
                   type: object
                   properties:
+                    maxmindMirror:
+                      type: object
+                      required: ["url"]
+                      properties:
+                        url:
+                          type: string
+                          pattern: '^https?://.+$'
+                        ca:
+                          type: string
+                        insecureSkipVerify:
+                          type: boolean
                     maxmindLicenseKey:
                       type: string
                     maxmindEditionIDs:
                       type: array
                       items:
                         type: string
+                    maxmindAccountID:
+                      type: integer
+                      minimum: 1
                 legacySSL:
                   type: boolean
                 disableHTTP2:
@@ -340,3 +354,12 @@ properties:
             default: []
             items:
               type: string
+      geoproxyReady:
+        type: boolean
+        default: false
+        description: Indicates that geoproxy StatefulSet is ready.
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean

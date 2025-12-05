@@ -72,6 +72,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.namespaces", json.RawMessage("[]"))
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.ingresses", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.geoproxyReady", true)
 	})
 
 	table.DescribeTable("Render IngressNginx controllers",
