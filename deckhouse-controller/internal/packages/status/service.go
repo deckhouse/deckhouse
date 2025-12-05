@@ -174,7 +174,6 @@ func (s *Service) ClearRuntimeConditions(name string) {
 	}
 
 	runtimeConditions := []ConditionName{
-		ConditionRequirementsMet,
 		ConditionSettingsIsValid,
 		ConditionHelmApplied,
 		ConditionHooksProcessed,
