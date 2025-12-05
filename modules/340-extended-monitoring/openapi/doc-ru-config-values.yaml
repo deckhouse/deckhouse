@@ -6,6 +6,16 @@ properties:
       exporterEnabled:
         description: |
           Включен ли imageAvailabilityExporter.
+      imageCheckInterval:
+        description: |
+          Интервал запросов в registry для проверки доступности образа.
+          Поддерживаемый формат - Go-style duration ("10s", "10m", "10h").
+          Если не задан, то используется дефолтное значение в 60 секунд.
+      defaultRegistry:
+        description: |
+          Стандартный registry для проверки доступности образов.
+          Используется если не указан таковой в образе.
+          Если не задан, то используется index.docker.io
       ignoredImages:
         description: |
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
@@ -30,6 +40,10 @@ properties:
         type: array
         description: |
           Список зеркал для container registry.
+      mirrorsSchemes:
+        type: array
+        description: |
+          Протокол доступа к зеркалу container registry.
       forceCheckDisabledControllers:
         description: |
           Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
