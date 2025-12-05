@@ -1508,7 +1508,7 @@ metadata:
 {% endalert %}
 
 {% alert level="info" %}
-NVIDIA Container Toolkit поддерживает следующие платформы — см. [официальную документацию](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+Список поддерживаемых платформ NVIDIA Container Toolkit см. в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
 {% endalert %}
 
 Чтобы добавить GPU-узел в кластер, выполните следующие действия:
