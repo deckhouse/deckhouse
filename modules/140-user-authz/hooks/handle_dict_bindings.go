@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,7 +75,20 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
-	if !strings.HasPrefix(binding.RoleRef.Name, "d8:use:role:") {
+	switch {
+	case strings.HasPrefix(binding.RoleRef.Name, "d8:use:role:"):
+		break
+	case slices.Contains(
+		[]string{
+			"user-authz:user",
+			"user-authz:privileged-user",
+			"user-authz:editor",
+			"user-authz:admin",
+		},
+		binding.RoleRef.Name,
+	):
+		break
+	default:
 		return nil, nil
 	}
 
