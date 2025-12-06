@@ -19,47 +19,54 @@ import (
 	"fmt"
 	"time"
 
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvider, nodeUser *v1.NodeUser) error {
+func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
 	if err != nil {
-		return fmt.Errorf("failed to convert NodeUser to unstructured: %w", err)
+		return fmt.Errorf("Failed to convert NodeUser to unstructured: %w", err)
 	}
 
 	return retry.NewLoop("Save dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() error {
-		_, err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Create(ctx, nodeUserResource, metav1.CreateOptions{})
+		kubeCl, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
 
+		_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Create(ctx, nodeUserResource, metav1.CreateOptions{})
 		if err != nil {
 			if k8errors.IsAlreadyExists(err) {
-				_, err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
+				_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
 				return err
 			}
 
-			return fmt.Errorf("failed to create NodeUser: %w", err)
+			return fmt.Errorf("Failed to create NodeUser: %w", err)
 		}
 
 		return nil
 	})
 }
 
-func DeleteNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvider, name string) error {
+func DeleteNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, name string) error {
 	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() (err error) {
-		err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
+		kubeCl, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+		err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
 			}
 
-			return fmt.Errorf("failed to delete NodeUser: %w", err)
+			return fmt.Errorf("Failed to delete NodeUser: %w", err)
 		}
 
 		return nil

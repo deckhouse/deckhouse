@@ -20,26 +20,23 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-type KubeClientGetter interface {
-	GetKubeClient(ctx context.Context) (*client.KubernetesClient, error)
-}
-
 type KubeTerraStateLoader struct {
-	kubeGetter KubeClientGetter
-	stateCache state.Cache
-	logger     log.Logger
+	kubeProvider kubernetes.KubeClientProviderWithCtx
+	stateCache   state.Cache
+	logger       log.Logger
 }
 
-func NewCachedTerraStateLoader(kubeGetter KubeClientGetter, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
-		kubeGetter: kubeGetter,
-		stateCache: stateCache,
+		kubeProvider: kubeProvider,
+		stateCache:   stateCache,
 	}
 }
 
@@ -63,7 +60,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return metaConfig, nil
 	}
 
-	kubeCl, err := s.kubeGetter.GetKubeClient(ctx)
+	kubeCl, err := s.kubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +121,7 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 			return nil, err
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
+		if kubeCl, err = s.kubeProvider.KubeClientCtx(ctx); err != nil {
 			return nil, err
 		}
 		nodesState, err = GetNodesStateFromCluster(ctx, kubeCl)
@@ -160,7 +157,7 @@ func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, err
 			return nil, fmt.Errorf("can't load cluster state from cache")
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
+		if kubeCl, err = s.kubeProvider.KubeClientCtx(ctx); err != nil {
 			return nil, err
 		}
 		clusterState, err = GetClusterStateFromCluster(ctx, kubeCl)
