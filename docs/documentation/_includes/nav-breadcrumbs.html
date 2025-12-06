@@ -1,13 +1,14 @@
 <div class="navigation__container">
-  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
-    <div>
-      {%- if site.mode == 'module' %}
-        <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
-      {%- else if page.sidebar == 'embedded-modules' %}
-        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
-      {%- else %}
-        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
-      {%- endif %}
+  <div class="navigation__container--left">
+    <div class="version">
+      <div>
+        {%- if site.mode == 'module' %}
+          <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
+        {%- else if page.sidebar == 'embedded-modules' %}
+          <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+        {%- else %}
+          <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+        {%- endif %}
 
       <!-- module-version-badge -->
       <div id="doc-versions-menu" class="channel-menu submenu-parent">
@@ -19,11 +20,12 @@
           {%- endif %}
         {%- endunless -%}
       </div>
-  </div>
-  <div class="breadcrumbs__container">
-    <ol class="breadcrumbs">
-      {% include nav-breadcrumbs-pagepath.html %}
-    </ol>
+    </div>
+    <div class="breadcrumbs__container">
+      <ol class="breadcrumbs">
+        {% include nav-breadcrumbs-pagepath.html %}
+      </ol>
+    </div>
   </div>
   {% if page.searchBageEnabled %}
     <!--start search-->

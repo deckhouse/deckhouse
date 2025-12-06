@@ -1,13 +1,27 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 div.alert__wrap {
-  display: flex;
+  display: block;
   padding: 0 15px;
   margin-bottom: 15px;
   font-size: 16px;
   line-height: 24px;
   border-radius: .5em;
   border: 2px solid;
+
+  @include breakpoints.max-w(xl) {
+    padding: 0 10px;
+  }
+
+  & > div {
+    padding-left: 40px;
+
+    @include breakpoints.max-w(s) {
+      padding-left: 30px;
+    }
+  }
 
   & a {
     color: variables.$color-alt;
@@ -18,11 +32,22 @@ div.alert__wrap {
   }
 
   & .alert__icon {
+    position: absolute;
     min-width: 24px;
     width: 24px;
     height: 24px;
     margin-right: 24px;
     padding: 16px 0;
+
+    @include breakpoints.max-w(xl) {
+      margin-right: 16px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      min-width: 20px;
+      width: 20px;
+      height: 20px;
+    }
   }
 
   &.hide {

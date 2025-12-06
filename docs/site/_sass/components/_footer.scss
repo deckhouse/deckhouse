@@ -13,7 +13,7 @@ body {
 }
 
 .content {
-  min-width: 1065px;
+  min-width: 100%;
   flex: 1 0 auto;
 }
 
@@ -124,7 +124,7 @@ body {
   padding: 24px 0;
   @include mixins.color(mixins.$white);
   @include mixins.bg-color(mixins.$dark-blue);
-  min-width: 1065px;
+  min-width: 100%;
 
   @include breakpoints.min-w(xs) {
     padding: 32px 0;
@@ -135,13 +135,29 @@ body {
   }
 
   &__cols {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    // display: flex;
+    // flex-direction: row;
+    // flex-wrap: wrap;
+    // justify-content: space-between;
     padding: 25px 0;
     gap: 24px 64px;
     border-top: mixins.$ntrl-300 solid 1px;
+
+    @media screen and (min-width: 320px) {
+      grid-template-columns: none;
+    }
+
+    @include breakpoints.min-w(s) {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @include breakpoints.min-w(m) {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
   }
 
   &__col {
@@ -178,16 +194,20 @@ body {
 
   &__copyright {
     display: flex;
+    flex-direction: column;
     padding-top: 20px;
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-between;
+    // align-items: center;
+    // flex-direction: row;
+    // justify-content: space-between;
     gap: 30px 20px;
     flex-wrap: wrap;
     font-size: 14px;
     @include mixins.color(mixins.$ntrl-300);
 
     @include breakpoints.min-w(m) {
+      align-items: center;
+      flex-direction: row;
+      justify-content: space-between;
       padding-top: 60px;
     }
 
@@ -197,27 +217,40 @@ body {
 
     .nav {
       display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
+      align-items: baseline;
+      flex-direction: column;
       gap: 0.8em 20px;
+
+      @include breakpoints.min-w(m) {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
 
       li:not(:first-of-type) {
         position: relative;
 
-        &:before {
-          content: '';
-          position: absolute;
-          left: -10px;
-          top: 25%;
-          width: 1px;
-          height: 60%;
-          @include mixins.bg-color(mixins.$ntrl-300);
+        @include breakpoints.min-w(m) {
+          &:before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 25%;
+            width: 1px;
+            height: 60%;
+            @include mixins.bg-color(mixins.$ntrl-300);
+          }
         }
       }
 
       a {
-        @include mixins.color(mixins.$ntrl-300);
+        // @include mixins.color(mixins.$ntrl-300);
+
+        color: #fff;
+
+        @include breakpoints.min-w(m) {
+          @include mixins.color(mixins.$ntrl-300);
+        }
 
         &:hover {
           @include mixins.color(mixins.$white);
