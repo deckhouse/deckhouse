@@ -32,7 +32,7 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 
 	state := NewDestroyState(&cache.DummyCache{})
 
-	destroyer := NewDeckhouseDestroyer(sshProvider, state, DeckhouseDestroyerOptions{CommanderMode: false})
+	destroyer := NewDeckhouseDestroyer(newKubeClientProvider(sshProvider), state, DeckhouseDestroyerOptions{CommanderMode: false})
 
 	cleanupTest := func() {
 		destroyer.Cleanup(true)
