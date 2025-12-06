@@ -18,15 +18,12 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type DeckhouseDestroyerOptions struct {
@@ -35,20 +32,19 @@ type DeckhouseDestroyerOptions struct {
 }
 
 type DeckhouseDestroyer struct {
-	convergeUnlocker  func(fullUnlock bool)
-	sshClientProvider SSHProvider
-	sshClient         node.SSHClient
-	kubeCl            *client.KubernetesClient
-	state             *State
+	convergeUnlocker func(fullUnlock bool)
+
+	kubeProvider kubeClientProviderWithCleanup
+	state        *State
 
 	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClientProvider SSHProvider, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(kubeProvider kubeClientProviderWithCleanup, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
-		sshClientProvider:         sshClientProvider,
 		state:                     state,
 		DeckhouseDestroyerOptions: opts,
+		kubeProvider:              kubeProvider,
 	}
 }
 
@@ -59,29 +55,8 @@ func (g *DeckhouseDestroyer) UnlockConverge(fullUnlock bool) {
 	}
 }
 
-func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
-	if g.kubeCl != nil {
-		return g.kubeCl, nil
-	}
-
-	sshClient, err := g.sshClientProvider()
-	if err != nil {
-		return nil, err
-	}
-
-	g.sshClient = sshClient
-
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
-	if err != nil {
-		return nil, err
-	}
-	g.kubeCl = kubeCl
-
-	return kubeCl, err
-}
-
 func (g *DeckhouseDestroyer) LockConverge(ctx context.Context) error {
-	kubeCl, err := g.GetKubeClient(ctx)
+	kubeCl, err := g.kubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -95,11 +70,6 @@ func (g *DeckhouseDestroyer) LockConverge(ctx context.Context) error {
 	return nil
 }
 
-func (g *DeckhouseDestroyer) KubeClient() *client.KubernetesClient {
-	kubeClient, _ := g.GetKubeClient(context.Background())
-	return kubeClient
-}
-
 func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType string) error {
 	resourcesDestroyed, err := g.state.IsResourcesDestroyed()
 	if err != nil {
@@ -111,7 +81,7 @@ func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType stri
 		return nil
 	}
 
-	kubeCl, err := g.GetKubeClient(ctx)
+	kubeCl, err := g.kubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -192,13 +162,5 @@ func (g *DeckhouseDestroyer) Cleanup(stopSSH bool) {
 	// we get race (destroyer destroy node group, auto applayer create nodes)
 	g.UnlockConverge(false)
 
-	if !govalue.IsNil(g.kubeCl) {
-		g.kubeCl.KubeProxy.StopAll()
-		g.kubeCl = nil
-	}
-
-	if stopSSH && !govalue.IsNil(g.sshClient) {
-		g.sshClient.Stop()
-		g.sshClient = nil
-	}
+	g.kubeProvider.cleanup(stopSSH)
 }

@@ -136,7 +136,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return sshClient, nil
 	})
 
-	d8Destroyer := NewDeckhouseDestroyer(sshClientProvider, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
+	var kubeProvider kubeClientProviderWithCleanup = newKubeClientProvider(sshClientProvider)
+
+	d8Destroyer := NewDeckhouseDestroyer(kubeProvider, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader controller.StateLoader
 
@@ -152,8 +154,13 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		}
 		terraStateLoader = infrastructurestate.NewFileTerraStateLoader(state.cache, metaConfig)
 	} else {
+		stateLoaderKubeProvider := kubeProvider
+		if params.SkipResources {
+			stateLoaderKubeProvider = newKubeClientSkipResourcesErrorProvider()
+		}
+
 		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(
-			infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache, logger),
+			infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, state.cache, logger),
 		)
 	}
 
@@ -198,6 +205,11 @@ func (d *ClusterDestroyer) lockConverge(ctx context.Context) error {
 		return nil
 	}
 
+	if d.skipResources {
+		d.logger.LogDebugLn("Locking converge skipped because resources should skip")
+		return nil
+	}
+
 	locked, err := d.state.IsConvergeLocked()
 	if err != nil {
 		return err
@@ -232,7 +244,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
 	if d.CommanderMode {
-		kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
+		kubeCl, err := d.d8Destroyer.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
 		}
@@ -274,7 +286,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 
 			d.staticDestroyer.SetUserCredentials(nodeUserCredentials)
 
-			err = entity.CreateNodeUser(ctx, d.d8Destroyer, nodeUser)
+			err = entity.CreateNodeUser(ctx, d.d8Destroyer.kubeProvider, nodeUser)
 			if err != nil {
 				return err
 			}
@@ -489,7 +501,7 @@ func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, sshClien
 func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, error) {
 	var nodeIPs []NodeIP
 
-	kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
+	kubeCl, err := d.d8Destroyer.kubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
 		return []NodeIP{}, err
