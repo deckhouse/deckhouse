@@ -105,3 +105,9 @@ properties:
           type: string
         x-examples:
         - {"aaa": "aaa"}
+      publicNetworkAllowList:
+        type: array
+        items:
+          type: string
+        x-examples:
+        - ["193.109.69.26/32"]
