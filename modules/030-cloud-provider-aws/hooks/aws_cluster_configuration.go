@@ -143,11 +143,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	var publicNetworkAllowList []string
-	if len(metaCfg.ProviderClusterConfig["publicNetworkAllowList"]) != 0 {
-		if err := json.Unmarshal(metaCfg.ProviderClusterConfig["publicNetworkAllowList"], &publicNetworkAllowList); err != nil {
+	if raw, ok := metaCfg.ProviderClusterConfig["publicNetworkAllowList"]; ok && len(raw) != 0 {
+		var publicNetworkAllowList []string
+		if err := json.Unmarshal(raw, &publicNetworkAllowList); err != nil {
 			return err
 		}
+		input.Values.Set("cloudProviderAws.internal.publicNetworkAllowList", publicNetworkAllowList)
 	}
 
 	input.Values.Set("cloudProviderAws.internal.keyName", discoveryData.KeyName)
@@ -159,7 +160,6 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	input.Values.Set("cloudProviderAws.internal.providerAccessKeyId", provider.ProviderAccessKeyID)
 	input.Values.Set("cloudProviderAws.internal.providerSecretAccessKey", provider.ProviderSecretAccessKey)
 	input.Values.Set("cloudProviderAws.internal.tags", tags)
-	input.Values.Set("cloudProviderAws.internal.publicNetworkAllowList", publicNetworkAllowList)
 
 	return nil
 }
