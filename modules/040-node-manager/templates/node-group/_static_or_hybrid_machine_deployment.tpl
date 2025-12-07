@@ -11,11 +11,6 @@ metadata:
 spec:
   clusterName: static
   replicas: {{ $ng.staticInstances.count | default "0" }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
   template:
     spec:
       clusterName: static
