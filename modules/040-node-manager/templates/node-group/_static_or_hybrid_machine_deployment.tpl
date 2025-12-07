@@ -26,5 +26,8 @@ spec:
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: {{ $ng.name }}
-  selector: {}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: static
+      cluster.x-k8s.io/deployment-name: {{ $ng.name }}
 {{- end }}
