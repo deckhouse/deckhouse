@@ -17,6 +17,10 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: static
+        cluster.x-k8s.io/deployment-name: {{ $ng.name }}
     spec:
       clusterName: static
       bootstrap:

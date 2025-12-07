@@ -674,6 +674,10 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   template:
+	metadata:
+	  labels:
+	    cluster.x-k8s.io/cluster-name: static
+		cluster.x-k8s.io/deployment-name: {{ $ng.name }}
     spec:
       bootstrap:
         dataSecretName: manual-bootstrap-for-worker
@@ -683,7 +687,10 @@ spec:
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: worker
-  selector: {}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: static
+      cluster.x-k8s.io/deployment-name: {{ $ng.name }}
 `
 )
 
