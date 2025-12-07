@@ -56,13 +56,15 @@ var _ webhook.Validator = &StaticMachine{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachine) ValidateCreate() (admission.Warnings, error) {
-	staticmachinelog.V(2).Info("validate create", "name", r.Name, "allowed", true)
+	staticmachinelog.Info("validate create", "name", r.Name)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	staticmachinelog.Info("validate update", "name", r.Name)
+
 	var errs field.ErrorList
 
 	// By convention, StaticMachine.spec is immutable except for the providerID field.
@@ -87,20 +89,12 @@ func (r *StaticMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, 
 		errs = append(errs, field.Forbidden(field.NewPath("spec"), "cannot be modified"))
 	}
 
-	warnings, aggErr := aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
-	if aggErr != nil {
-		staticmachinelog.Error(aggErr, "validate update rejected", "name", r.Name, "allowed", false)
-		return warnings, aggErr
-	}
-
-	staticmachinelog.V(2).Info("validate update accepted", "name", r.Name, "allowed", true)
-
-	return warnings, nil
+	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachine) ValidateDelete() (admission.Warnings, error) {
-	staticmachinelog.V(2).Info("validate delete", "name", r.Name, "allowed", true)
+	staticmachinelog.Info("validate delete", "name", r.Name)
 
 	return nil, nil
 }
