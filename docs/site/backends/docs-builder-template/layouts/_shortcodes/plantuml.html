@@ -6,12 +6,15 @@
 </div>
 
 <script>
-
 document.addEventListener("DOMContentLoaded", function () {
-    function encodeHex(data) {
-        return data.split('').map(function (c) {
-            return c.charCodeAt(0).toString(16).padStart(2, '0');
-        }).join('');
+    function encodePlantUML(text) {
+        // Encode text to UTF-8, then to hex
+        const utf8Bytes = new TextEncoder().encode(text);
+        let hex = '';
+        for (const byte of utf8Bytes) {
+            hex += byte.toString(16).padStart(2, '0');
+        }
+        return hex;
     }
 
     function compressToPlantUML(hex) {
@@ -19,7 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // return "http://www.plantuml.com/plantuml/img/" + "~h" + hex;
         // Rendering using local server
         return "http://localhost:8080/png/" + "~h" + hex;
-        
     }
 
     document.querySelectorAll('.plantuml-diagram').forEach(function (container, index) {
@@ -28,13 +30,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (textarea && img) {
             const code = textarea.value;
-            console.log("PlantUML Code:", code); 
-            const hex = encodeHex(code);
-            console.log("Encoded Hex:", hex); 
-            img.src = compressToPlantUML(hex);
+            console.log("PlantUML Code:", code);
+            
+            try {
+                const hex = encodePlantUML(code);
+                console.log("Encoded Hex:", hex);
+                img.src = compressToPlantUML(hex);
+            } catch (error) {
+                console.error("Error encoding PlantUML:", error);
+            }
         }
     });
 });
-
-
 </script>
