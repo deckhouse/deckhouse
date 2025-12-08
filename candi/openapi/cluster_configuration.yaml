@@ -117,8 +117,6 @@ apiVersions:
           If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
 
-          If you need to use `Containerd` as the container runtime on cluster nodes and require support for module integrity checking, the `erofs` module must be enabled in the operating system on virtual machines.
-
           If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
 
           - Support for `CgroupsV2`.

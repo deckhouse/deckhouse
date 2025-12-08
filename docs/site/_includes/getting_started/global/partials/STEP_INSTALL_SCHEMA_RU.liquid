@@ -140,6 +140,9 @@
 {%- elsif page.platform_type == 'baremetal' %}
    <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
    {% offtopic title="Требования..." %}
+   {% alert level="info" %}
+   Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
+   {% endalert %}
    {% alert level="warning" %}
    На следующем шаге данного руководства в качестве container runtime по умолчанию на узлах кластера указан `ContainerdV2`.
    Чтобы использовать `ContainerdV2` в качестве container runtime на узлах кластера, они должны соответствовать следующим требованиям:
@@ -149,11 +152,6 @@
    - поддержка модуля ядра `erofs`.
 
    Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Kubernetes Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
-   {% endalert %}
-   {% alert level="warning" %}
-   Если вам необходимо использовать `Containerd` в качестве container runtime на узлах кластера и при этом нужна поддержка контроля целостности модулей, в ОС на виртуальных машинах должен быть включен модуль `erofs`.
-
-   Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
    {% endalert %}
 
    - не менее 4 ядер CPU;

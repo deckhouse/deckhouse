@@ -10,6 +10,10 @@ In Deckhouse Kubernetes Platform (DKP), integrity control works:
 - When application containers are started;
 - While application containers are running.
 
+{% alert level="info" %}
+In addition, starting with version 1.74, Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is missing, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{% endalert %}
+
 ## Integrity control when starting containers
 
 DKP provides integrity control of application containers at the container runtime (CRI) level.
