@@ -41,6 +41,7 @@ internal:
 vpa: {}
 `,
 			expected: `
+oomKillsExporterEnabled: true
 internal:
   clusterDNSImplementation: coredns
   vpa:

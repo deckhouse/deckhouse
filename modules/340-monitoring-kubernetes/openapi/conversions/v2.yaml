@@ -1,3 +1,7 @@
 version: 2
 conversions:
+  - if .ebpfExporterEnabled == true then .oomKillsExporterEnabled=true end
   - del(.ebpfExporterEnabled)
+description:
+  ru: "Если для поля `.ebpfExporterEnabled` установлено значение `true`, добавьте поле `.oomKillsExporterEnabled=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта."
+  en: "If the `.ebpfExporterEnabled` field is set to `true`, add `.oomKillsExporterEnabled=true`. Then, delete the `skipRegistryCertVerification` field from the object."
