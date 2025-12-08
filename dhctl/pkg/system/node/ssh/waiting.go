@@ -58,37 +58,37 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 	}
 
 	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).RunContext(ctx, func() error {
-		log.InfoF("Try to connect to %v host\n", c.Session.Host())
+		host := c.Session.Host()
+		log.InfoF("Try to connect to host: %v\n", host)
+
 		output, err := c.ExpectAvailable(ctx)
 		if err == nil {
+			log.InfoF("Successfully connected to host: %v\n", host)
 			return nil
 		}
 
-		log.InfoF(string(output))
-		oldHost := c.Session.Host()
+		log.InfoF("Connection attempt failed to host: %v", host)
+		oldHost := host
 		c.Session.ChoiceNewHost()
 
-		msg := strings.TrimSpace(string(output))
 		errMsg := "unknown error"
 		if err != nil {
 			errMsg = err.Error()
 		}
 
+		var detailedErr string
 		switch {
 		case strings.Contains(errMsg, "timeout"):
-			errMsg = "SSH connection timed out"
+			detailedErr = fmt.Sprintf("SSH connection timed out to host '%s'", oldHost)
 		case strings.Contains(errMsg, "permission denied"):
-			errMsg = "SSH access denied (wrong credentials)"
+			detailedErr = fmt.Sprintf("SSH permission access denied to host '%s'", oldHost)
 		case strings.Contains(errMsg, "no route to host"), strings.Contains(errMsg, "host unreachable"):
-			errMsg = "Host unreachable"
+			detailedErr = fmt.Sprintf("No route to host: '%s' unreachable", oldHost)
+		default:
+			detailedErr = fmt.Sprintf("Failed to connect to host '%s': %s", oldHost, errMsg)
 		}
 
-		return fmt.Errorf(
-			"host '%s' is not available: %s, last attempt output: %s",
-			oldHost,
-			errMsg,
-			msg,
-		)
+		return fmt.Errorf("%s\nSSH command output:\n%s", detailedErr, strings.TrimSpace(string(output)))
 	})
 }
 
