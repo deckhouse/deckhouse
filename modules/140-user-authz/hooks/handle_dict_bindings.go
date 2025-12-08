@@ -55,15 +55,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "useBindings",
 			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
-			LabelSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "heritage",
-						Operator: metav1.LabelSelectorOpNotIn,
-						Values:   []string{"deckhouse"},
-					},
-				},
-			},
 			FilterFunc: filterUseBinding,
 		},
 	},
@@ -76,17 +67,9 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	switch {
-	case strings.HasPrefix(binding.RoleRef.Name, "d8:use:role:"):
+	case isD8DictBinding(binding):
 		break
-	case slices.Contains(
-		[]string{
-			"user-authz:user",
-			"user-authz:privileged-user",
-			"user-authz:editor",
-			"user-authz:admin",
-		},
-		binding.RoleRef.Name,
-	):
+	case isRBACv1ReservedRoleRef(binding):
 		break
 	default:
 		return nil, nil
@@ -182,4 +165,35 @@ func stringBySubject(subject rbacv1.Subject) string {
 		str = str[:55]
 	}
 	return strings.ToLower(str)
+}
+
+func isD8DictBinding(bind *rbacv1.RoleBinding) bool {
+	labels := bind.GetLabels()
+	if labels != nil && labels["heritage"] == "deckhouse" {
+		return false
+	}
+
+	return strings.HasPrefix(bind.RoleRef.Name, "d8:use:role:")
+}
+
+func isRBACv1ReservedRoleRef(bind *rbacv1.RoleBinding) bool {
+	// We are generally discarding bindings labeled as "heritage: deckhouse" here
+	// But project-scoped RBACv1 roles are an exception.
+	labels := bind.GetLabels()
+	if labels == nil {
+		return false
+	}
+	if labels["heritage"] != "deckhouse" {
+		return false
+	}
+
+	return slices.Contains(
+		[]string{
+			"user-authz:user",
+			"user-authz:privileged-user",
+			"user-authz:editor",
+			"user-authz:admin",
+		},
+		bind.RoleRef.Name,
+	)
 }
