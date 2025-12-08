@@ -52,6 +52,9 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
+// +kubebuilder:printcolumn:name=Sync,type=string,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.
 type PackageRepository struct {

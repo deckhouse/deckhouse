@@ -11,12 +11,19 @@ spec:
     kind: ApplicationPackageVersion
     listKind: ApplicationPackageVersionList
     plural: applicationpackageversions
-    singular: applicationpackageversion
     shortNames:
-      - apv
+    - apv
+    singular: applicationpackageversion
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.packageName
+      name: Package
+      type: string
+    - jsonPath: .spec.packageRepository
+      name: Repository
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ApplicationPackageVersion represents a version of an application
@@ -189,10 +196,3 @@ spec:
     storage: true
     subresources:
       status: {}
-    additionalPrinterColumns:
-      - jsonPath: .spec.packageName
-        name: Package
-        type: string
-      - jsonPath: .spec.packageRepository
-        name: Repository
-        type: string

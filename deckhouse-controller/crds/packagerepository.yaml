@@ -12,11 +12,20 @@ spec:
     listKind: PackageRepositoryList
     plural: packagerepositories
     singular: packagerepository
-    shortNames:
-      - repo
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.syncTime
+      name: Sync
+      type: string
+    - jsonPath: .status.packagesCount
+      name: Packages
+      priority: 1
+      type: integer
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: PackageRepository is a source of packages for Deckhouse.
@@ -89,14 +98,3 @@ spec:
     storage: true
     subresources:
       status: {}
-    additionalPrinterColumns:
-      - jsonPath: .status.phase
-        name: Phase
-        type: string
-      - jsonPath: .status.syncTime
-        name: Sync
-        type: string
-      - jsonPath: .status.packagesCount
-        name: Packages
-        type: integer
-        priority: 1
