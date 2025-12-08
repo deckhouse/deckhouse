@@ -1,0 +1,40 @@
+Subject: [PATCH] fix unpublishValidation for non exist ECS instance
+---
+Index: pkg/evs/controllerserver.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/evs/controllerserver.go b/pkg/evs/controllerserver.go
+--- a/pkg/evs/controllerserver.go	(revision c070bde369d73794fd73e479217f851211947ca9)
++++ b/pkg/evs/controllerserver.go	(date 1765199790651)
+@@ -379,6 +379,10 @@
+ 		return nil, err
+ 	}
+ 
++	if volume == nil {
++		return &csi.ControllerUnpublishVolumeResponse{}, nil
++	}
++
+ 	if volume.Status == services.EvsAvailableStatus || len(volume.Attachments) == 0 {
+ 		log.Warningf("Warning, the volume %s is not in the server %s attach volume list, skip unpublishing",
+ 			volumeID, instanceID)
+@@ -410,10 +414,18 @@
+ 
+ 	volume, err := services.GetVolume(cc, volumeID)
+ 	if err != nil {
++		if status.Code(err) == codes.NotFound {
++			log.Infof("assuming Volume %s is detached because it does not exist", volumeID)
++			return nil, nil
++		}
+ 		return nil, err
+ 	}
+ 
+ 	if _, err = services.GetServer(cc, instanceID); err != nil {
++		if status.Code(err) == codes.NotFound {
++			log.Infof("assuming Volume %s is detached because ECS instance %s does not exist", volumeID, instanceID)
++			return nil, nil
++		}
+ 		return nil, err
+ 	}
+ 
