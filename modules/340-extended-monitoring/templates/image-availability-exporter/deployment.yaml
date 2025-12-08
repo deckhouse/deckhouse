@@ -97,7 +97,7 @@ spec:
         {{- end }}
         {{- if .Values.extendedMonitoring.imageAvailability.mirrors }}
         {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrors }}
-        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror}}'
+        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
         {{- end }}
         {{- end }}
         env:
