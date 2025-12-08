@@ -110,16 +110,10 @@ spec:
                   category:
                     type: string
                   changelog:
-                    properties:
-                      features:
-                        items:
-                          type: string
-                        type: array
-                      fixes:
-                        items:
-                          type: string
-                        type: array
+                    description: MappedFields handles arbitrary JSON settings as a
+                      map[string]any.
                     type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   description:
                     properties:
                       en:
