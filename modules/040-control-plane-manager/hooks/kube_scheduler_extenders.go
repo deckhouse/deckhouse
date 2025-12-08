@@ -58,7 +58,6 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return extenderCR.Webhooks, err
 }
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
-
 	type extenderConfig struct {
 		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
 		Weight         int    `yaml:"weight" json:"weight"`
