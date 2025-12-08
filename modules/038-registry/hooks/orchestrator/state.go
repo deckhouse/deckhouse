@@ -114,6 +114,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 
 	// Set Bashible ActualParams
 	var bashibleActualParams *bashible.ModeParams
+	var bashibleUnmanagedParams *bashible.UnmanagedModeParams
 	switch inputs.Params.Mode {
 	case registry_const.ModeDirect:
 		bashibleActualParams = &bashible.ModeParams{
@@ -124,6 +125,13 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 				Username:   inputs.Params.UserName,
 				Password:   inputs.Params.Password,
 			},
+		}
+		bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
+			ImagesRepo: inputs.Params.ImagesRepo,
+			Scheme:     inputs.Params.Scheme,
+			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+			Username:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
 		}
 	case registry_const.ModeUnmanaged:
 		// Only for configurable unmanaged mode
@@ -137,9 +145,17 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 					Password:   inputs.Params.Password,
 				},
 			}
+			bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			}
 		}
 	}
 	state.Bashible.ActualParams = bashibleActualParams
+	state.Bashible.UnmanagedParams = bashibleUnmanagedParams
 	return nil
 }
 
