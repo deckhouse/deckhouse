@@ -30,7 +30,9 @@ total_swap_used_bytes() {
 
 version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
 
-has_cgroup2() { [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ] }
+has_cgroup2() {
+  [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]
+}
 
 
 {{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
