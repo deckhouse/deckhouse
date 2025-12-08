@@ -28,44 +28,6 @@ total_swap_used_bytes() {
   swapon --show=USED --bytes --noheadings 2>/dev/null | awk '{sum+=$1} END {if (sum=="") print 0; else print sum}'
 }
 
-buffer_bytes() {
-  # Extra size
-  echo $((1024 * 1024 * 1024))
-}
-
-disruptive_approve_and_drain() {
-  # Approval -> cordon + drain
-  local kubeconfig="/etc/kubernetes/kubelet.conf"
-  local node="${D8_NODE_HOSTNAME:-$(hostname)}"
-
-  bb-deckhouse-get-disruptive-update-approval
-
-  bb-log-info "Disruption approved, cordoning and draining node $node"
-  # kubectl --kubeconfig="$kubeconfig" cordon "$node"
-
-  attempts=30
-  while true; do
-    if [[ $attempts == 0 ]]; then
-      bb-log-error "Out of attempts while waiting for node drain annotations."
-      exit 1
-    fi
-
-    DRAINING_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig="$kubeconfig" get no "$node" -o json | jq -r '.metadata.annotations."update.node.deckhouse.io/draining"' )"
-    DRAINED_ANNOTATION="$( kubectl --request-timeout 60s --kubeconfig="$kubeconfig" get no "$node" -o json | jq -r '.metadata.annotations."update.node.deckhouse.io/drained"' )"
-
-    if [[ $DRAINED_ANNOTATION != "null" ]]; then
-      bb-log-info "Node $node is drained."
-      break
-    else
-      if [[ $DRAINING_ANNOTATION == "null" ]]; then
-        kubectl --request-timeout 60s --kubeconfig="$kubeconfig" annotate node "$node" update.node.deckhouse.io/draining=bashible
-      fi
-    fi
-    sleep 20
-    attempts=$(( attempts - 1 ))
-  done
-}
-
 
 {{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
 ###############################################
@@ -76,11 +38,9 @@ disruptive_approve_and_drain() {
 TOTAL_SWAP_USED=$(total_swap_used_bytes)
 if [ "$TOTAL_SWAP_USED" -gt 0 ]; then
   AVAILABLE=$(mem_available_bytes)
-  BUFFER=$(buffer_bytes "$TOTAL_SWAP_USED")
-  REQUIRED=$((TOTAL_SWAP_USED + BUFFER))
+  REQUIRED=$TOTAL_SWAP_USED
   if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
-    bb-log-warning "Not enough free memory to disable swap safely (available=${AVAILABLE}B, needed>=$REQUIRED B). Requesting disruptive approval and draining node."
-    disruptive_approve_and_drain
+    bb-log-warning "Not enough free memory to disable swap safely (available=${AVAILABLE}B, needed>=$REQUIRED B). Proceeding in-place."
   else
     bb-log-info "Sufficient memory to disable swap in-place (available=${AVAILABLE}B, swap_used=${TOTAL_SWAP_USED}B)."
   fi
@@ -163,11 +123,9 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   SWAP_USED=${SWAP_USED:-0}
   if [ "$SWAP_USED" -gt 0 ]; then
     AVAILABLE=$(mem_available_bytes)
-    BUFFER=$(buffer_bytes "$SWAP_USED")
-    REQUIRED=$((SWAP_USED + BUFFER))
+    REQUIRED=$SWAP_USED
     if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
-      bb-log-warning "Not enough free memory to resize swap safely (available=${AVAILABLE}B, swap_used=${SWAP_USED}B). Requesting disruptive approval and draining node."
-      disruptive_approve_and_drain
+      bb-log-warning "Not enough free memory to resize swap safely (available=${AVAILABLE}B, swap_used=${SWAP_USED}B). Proceeding in-place."
     else
       bb-log-info "Sufficient memory to resize swap in-place (available=${AVAILABLE}B, swap_used=${SWAP_USED}B)."
     fi
