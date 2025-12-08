@@ -20,6 +20,9 @@ spec:
     - jsonPath: .spec.packageName
       name: Package
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     - jsonPath: .spec.version
       name: Version
       type: string
@@ -33,9 +36,12 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
+    - jsonPath: .status.conditions[?(@.type=='Processed')].status
+      name: Processed
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+      name: Message
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

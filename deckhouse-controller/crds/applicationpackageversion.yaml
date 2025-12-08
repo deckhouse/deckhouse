@@ -23,6 +23,15 @@ spec:
     - jsonPath: .spec.packageRepository
       name: Repository
       type: string
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
+      name: TransitionTime
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].status
+      name: MetadataLoaded
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
+      name: Message
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
