@@ -16,6 +16,8 @@ import (
 
 	"webhook/internal/cache"
 	"webhook/internal/web/hook"
+
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -99,6 +101,18 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
+	}
+
+	// Configure HTTP/2 with higher limits for high-load scenarios
+	// API server can send many SubjectAccessReview requests rapidly
+	http2Server := &http2.Server{
+		MaxConcurrentStreams: 1000,    // Increase from default ~250 to handle burst requests
+		MaxReadFrameSize:     1 << 20, // 1MB
+		IdleTimeout:          15 * time.Second,
+	}
+
+	if err := http2.ConfigureServer(srv, http2Server); err != nil {
+		return nil, fmt.Errorf("error configuring http2: %v", err)
 	}
 
 	return srv, nil
