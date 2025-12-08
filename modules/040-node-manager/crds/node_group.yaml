@@ -654,6 +654,7 @@ spec:
                       properties:
                         swapBehavior:
                           type: string
+                          default: NoSwap
                           description: |
                             Defines how swap memory is handled:
                             

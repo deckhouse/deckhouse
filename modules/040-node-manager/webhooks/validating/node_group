@@ -101,8 +101,8 @@ kubernetes:
     apiVersion: v1
     kind: nodes
     group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
+    executeHookOnEvent: ["Added", "Modified", "Deleted"]
+    executeHookOnSynchronization: true
     keepFullObjectsInMemory: false
     labelSelector:
       matchLabels:
@@ -110,7 +110,8 @@ kubernetes:
     jqFilter: |
       {
         "nodeName": .metadata.name,
-        "labels": .metadata.labels
+        "labels": .metadata.labels,
+        "annotations": .metadata.annotations
       }
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
@@ -340,11 +341,12 @@ EOF
       unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
         .snapshots.nodes_without_containerd_support[]
         | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | select(.filterResult.annotations["node.deckhouse.io/containerd-v2-err"] | contains("cgroupv2"))
         | .filterResult.nodeName
       ')"
       if [[ -n "${unsupportedNodes}" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes that do not support it. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
+{"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes where cgroup v2 is not supported."}
 EOF
         return 0
       fi

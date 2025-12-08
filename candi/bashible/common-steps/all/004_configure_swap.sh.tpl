@@ -28,11 +28,19 @@ total_swap_used_bytes() {
   swapon --show=USED --bytes --noheadings 2>/dev/null | awk '{sum+=$1} END {if (sum=="") print 0; else print sum}'
 }
 
+version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+
+has_cgroup2() { [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ] }
+
 
 {{- if or (eq $swapBehavior "") (eq $swapBehavior "NoSwap") }}
 ###############################################
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
+
+if ! has_cgroup2; then
+  bb-log-warning "Swap is disabled and node uses cgroup v1; proceeding without swap configuration."
+fi
 
 # If we are about to disable swap, ensure enough RAM or perform cordon+drain
 TOTAL_SWAP_USED=$(total_swap_used_bytes)
@@ -82,21 +90,10 @@ exit 0
 #  CASE 2: swapBehavior == LimitedSwap
 ###############################################
 
-SKIP_SWAP_CONFIGURATION=false
-
-# Helper functions
-version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
-has_cgroup2() { [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]; }
-
 # Check cgroup v2 (swap only works with cgroupv2)
 if ! has_cgroup2; then
-  bb-log-warning "Swap support requires cgroup v2, but this node uses cgroup v1. Skipping swap configuration."
-  SKIP_SWAP_CONFIGURATION=true
-fi
-
-# Exit if preconditions are not met
-if [ "$SKIP_SWAP_CONFIGURATION" = "true" ]; then
-  exit 0
+  bb-log-error "Swap support requires cgroup v2, but this node uses cgroup v1."
+  exit 1
 fi
 
 if [ -z "{{ $limitedSwapSize }}" ]; then
