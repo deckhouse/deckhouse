@@ -44,7 +44,7 @@ spec:
                 items:
                   type: string
                 type: array
-              instances:
+              installed:
                 additionalProperties:
                   items:
                     properties:
@@ -53,7 +53,7 @@ spec:
                     type: object
                   type: array
                 type: object
-              instancesOverall:
+              installedOverall:
                 type: integer
             type: object
         type: object

@@ -11,12 +11,32 @@ spec:
     kind: Application
     listKind: ApplicationList
     plural: applications
-    singular: application
     shortNames:
-      - app
+    - app
+    singular: application
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.packageName
+      name: Package
+      type: string
+    - jsonPath: .spec.version
+      name: Version
+      type: string
+    - jsonPath: .spec.packageRepository
+      name: Registry
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Installed')].status
+      name: Installed
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Application represents a namespace-scoped application instance.
@@ -98,6 +118,26 @@ spec:
                     lastTransitionTime:
                       format: date-time
                       type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              repository:
+                type: string
+              resourceConditions:
+                items:
+                  properties:
+                    lastProbeTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
                     message:
                       type: string
                     reason:
@@ -111,8 +151,6 @@ spec:
                   - type
                   type: object
                 type: array
-              repository:
-                type: string
               status:
                 type: string
             type: object
@@ -123,23 +161,3 @@ spec:
     storage: true
     subresources:
       status: {}
-    additionalPrinterColumns:
-      - jsonPath: .spec.packageName
-        name: Package
-        type: string
-      - jsonPath: .spec.version
-        name: Version
-        type: string
-      - jsonPath: .spec.packageRegistry
-        name: Registry
-        type: string
-        priority: 1
-      - jsonPath: .status.conditions[?(@.type=='Ready')].status
-        name: Ready
-        type: string
-      - jsonPath: .status.conditions[?(@.type=='Installed')].status
-        name: Installed
-        type: string
-      - name: Age
-        type: date
-        jsonPath: .metadata.creationTimestamp
