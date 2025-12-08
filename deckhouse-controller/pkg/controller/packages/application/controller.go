@@ -35,6 +35,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -55,7 +57,7 @@ const (
 type reconciler struct {
 	init     *sync.WaitGroup
 	client   client.Client
-	operator *packageoperator.Operator
+	operator packageOperator
 	status   *status.Service
 
 	moduleManager moduleManager
@@ -67,9 +69,15 @@ type moduleManager interface {
 	AreModulesInited() bool
 }
 
+type packageOperator interface {
+	Update(reg registry.Registry, inst packageoperator.Instance)
+	Remove(namespace, name string)
+	Status() *packagestatus.Service
+}
+
 func RegisterController(
 	runtimeManager manager.Manager,
-	operator *packageoperator.Operator,
+	operator packageOperator,
 	moduleManager moduleManager,
 	dc dependency.Container,
 	logger *log.Logger,
@@ -325,7 +333,9 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		}
 	}
 
-	r.operator.Update(repo, packageoperator.Instance{
+	reg := registry.BuildRegistryByRepository(repo)
+
+	r.operator.Update(reg, packageoperator.Instance{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
