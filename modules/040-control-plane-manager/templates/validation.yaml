@@ -24,7 +24,7 @@ spec:
             && object.metadata.labels["node.deckhouse.io/etcd-arbiter"]
                == oldObject.metadata.labels["node.deckhouse.io/etcd-arbiter"])
       reason: Forbidden
-      messageExpression: "'Adding the `node.deckhouse.io/etcd-arbiter` label on nodes is forbidden'"
+      messageExpression: "'Changing the `node.deckhouse.io/etcd-arbiter` label on nodes manually is forbidden, this label is managed by deckhouse'"
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
