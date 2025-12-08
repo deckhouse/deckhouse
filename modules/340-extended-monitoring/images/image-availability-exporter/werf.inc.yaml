@@ -2,7 +2,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: 2025-12-08
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -15,7 +14,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch mirrors_scheme_support https://github.com/deckhouse/k8s-image-availability-exporter.git /src
+  - git clone --depth 1 --branch v{{ $imageAvailabilityExporterVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/k8s-image-availability-exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git

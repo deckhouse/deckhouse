@@ -75,28 +75,6 @@ properties:
           properties:
             original:
               type: string
-      mirrorsSchemes:
-        type: array
-        default: []
-        x-examples:
-        - - mirror: mirror.gcr.io
-            scheme: HTTP
-          - mirror: mirror.internal-registry.com
-            scheme: HTTPS
-        items:
-          type: object
-          required:
-          - mirror
-          - scheme
-          properties:
-            mirror:
-              type: string
-            scheme:
-              type: string
-              enum: [HTTP, HTTPS]
-        description: |
-          Scheme for checking availability of image from this mirror.
-          If extendedMonitoring.imageAvailability.registry.scheme is setted to HTTP than this scheme will be used for all checks.
       forceCheckDisabledControllers:
         type: array
         x-examples:
