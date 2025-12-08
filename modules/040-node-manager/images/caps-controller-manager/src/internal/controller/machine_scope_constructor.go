@@ -41,7 +41,7 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 		return nil, false, err
 	}
 	if machine == nil {
-		logger.Info("Machine Controller has not yet set OwnerRef")
+		logger.V(1).Info("Machine Controller has not yet set OwnerRef")
 
 		return nil, false, nil
 	}
@@ -68,7 +68,7 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, client, machine.ObjectMeta)
 	if err != nil {
-		logger.Info("Machine is missing cluster label or cluster does not exist")
+		logger.V(1).Info("Machine is missing cluster label or cluster does not exist")
 
 		return nil, false, nil
 	}
@@ -82,7 +82,7 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 	// Fetch the StaticCluster.
 	err = client.Get(ctx, staticClusterNamespacedName, staticCluster)
 	if err != nil {
-		logger.Info("StaticCluster is not available yet")
+		logger.V(1).Info("StaticCluster is not available yet")
 
 		return nil, false, nil
 	}

@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/component-base/logs"
 	v1 "k8s.io/component-base/logs/api/v1"
+	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -50,7 +51,6 @@ import (
 
 var (
 	scheme     = runtime.NewScheme()
-	setupLog   = ctrl.Log.WithName("setup")
 	logOptions = logs.NewOptions()
 )
 
@@ -86,14 +86,18 @@ func main() {
 
 	flag.DurationVar(&leaderElectionRetryPeriod, "leader-elect-retry-period", 2*time.Second,
 		"Duration the LeaderElector clients should wait between tries of actions (duration string)")
+	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+
+	logs.AddGoFlags(flag.CommandLine)
 
 	flag.Parse()
+	ctrl.SetLogger(klog.Background())
+	setupLog := ctrl.Log.WithName("setup")
 
 	if err := v1.ValidateAndApply(logOptions, nil); err != nil {
 		setupLog.Error(err, "unable to validate and apply log options")
 		os.Exit(1)
 	}
-	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

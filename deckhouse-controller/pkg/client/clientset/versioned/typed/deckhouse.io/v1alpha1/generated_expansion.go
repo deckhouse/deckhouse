@@ -39,6 +39,8 @@ type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
 
+type ObjectKeeperExpansion interface{}
+
 type PackageRepositoryExpansion interface{}
 
 type PackageRepositoryOperationExpansion interface{}

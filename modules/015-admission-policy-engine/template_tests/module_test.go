@@ -266,14 +266,16 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders empty ValidatingWebhookConfiguration", func() {
-			checkVWC(f, 0)
+		It("Renders ValidatingWebhookConfiguration with deny-exec-heritage webhook only", func() {
+			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
+			checkVWC(f, 1, denyExecHeritageRules)
 		})
 	})
 
 	Context("Cluster with deckhouse on master node and trivy-provider", func() {
 		trackedResourcesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups": ["constraints.gatekeeper.sh"],"apiVersions":["*"],"resources": ["*"],"operations": ["CREATE","UPDATE","DELETE"],"scope": "*"},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`
 		trivyProviderRules := `[{"apiGroups":["apps"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["deployments","daemonsets","statefulsets"]},{"apiGroups":["apps.kruise.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["daemonsets"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","DELETE"],"resources":["pods"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups": ["constraints.gatekeeper.sh"],"apiVersions":["*"],"resources": ["*"],"operations": ["CREATE","UPDATE","DELETE"],"scope": "*"},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`
+		denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
 
 		BeforeEach(func() {
 			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
@@ -295,7 +297,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			})
 
 			It("Creates ValidatingWebhookConfiguration after bootstrap", func() {
-				checkVWC(f, 2, trackedResourcesRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 1, trackedResourcesRules)' after full migration to securityPolicyExtensions in all modules
+				checkVWC(f, 3, trackedResourcesRules, denyExecHeritageRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 2, trackedResourcesRules, denyExecHeritageRules)' after full migration to securityPolicyExtensions in all modules
 			})
 		})
 
@@ -323,7 +325,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			})
 
 			It("Creates ValidatingWebhookConfiguration after bootstrap with trivy provider config", func() {
-				checkVWC(f, 3, trivyProviderRules, trackedResourcesRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 2, trivyProviderRules, trackedResourcesRules)' after full migration to securityPolicyExtensions in all modules
+				checkVWC(f, 4, trivyProviderRules, trackedResourcesRules, denyExecHeritageRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 3, trivyProviderRules, trackedResourcesRules, denyExecHeritageRules)' after full migration to securityPolicyExtensions in all modules
 			})
 		})
 	})

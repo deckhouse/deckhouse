@@ -100,10 +100,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
+			instanceScope.Logger.V(1).Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
-			instanceScope.Logger.Info("using gossh")
+			instanceScope.Logger.V(1).Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 		if err != nil {
@@ -132,7 +132,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		return true
 	})
 	if done == nil || !*done {
-		instanceScope.Logger.Info("Bootstrapping is not finished yet, waiting...")
+		instanceScope.Logger.V(1).Info("Bootstrapping is not finished yet, waiting...")
 		return ctrl.Result{}, nil
 	}
 
@@ -185,12 +185,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	address := net.JoinHostPort(instanceScope.Instance.Spec.Address, strconv.Itoa(instanceScope.Credentials.Spec.SSHPort))
 
 	delay := c.tcpCheckRateLimiter.When(address)
-	instanceScope.Logger.Info("Scheduling TCP check", "address", address, "timeout", delay)
+	instanceScope.Logger.V(1).Info("Scheduling TCP check", "address", address, "timeout", delay)
 
 	tcpCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
 	if tcpCondition == nil || tcpCondition.Status != corev1.ConditionTrue {
 		tcpTaskID := fmt.Sprintf("%s", address)
-		instanceScope.Logger.Info("Scheduling TCP check",
+		instanceScope.Logger.V(1).Info("Scheduling TCP check",
 			"address", address,
 			"timeout", delay,
 			"taskID", tcpTaskID,
@@ -199,7 +199,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
 			start := time.Now()
 			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
-			instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
+			instanceScope.Logger.V(1).Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
 			conn, err := net.DialTimeout("tcp", address, delay)
 			if err != nil {
 				instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
@@ -230,7 +230,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			return true
 		})
 		if done == nil {
-			instanceScope.Logger.Info("TCP check still running, requeueing",
+			instanceScope.Logger.V(1).Info("TCP check still running, requeueing",
 				"address", address,
 				"machine", instanceScope.MachineScope.StaticMachine.Name,
 				"requeueAfter", delay,
@@ -256,10 +256,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			var sshCl ssh.SSH
 			var err error
 			if instanceScope.SSHLegacyMode {
-				instanceScope.Logger.Info("using clissh")
+				instanceScope.Logger.V(1).Info("using clissh")
 				sshCl, err = clissh.CreateSSHClient(instanceScope)
 			} else {
-				instanceScope.Logger.Info("using gossh")
+				instanceScope.Logger.V(1).Info("using gossh")
 				sshCl, err = gossh.CreateSSHClient(instanceScope)
 			}
 			if err != nil {
@@ -297,7 +297,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			return true
 		})
 		if check == nil {
-			instanceScope.Logger.Info("SSH check still running, requeueing", "address", address, "requeueAfter", delay)
+			instanceScope.Logger.V(1).Info("SSH check still running, requeueing", "address", address, "requeueAfter", delay)
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 		if !*check {

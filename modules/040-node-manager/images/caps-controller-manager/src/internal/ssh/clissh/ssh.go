@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
 	"caps-controller-manager/internal/scope"
@@ -123,7 +124,14 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		stderr = genssh.NewLogger(instanceScope.Logger.WithName("stderr"))
 	}
 
-	instanceScope.Logger.Info("Exec ssh command", "command", cmd.String())
+	instanceScope.Logger.Info(
+		"Exec ssh command",
+		"user", instanceScope.Credentials.Spec.User,
+		"address", instanceScope.Instance.Spec.Address,
+		"port", instanceScope.Credentials.Spec.SSHPort,
+		"command", formatCommand(cmd.Args),
+		"args", formatArgs(cmd.Args),
+	)
 
 	err = cmd.Run()
 	if err != nil {
@@ -144,7 +152,7 @@ func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command
 			return "", errors.Wrap(err2, "failed to read stderr from ssh command")
 		}
 		str := strings.TrimSpace(string(stderrBytes))
-		instanceScope.Logger.Info(str, "stderr")
+		logSSHOutput(instanceScope.Logger, "stderr", str)
 		return str, err
 	}
 
@@ -154,4 +162,44 @@ func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command
 	}
 
 	return strings.TrimSpace(string(stdoutBytes)), nil
+}
+
+func formatCommand(args []string) string {
+	const maxCommandLength = 1024
+	runes := []rune(strings.Join(args, " "))
+	if len(runes) <= maxCommandLength {
+		return string(runes)
+	}
+
+	return fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxCommandLength]), len(runes))
+}
+
+func formatArgs(args []string) []string {
+	const maxArgLength = 512
+
+	formatted := make([]string, 0, len(args))
+	for _, arg := range args {
+		runes := []rune(arg)
+		if len(runes) <= maxArgLength {
+			formatted = append(formatted, arg)
+			continue
+		}
+
+		formatted = append(formatted, fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxArgLength]), len(runes)))
+	}
+
+	return formatted
+}
+
+func logSSHOutput(logger logr.Logger, stream, raw string) {
+	if raw == "" {
+		return
+	}
+
+	text := strings.ReplaceAll(raw, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+
+	for _, line := range strings.Split(text, "\n") {
+		logger.Info(line, "stream", stream)
+	}
 }

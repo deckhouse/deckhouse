@@ -1,0 +1,15 @@
+deckhouse-controller:
+  fixes:
+    - summary: Fix conversions for external modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16891
+    - summary: Fixed verifying migrated modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16873
+    - summary: >-
+        Fixed a crash during external module updates with conversions that caused ModuleRelease to
+        fail validation due to a forbidden property error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16849
+istio:
+  fixes:
+    - summary: Fixed AuthorizationPolicy CRD insufficiency for Istio 1.25.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16605
+
