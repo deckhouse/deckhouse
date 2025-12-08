@@ -3,8 +3,23 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
   creationTimestamp: null
+  finalizers:
+  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.1
+    uid: ""
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackage
+    name: test
+    uid: ""
   resourceVersion: "4"
 spec:
   packageName: test
@@ -21,6 +36,27 @@ status:
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: UpdateNotified
+  resourceConditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
+  installed:
+    foobar:
+    - name: test-app
+  installedOverall: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -30,7 +66,7 @@ metadata:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.1
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepository: deckhouse
@@ -51,6 +87,10 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
   version: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
