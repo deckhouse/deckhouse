@@ -1,39 +1,5 @@
 Subject: [PATCH] Fix some issues with the disable API call cache feature
 ---
-Index: pkg/provider/azure_vmss.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
---- a/pkg/provider/azure_vmss.go	(revision ebecf6de86eae1889fd1675cb660528134cb1e1c)
-+++ b/pkg/provider/azure_vmss.go	(date 1741624707025)
-@@ -430,6 +430,25 @@
- 	vmManagementType, err := ss.getVMManagementTypeByProviderID(providerID, azcache.CacheReadTypeUnsafe)
- 	if err != nil {
- 		klog.Errorf("Failed to check VM management type: %v", err)
-+
-+		if vmManagementType == ManagedByUnknownVMSet {
-+			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
-+
-+			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
-+			} else {
-+				return nodeName, nil
-+			}
-+
-+			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
-+			} else {
-+				return nodeName, nil
-+			}
-+		}
-+
- 		return "", err
- 	}
-
 Index: pkg/provider/azure_instance_metadata.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
