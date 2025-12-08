@@ -44,5 +44,5 @@ spec:
           requests[resource_name]
           pattern := input.parameters.resourcePatterns[_]
           regex.match(pattern, resource_name)
-          msg := sprintf("container <%v> requests resources matching regex <%v> that are not allowed in the namespace", [container.name, pattern])
+          msg := sprintf("container <%v> requests resource <%v> matching regex <%v> that is not allowed in the namespace", [container.name, container.resources, pattern])
         }
