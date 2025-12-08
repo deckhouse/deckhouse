@@ -48,7 +48,7 @@ func (c *Check) WithDelaySeconds(seconds int) node.Check {
 
 func (c *Check) AwaitAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
-		return fmt.Errorf("Empty host for connection received")
+		return fmt.Errorf("empty host for connection received")
 	}
 
 	select {
@@ -67,7 +67,28 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 		log.InfoF(string(output))
 		oldHost := c.Session.Host()
 		c.Session.ChoiceNewHost()
-		return fmt.Errorf("host '%s' is not available", oldHost)
+
+		msg := strings.TrimSpace(string(output))
+		errMsg := "unknown error"
+		if err != nil {
+			errMsg = err.Error()
+		}
+
+		switch {
+		case strings.Contains(errMsg, "timeout"):
+			errMsg = "SSH connection timed out"
+		case strings.Contains(errMsg, "permission denied"):
+			errMsg = "SSH access denied (wrong credentials)"
+		case strings.Contains(errMsg, "no route to host"), strings.Contains(errMsg, "host unreachable"):
+			errMsg = "Host unreachable"
+		}
+
+		return fmt.Errorf(
+			"host '%s' is not available: %s, last attempt output: %s",
+			oldHost,
+			errMsg,
+			msg,
+		)
 	})
 }
 
