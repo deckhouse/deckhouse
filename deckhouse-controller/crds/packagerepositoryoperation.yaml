@@ -14,7 +14,14 @@ spec:
     singular: packagerepositoryoperation
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.packages.total
+      name: Count
+      type: integer
+    - jsonPath: .status.conditions[?(@.type=='Processed')].status
+      name: Processed
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: PackageRepositoryOperation represents an operation to scan/update
@@ -145,10 +152,3 @@ spec:
     storage: true
     subresources:
       status: {}
-    additionalPrinterColumns:
-      - jsonPath: .status.packages.total
-        name: Count
-        type: integer
-      - jsonPath: .status.conditions[?(@.type=='Processed')].status
-        name: Processed
-        type: string
