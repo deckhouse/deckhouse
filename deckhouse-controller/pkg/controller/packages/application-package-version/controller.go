@@ -258,9 +258,9 @@ func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.Application
 	res := ctrl.Result{}
 
 	if apv.Status.UsedByCount > 0 {
-		logger.Warn("application package version is used by applications, skipping deletion")
+		logger.Warn("application package version is used by applications, skipping deletion", slog.Int("used_by_count", apv.Status.UsedByCount))
 
-		return res, fmt.Errorf("application package version is used by applications")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
