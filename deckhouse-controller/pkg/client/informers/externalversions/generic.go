@@ -51,12 +51,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=deckhouse.io, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("applications"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().Applications().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("applicationpackages"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ApplicationPackages().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("applicationpackageversions"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ApplicationPackageVersions().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("deckhousereleases"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().DeckhouseReleases().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modules"):
@@ -77,10 +73,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleUpdatePolicies().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("objectkeepers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ObjectKeepers().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("packagerepositories"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositories().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("packagerepositoryoperations"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositoryOperations().Informer()}, nil
 
 		// Group=deckhouse.io, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("modulepulloverrides"):

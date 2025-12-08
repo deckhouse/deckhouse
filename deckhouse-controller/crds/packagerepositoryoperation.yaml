@@ -12,8 +12,6 @@ spec:
     listKind: PackageRepositoryOperationList
     plural: packagerepositoryoperations
     singular: packagerepositoryoperation
-    shortNames:
-      - pro
   scope: Cluster
   versions:
   - name: v1alpha1

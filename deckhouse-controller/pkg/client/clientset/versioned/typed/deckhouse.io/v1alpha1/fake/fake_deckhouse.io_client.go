@@ -25,16 +25,8 @@ type FakeDeckhouseV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeDeckhouseV1alpha1) Applications(namespace string) v1alpha1.ApplicationInterface {
-	return newFakeApplications(c, namespace)
-}
-
 func (c *FakeDeckhouseV1alpha1) ApplicationPackages() v1alpha1.ApplicationPackageInterface {
 	return newFakeApplicationPackages(c)
-}
-
-func (c *FakeDeckhouseV1alpha1) ApplicationPackageVersions() v1alpha1.ApplicationPackageVersionInterface {
-	return newFakeApplicationPackageVersions(c)
 }
 
 func (c *FakeDeckhouseV1alpha1) DeckhouseReleases() v1alpha1.DeckhouseReleaseInterface {
@@ -75,14 +67,6 @@ func (c *FakeDeckhouseV1alpha1) ModuleUpdatePolicies() v1alpha1.ModuleUpdatePoli
 
 func (c *FakeDeckhouseV1alpha1) ObjectKeepers() v1alpha1.ObjectKeeperInterface {
 	return newFakeObjectKeepers(c)
-}
-
-func (c *FakeDeckhouseV1alpha1) PackageRepositories() v1alpha1.PackageRepositoryInterface {
-	return newFakePackageRepositories(c)
-}
-
-func (c *FakeDeckhouseV1alpha1) PackageRepositoryOperations() v1alpha1.PackageRepositoryOperationInterface {
-	return newFakePackageRepositoryOperations(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -62,7 +62,9 @@ var _ runtime.Object = (*ApplicationPackageVersion)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=apv
+// +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
+// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepository
 
 // ApplicationPackageVersion represents a version of an application package.
 type ApplicationPackageVersion struct {
