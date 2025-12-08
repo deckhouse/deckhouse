@@ -27,6 +27,14 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" title="Добавление дополнительных узлов в облаке" %}
+Если вам потребуется добавить дополнительные узлы в облачном кластере (например, увеличить количество worker-узлов), воспользуйтесь [руководством по масштабированию кластера](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
 ```shell

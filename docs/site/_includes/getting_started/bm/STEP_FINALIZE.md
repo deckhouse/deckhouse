@@ -250,6 +250,27 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
 </li>
 </ul>
+{% alert type="info" %}
+{% offtopic title="Adding two or more worker nodes..." %}
+**Bootstrap script**:  
+Use the same NodeGroup `worker` and the same bootstrap script.  
+For each additional node:
+
+- Prepare a clean virtual machine  
+- On this VM run the command with the same Base64 encoded script:  
+  `echo <BASE64-SCRIPT-CODE> | base64 -d | bash`  
+
+**CAPS**:  
+If you use CAPS and want more static nodes in the `worker` NodeGroup:
+
+- Increase <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> in the NodeGroup `worker` resource to the required number of nodes.  
+- Create one StaticInstance resource for each new node, specifying:  
+  - the label `role: worker`
+  - the IP address of this node in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a> 
+  - a reference to <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>
+{%- endofftopic %}
+{% endalert %}
+
 </div>
 
 <p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>

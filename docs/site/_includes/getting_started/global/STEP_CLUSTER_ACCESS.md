@@ -27,6 +27,14 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" title="Adding additional nodes in the cloud" %}
+If you need to add more nodes to your cloud cluster (for example, increase the number of worker nodes), use the [cluster scaling documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 It may take some time to start the Ingress controller after installing Deckhouse. Make sure that the Ingress controller has started before continuing:
 
 ```shell
