@@ -19,22 +19,44 @@ import (
 	"fmt"
 	"log/slog"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/disable"
+	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/download"
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/load"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/uninstall"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
+
+const (
+	eventSettingsChanged = iota
+	eventVersionChanged
+	eventRemove
+	eventStartup
+	eventDisable
+	eventRerun
+)
+
+type lifecyclePackage struct {
+	version  string
+	settings addonutils.Values
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	rerunCancel   context.CancelFunc
+	settingCancel context.CancelFunc
+	disableCancel context.CancelFunc
+	startupCancel context.CancelFunc
+}
 
 type Instance struct {
 	Name       string
@@ -54,65 +76,53 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository, inst Instance) {
-	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Update")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", inst.Name))
-	span.SetAttributes(attribute.String("namespace", inst.Namespace))
-	span.SetAttributes(attribute.String("package", inst.Definition.Name))
-	span.SetAttributes(attribute.String("version", inst.Definition.Version))
-	span.SetAttributes(attribute.String("repo", repo.Name))
-
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
+func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 	if inst.Namespace == "" {
 		inst.Namespace = "default"
 	}
 
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
 	name := apps.BuildName(inst.Namespace, inst.Name)
-
 	if _, ok := o.packages[name]; !ok {
-		o.packages[name] = &Package{
-			name: name,
-			status: Status{
-				Phase: Pending,
-			},
+		o.packages[name] = new(lifecyclePackage)
+	}
+
+	if o.packages[name].versionChanged(inst.Definition.Version) {
+		if err := o.scheduler.Check(inst.Definition.Requirements.Checks()); err != nil {
+			o.status.HandleError(name, err)
+			return
 		}
-	}
+		o.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
-	if o.manager.VersionChanged(name, inst.Definition.Version) {
-		o.packages[name].status.Phase = Pending
-	}
+		o.packages[name].settings = inst.Settings
 
-	if o.packages[name].status.Phase == Pending {
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(ctx)
+		ctx := o.packages[name].renewContext(eventVersionChanged)
 
 		packageName := inst.Definition.Name
 		packageVersion := inst.Definition.Version
 		reg := registry.BuildRegistryByRepository(repo)
 
-		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, true, o.logger))
-		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.manager, o.logger),
-			queue.WithOnDone(func() {
-				o.mu.Lock()
-				o.packages[name].status.Phase = Loaded
-				o.mu.Unlock()
+		o.logger.Debug("update package", slog.String("name", name), slog.String("version", packageVersion))
 
-				o.scheduler.Add(o.manager.GetApplication(name))
-			}))
+		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger))
+		o.queueService.Enqueue(ctx, name, taskdownload.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
+		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
+		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
 
 		return
 	}
 
-	if o.manager.SettingsChanged(name, inst.Settings) {
+	if o.packages[name].settingsChanged(inst.Settings) {
 		// Cancel previous tasks before enqueueing new ones
-		ctx = o.packages[name].renewContext(ctx)
-		o.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(name, inst.Settings, o.manager, o.logger))
-		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.manager, o.logger), queue.WithUnique())
+		ctx := o.packages[name].renewContext(eventSettingsChanged)
+
+		o.logger.Debug("update package settings", slog.String("name", name))
+
+		o.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(name, inst.Settings, o.status, o.manager, o.logger))
+		o.queueService.Enqueue(ctx, name, taskrun.NewTask(name, o.status, o.manager, o.logger), queue.WithUnique())
 	}
 }
 
@@ -123,50 +133,109 @@ func (o *Operator) Update(ctx context.Context, repo *v1alpha1.PackageRepository,
 //  2. Clean up custom queues created by package hooks
 //  3. Uninstall package resources (taskuninstall)
 //  4. Remove package's main queue
-func (o *Operator) Remove(ctx context.Context, namespace, instance string) {
-	ctx, span := otel.Tracer(operatorTracer).Start(ctx, "Remove")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("name", instance))
-	span.SetAttributes(attribute.String("namespace", namespace))
-
+func (o *Operator) Remove(namespace, instance string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
 	name := apps.BuildName(namespace, instance)
-
-	app := o.packages[name]
-	if app == nil {
+	if _, ok := o.packages[name]; !ok {
 		return
 	}
-
-	// stop getting enabling/disabling event
-	o.scheduler.Remove(name)
 
 	// Capture queues before manager removes the app metadata
 	queues := o.manager.GetPackageQueues(name)
 
-	ctx = app.renewContext(ctx)
-	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.manager, false, o.logger), queue.WithOnDone(func() {
+	ctx := o.packages[name].renewContext(eventRemove)
+	o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, false, o.logger), queue.WithOnDone(func() {
 		for _, q := range queues {
-			if q == "main" || q == name {
-				continue
-			}
-
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
-			o.queueService.Remove(q)
+			o.queueService.Remove(fmt.Sprintf("%s/%s", name, q))
 		}
-
-		o.mu.Lock()
-		delete(o.packages, name)
-		o.mu.Unlock()
 	}))
 
 	o.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, o.installer, o.logger), queue.WithOnDone(func() {
 		// Remove package's main queue after uninstall completes
-		o.queueService.Remove(fmt.Sprintf("%s-sync", name))
+		o.queueService.Remove(fmt.Sprintf("%s/sync", name))
 		go o.queueService.Remove(name)
+
+		o.mu.Lock()
+		delete(o.packages, name)
+		o.mu.Unlock()
+
+		o.status.Delete(name)
 	}))
+}
+
+func (p *lifecyclePackage) renewContext(event int) context.Context {
+	var ctx context.Context
+
+	switch event {
+	case eventVersionChanged, eventRemove:
+		// cancel all the current tasks
+		if p.cancel != nil {
+			p.cancel()
+		}
+		p.ctx, p.cancel = context.WithCancel(context.Background())
+		ctx = p.ctx
+
+	case eventSettingsChanged:
+		// cancel the previous settings changed
+		if p.settingCancel != nil {
+			p.settingCancel()
+		}
+		ctx, p.settingCancel = context.WithCancel(p.ctx)
+
+	case eventRerun:
+		// cancel the previous rerun
+		if p.rerunCancel != nil {
+			p.rerunCancel()
+			p.rerunCancel = nil
+		}
+		ctx, p.rerunCancel = context.WithCancel(p.ctx)
+
+	case eventStartup:
+		// cancel disable task
+		if p.disableCancel != nil {
+			p.disableCancel()
+			p.disableCancel = nil
+		}
+		ctx, p.startupCancel = context.WithCancel(p.ctx)
+
+	case eventDisable:
+		// cancel startup task
+		if p.startupCancel != nil {
+			p.startupCancel()
+		}
+		ctx, p.disableCancel = context.WithCancel(p.ctx)
+	}
+
+	return ctx
+}
+
+func (p *lifecyclePackage) versionChanged(version string) bool {
+	if p.version != version {
+		p.version = version
+		return true
+	}
+
+	return false
+}
+
+func (p *lifecyclePackage) settingsChanged(settings addonutils.Values) bool {
+	if len(p.settings) == 0 {
+		p.settings = make(addonutils.Values)
+	}
+
+	if len(settings) == 0 {
+		settings = make(addonutils.Values)
+	}
+
+	if settings.Checksum() != p.settings.Checksum() {
+		p.settings = settings
+		return true
+	}
+
+	return false
 }
 
 type dump struct {
@@ -174,8 +243,7 @@ type dump struct {
 }
 
 type packageDump struct {
-	Status
-	schedule.State
+	status.Status
 	apps.Info
 }
 
@@ -196,10 +264,9 @@ func (o *Operator) Dump() []byte {
 		Packages: make(map[string]packageDump),
 	}
 
-	for name, pkg := range o.packages {
+	for name := range o.packages {
 		d.Packages[name] = packageDump{
-			pkg.status,
-			o.scheduler.State(name),
+			o.status.GetStatus(name),
 			o.manager.GetAppInfo(name),
 		}
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package install
+package download
 
 import (
 	"context"
@@ -26,11 +26,11 @@ import (
 )
 
 const (
-	taskTracer = "package-install"
+	taskTracer = "package-download"
 )
 
-type installer interface {
-	Install(ctx context.Context, registry, instance, packageName, version string) error
+type downloader interface {
+	Download(ctx context.Context, reg registry.Registry, packageName, version string) error
 }
 
 type statusService interface {
@@ -44,26 +44,26 @@ type task struct {
 	version     string
 	registry    registry.Registry
 
-	installer installer
-	status    statusService
+	downloader downloader
+	status     statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name, pack, version string, reg registry.Registry, status statusService, installer installer, logger *log.Logger) queue.Task {
+func NewTask(name, pack, version string, reg registry.Registry, status statusService, downloader downloader, logger *log.Logger) queue.Task {
 	return &task{
 		instance:    name,
 		packageName: pack,
 		version:     version,
 		registry:    reg,
-		installer:   installer,
+		downloader:  downloader,
 		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return "Install"
+	return "Download"
 }
 
 func (t *task) Execute(ctx context.Context) error {
@@ -73,14 +73,14 @@ func (t *task) Execute(ctx context.Context) error {
 		slog.String("registry", t.registry.Name),
 		slog.String("version", t.version))
 
-	// Install (mount) package to apps directory
-	logger.Debug("install application")
-	if err := t.installer.Install(ctx, t.registry.Name, t.instance, t.packageName, t.version); err != nil {
+	// Download package from repository
+	logger.Debug("download package")
+	if err := t.downloader.Download(ctx, t.registry, t.packageName, t.version); err != nil {
 		t.status.HandleError(t.instance, err)
-		return fmt.Errorf("install application: %w", err)
+		return fmt.Errorf("download package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.instance, status.ConditionReadyOnFilesystem)
+	t.status.SetConditionTrue(t.instance, status.ConditionDownloaded)
 
 	return nil
 }
