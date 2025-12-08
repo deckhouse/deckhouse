@@ -1,0 +1,114 @@
+From e6a4e6b7c49fa4a522c250b88037be6ba61cc091 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 24 Nov 2025 13:44:22 +0300
+Subject: [PATCH] new migration cleanup ct logic
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ pkg/endpoint/bpf.go     | 24 ++++++++++++++++++++++++
+ pkg/maps/ctmap/ctmap.go | 27 ++++++++++++++++++++++++---
+ 2 files changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
+index 59e81f5bd1..a971abf5be 100644
+--- a/pkg/endpoint/bpf.go
++++ b/pkg/endpoint/bpf.go
+@@ -9,6 +9,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"io"
++	"net"
+ 	"net/netip"
+ 	"os"
+ 	"path/filepath"
+@@ -34,6 +35,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/logging"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
++	"github.com/cilium/cilium/pkg/maps/ipcache"
+ 	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/maps/policymap"
+ 	"github.com/cilium/cilium/pkg/option"
+@@ -924,12 +926,34 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
+ 	}
+ }
+ 
++func isVmRelatedEndpoint(e *Endpoint) bool {
++	ip := net.IP(e.IPv4.AsSlice())
++	mask := net.CIDRMask(32, 32)
++	fmt.Printf("DEBUG isVmRelatedEndpoint %v, %v, %v\n", ip, mask, option.Config.ClusterID)
++	k := ipcache.NewKey(ip, mask, uint16(option.Config.ClusterID))
++	m := ipcache.IPCacheMap()
++	v, err := m.Lookup(&k)
++	if err != nil {
++		fmt.Printf("DEBUG isVmRelatedEndpoint LOOKUP ERROR %v\n", err)
++		return false
++	}
++	if v != nil {
++		fmt.Printf("DEBUG isVmRelatedEndpoint LOOKUP DONE\n")
++		info := v.(*ipcache.RemoteEndpointInfo)
++		return !info.TunnelEndpoint.IsZero()
++	}
++	fmt.Printf("DEBUG isVmRelatedEndpoint LOOKUP FAILED - NO VALUE\n")
++	return false
++}
++
+ func (e *Endpoint) scrubIPsInConntrackTableLocked() {
++	fmt.Printf("DEBUG scrubIPsInConntrackTableLocked ENABLED\n")
+ 	e.garbageCollectConntrack(ctmap.GCFilter{
+ 		MatchIPs: map[netip.Addr]struct{}{
+ 			e.IPv4: {},
+ 			e.IPv6: {},
+ 		},
++		MigrationSafeCleanup: isVmRelatedEndpoint(e),
+ 	})
+ }
+ 
+diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
+index ad69a5379d..9ad3eddd33 100644
+--- a/pkg/maps/ctmap/ctmap.go
++++ b/pkg/maps/ctmap/ctmap.go
+@@ -178,6 +178,14 @@ type GCFilter struct {
+ 	// passes. It has no impact on CT GC, but can be used to iterate over valid
+ 	// CT entries.
+ 	EmitCTEntryCB EmitCTEntryCBFunc
++
++	// MigrationSafeCleanup enables migration-safe selective cleanup:
++	// - When true, perform directional deletion *only*:
++	//     * delete OUT (src==MatchIP)
++	//     * delete IN  (dst==MatchIP)
++	//   and do NOT delete entries that will be used after VM migrate on other node.
++	// - When false (default), legacy behavior (src || dst match) is used.
++	MigrationSafeCleanup bool
+ }
+ 
+ // EmitCTEntryCBFunc is the type used for the EmitCTEntryCB callback in GCFilter
+@@ -610,9 +618,22 @@ func (f GCFilter) doFiltering(srcIP, dstIP netip.Addr, srcPort, dstPort uint16,
+ 	}
+ 
+ 	if f.MatchIPs != nil {
+-		_, srcIPExists := f.MatchIPs[srcIP]
+-		_, dstIPExists := f.MatchIPs[dstIP]
+-		if srcIPExists || dstIPExists {
++		_, srcMatch := f.MatchIPs[srcIP]
++		_, dstMatch := f.MatchIPs[dstIP]
++
++		if f.MigrationSafeCleanup {
++			if flags == TUPLE_F_OUT {
++				if srcMatch {
++					return deleteEntry
++				}
++			} else if flags == TUPLE_F_IN {
++				if dstMatch {
++					return deleteEntry
++				}
++			} else if srcMatch || dstMatch {
++				return deleteEntry
++			}
++		} else if srcMatch || dstMatch {
+ 			return deleteEntry
+ 		}
+ 	}
+-- 
+2.34.1
+
