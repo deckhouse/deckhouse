@@ -15,9 +15,21 @@
 
 package v1alpha1
 
+// ApplicationListerExpansion allows custom methods to be added to
+// ApplicationLister.
+type ApplicationListerExpansion interface{}
+
+// ApplicationNamespaceListerExpansion allows custom methods to be added to
+// ApplicationNamespaceLister.
+type ApplicationNamespaceListerExpansion interface{}
+
 // ApplicationPackageListerExpansion allows custom methods to be added to
 // ApplicationPackageLister.
 type ApplicationPackageListerExpansion interface{}
+
+// ApplicationPackageVersionListerExpansion allows custom methods to be added to
+// ApplicationPackageVersionLister.
+type ApplicationPackageVersionListerExpansion interface{}
 
 // DeckhouseReleaseListerExpansion allows custom methods to be added to
 // DeckhouseReleaseLister.
@@ -58,3 +70,11 @@ type ModuleUpdatePolicyListerExpansion interface{}
 // ObjectKeeperListerExpansion allows custom methods to be added to
 // ObjectKeeperLister.
 type ObjectKeeperListerExpansion interface{}
+
+// PackageRepositoryListerExpansion allows custom methods to be added to
+// PackageRepositoryLister.
+type PackageRepositoryListerExpansion interface{}
+
+// PackageRepositoryOperationListerExpansion allows custom methods to be added to
+// PackageRepositoryOperationLister.
+type PackageRepositoryOperationListerExpansion interface{}
