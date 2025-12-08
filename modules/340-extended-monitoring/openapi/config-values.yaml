@@ -92,8 +92,8 @@ properties:
               type: string
             scheme:
               type: string
-            enum: [HTTP, HTTPS]
-            default: HTTPS
+              enum: [HTTP, HTTPS]
+              default: HTTPS
         description: |
           Scheme for checking availability of image from this mirror.
           If extendedMonitoring.imageAvailability.registry.scheme is setted to HTTP than this scheme will be used for all checks.
