@@ -34,13 +34,16 @@ extenders:
   {{- if $extender.prioritizeVerb }}
   prioritizeVerb: {{ $extender.prioritizeVerb}}
   {{- end }}
+  {{- if $extender.preemptVerb }}
+  preemptVerb: {{ $extender.preemptVerb}}
+  {{- end }}
   weight: {{ $extender.weight }}
   enableHTTPS: true
+  tlsConfig:
+    caData: {{ $extender.caData }}
   httpTimeout: {{ $extender.timeout }}s
   nodeCacheCapable: true
   ignorable: {{ $extender.ignorable }}
-  tlsConfig:
-    caData: {{ $extender.caData }}
     {{- end }}
   {{- end }}
 {{- end }}

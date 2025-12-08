@@ -72,6 +72,12 @@ properties:
           properties:
             urlPrefix:
               type: string
+            filterVerb:
+              type: string
+            preemptVerb:
+              type: string
+            prioritizeVerb:
+              type: string
             weight:
               type: integer
             timeout:
@@ -79,18 +85,6 @@ properties:
             ignorable:
               type: boolean
             caData:
-              type: string
-            filterVerb:
-              type: string
-            filterVerbStatus:
-              type: boolean
-            prioritizeVerb:
-              type: string
-            prioritizeVerbStatus:
-              type: boolean
-            preemptVerb:
-              type: string
-            bindVerb:
               type: string
         default: []
       allowedFeatureGates:

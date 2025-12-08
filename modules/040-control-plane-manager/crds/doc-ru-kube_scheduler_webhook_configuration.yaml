@@ -32,11 +32,28 @@ spec:
                 type: object
                 required: ['weight', 'clientConfig']
                 properties:
+                  filterVerb:
+                    type: string
+                    description: |
+                      Этот суффикс добавляется в URLPrefix при вызове расширения на стадии "filter".
+                  preemptVerb:
+                    type: string
+                    description: |
+                      Этот суффикс добавляется в URLPrefix при вызове расширения на стадии "scoring".
+                  prioritizeVerb:
+                    type: string
+                    description: |
+                      Этот суффикс добавляется в URLPrefix при вызове расширения на стадии "scoring".
                   weight:
                     type: integer
                     description: |
                       Числовой множитель для оценок узла, которые генерирует вызов расчета приоритезации.
                     minimum: 1
+                  timeoutSeconds:
+                    type: integer
+                    description: |
+                      Таймаут срабатывания вебхука.
+                    default: 5
                   failurePolicy:
                     type: string
                     enum: ['Fail', 'Ignore']
@@ -77,8 +94,4 @@ spec:
                         type: string
                         description: |
                           caBundle - это пакет CA в PEM-кодировке, который будет использоваться для проверки сертификата сервера webhook.
-                  timeoutSeconds:
-                    type: integer
-                    description: |
-                      Таймаут срабатывания вебхука.
-                    default: 5
+

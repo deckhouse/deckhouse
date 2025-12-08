@@ -60,13 +60,14 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 
 	type extenderConfig struct {
-		URLPrefix            string `yaml:"urlPrefix" json:"urlPrefix"`
-		Weight               int    `yaml:"weight" json:"weight"`
-		Timeout              int    `yaml:"timeout" json:"timeout"`
-		Ignorable            bool   `yaml:"ignorable" json:"ignorable"`
-		CAData               string `yaml:"caData" json:"caData"`
-		FilterVerb           string `yaml:"filterVerb" json:"filterVerb"`
-		PrioritizeVerb       string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
+		Weight         int    `yaml:"weight" json:"weight"`
+		Timeout        int    `yaml:"timeout" json:"timeout"`
+		Ignorable      bool   `yaml:"ignorable" json:"ignorable"`
+		CAData         string `yaml:"caData" json:"caData"`
+		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
+		PrioritizeVerb string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+		PreemptVerb    string `yaml:"preemptVerb" json:"preemptVerb"`
 	}
 	extenders := make([]extenderConfig, 0)
 
@@ -88,11 +89,12 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
-			if !config.FilterVerbStatus {
-				config.FilterVerb = ""
+
+			if config.FilterVerb == nil {
+				config.FilterVerb = ptr.To("filter")
 			}
-			if !config.PrioritizeVerbStatus {
-				config.PrioritizeVerb = ""
+			if config.PrioritizeVerb == nil {
+				config.PrioritizeVerb = ptr.To("prioritize")
 			}
 			newExtender := extenderConfig{
 				URLPrefix:      urlPrefix,
@@ -100,8 +102,9 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 				Timeout:        config.TimeoutSeconds,
 				Ignorable:      config.FailurePolicy == "Ignore",
 				CAData:         config.ClientConfig.CABundle,
-				FilterVerb:     config.FilterVerb,
-				PrioritizeVerb: config.PrioritizeVerb,
+				FilterVerb:     *config.FilterVerb,
+				PrioritizeVerb: *config.PrioritizeVerb,
+				PreemptVerb:    config.PreemptVerb,
 			}
 			extenders = append(extenders, newExtender)
 		}
@@ -126,14 +129,13 @@ type KubeSchedulerWebhookConfiguration struct {
 }
 
 type KubeSchedulerWebhook struct {
-	Weight               int                              `json:"weight" yaml:"weight"`
-	FailurePolicy        string                           `json:"failurePolicy" yaml:"failurePolicy"`
-	ClientConfig         KubeSchedulerWebhookClientConfig `json:"clientConfig" yaml:"clientConfig"`
-	TimeoutSeconds       int                              `json:"timeoutSeconds" yaml:"timeoutSeconds"`
-	FilterVerb           string                           `yaml:"filterVerb" json:"filterVerb"`
-	FilterVerbStatus     bool                             `yaml:"filterVerbStatus" json:"filterVerbStatus"`
-	PrioritizeVerb       string                           `yaml:"prioritizeVerb" json:"prioritizeVerb"`
-	PrioritizeVerbStatus bool                             `yaml:"prioritizeVerbStatus" json:"prioritizeVerbStatus"`
+	Weight         int                              `json:"weight" yaml:"weight"`
+	FailurePolicy  string                           `json:"failurePolicy" yaml:"failurePolicy"`
+	ClientConfig   KubeSchedulerWebhookClientConfig `json:"clientConfig" yaml:"clientConfig"`
+	TimeoutSeconds int                              `json:"timeoutSeconds" yaml:"timeoutSeconds"`
+	FilterVerb     *string                          `yaml:"filterVerb,omitempty" json:"filterVerb,omitempty"`
+	PrioritizeVerb *string                          `yaml:"prioritizeVerb,omitempty" json:"prioritizeVerb,omitempty"`
+	PreemptVerb    string                           `yaml:"preemptVerb" json:"preemptVerb"`
 }
 
 type KubeSchedulerWebhookClientConfig struct {
