@@ -494,6 +494,8 @@ controller-gen-generate: controller-gen
 
 .PHONY: manifests 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
 	@echo "Generating CRDs..."
 	@$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases
 

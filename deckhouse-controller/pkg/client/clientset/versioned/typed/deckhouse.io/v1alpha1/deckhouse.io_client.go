@@ -25,7 +25,9 @@ import (
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ApplicationsGetter
 	ApplicationPackagesGetter
+	ApplicationPackageVersionsGetter
 	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
@@ -36,6 +38,8 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
 	ObjectKeepersGetter
+	PackageRepositoriesGetter
+	PackageRepositoryOperationsGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
@@ -43,8 +47,16 @@ type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
 }
 
+func (c *DeckhouseV1alpha1Client) Applications(namespace string) ApplicationInterface {
+	return newApplications(c, namespace)
+}
+
 func (c *DeckhouseV1alpha1Client) ApplicationPackages() ApplicationPackageInterface {
 	return newApplicationPackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ApplicationPackageVersions() ApplicationPackageVersionInterface {
+	return newApplicationPackageVersions(c)
 }
 
 func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
@@ -85,6 +97,14 @@ func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInter
 
 func (c *DeckhouseV1alpha1Client) ObjectKeepers() ObjectKeeperInterface {
 	return newObjectKeepers(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {
+	return newPackageRepositories(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositoryOperations() PackageRepositoryOperationInterface {
+	return newPackageRepositoryOperations(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.
