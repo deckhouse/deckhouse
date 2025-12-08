@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackagerDir"
+	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDir"
 	ConditionReasonGetRootHash      status.ConditionReason = "GetRootHash"
 	ConditionReasonGetImageReader   status.ConditionReason = "GetImageReader"
 	ConditionReasonImageByTar       status.ConditionReason = "ImageByTar"
@@ -152,9 +152,10 @@ func newMountErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Name:   status.ConditionReadyOnFilesystem,
-				Status: metav1.ConditionFalse,
-				Reason: ConditionReasonMount,
+				Name:    status.ConditionReadyOnFilesystem,
+				Status:  metav1.ConditionFalse,
+				Reason:  ConditionReasonMount,
+				Message: err.Error(),
 			},
 		},
 	}

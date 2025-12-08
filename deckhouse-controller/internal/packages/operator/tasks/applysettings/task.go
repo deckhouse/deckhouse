@@ -68,7 +68,7 @@ func (t *task) Execute(_ context.Context) error {
 		return fmt.Errorf("apply settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
+	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsIsValid)
 
 	return nil
 }

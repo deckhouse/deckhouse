@@ -85,7 +85,7 @@ func NewService() *Service {
 	}
 }
 
-// newStatus creates a new Status with all known conditions initialized to false
+// newStatus creates a new Status with all known conditions initialized to unknown
 func newStatus() *Status {
 	return &Status{
 		Conditions: []Condition{
@@ -164,7 +164,7 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	}
 }
 
-// ClearRuntimeConditions set runtime conditions to unknown
+// ClearRuntimeConditions sets runtime conditions to unknown
 func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -174,7 +174,6 @@ func (s *Service) ClearRuntimeConditions(name string) {
 	}
 
 	runtimeConditions := []ConditionName{
-		ConditionRequirementsMet,
 		ConditionSettingsIsValid,
 		ConditionHelmApplied,
 		ConditionHooksProcessed,

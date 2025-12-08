@@ -155,7 +155,7 @@ func (o *Operator) Remove(namespace, instance string) {
 
 	o.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, o.installer, o.logger), queue.WithOnDone(func() {
 		// Remove package's main queue after uninstall completes
-		o.queueService.Remove(fmt.Sprintf("%s.sync", name))
+		o.queueService.Remove(fmt.Sprintf("%s/sync", name))
 		go o.queueService.Remove(name)
 
 		o.mu.Lock()
