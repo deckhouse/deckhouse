@@ -981,21 +981,32 @@ function wait_upmeter_green() {
 }
 
 function check_resources_state_results() {
+  local testRunAttempts=20
   echo "Check applied resource status..."
-  response=$(get_cluster_status)
-  errors=$(jq -c '
-    .resources_state_results[]
-    | select(.errors)
-    | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
-    | select(.errors | length > 0)
-    | .errors
-  ' <<< "$response")
-  if [ -n "$errors" ]; then
-    echo "  Errors found:"
-    echo "${errors}"
-    return 1
-  fi
-  echo "Check applied resource status... Passed"
+  for ((i=1; i<=testRunAttempts; i++)); do
+    response=$(get_cluster_status)
+    errors=$(jq -c '
+      .resources_state_results[]
+      | select(.errors)
+      | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
+      | select(.errors | length > 0)
+      | .errors
+    ' <<< "$response")
+    if [ -n "$errors" ]; then
+      if [[ $i -lt $testRunAttempts ]]; then
+        echo "  Errors found. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+        sleep 30
+        continue
+      else
+        echo "  Attempt $i/$testRunAttempts failed."
+        echo "${errors}"
+        return 1
+      fi
+    else
+      echo "Check applied resource status... Passed"
+      return 0
+    fi
+  done
 }
 
 function change_deckhouse_image() {
