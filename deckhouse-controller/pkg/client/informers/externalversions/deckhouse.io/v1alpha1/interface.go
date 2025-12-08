@@ -21,12 +21,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Applications returns a ApplicationInformer.
-	Applications() ApplicationInformer
 	// ApplicationPackages returns a ApplicationPackageInformer.
 	ApplicationPackages() ApplicationPackageInformer
-	// ApplicationPackageVersions returns a ApplicationPackageVersionInformer.
-	ApplicationPackageVersions() ApplicationPackageVersionInformer
 	// DeckhouseReleases returns a DeckhouseReleaseInformer.
 	DeckhouseReleases() DeckhouseReleaseInformer
 	// Modules returns a ModuleInformer.
@@ -47,10 +43,6 @@ type Interface interface {
 	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
 	// ObjectKeepers returns a ObjectKeeperInformer.
 	ObjectKeepers() ObjectKeeperInformer
-	// PackageRepositories returns a PackageRepositoryInformer.
-	PackageRepositories() PackageRepositoryInformer
-	// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
-	PackageRepositoryOperations() PackageRepositoryOperationInformer
 }
 
 type version struct {
@@ -64,19 +56,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// Applications returns a ApplicationInformer.
-func (v *version) Applications() ApplicationInformer {
-	return &applicationInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
 // ApplicationPackages returns a ApplicationPackageInformer.
 func (v *version) ApplicationPackages() ApplicationPackageInformer {
 	return &applicationPackageInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// ApplicationPackageVersions returns a ApplicationPackageVersionInformer.
-func (v *version) ApplicationPackageVersions() ApplicationPackageVersionInformer {
-	return &applicationPackageVersionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // DeckhouseReleases returns a DeckhouseReleaseInformer.
@@ -127,14 +109,4 @@ func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
 // ObjectKeepers returns a ObjectKeeperInformer.
 func (v *version) ObjectKeepers() ObjectKeeperInformer {
 	return &objectKeeperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// PackageRepositories returns a PackageRepositoryInformer.
-func (v *version) PackageRepositories() PackageRepositoryInformer {
-	return &packageRepositoryInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
-func (v *version) PackageRepositoryOperations() PackageRepositoryOperationInformer {
-	return &packageRepositoryOperationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

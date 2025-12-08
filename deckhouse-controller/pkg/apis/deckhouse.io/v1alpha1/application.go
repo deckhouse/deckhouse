@@ -85,7 +85,13 @@ var _ runtime.Object = (*Application)(nil)
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,shortName=app
+// +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
+// +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.version
+// +kubebuilder:printcolumn:name=Registry,type=string,JSONPath=.spec.packageRepository,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
