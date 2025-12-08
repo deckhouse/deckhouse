@@ -68,27 +68,27 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 		}
 
 		log.InfoF("Connection attempt failed to host: %v", host)
-		oldHost := host
+		//oldHost := host
 		c.Session.ChoiceNewHost()
 
-		errMsg := "unknown error"
-		if err != nil {
-			errMsg = err.Error()
-		}
+		//errMsg := "unknown error"
+		//if err != nil {
+		//	errMsg = err.Error()
+		//}
 
-		var detailedErr string
-		switch {
-		case strings.Contains(errMsg, "timeout"):
-			detailedErr = fmt.Sprintf("SSH connection timed out to host '%s'", oldHost)
-		case strings.Contains(errMsg, "permission denied"):
-			detailedErr = fmt.Sprintf("SSH permission access denied to host '%s'", oldHost)
-		case strings.Contains(errMsg, "no route to host"), strings.Contains(errMsg, "host unreachable"):
-			detailedErr = fmt.Sprintf("No route to host: '%s' unreachable", oldHost)
-		default:
-			detailedErr = fmt.Sprintf("Failed to connect to host '%s': %s", oldHost, errMsg)
-		}
+		//var detailedErr string
+		//switch {
+		//case strings.Contains(errMsg, "timeout"):
+		//	detailedErr = fmt.Sprintf("SSH connection timed out to host '%s'", oldHost)
+		//case strings.Contains(errMsg, "permission denied"):
+		//	detailedErr = fmt.Sprintf("SSH permission access denied to host '%s'", oldHost)
+		//case strings.Contains(errMsg, "no route to host"), strings.Contains(errMsg, "host unreachable"):
+		//	detailedErr = fmt.Sprintf("No route to host: '%s' unreachable", oldHost)
+		//default:
+		//	detailedErr = fmt.Sprintf("Failed to connect to host '%s': %s", oldHost, errMsg)
+		//}
 
-		return fmt.Errorf("%s\nSSH command output:\n%s", detailedErr, strings.TrimSpace(string(output)))
+		return fmt.Errorf("\nSSH command output: '%s', '%s' \n", err.Error(), strings.TrimSpace(string(output)))
 	})
 }
 
