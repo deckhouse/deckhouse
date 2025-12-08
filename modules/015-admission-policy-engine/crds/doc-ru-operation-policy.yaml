@@ -31,6 +31,8 @@ spec:
                           description: "Список запросов на выделение ресурсов, которые должны быть выполнены (процессор, память или оба запроса)."
                     disallowedImageTags:
                       description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
+                    disallowedCustomResources:
+                      description: "Запретить контейнерам запрашивать ресурсы, указанные в списке. Это полезно для управления доступом к GPU в связке с оператором `notIn` в `namespaceSelector`."
                     disallowedTolerations:
                       description: |
                         Запрещает создание подов с tolerations из указанного списка.

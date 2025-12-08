@@ -1,0 +1,48 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8disallowedcustomresources
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Allowed custom resources"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Deny containers that request any resources specified in the list. This is useful for managing access to GPUs along with `notIn` operator in the `namespaceSelector`."
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DisallowedCustomResources
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            resourcePatterns:
+              description: "Resources regex patterns (like 'nvidia.com/.*')."
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          general_violation[{"msg": msg, "field": "containers"}]
+        }
+
+        violation[{"msg": msg}] {
+          general_violation[{"msg": msg, "field": "initContainers"}]
+        }
+
+        general_violation[{"msg": msg, "field": field}] {
+          container := input.review.object.spec[field][_]
+          requests := object.get(container.resources, "requests", {})
+          some resource_name
+          requests[resource_name]
+          pattern := input.parameters.resourcePatterns[_]
+          regex.match(pattern, resource_name)
+          msg := sprintf("container <%v> requests resources matching regex <%v> that are not allowed in the namespace", [container.name, pattern])
+        }
