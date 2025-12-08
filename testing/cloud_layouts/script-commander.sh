@@ -1051,16 +1051,16 @@ if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.en
     "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api | jq -r '.kind'")
     if [[ "$RESPONSE" != "APIVersions" ]]; then
       echo "API is not available. Response: $RESPONSE"
-      return 1
+      exit 1
     fi
-    return 0
+    exit 0
   else
     echo "Ingress kubernetes-api not found"
-    return 1
+    exit 1
   fi
 else
   echo "Publish API is not enabled"
-  return 0
+  exit 0
 fi
 END_SCRIPT
 )
