@@ -1,5 +1,5 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index e1070eec..372fff19 100644
+index e1070eec..e8ce1ba6 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
 @@ -373,7 +373,8 @@ type Cloud struct {
@@ -12,12 +12,14 @@ index e1070eec..372fff19 100644
  
  	// The AWS instance that we are running on
  	// Note that we cache some state in awsInstance (mountpoints), so we must preserve the instance
-@@ -584,6 +585,22 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
+@@ -584,6 +585,26 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
  		deleteTagsBatcher:       newDeleteTagsBatcher(ctx, ec2),
  		describeInstanceBatcher: newdescribeInstanceBatcher(ctx, ec2),
  	}
 +
-+	if s := cfg.Global.PublicNetworkAllowList; s != "" {
++	s := cfg.Global.PublicNetworkAllowList
++	if s != "" {
++		klog.Infof("Raw PublicNetworkAllowList from CloudConfig: %q", s)
 +		parts := strings.Split(s, ",")
 +		cidrs := make([]string, 0, len(parts))
 +		for _, p := range parts {
@@ -30,21 +32,30 @@ index e1070eec..372fff19 100644
 +			awsCloud.defaultNLBClientCIDRs = cidrs
 +			klog.Infof("Using publicNetworkAllowList for NLB client CIDRs: %v", cidrs)
 +		}
++	} else {
++		klog.Infof("No PublicNetworkAllowList provided: %q", s)
 +	}
 +
  	awsCloud.instanceCache.cloud = awsCloud
  	awsCloud.zoneCache.cloud = awsCloud
  	awsCloud.instanceTopologyManager = NewInstanceTopologyManager(ec2, &cfg)
 diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
-index ca95a3ab..baf2e23a 100644
+index ca95a3ab..815c8d5e 100644
 --- a/pkg/providers/v1/aws_loadbalancer.go
 +++ b/pkg/providers/v1/aws_loadbalancer.go
-@@ -793,6 +793,10 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(ctx context.Context, lbName s
+@@ -789,10 +789,17 @@ func (c *Cloud) chunkTargetDescriptions(targets []elbv2types.TargetDescription,
+ // updateInstanceSecurityGroupsForNLB will adjust securityGroup's settings to allow inbound traffic into instances from clientCIDRs and portMappings.
+ // TIP: if either instances or clientCIDRs or portMappings are nil, then the securityGroup rules for lbName are cleared.
+ func (c *Cloud) updateInstanceSecurityGroupsForNLB(ctx context.Context, lbName string, instances map[InstanceID]*ec2types.Instance, subnetCIDRs []string, clientCIDRs []string, portMappings []nlbPortMapping) error {
++	klog.Infof("updateInstanceSecurityGroupsForNLB: lbName=%s, initial clientCIDRs=%v, defaultNLBClientCIDRs=%v", lbName, clientCIDRs, c.defaultNLBClientCIDRs)
++
+ 	if c.cfg.Global.DisableSecurityGroupIngress {
  		return nil
  	}
  
 +	if (len(clientCIDRs) == 0 || (len(clientCIDRs) == 1 && clientCIDRs[0] == "0.0.0.0/0")) && len(c.defaultNLBClientCIDRs) > 0 {
 +		clientCIDRs = c.defaultNLBClientCIDRs
++		klog.Infof("updateInstanceSecurityGroupsForNLB: overriding clientCIDRs with defaultNLBClientCIDRs=%v", clientCIDRs)
 +	}
 +
  	clusterSGs, err := c.getTaggedSecurityGroups(ctx)
