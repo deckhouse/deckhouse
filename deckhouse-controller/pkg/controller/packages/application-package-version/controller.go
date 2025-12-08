@@ -227,7 +227,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// Patch the status
-	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
+	apv = enrichWithPackageDefinition(apv, packageMeta)
 
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
@@ -337,10 +337,12 @@ func (r *reconciler) SetConditionFalse(apv *v1alpha1.ApplicationPackageVersion, 
 	return apv
 }
 
-func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
-	if pd == nil {
+func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, meta *PackageMetadata) *v1alpha1.ApplicationPackageVersion {
+	if meta == nil {
 		return apv
 	}
+
+	pd := meta.PackageDefinition
 
 	apv.Status.PackageName = pd.Name
 	apv.Status.Version = pd.Version
@@ -387,6 +389,10 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 				},
 			}
 		}
+	}
+
+	if len(meta.Changelog) > 0 {
+		apv.Status.PackageMetadata.Changelog = v1alpha1.MakeMappedFields(meta.Changelog)
 	}
 
 	return apv

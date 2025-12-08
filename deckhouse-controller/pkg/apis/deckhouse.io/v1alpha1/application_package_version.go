@@ -131,7 +131,7 @@ type ApplicationPackageVersionStatusMetadata struct {
 	Stage         string                            `json:"stage,omitempty"`
 	Requirements  *PackageRequirements              `json:"requirements,omitempty"`
 	Licensing     *PackageLicensing                 `json:"licensing,omitempty"`
-	Changelog     *PackageChangelog                 `json:"changelog,omitempty"`
+	Changelog     *MappedFields                     `json:"changelog,omitempty"`
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
 }
 
