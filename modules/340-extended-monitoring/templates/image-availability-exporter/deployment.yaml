@@ -94,6 +94,11 @@ spec:
         - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
         {{- end }}
         {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.mirrorsSchemes }}
+        {{- range $mirrorScheme := .Values.extendedMonitoring.imageAvailability.mirrorsSchemes }}
+        - '--mirror-scheme={{ printf "%s=%s" $mirrorScheme.mirror $mirrorScheme.scheme}}'
+        {{- end }}
+        {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         resources:
