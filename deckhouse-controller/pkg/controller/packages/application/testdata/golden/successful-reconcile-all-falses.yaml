@@ -9,12 +9,14 @@ metadata:
   namespace: foobar
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
-    controller: true
+    blockOwnerDeletion: true
+    controller: false
     kind: ApplicationPackageVersion
     name: deckhouse-test-v1.0.3
     uid: ""
   - apiVersion: deckhouse.io/v1alpha1
-    controller: true
+    blockOwnerDeletion: true
+    controller: false
     kind: ApplicationPackage
     name: test
     uid: ""
