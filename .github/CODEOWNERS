@@ -3,22 +3,22 @@
 002-deckhouse/                  @yalosev @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
 015-admission-policy-engine/    @nabokihms
-021-cni-cilium/                 @apolovov
-025-static-routing-manager/     @apolovov
+021-cni-cilium/                 @AndreyPavlovFlant @apolovov
+025-static-routing-manager/     @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/           @aleksey-su
 031-local-path-provisioner/     @AleksZimin @duckhawk
-035-cni-flannel/                @apolovov
-035-cni-simple-bridge/          @apolovov
-036-kube-proxy/                 @apolovov
+035-cni-flannel/                @AndreyPavlovFlant @apolovov
+035-cni-simple-bridge/          @AndreyPavlovFlant @apolovov
+036-kube-proxy/                 @AndreyPavlovFlant @apolovov
 038-registry/                   @RaveNoX
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212
 040-terraform-manager/          @name212 @aleksey-su
-042-kube-dns/                   @apolovov
-050-network-policy-engine/      @apolovov
+042-kube-dns/                   @AndreyPavlovFlant @apolovov
+050-network-policy-engine/      @AndreyPavlovFlant @apolovov
 101-cert-manager/               @Suselz
-110-istio/                      @apolovov @skurbatov
+110-istio/                      @skurbatov @apolovov
 140-user-authz/                 @nabokihms
 150-user-authn/                 @nabokihms
 160-multitenancy-manager/       @nabokihms
@@ -29,26 +29,26 @@
 303-prometheus-*/               @vladimirGuryanov @lazovskiy
 340-extended-monitoring/        @vladimirGuryanov @lazovskiy
 340-monitoring-*/               @vladimirGuryanov @lazovskiy
-350-node-local-dns/             @apolovov
-380-metallb/                    @apolovov
+350-node-local-dns/             @AndreyPavlovFlant @apolovov
+380-metallb/                    @AndreyPavlovFlant @apolovov
 400-descheduler/                @yalosev
-402-ingress-nginx/              @apolovov
-450-keepalived/                 @apolovov
-450-network-gateway/            @apolovov
+402-ingress-nginx/              @miklezzzz @apolovov
+450-keepalived/                 @AndreyPavlovFlant @apolovov
+450-network-gateway/            @AndreyPavlovFlant @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
 470-chrony/                     @name212
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms
-500-openvpn/                    @apolovov
-500-cilium-hubble/              @apolovov
+500-openvpn/                    @AndreyPavlovFlant @apolovov
+500-cilium-hubble/              @AndreyPavlovFlant @apolovov
 500-dashboard/                  @shvgn
 500-upmeter/                    @vladimirGuryanov @lazovskiy
 500-okmeter/                    @vladimirGuryanov @lazovskiy
 500-operator-trivy/             @nabokihms
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
-610-service-with-healthchecks   @apolovov
+610-service-with-healthchecks   @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/            @RomanenkoDenys @name212
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
