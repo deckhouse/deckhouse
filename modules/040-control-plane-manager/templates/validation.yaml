@@ -17,8 +17,13 @@ spec:
   validations:
     - expression: |
         request.userInfo.username.startsWith("system:serviceaccount:d8-")
-        || object.metadata.?labels["node.deckhouse.io/etcd-arbiter"].orValue("")
-           == oldObject.metadata.?labels["node.deckhouse.io/etcd-arbiter"].orValue("")
+        || (
+          (has(object.metadata.labels) && "node.deckhouse.io/etcd-arbiter" in object.metadata.labels)
+          == (has(oldObject.metadata.labels) && "node.deckhouse.io/etcd-arbiter" in oldObject.metadata.labels)
+        ) && (
+          object.metadata.?labels["node.deckhouse.io/etcd-arbiter"].orValue("")
+          == oldObject.metadata.?labels["node.deckhouse.io/etcd-arbiter"].orValue("")
+        )
       reason: Forbidden
       messageExpression: "'Changing the `node.deckhouse.io/etcd-arbiter` label on nodes manually is forbidden, this label is managed by deckhouse'"
 ---
