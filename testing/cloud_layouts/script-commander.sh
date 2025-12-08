@@ -1042,24 +1042,24 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
-  echo "Publish API is enabled"
+  >&2 echo "Publish API is enabled"
   if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
-    echo "Ingress kubernetes-api found"
+    >&2 echo "Ingress kubernetes-api found"
     HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
     IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
     "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api | jq -r '.kind'")
     if [[ "$RESPONSE" != "APIVersions" ]]; then
-      echo "API is not available. Response: $RESPONSE"
+      echo "Publish API is enabled, but API is not available. Response: $RESPONSE"
       exit 1
     fi
     exit 0
   else
-    echo "Ingress kubernetes-api not found"
+    echo "Publish API is enabled, but ingress kubernetes-api not found"
     exit 1
   fi
 else
-  echo "Publish API is not enabled"
+  >&2 echo "Publish API is not enabled"
   exit 0
 fi
 END_SCRIPT
