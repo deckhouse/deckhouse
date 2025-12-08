@@ -551,8 +551,11 @@ func (r *reconciler) SetConditionFalse(app *v1alpha1.Application, condType strin
 }
 
 func (r *reconciler) addOwnerReferencesIfNotSet(app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion, ap *v1alpha1.ApplicationPackage) *v1alpha1.Application {
+	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
+
 	ownerRefs := app.GetOwnerReferences()
 	trueLink := &[]bool{true}[0]
+	falseLink := &[]bool{false}[0]
 
 	isAPVRefSet := false
 	isAPRefSet := false
@@ -572,22 +575,28 @@ func (r *reconciler) addOwnerReferencesIfNotSet(app *v1alpha1.Application, apv *
 
 	// add owner references if they are not set
 	if !isAPVRefSet {
+		logger.Debug("adding ApplicationPackageVersion owner reference to application", slog.String("apv_name", apv.Name))
+
 		ownerRefs = append(ownerRefs, metav1.OwnerReference{
-			APIVersion: v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
-			Kind:       v1alpha1.ApplicationPackageVersionKind,
-			Name:       apv.Name,
-			UID:        apv.UID,
-			Controller: trueLink,
+			APIVersion:         v1alpha1.ApplicationPackageVersionGVK.GroupVersion().String(),
+			Kind:               v1alpha1.ApplicationPackageVersionKind,
+			Name:               apv.Name,
+			UID:                apv.UID,
+			Controller:         falseLink,
+			BlockOwnerDeletion: trueLink,
 		})
 	}
 
 	if !isAPRefSet {
+		logger.Debug("adding ApplicationPackage owner reference to application", slog.String("ap_name", ap.Name))
+
 		ownerRefs = append(ownerRefs, metav1.OwnerReference{
-			APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
-			Kind:       v1alpha1.ApplicationPackageKind,
-			Name:       ap.Name,
-			UID:        ap.UID,
-			Controller: trueLink,
+			APIVersion:         v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
+			Kind:               v1alpha1.ApplicationPackageKind,
+			Name:               ap.Name,
+			UID:                ap.UID,
+			Controller:         falseLink,
+			BlockOwnerDeletion: trueLink,
 		})
 	}
 
