@@ -1,0 +1,13 @@
+ci:
+  features:
+    - summary: Add DVP e2e for the cse edition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16807
+deckhouse-controller:
+  fixes:
+    - summary: Fix conversions for external modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16851
+dhctl:
+  fixes:
+    - summary: Fix parallel bootstrap cloud permanent nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16886
+
