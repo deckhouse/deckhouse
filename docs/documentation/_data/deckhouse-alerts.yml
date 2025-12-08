@@ -5324,6 +5324,51 @@ alerts:
         NAT instance {{ $labels.name }} is in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
+    - name: NginxIngressAdmissionConfigSizeCritical
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 8 MiB).
+
+        This may cause high memory usage or crashes during validation or reload. Split ingresses between controllers or reduce configuration size.
+
+        This alert is based on metrics scraped from the validator webhook.
+      summary: |
+        Ingress-NGINX: admission config is too large
+      severity: "5"
+      markupFormat: markdown
+    - name: NginxIngressAdmissionConfigSizeWarning
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 4 MiB).
+
+        Consider splitting ingresses between multiple controllers or reducing configuration size.
+
+        This alert is based on metrics scraped from the validator webhook.
+      summary: |
+        Ingress-NGINX: admission config is getting large
+      severity: "6"
+      markupFormat: markdown
+    - name: NginxIngressAdmissionRenderSlow
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} renders configuration longer than 30s (current: {{ printf "%.1f" $value }}s).
+
+        Long render may indicate heavy ingress configuration or performance issues. Consider splitting ingresses between controllers or simplifying configuration.
+
+        This alert is based on metrics scraped from the validator webhook.
+      summary: |
+        Ingress-NGINX: admission render is slow
+      severity: "6"
+      markupFormat: markdown
     - name: NginxIngressConfigTestFailed
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx

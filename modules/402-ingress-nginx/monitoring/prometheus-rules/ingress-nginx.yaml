@@ -89,6 +89,53 @@
         ```bash
         d8 k -n d8-ingress-nginx logs $(d8 k -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
         ```
+  - alert: NginxIngressAdmissionConfigSizeWarning
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_config_size) > 4 * 1024 * 1024
+    for: 10m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: "Ingress-NGINX: admission config is getting large"
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 4 MiB).
+
+        Consider splitting ingresses between multiple controllers or reducing configuration size.
+
+        This alert is based on metrics scraped from the validator webhook.
+
+  - alert: NginxIngressAdmissionConfigSizeCritical
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_config_size) > 8 * 1024 * 1024
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: "Ingress-NGINX: admission config is too large"
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 8 MiB).
+
+        This may cause high memory usage or crashes during validation or reload. Split ingresses between controllers or reduce configuration size.
+
+        This alert is based on metrics scraped from the validator webhook.
+
+  - alert: NginxIngressAdmissionRenderSlow
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_render_duration_seconds) > 30
+    for: 5m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: "Ingress-NGINX: admission render is slow"
+      description: |-
+        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} renders configuration longer than 30s (current: {{ printf "%.1f" $value }}s).
+
+        Long render may indicate heavy ingress configuration or performance issues. Consider splitting ingresses between controllers or simplifying configuration.
+
+        This alert is based on metrics scraped from the validator webhook.
 
   - alert: NginxIngressPodIsRestartingTooOften
     expr: |
