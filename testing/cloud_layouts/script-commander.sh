@@ -1400,11 +1400,12 @@ function run-test() {
 
   wait_alerts_resolve || return $?
 
+  set_common_ssh_parameters
+
   if [[ $PROVIDER == "Yandex.Cloud" ]]; then
     check_publish_api || return $?
   fi
 
-  set_common_ssh_parameters
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     wait_prom_rules_mutating_ready || return $?
   else
