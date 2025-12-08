@@ -77,11 +77,12 @@ properties:
               type: string
       mirrorsSchemes:
         type: array
+        default: []
         x-examples:
-        - mirror: mirror.gcr.io
-          scheme: HTTP
-        - mirror: mirror.internal-registry.com
-          scheme: HTTPS
+        - - mirror: mirror.gcr.io
+            scheme: HTTP
+          - mirror: mirror.internal-registry.com
+            scheme: HTTPS
         items:
           type: object
           required:
