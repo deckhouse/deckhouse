@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -49,6 +48,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
