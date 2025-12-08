@@ -335,22 +335,15 @@ EOF
   # Check memorySwap configuration requires cgroup v2
   if context::jq -e -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior != null and .review.request.object.spec.kubelet.memorySwap.swapBehavior != ""' >/dev/null 2>&1; then
     swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior')"
-    nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
-    # Debug info
-    echo "[DEBUG] swapBehavior=${swapBehavior}"
-    echo "[DEBUG] nodeGroup=${nodeGroupName}"
-    echo "[DEBUG] nodes_without_containerd_support len: $(context::jq -r '.snapshots.nodes_without_containerd_support | length')"
-    echo "[DEBUG] nodes_without_containerd_support entries:"
-    context::jq -r '.snapshots.nodes_without_containerd_support[] | {name: .filterResult.nodeName, labels: .filterResult.labels, annotations: .filterResult.annotations}' || true
     if [[ "${swapBehavior}" != "NoSwap" ]]; then
       # Block if NodeGroup contains nodes without cgroup v2 support
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
       unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
         .snapshots.nodes_without_containerd_support[]
         | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
         | select(.filterResult.annotations["node.deckhouse.io/containerd-v2-err"] | contains("cgroupv2"))
         | .filterResult.nodeName
       ')"
-      echo "[DEBUG] unsupportedNodes=${unsupportedNodes}"
       if [[ -n "${unsupportedNodes}" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes where cgroup v2 is not supported."}
