@@ -128,10 +128,11 @@ type OperationPolicySpec struct {
 			Limits   []string `json:"limits,omitempty"`
 			Requests []string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
-		DisallowedImageTags   []string     `json:"disallowedImageTags,omitempty"`
-		DisallowedTolerations []Toleration `json:"disallowedTolerations,omitempty"`
-		RequiredProbes        []string     `json:"requiredProbes,omitempty"`
-		RequiredLabels        struct {
+		DisallowedImageTags       []string     `json:"disallowedImageTags,omitempty"`
+		DisallowedCustomResources []string     `json:"disallowedCustomResources,omitempty"`
+		DisallowedTolerations     []Toleration `json:"disallowedTolerations,omitempty"`
+		RequiredProbes            []string     `json:"requiredProbes,omitempty"`
+		RequiredLabels            struct {
 			Labels []struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
