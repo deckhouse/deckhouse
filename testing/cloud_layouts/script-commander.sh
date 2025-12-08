@@ -1036,6 +1036,46 @@ ENDSSH
   fi
 }
 
+function check_publish_api() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
+  echo "Publish API is enabled"
+  if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
+    echo "Ingress kubernetes-api found"
+    HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+    IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
+    "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api | jq -r '.kind'")
+    if [[ "$RESPONSE" != "APIVersions" ]]; then
+      echo "API is not available. Response: $RESPONSE"
+      return 1
+    fi
+    return 0
+  else
+    echo "Ingress kubernetes-api not found"
+    return 1
+  fi
+else
+  echo "Publish API is not enabled"
+  return 0
+fi
+END_SCRIPT
+)
+
+  testRunAttempts=10
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    else
+      >&2 echo "Publish API is not enabled. Attempt $i/$testRunAttempts failed. Sleep for 10 seconds..."
+      sleep 10
+    fi
+  done
+  return 1
+}
 
 # update_release_channel changes the release-channel image to given tag
 function update_release_channel() {
@@ -1359,6 +1399,10 @@ function run-test() {
   check_resources_state_results || return $?
 
   wait_alerts_resolve || return $?
+
+  if [[ $PROVIDER == "Yandex.Cloud" ]]; then
+    check_publish_api || return $?
+  fi
 
   set_common_ssh_parameters
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
