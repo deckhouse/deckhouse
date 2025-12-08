@@ -101,8 +101,8 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.extendedMonitoring.imageAvailability.mirrorsSchemes }}
-        {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrorsSchemes }}
-        - '--image-mirror={{ printf "%s=%s" $mirror.mirror $mirror.scheme}}'
+        {{- range $mirrorScheme := .Values.extendedMonitoring.imageAvailability.mirrorsSchemes }}
+        - '--mirror-scheme={{ printf "%s=%s" $mirrorScheme.mirror $mirrorScheme.scheme}}'
         {{- end }}
         {{- end }}
         env:
