@@ -263,7 +263,7 @@ spec:
 
 - настроить правила доступа на уровне Ingress-ресурсов,
 - использовать разные Ingress-контроллеры,
-- На Ingress-контроллерах ограничить, с каких адресов можно подключаться к ним.
+- на Ingress-контроллерах ограничить, с каких адресов можно подключаться к ним.
 
 Пример конфигурации Ingress-ресурсов для такого случая:
 
@@ -339,7 +339,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
-  name: admin
+  name: public
 spec:
   ingressClass: public-nginx
   inlet: HostPort
