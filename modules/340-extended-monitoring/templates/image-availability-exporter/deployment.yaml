@@ -71,8 +71,8 @@ spec:
         {{- if .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
         - --check-interval={{ .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
         {{- end }}
-        {{- if .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
-        - --default-registry= {{ .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
+        {{- if .Values.extendedMonitoring.imageAvailability.defaultRegistry }}
+        - --default-registry= {{ .Values.extendedMonitoring.imageAvailability.defaultRegistry }}
         {{- end }}
         {{- $ignoredImages := list ".*upmeter-nonexistent.*" }}
         {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
