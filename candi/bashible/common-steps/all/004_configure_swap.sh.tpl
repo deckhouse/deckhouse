@@ -51,8 +51,6 @@ if [ "$TOTAL_SWAP_USED" -gt 0 ]; then
   REQUIRED=$TOTAL_SWAP_USED
   if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
     bb-log-warning "Not enough free memory to disable swap safely (available=${AVAILABLE}B, needed>=$REQUIRED B). Proceeding in-place."
-  else
-    bb-log-info "Sufficient memory to disable swap in-place (available=${AVAILABLE}B, swap_used=${TOTAL_SWAP_USED}B)."
   fi
 fi
 
@@ -125,8 +123,6 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
     REQUIRED=$SWAP_USED
     if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
       bb-log-warning "Not enough free memory to resize swap safely (available=${AVAILABLE}B, swap_used=${SWAP_USED}B). Proceeding in-place."
-    else
-      bb-log-info "Sufficient memory to resize swap in-place (available=${AVAILABLE}B, swap_used=${SWAP_USED}B)."
     fi
   fi
 
@@ -142,8 +138,6 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
   bb-log-info "Swapfile formatted successfully"
-  # Swapfile changed, kubelet needs restart
-  bb-flag-set kubelet-need-restart
 else
   bb-log-info "Swapfile already exists with correct size: ${CURRENT_BYTES} bytes"
 fi
@@ -159,8 +153,6 @@ if swapon --show | grep -q "$SWAPFILE"; then
 else
   if swapon "$SWAPFILE"; then
     bb-log-info "Swap enabled successfully"
-    # Swap was just enabled, kubelet needs restart
-    bb-flag-set kubelet-need-restart
   else
     bb-log-error "Failed to enable swap"
     exit 1
