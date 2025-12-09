@@ -21,6 +21,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
@@ -84,6 +85,9 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
 			}, logger)
+		case dvp.ProviderName:
+			dvpPreparator := dvp.NewMetaConfigPreparator(true).WithLogger(logger).EnableValidateKubeConfig()
+			return dvpPreparator
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
