@@ -96,7 +96,7 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 		//	debugErr = fmt.Sprintf("Failed to connect to host '%s'", oldHost)
 		//}
 
-		return fmt.Errorf("SSH command output:'%s', err:'%s'", string(output), err.Error())
+		return fmt.Errorf("SSH command output: '%s', err: '%s'", string(output), err.Error())
 	})
 }
 
@@ -124,8 +124,8 @@ func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 
 	output, debug, err := cmd.Output(ctx)
 	if err != nil {
-		//full := fmt.Sprintf("debug: %s", debug)
-		return debug, err
+		full := fmt.Sprintf("output: %s, debug: %s", output, debug)
+		return []byte(full), err
 	}
 
 	if strings.Contains(string(output), "SUCCESS") {
