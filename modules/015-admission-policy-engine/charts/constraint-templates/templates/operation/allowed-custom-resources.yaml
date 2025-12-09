@@ -42,10 +42,10 @@ spec:
           some resource_type
           resource_group := object.get(container.resources, resource_type, {})
           some resource_name
-          resource_group[resource_name]
+          resource_value := resource_group[resource_name]
           pattern := input.parameters.resourcePatterns[_]
           regex.match(pattern, resource_name)
-          msg := sprintf("container <%v> %v resources matching regex <%v> that are not allowed in the namespace", [container.name, resource_type, pattern])
+          msg := sprintf("container <%v> %v resource <%v: %v> matching regex <%v> that is not allowed in the namespace", [container.name, resource_type, resource_name, resource_value, pattern])
         } {
           resource_type := "requests"
         } {
