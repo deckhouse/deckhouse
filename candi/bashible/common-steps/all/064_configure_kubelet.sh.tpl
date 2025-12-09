@@ -294,12 +294,8 @@ evictionSoftGracePeriod:
 evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
-{{- $memorySwap := dig "kubelet" "memorySwap" nil .nodeGroup }}
-{{- if $memorySwap }}
-  {{- $swapBehavior := dig "kubelet" "memorySwap" "swapBehavior" "" .nodeGroup }}
-  {{- if eq $swapBehavior "" }}
-    {{- $swapBehavior = "NoSwap" }}
-  {{- end }}
+{{- if ((.nodeGroup).kubelet).memorySwap }}
+  {{- $swapBehavior := .nodeGroup.kubelet.memorySwap.swapBehavior | default "NoSwap" }}
 failSwapOn: false
 memorySwap:
   swapBehavior: {{ $swapBehavior }}

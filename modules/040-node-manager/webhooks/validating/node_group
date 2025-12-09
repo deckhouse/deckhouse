@@ -110,8 +110,7 @@ kubernetes:
     jqFilter: |
       {
         "nodeName": .metadata.name,
-        "labels": .metadata.labels,
-        "annotations": .metadata.annotations
+        "labels": .metadata.labels
       }
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
@@ -332,16 +331,15 @@ EOF
     fi
   fi
 
-  # Check memorySwap configuration requires cgroup v2
-  if context::jq -e -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior != null and .review.request.object.spec.kubelet.memorySwap.swapBehavior != ""' >/dev/null 2>&1; then
-    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior')"
-    if [[ "${swapBehavior}" != "NoSwap" ]]; then
+  # Check memorySwap configuration requires cgroup v2 on update
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior // ""')"
+    if [[ "${swapBehavior}" == "LimitedSwap" ]]; then
       # Block if NodeGroup contains nodes without cgroup v2 support
       nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
       unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
         .snapshots.nodes_without_containerd_support[]
         | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
-        | select(.filterResult.annotations["node.deckhouse.io/containerd-v2-err"] | contains("cgroupv2"))
         | .filterResult.nodeName
       ')"
       if [[ -n "${unsupportedNodes}" ]]; then

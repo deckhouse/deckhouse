@@ -40,20 +40,6 @@ has_cgroup2() {
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
 
-if ! has_cgroup2; then
-  bb-log-warning "Swap is disabled and node uses cgroup v1; proceeding without swap configuration."
-fi
-
-# If we are about to disable swap, ensure enough RAM or perform cordon+drain
-TOTAL_SWAP_USED=$(total_swap_used_bytes)
-if [ "$TOTAL_SWAP_USED" -gt 0 ]; then
-  AVAILABLE=$(mem_available_bytes)
-  REQUIRED=$TOTAL_SWAP_USED
-  if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
-    bb-log-warning "Not enough free memory to disable swap safely (available=${AVAILABLE}B, needed>=$REQUIRED B). Proceeding in-place."
-  fi
-fi
-
 # Stop and mask systemd swap units
 for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
   systemctl stop "$swapunit" || true
@@ -115,26 +101,11 @@ fi
 
 # Recreate swapfile if size differs or doesn't exist
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
-  # If swap is in use and memory is tight, require disruptive approval and drain
-  SWAP_USED=$(swapon --show=NAME,USED --bytes --noheadings 2>/dev/null | awk -v f="$SWAPFILE" '$1==f {print $2}')
-  SWAP_USED=${SWAP_USED:-0}
-  if [ "$SWAP_USED" -gt 0 ]; then
-    AVAILABLE=$(mem_available_bytes)
-    REQUIRED=$SWAP_USED
-    if [ "$AVAILABLE" -lt "$REQUIRED" ]; then
-      bb-log-warning "Not enough free memory to resize swap safely (available=${AVAILABLE}B, swap_used=${SWAP_USED}B). Proceeding in-place."
-    fi
-  fi
-
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
   swapoff "$SWAPFILE" 2>/dev/null || true
   rm -f "$SWAPFILE"
-  if fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
-    bb-log-info "Swapfile created with fallocate"
-  else
-    bb-log-info "fallocate failed, using dd as fallback"
-    dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SIZE_NUM * 1024)) status=progress
-  fi
+  bb-log-info "Creating swapfile with dd"
+  dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SIZE_NUM * 1024)) status=progress
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
   bb-log-info "Swapfile formatted successfully"

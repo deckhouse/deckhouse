@@ -632,68 +632,6 @@ spec:
                         How many rotated log files to store before deleting them.
 
                         > **WARNING!** This parameter does nothing if CRI type is `Docker`.
-                    memorySwap:
-                      type: object
-                      description: |
-                        Memory swap configuration for kubelet.
-
-                        **Warning**: Swap support only works on nodes with cgroup v2. Nodes with cgroup v1 will generate an error.
-
-                        For Kubernetes versions < 1.34, the NodeSwap feature gate will be automatically enabled.
-                      oneOf:
-                      - properties:
-                          swapBehavior:
-                            enum: ["NoSwap"]
-                        not:
-                          required: ["limitedSwap"]
-                      - properties:
-                          swapBehavior:
-                            enum: ["LimitedSwap"]
-                        required:
-                          - limitedSwap
-                      properties:
-                        swapBehavior:
-                          type: string
-                          default: NoSwap
-                          description: |
-                            Defines how swap memory is handled:
-                            
-                            * `NoSwap` — swap is disabled on the node. This is the traditional Kubernetes behavior.
-                            * `LimitedSwap` — kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
-
-                            See [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/nodes/#swap-memory) for more details.
-                          enum:
-                            - NoSwap
-                            - LimitedSwap
-                        swappiness:
-                          type: integer
-                          minimum: 0
-                          maximum: 100
-                          default: 60
-                          description: |
-                            Controls the kernel's tendency to swap memory pages.
-                            
-                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
-                            * `60` — default balanced behavior.
-                            * `100` — aggressive swapping.
-                            
-                            This value is set via `vm.swappiness` sysctl parameter.
-                          x-doc-default: 60
-                        limitedSwap:
-                          type: object
-                          description: |
-                            Configuration for limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
-                          required:
-                            - size
-                          properties:
-                            size:
-                              type: string
-                              pattern: '^\d+G$'
-                              description: |
-                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
-                                
-                                Must be a valid Kubernetes byte size format.
-                              x-doc-example: "1G"
     - name: v1alpha2
       served: true
       storage: false
@@ -1305,67 +1243,6 @@ spec:
                         How many rotated log files to store before deleting them.
 
                         > **WARNING!** This parameter does nothing if CRI type is `Docker`.
-                    memorySwap:
-                      type: object
-                      description: |
-                        Memory swap configuration for kubelet.
-
-                        **Warning**: Swap support only works on nodes with cgroup v2. Nodes with cgroup v1 will generate an error.
-
-                        For Kubernetes versions < 1.34, the NodeSwap feature gate will be automatically enabled.
-                      oneOf:
-                      - properties:
-                          swapBehavior:
-                            enum: ["NoSwap"]
-                        not:
-                          required: ["limitedSwap"]
-                      - properties:
-                          swapBehavior:
-                            enum: ["LimitedSwap"]
-                        required:
-                          - limitedSwap
-                      properties:
-                        swapBehavior:
-                          type: string
-                          description: |
-                            Defines how swap memory is handled:
-                            
-                            * `NoSwap` — swap is disabled on the node. This is the traditional Kubernetes behavior.
-                            * `LimitedSwap` — kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
-
-                            See [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/nodes/#swap-memory) for more details.
-                          enum:
-                            - NoSwap
-                            - LimitedSwap
-                        swappiness:
-                          type: integer
-                          minimum: 0
-                          maximum: 100
-                          default: 60
-                          description: |
-                            Controls the kernel's tendency to swap memory pages.
-                            
-                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
-                            * `60` — default balanced behavior.
-                            * `100` — aggressive swapping.
-                            
-                            This value is set via `vm.swappiness` sysctl parameter.
-                          x-doc-default: 60
-                        limitedSwap:
-                          type: object
-                          description: |
-                            Configuration for limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
-                          required:
-                            - size
-                          properties:
-                            size:
-                              type: string
-                              pattern: '^\d+G$'
-                              description: |
-                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
-                                
-                                Must be a valid Kubernetes byte size format.
-                              x-doc-example: "1G"
     - name: v1
       served: true
       storage: true
@@ -2354,10 +2231,6 @@ spec:
                       type: object
                       description: |
                         Memory swap configuration for kubelet.
-
-                        **Warning**: Swap support only works on nodes with cgroup v2. Nodes with cgroup v1 will generate an error.
-
-                        For Kubernetes versions < 1.34, the NodeSwap feature gate will be automatically enabled.
                       oneOf:
                       - properties:
                           swapBehavior:
@@ -2408,8 +2281,6 @@ spec:
                               pattern: '^\d+G$'
                               description: |
                                 Size of the swap file to create in gigabytes (e.g., "2G", "4G").
-                                
-                                Must be a valid Kubernetes byte size format.
                               x-doc-example: "1G"
                 update:
                   type: object

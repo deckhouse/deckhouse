@@ -241,31 +241,10 @@ type Kubelet struct {
 	// How many rotated log files to store before deleting them.
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
-
-	// Memory swap configuration for kubelet
-	MemorySwap *KubeletMemorySwap `json:"memorySwap,omitempty"`
 }
 
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 && k.MemorySwap == nil
-}
-
-// KubeletMemorySwap configures swap memory settings for kubelet
-type KubeletMemorySwap struct {
-	// SwapBehavior defines how swap is handled: NoSwap or LimitedSwap
-	SwapBehavior string `json:"swapBehavior"`
-
-	// LimitedSwap contains configuration for limited swap mode
-	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
-
-	// Swappiness controls kernel's tendency to swap memory pages (0-100)
-	Swappiness *int `json:"swappiness,omitempty"`
-}
-
-// KubeletLimitedSwap contains settings for limited swap mode
-type KubeletLimitedSwap struct {
-	// Size of the swap file (e.g., "1G", "2G")
-	Size string `json:"size"`
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
 }
 
 type NodeGroupStatus struct {
