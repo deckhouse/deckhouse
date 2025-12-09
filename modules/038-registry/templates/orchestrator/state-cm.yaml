@@ -9,7 +9,11 @@ metadata:
   annotations:
     registry.deckhouse.io/config-hash: {{ .hash | quote }}
 data:
-  conditions: | {{ .state.conditions | toYaml | nindent 4 }}
+  {{- with .state.conditions }}
+  conditions: |- {{ . | toYaml | nindent 4 }}
+  {{- else }}
+  conditions: ""
+  {{- end }}
   hash: {{ .hash | quote }}
   mode: {{ .state.mode | quote  }}
   target_mode: {{ .state.target_mode | quote }}
