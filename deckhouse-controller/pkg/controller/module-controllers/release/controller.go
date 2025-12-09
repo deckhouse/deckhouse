@@ -270,6 +270,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	configConfigurationErrorMetricsLabels := map[string]string{
+		"version": release.GetVersion().String(),
+		"module":  release.GetModuleName(),
+		"error":   "",
+	}
+
+	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 0, configConfigurationErrorMetricsLabels)
+
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
 		return r.deleteRelease(ctx, release)
@@ -1390,11 +1398,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
-
-	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
-		0,
-		configConfigurationErrorMetricsLabels,
-	)
 
 	if err = r.installer.Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
 		r.log.Error("failed to install module", slog.String("module", modulePath), log.Err(err))
