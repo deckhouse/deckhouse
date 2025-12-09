@@ -71,34 +71,9 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 
 		log.InfoF("Connection attempt failed to host: %v\n", host)
 
-		//oldHost := host
 		c.Session.ChoiceNewHost()
-		//errText := string(output)
 
-		//var debugErr string
-		//
-		//switch {
-		//case strings.Contains(errText, "timed out"):
-		//	debugErr = fmt.Sprintf("SSH connection timed out to host '%s'", oldHost)
-		//
-		//case strings.Contains(errText, "permission denied"):
-		//	debugErr = fmt.Sprintf("SSH permission denied for host '%s'", oldHost)
-		//
-		//case strings.Contains(errText, "no route to host"),
-		//	strings.Contains(errText, "host unreachable"):
-		//	debugErr = fmt.Sprintf("No route to host '%s'", oldHost)
-		//
-		//case strings.Contains(errText, "connection refused"):
-		//	debugErr = fmt.Sprintf("SSH connection refused on host '%s' (sshd not running?)", oldHost)
-		//
-		//case strings.Contains(errText, "host key verification failed"):
-		//	debugErr = fmt.Sprintf("SSH host key verification failed for '%s'", oldHost)
-		//
-		//default:
-		//	debugErr = fmt.Sprintf("Failed to connect to host '%s'", oldHost)
-		//}
-
-		return fmt.Errorf("SSH command output: '%s', err: '%s'", string(output), err.Error())
+		return fmt.Errorf("SSH error: %s\nSSH command output: %s", err.Error(), string(output))
 	})
 }
 
@@ -119,10 +94,6 @@ func (c *Check) CheckAvailability(ctx context.Context) error {
 func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	cmd := c.createCommand(c.Session, "echo SUCCESS")
 	cmd.Cmd(ctx)
-	//output, _, err := cmd.Output(ctx)
-	//if err != nil {
-	//	return output, err
-	//}
 
 	output, _, err := cmd.Output(ctx)
 	if err != nil {

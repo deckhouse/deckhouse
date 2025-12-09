@@ -116,30 +116,6 @@ func (c *Command) OnCommandStart(fn func()) {
 	c.onStart = fn
 }
 
-//func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
-//	if !c.used.CompareAndSwap(false, true) {
-//		return nil, nil, fmt.Errorf("command instance reused")
-//	}
-//
-//	cmd, cancel := c.prepareCmd(ctx)
-//	defer cancel()
-//
-//	var stdout bytes.Buffer
-//	cmd.Stdout = &stdout
-//
-//	if err := cmd.Start(); err != nil {
-//		return nil, nil, fmt.Errorf("start %q: %w", c.program, err)
-//	}
-//	if c.onStart != nil {
-//		c.onStart()
-//	}
-//
-//	if err := cmd.Wait(); err != nil {
-//		return nil, nil, err
-//	}
-//	return stdout.Bytes(), nil, nil // stderr is ignored to preserve compatibility with ssh frontend
-//}
-
 func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	if !c.used.CompareAndSwap(false, true) {
 		return nil, nil, fmt.Errorf("command instance reused")
@@ -148,9 +124,8 @@ func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	cmd, cancel := c.prepareCmd(ctx)
 	defer cancel()
 
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 
 	if err := cmd.Start(); err != nil {
 		return nil, nil, fmt.Errorf("start %q: %w", c.program, err)
@@ -160,10 +135,9 @@ func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, stderr.Bytes(), err
+		return nil, nil, err
 	}
-
-	return stdout.Bytes(), nil, nil
+	return stdout.Bytes(), nil, nil // stderr is ignored to preserve compatibility with ssh frontend
 }
 
 func (c *Command) CombinedOutput(ctx context.Context) ([]byte, error) {
