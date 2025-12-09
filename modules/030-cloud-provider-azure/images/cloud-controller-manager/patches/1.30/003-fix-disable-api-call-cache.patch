@@ -1,12 +1,31 @@
-Index: pkg/provider/azure_instance_metadata.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+index db0bccbed3..e79553a5a9 100644
+--- a/pkg/provider/azure.go
++++ b/pkg/provider/azure.go
+@@ -191,6 +191,9 @@ type Config struct {
+ 	// Use instance metadata service where possible
+ 	UseInstanceMetadata bool `json:"useInstanceMetadata,omitempty" yaml:"useInstanceMetadata,omitempty"`
+ 
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
++
+ 	// Backoff exponent
+ 	CloudProviderBackoffExponent float64 `json:"cloudProviderBackoffExponent,omitempty" yaml:"cloudProviderBackoffExponent,omitempty"`
+ 	// Backoff jitter
+@@ -608,7 +611,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *Config,
+ 	az.Config = *config
+ 	az.Environment = *env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
 diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
---- a/pkg/provider/azure_instance_metadata.go	(revision ebecf6de86eae1889fd1675cb660528134cb1e1c)
-+++ b/pkg/provider/azure_instance_metadata.go	(date 1742470925784)
-@@ -107,12 +107,12 @@
+index ad198e6740..a4f94e941b 100644
+--- a/pkg/provider/azure_instance_metadata.go
++++ b/pkg/provider/azure_instance_metadata.go
+@@ -109,12 +109,12 @@ type InstanceMetadataService struct {
  }
  
  // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
@@ -20,23 +39,6 @@ diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instan
 +	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
  	if err != nil {
  		return nil, err
- 	}
-Index: pkg/provider/azure.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
---- a/pkg/provider/azure.go	(revision ebecf6de86eae1889fd1675cb660528134cb1e1c)
-+++ b/pkg/provider/azure.go	(date 1742457863247)
-@@ -632,7 +632,7 @@
- 	az.Config = *config
- 	az.Environment = *env
- 	az.ResourceRequestBackoff = resourceRequestBackoff
--	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
-+	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
- 	if err != nil {
- 		return err
  	}
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
 index 2ef66bd3dc..64bcc2355e 100644
@@ -67,5 +69,4 @@ index 2ef66bd3dc..64bcc2355e 100644
 +
  		return "", err
  	}
-	
  
