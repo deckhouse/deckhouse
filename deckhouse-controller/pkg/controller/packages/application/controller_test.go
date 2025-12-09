@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"testing"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -40,10 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -55,7 +57,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	flag.BoolVar(&golden, "golden", true, "generate golden files")
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
@@ -87,10 +89,6 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	if suite.T().Skipped() {
 		return
 	}
-
-	ctx := context.Background()
-	err := suite.ctr.statusService.WaitForIdle(ctx)
-	require.NoError(suite.T(), err)
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
@@ -196,29 +194,13 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.Application{}, &v1alpha1.ApplicationPackage{}, &v1alpha1.ApplicationPackageVersion{}).
 		Build()
 
-	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
-	eventChannel := make(chan packagestatusservice.PackageEvent)
-	pm.SetEventChannel(eventChannel)
-
-	statusService := &StatusService{
-		client:       kubeClient,
-		logger:       log.NewNop(),
-		pm:           pm,
-		dc:           dependency.NewMockedContainer(),
-		eventChannel: eventChannel,
-	}
-
-	// go statusService.Start(context.Background())
-
-	pm.SetStatusService(statusService)
-
 	ctr := &reconciler{
+		init:          new(sync.WaitGroup),
 		client:        kubeClient,
 		logger:        log.NewNop(),
-		pm:            pm,
+		operator:      &operatorStub{},
+		moduleManager: &moduleManagerStub{},
 		dc:            dependency.NewMockedContainer(),
-		statusService: statusService,
-		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	// Load test data from file
@@ -283,7 +265,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("resource not found", func() {
 		suite.setupController("resource-not-found.yaml")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: "non-existent-app"},
+			NamespacedName: client.ObjectKey{Name: "non-existent-app"},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -305,7 +287,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -314,19 +296,19 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("version-not-found.yaml")
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 		app = suite.getApplication("test-app", "foobar")
-		require.NotEmpty(suite.T(), app.Status.Conditions)
-		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.Conditions[0].Reason)
+		require.NotEmpty(suite.T(), app.Status.ResourceConditions)
+		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.ResourceConditions[0].Reason)
 	})
 
 	suite.Run("version is draft", func() {
 		suite.setupController("version-is-draft.yaml")
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -348,7 +330,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -370,7 +352,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -382,4 +364,26 @@ func (suite *ControllerTestSuite) getApplication(name string, namespace string) 
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &app)
 	require.NoError(suite.T(), err)
 	return &app
+}
+
+type moduleManagerStub struct {
+}
+
+func (m *moduleManagerStub) AreModulesInited() bool {
+	return true
+}
+
+type operatorStub struct {
+}
+
+func (o *operatorStub) Update(_ registry.Registry, _ packageoperator.Instance) {
+	return
+}
+
+func (o *operatorStub) Remove(_, _ string) {
+	return
+}
+
+func (o *operatorStub) Status() *packagestatus.Service {
+	return packagestatus.NewService()
 }

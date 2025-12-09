@@ -116,6 +116,14 @@ spec:
                 matchLabels:
                   app: agent
                   module: cni-cilium
+        {{- if (include "helm_lib_ha_enabled" .) }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: hubble-relay
+              topologyKey: kubernetes.io/hostname
+        {{- end }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       volumes:

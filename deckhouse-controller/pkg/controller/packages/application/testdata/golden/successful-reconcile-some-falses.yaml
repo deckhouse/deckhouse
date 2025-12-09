@@ -20,28 +20,12 @@ metadata:
     kind: ApplicationPackage
     name: test
     uid: ""
-  resourceVersion: "4"
+  resourceVersion: "3"
 spec:
   packageName: test
   packageRepository: deckhouse
   version: v1.0.2
 status:
-  conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: Processed
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: A newer version v1.0.2 is available.
-    reason: NewerVersionAvailable
-    status: "False"
-    type: UpdateAvailable
-  internalConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: UpdateNotified
   resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
