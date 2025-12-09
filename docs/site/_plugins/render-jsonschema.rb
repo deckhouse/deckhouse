@@ -1,4 +1,6 @@
 require 'erb'
+require 'cgi'
+require 'uri'
 
 module JSONSchemaRenderer
   class JSONSchemaRenderer
@@ -420,6 +422,8 @@ module JSONSchemaRenderer
         # The replacement with sub is for preserving anchor links for ModuleConfig parameters
         linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
         linkAnchor = @moduleName.downcase + '-' + linkAnchor if @resourceType == 'moduleConfig' and @moduleName != ''
+        # URL-encode linkAnchor for proper URL fragment handling (similar to Hugo's urlquery)
+        linkAnchor = URI.encode_www_form_component(linkAnchor)
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
 
         # Data for search index
