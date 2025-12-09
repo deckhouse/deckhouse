@@ -110,9 +110,6 @@ spec:
                           caBundle is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
                         pattern: '^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}={2})$'
                         minLength: 4
-                x-kubernetes-validations:
-                  - rule: "self.filterVerb != self.prioritizeVerb && self.filterVerb != self.preemptVerb && self.preemptVerb != self.prioritizeVerb"
-                    message: "filterVerb, prioritizeVerb and preemptVerb must be different"
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name
