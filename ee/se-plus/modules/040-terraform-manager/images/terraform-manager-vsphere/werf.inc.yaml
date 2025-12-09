@@ -44,5 +44,6 @@ shell:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ .TF.vsphere.version }}" -o /terraform-provider-vsphere
+    - strip /terraform-provider-vsphere
     - chmod -R 755 /terraform-provider-vsphere
     - chown 64535:64535 /terraform-provider-vsphere
