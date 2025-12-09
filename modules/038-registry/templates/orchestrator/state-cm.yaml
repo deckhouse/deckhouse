@@ -1,0 +1,16 @@
+{{- with .Values.registry.internal.orchestrator -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-state
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry" "type" "registry-state" )) | nindent 2 }}
+  annotations:
+    registry.deckhouse.io/config-hash: {{ .hash | quote }}
+data:
+  conditions: | {{ .state.conditions | toYaml | nindent 4 }}
+  hash: {{ .hash | quote }}
+  mode: {{ .state.mode | quote  }}
+  target_mode: {{ .state.target_mode | quote }}
+{{- end }}
