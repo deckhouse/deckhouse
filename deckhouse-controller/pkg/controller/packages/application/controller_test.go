@@ -57,7 +57,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&golden, "golden", true, "generate golden files")
+	flag.BoolVar(&golden, "golden", false, "generate golden files")
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
