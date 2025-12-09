@@ -446,7 +446,7 @@ dhctl bootstrap \
 - `--preflight-skip-cidr-intersection` — пропуск проверки пересечения CIDR.
 - `--preflight-skip-deckhouse-user-check` — пропуск проверки наличия пользователя Deckhouse.
 - `--preflight-skip-yandex-with-nat-instance-check` — пропуск проверки конфигурации Yandex Cloud с WithNatInstance.
-
+- `--preflight-skip-dvp-kubeconfig` — пропуск проверки DVP kubeconfig.
 Пример применения флага пропуска:
 
 ```shell

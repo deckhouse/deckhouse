@@ -38,9 +38,8 @@ type MetaConfigPreparator struct {
 	logger             log.Logger
 }
 
-func NewMetaConfigPreparator(validateKubeConfig bool) *MetaConfigPreparator {
+func NewMetaConfigPreparator() *MetaConfigPreparator {
 	return &MetaConfigPreparator{
-		validateKubeConfig: validateKubeConfig,
 		logger:             log.NewSilentLogger(),
 	}
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
@@ -86,7 +87,10 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 				ValidateClusterPrefix: true,
 			}, logger)
 		case dvp.ProviderName:
-			dvpPreparator := dvp.NewMetaConfigPreparator(true).WithLogger(logger).EnableValidateKubeConfig()
+			dvpPreparator := dvp.NewMetaConfigPreparator().WithLogger(logger)
+			if !app.PreflightSkipDVPKubeconfigCheck {
+				dvpPreparator.EnableValidateKubeConfig()
+			}
 			return dvpPreparator
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
