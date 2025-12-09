@@ -53,9 +53,6 @@ kind: Deployment
 metadata:
   name: cloud-data-discoverer
   namespace: d8-cloud-provider-vcd
-  annotations:
-    werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    werf.io/track-termination-mode: NonBlocking
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
 spec:
   replicas: 1

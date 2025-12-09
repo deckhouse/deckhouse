@@ -53,9 +53,6 @@ kind: Deployment
 metadata:
   name: infra-controller-manager
   namespace: d8-cloud-provider-vcd
-  annotations:
-    werf.io/fail-mode: IgnoreAndContinueDeployProcess
-    werf.io/track-termination-mode: NonBlocking
   {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
