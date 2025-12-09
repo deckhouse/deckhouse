@@ -69,11 +69,16 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 			return nil
 		}
 
-		log.InfoF("Connection attempt failed to host: %v\n", host)
+		target := c.Session.Host()
+		if target == "" && c.Session.BastionHost != "" {
+			target = c.Session.BastionHost
+		}
+
+		log.InfoF("Connection attempt failed to host: %v\n", target)
 
 		c.Session.ChoiceNewHost()
 
-		return fmt.Errorf("SSH error: %s\nSSH command output: %s", err.Error(), string(output))
+		return fmt.Errorf("SSH error: %s\nSSH connect failed to %s: %s", err.Error(), target, string(output))
 	})
 }
 
