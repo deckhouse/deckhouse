@@ -9,7 +9,7 @@
   <xsl:template match="outline:outline">
     <html>
       <head>
-        <title>Table of Contents</title>
+        <title>Содержание</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <style>
           h1 {
@@ -62,7 +62,7 @@
         </style>
       </head>
       <body>
-        <h1>Table of Contents</h1>
+        <h1>Содержание</h1>
         <ul><xsl:apply-templates select="outline:item/outline:item"/></ul>
       </body>
     </html>
