@@ -46,6 +46,13 @@
 - Added support for the SCTP (Stream Control Transmission Protocol).
   Applications using this protocol can now run in a Deckhouse cluster.
 
+- Added a `geoproxy` auxiliary microservice to the [`ingress-nginx`](https://deckhouse.io/modules/ingress-nginx/) module.
+  This service is aimed at improving the stability of the Ingress NGINX Controller when working with GeoIP databases
+  and provides the following features:
+  - MaxMind license saving (databases are downloaded from a single point once a day).
+  - Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers).
+  - Lets you specify a custom mirror for downloading databases.
+
 - Added the Prometheus metric `bpf_progs_complexity_max_verified_insts` to assess the number of instructions in eBPF programs
   loaded into the kernel on cluster nodes.
   This metric helps evaluate the compatibility of the networking subsystem with the node kernels.
