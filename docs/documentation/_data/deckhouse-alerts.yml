@@ -4144,6 +4144,20 @@ alerts:
         GeoIP DB download error in controller {{ $labels.controller }}.
       severity: "4"
       markupFormat: markdown
+    - name: GeoIPDownloadErrorDetectedFromMaxMind
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database from MaxMind.
+        **Reason:** `{{ $labels.reason }}`
+        **Type:** `{{ $labels.type }}`
+        If this issue persists, investigate network connectivity or database availability.
+      summary: |
+        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}).
+      severity: "4"
+      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -5411,6 +5425,19 @@ alerts:
         ```
       summary: |
         Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+      severity: "6"
+      markupFormat: markdown
+    - name: NginxIngressMaxMindAccountIDNotSet
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The controller **"{{ $labels.controller_name }}"** downloads the GeoIP database using the legacy flow because `spec.geoIP2.maxmindAccountID` is not set.
+        This fallback is less reliable and may be throttled by MaxMind. Specify both `maxmindAccountID` and `maxmindLicenseKey`
+        in the corresponding `ingressnginxcontroller` resource to use the official GeoIP update client.
+      summary: |
+        MaxMind Account ID is missing for the NGINX Ingress Controller &quot;{{ $labels.controller_name }}&quot;.
       severity: "6"
       markupFormat: markdown
     - name: NginxIngressPodIsRestartingTooOften

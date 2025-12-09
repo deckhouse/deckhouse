@@ -700,6 +700,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/geoproxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/kube-rbac-proxy/src"
   labels:
   - "type/dependencies"
