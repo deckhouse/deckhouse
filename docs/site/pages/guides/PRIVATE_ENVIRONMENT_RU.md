@@ -571,10 +571,29 @@ $ ./install.sh
 
 [Step 0]: checking if docker is installed ...
 ✖ Need to install docker(20.10.10+) first and run this script again.
-ubuntu@guide-bastion:~/harbor$ sudo ./install.sh 
-
-[Step 0]: checking if docker is installed ...
-✖ Need to install docker(20.10.10+) first and run this script again.
 ```
 {% endofftopic %}
 {% endalert %}
+
+Начнется установка Harbor — будут выкачаны все нужные образы и запущены соответствующие контейнеры.
+
+{% offtopic title="Лог успешной установки..." %}
+```console
+...
+[Step 5]: starting Harbor ...
+[+] up 10/10
+ ✔ Network harbor_harbor       Created 0.0s 
+ ✔ Container harbor-log        Created 0.1s 
+ ✔ Container registry          Created 0.1s 
+ ✔ Container harbor-portal     Created 0.2s 
+ ✔ Container redis             Created 0.1s 
+ ✔ Container harbor-db         Created 0.1s 
+ ✔ Container registryctl       Created 0.2s 
+ ✔ Container harbor-core       Created 0.1s 
+ ✔ Container nginx             Created 0.1s 
+ ✔ Container harbor-jobservice Created 0.1s 
+✔ ----Harbor has been installed and started successfully.----
+
+```
+{% endofftopic %}
+
