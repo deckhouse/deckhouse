@@ -1,0 +1,28 @@
+{{- define "showModuleStageBadge" }}
+{{- $module := .module }}
+{{- $channel := .channel }}
+{{- $moduleStageFallBackLegacy := .stageFallBackLegacy }}
+
+{{- if not (or (eq $module nil) (eq $channel nil)) }}
+  {{- $moduleData := index (index .ctx.Site.Data.modules $module) $channel }}
+  {{- $moduleMetadata := index $moduleData "module" }}
+  {{- $moduleStage := index $moduleMetadata "stage" }}
+  {{- if and (or (not $moduleStage) (eq $moduleStage nil)) (ne $moduleStageFallBackLegacy nil) (gt (len $moduleStageFallBackLegacy) 0) }}
+    {{- $moduleStage = humanize $moduleStageFallBackLegacy }}
+  {{- end }}
+
+  {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+
+    {{- $statusKey := replace (lower $moduleStage) " " "_" -}}
+
+    {{- $alertLevel := "info" }}
+    {{- if or (eq $moduleStage "Experimental") (eq $moduleStage  "Preview") }}
+      {{- $alertLevel = "warning" }}
+    {{- else if eq $moduleStage "Deprecated" }}
+       {{- $alertLevel = "danger" }}
+    {{- end }}
+
+    {{- partial "alert" ( dict "level" $alertLevel "content" (T (printf "module_alert_%s_long" $statusKey )) ) }}
+  {{- end }}
+{{- end }}
+{{- end }}
