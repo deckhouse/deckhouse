@@ -92,8 +92,8 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Registry,type=string,JSONPath=.spec.packageRepository,priority=1
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
 // +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
-// +kubebuilder:printcolumn:name="Processed",type="string",JSONPath=".status.conditions[?(@.type=='Processed')].status"
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Processed')].message"
+// +kubebuilder:printcolumn:name="Processed",type="string",JSONPath=".status.resourceConditions[?(@.type=='Processed')].status"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.resourceConditions[?(@.type=='Processed')].message"
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
