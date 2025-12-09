@@ -43,7 +43,7 @@ spec:
       k8s:
         env:
         - name: ISTIO_CREDENTIALS_SECRET_NAMES
-          value: "cacets,d8-istio-sidecar-registry,deckhouse-registry"
+          value: "cacerts,d8-istio-sidecar-registry,deckhouse-registry"
         - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
           value: "true"
         - name: ISTIO_MULTIROOT_MESH
