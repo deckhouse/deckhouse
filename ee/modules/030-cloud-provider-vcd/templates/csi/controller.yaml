@@ -101,7 +101,7 @@ checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_controller_pod_annotations" . | fromYaml) }}
-  {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "csi_dns_policy" . | quote) }}
+  {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "csi_dns_policy" .) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
@@ -112,7 +112,7 @@ checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
-  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "csi_dns_policy" . | quote) }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "csi_dns_policy" .) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}
