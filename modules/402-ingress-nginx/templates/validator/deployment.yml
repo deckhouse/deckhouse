@@ -3,6 +3,7 @@
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resources := $crd.spec.resourcesRequests | default dict }}
@@ -166,10 +167,18 @@ spec:
           - --healthz-port=10254
           - --healthz-host=0.0.0.0
           {{- if $geoIP2.maxmindLicenseKey }}
-          - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
-          {{- if $geoIP2.maxmindEditionIDs }}
+            {{- if $geoproxyReady }}
+          - --maxmind-mirror=https://geoproxy:4250/download
+          - --maxmind-skip-tls-verification=true
+          - --maxmind-retries-count=5
+          - --maxmind-retries-timeout=15s
           - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
-          {{- end }}
+            {{- else }}
+          - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+              {{- if $geoIP2.maxmindEditionIDs }}
+          - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+              {{- end }}
+            {{- end }}
           {{- end }}
           - --validating-webhook=:8443
           - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt

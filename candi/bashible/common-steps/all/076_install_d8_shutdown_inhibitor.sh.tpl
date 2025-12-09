@@ -34,7 +34,7 @@ extra_logind_conf="/etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
 bb-event-on 'inhibitor-unit-changed' '_inhibitor-unit-changed'
 _inhibitor-unit-changed() {
 systemctl daemon-reload
-systemctl enable $inhibitor_service_name
+systemctl is-enabled --quiet $inhibitor_service_name || systemctl enable $inhibitor_service_name
 systemctl restart $inhibitor_service_name
 }
 

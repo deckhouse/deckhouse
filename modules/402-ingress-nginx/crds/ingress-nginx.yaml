@@ -1009,6 +1009,41 @@ spec:
                   type: object
                   description: GeoIP2 activation options.
                   properties:
+                    maxmindMirror:
+                      type: object
+                      description: |
+                        Mirror configuration for downloading GeoIP databases.
+                        If no parameter is specified or the parameter has an empty value, the default value will be used, which is `https://download.maxmind.com`.
+
+                        If this mirror is used to host preloaded archives, the `licenseKey` parameter may be omitted.
+                      properties:
+                        url:
+                          type: string
+                          description: The URL for downloading GeoIP databases.
+                          x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
+                          pattern: '^https?://.+$'
+                        ca:
+                          type: string
+                          description: |
+                            Custom CA certificate in PEM format for verifying TLS connections to the mirror.
+                          x-doc-examples:
+                          - |
+                            -----BEGIN CERTIFICATE-----
+                            ...
+                            -----END CERTIFICATE-----
+                        insecureSkipVerify:
+                          type: boolean
+                          description: |
+                            Skip TLS certificate verification for the mirror, for example when using self-signed certificates.
+                      required: ['url']
+                    maxmindAccountID:
+                      type: integer
+                      minimum: 1
+                      description: |
+                        MaxMind Account ID used to authenticate GeoIP2 database downloads.
+
+                        Required when `licenseKey` is set. If `accountID` parameter is provided, downloads are performed using the official library `geoipupdate`, which allows you to skip unchanged updates and save the license limit.
+                        [https://github.com/maxmind/geoipupdate]
                     maxmindLicenseKey:
                       type: string
                       description: |
