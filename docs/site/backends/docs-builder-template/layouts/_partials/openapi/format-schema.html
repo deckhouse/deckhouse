@@ -42,7 +42,7 @@
 {{- end }}
 
 {{- if $fullPath }}
-  {{- $linkAnchor = printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower) }}
+  {{- $linkAnchor = (printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower)) | urlquery }}
 {{- end }}
 
 {{- if gt ($parameterTitle | len ) 0 }}
