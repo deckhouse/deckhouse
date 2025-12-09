@@ -35,15 +35,20 @@ spec:
                   filterVerb:
                     type: string
                     description: |
-                      This verb is appended to the URLPrefix when issuing the filter call to extender.
+                      This verb is appended to the URLPrefix when issuing a filter call to the extender.
+                      If not set, defaults to "filter".
+                      Set an "" if you do not want to add this extender.
                   preemptVerb:
                     type: string
                     description: |
-                      This verb is appended to the URLPrefix when issuing the preempt call to extender.
+                      This verb is appended to the URLPrefix when issuing the preempt call to the extender.
+                      Leave empty if you don't want to add this extender ("" are equivalent).
                   prioritizeVerb:
                     type: string
                     description: |
                       This verb is appended to the URLPrefix when issuing the prioritize call to extender.
+                      If not set, defaults to "prioritize".
+                      Set an "" if you do not want to add this extender.
                   weight:
                     type: integer
                     description: |
@@ -101,9 +106,6 @@ spec:
                             pattern: '^[0-9a-zA-Z._\/-]+$'
                             minLength: 1
                             maxLength: 255
-                            x-kubernetes-validations:
-                            - message: check uri format
-                              rule: 'isURL(self)'
                       caBundle:
                         type: string
                         description: |
