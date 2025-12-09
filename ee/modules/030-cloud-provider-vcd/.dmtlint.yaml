@@ -14,8 +14,6 @@ linters-settings:
       dns-policy:
         - kind: Deployment
           name: cloud-controller-manager
-        - kind: Deployment
-          name: csi-controller
       liveness-probe:
         - kind: Deployment
           name: csi-controller
