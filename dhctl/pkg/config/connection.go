@@ -228,12 +228,12 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		hosts = append(hosts, session.Host{Host: host.Host, Name: strconv.Itoa(i)})
 	}
 
-	bastionPort := ""
+	bastionPort := "22"
 	if cfg.SSHConfig.SSHBastionPort != nil {
 		bastionPort = strconv.Itoa(int(*cfg.SSHConfig.SSHBastionPort))
 	}
 
-	port := ""
+	port := "22"
 	if cfg.SSHConfig.SSHPort != nil {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
