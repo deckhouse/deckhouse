@@ -25,14 +25,15 @@ There are different types of images:
 Examples of resources for obtaining virtual machine images:
 
 <a id="image-resources-table"></a>
-| Distribution                                                                      | Default user.             |
-| --------------------------------------------------------------------------------- | ------------------------- |
-| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
-| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
-| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
-| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
-| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
-| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
+
+| Distribution                                                   | Default user. |
+|----------------------------------------------------------------|---------------|
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images) | `almalinux`   |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                  | `alpine`      |
+| [CentOS](https://cloud.centos.org/centos/)                     | `cloud-user`  |
+| [Debian](https://cdimage.debian.org/images/cloud/)             | `debian`      |
+| [Rocky](https://rockylinux.org/download/)                      | `rocky`       |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                     | `ubuntu`      |
 
 The following preinstalled image formats are supported:
 
