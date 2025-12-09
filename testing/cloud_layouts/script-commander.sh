@@ -1042,25 +1042,24 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
-  >&2 echo "Publish API is enabled"
   if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
-    >&2 echo "Ingress kubernetes-api found"
     HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
     IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
-    "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api | jq -r '.kind'")
-    if [[ "$RESPONSE" != "APIVersions" ]]; then
-      echo "Publish API is enabled, but API is not available. Response: $RESPONSE"
+    "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api")
+    if echo "$RESPONSE" | jq -e '.kind' >/dev/null 2>&1; then
+      exit 0
+    else
+      echo "PublishAPI is enabled, ingress kubernetes-api found, but API is not available. Response: $RESPONSE"
       exit 1
     fi
-    exit 0
   else
-    echo "Publish API is enabled, but ingress kubernetes-api not found"
+    echo "PublishAPI is enabled, but ingress kubernetes-api not found"
     exit 1
   fi
 else
-  >&2 echo "Publish API is not enabled"
-  exit 0
+  echo "PublishAPI is not enabled"
+  exit 1
 fi
 END_SCRIPT
 )
@@ -1070,7 +1069,7 @@ END_SCRIPT
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       return 0
     else
-      >&2 echo "Publish API is not enabled. Attempt $i/$testRunAttempts failed. Sleep for 10 seconds..."
+      >&2 echo "Publish API test failed. Attempt $i/$testRunAttempts. Sleep for 10 seconds..."
       sleep 10
     fi
   done
