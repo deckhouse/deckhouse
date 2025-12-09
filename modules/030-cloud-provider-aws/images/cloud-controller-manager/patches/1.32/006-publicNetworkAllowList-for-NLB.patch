@@ -1,8 +1,8 @@
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
-index e1070eec..7cf02e99 100644
+index 28727ca9..ef91d598 100644
 --- a/pkg/providers/v1/aws.go
 +++ b/pkg/providers/v1/aws.go
-@@ -373,7 +373,8 @@ type Cloud struct {
+@@ -376,7 +376,8 @@ type Cloud struct {
  	region   string
  	vpcID    string
  
@@ -12,9 +12,9 @@ index e1070eec..7cf02e99 100644
  
  	// The AWS instance that we are running on
  	// Note that we cache some state in awsInstance (mountpoints), so we must preserve the instance
-@@ -584,6 +585,23 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
- 		deleteTagsBatcher:       newDeleteTagsBatcher(ctx, ec2),
- 		describeInstanceBatcher: newdescribeInstanceBatcher(ctx, ec2),
+@@ -624,6 +625,23 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
+ 		createTagsBatcher: newCreateTagsBatcher(ctx, ec2),
+ 		deleteTagsBatcher: newDeleteTagsBatcher(ctx, ec2),
  	}
 +
 +	s := cfg.Global.PublicNetworkAllowList
@@ -35,12 +35,12 @@ index e1070eec..7cf02e99 100644
 +
  	awsCloud.instanceCache.cloud = awsCloud
  	awsCloud.zoneCache.cloud = awsCloud
- 	awsCloud.instanceTopologyManager = NewInstanceTopologyManager(ec2, &cfg)
+ 	awsCloud.instanceTopologyManager = resourcemanagers.NewInstanceTopologyManager(ec2v2, &cfg)
 diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
-index ca95a3ab..62194a2e 100644
+index c39ea3de..4cd53552 100644
 --- a/pkg/providers/v1/aws_loadbalancer.go
 +++ b/pkg/providers/v1/aws_loadbalancer.go
-@@ -793,6 +793,11 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(ctx context.Context, lbName s
+@@ -786,6 +786,11 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(lbName string, instances map[
  		return nil
  	}
  
@@ -49,14 +49,14 @@ index ca95a3ab..62194a2e 100644
 +		klog.Infof("updateInstanceSecurityGroupsForNLB: overriding clientCIDRs with defaultNLBClientCIDRs=%v", clientCIDRs)
 +	}
 +
- 	clusterSGs, err := c.getTaggedSecurityGroups(ctx)
+ 	clusterSGs, err := c.getTaggedSecurityGroups()
  	if err != nil {
  		return fmt.Errorf("error querying for tagged security groups: %q", err)
 diff --git a/pkg/providers/v1/config/config.go b/pkg/providers/v1/config/config.go
-index 6dd65a20..4a08ab83 100644
+index bc8f5e9e..c8227301 100644
 --- a/pkg/providers/v1/config/config.go
 +++ b/pkg/providers/v1/config/config.go
-@@ -75,7 +75,8 @@ type CloudConfig struct {
+@@ -59,7 +59,8 @@ type CloudConfig struct {
  		//AWS has a hard limit of 500 security groups. For large clusters creating a security group for each ELB
  		//can cause the max number of security groups to be reached. If this is set instead of creating a new
  		//Security group for each ELB this security group will be used instead.
