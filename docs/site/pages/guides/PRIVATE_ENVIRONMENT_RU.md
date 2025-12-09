@@ -617,3 +617,26 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 ```
 {% endofftopic %}
 
+Добавьте в файл `/etc/hosts` ассоциацию доменного имени `harbor.local` с localhost машины-бастиона, чтобы можно было обращаться к Harbor по этому имени с этой же машины:
+
+```bash
+127.0.0.1 localhost harbor.local
+```
+{% alert level="warning" %}
+**Обратите внимание!** В некоторых облачных провайерах, например в Yandex Cloud, исправления в `/etc/hosts` будут откачены к дефолтным значениям после перезагрузки виртуальной машины. Предупреждение об этом написано в самом начале этого файла:
+```text
+# Your system has configured 'manage_etc_hosts' as True.
+# As a result, if you wish for changes to this file to persist
+# then you will need to either
+# a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
+# b.) change or remove the value of 'manage_etc_hosts' in
+#     /etc/cloud/cloud.cfg or cloud-config from user-data
+#
+```
+Если у вашего провайдера такая же схема, внесите соответствующие изменения и в предложенный файл шаблона, чтобы после перезагрузки настройки не пострадали.
+{% endalert %}
+
+На этом установка Harbor завершена! 🎉
+
+
+
