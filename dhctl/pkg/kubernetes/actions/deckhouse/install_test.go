@@ -57,7 +57,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -72,7 +72,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -83,7 +83,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -98,7 +98,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -125,7 +125,6 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleEnable(),
 					),
 				}, func() error {
 					return nil
@@ -151,7 +150,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -173,7 +172,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				conf := config.DeckhouseInstaller{
 					Registry: registry_config.TestConfigBuilder(
 						registry_config.WithModeUnmanaged(),
-						registry_config.WithModuleDisable(),
+						registry_config.WithLegacyMode(),
 					),
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
@@ -221,7 +220,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
-			registry_config.WithModuleDisable(),
+			registry_config.WithLegacyMode(),
 		),
 		DevBranch: "pr1111",
 	}, func() error {
@@ -262,7 +261,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
-			registry_config.WithModuleDisable(),
+			registry_config.WithLegacyMode(),
 		),
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1},
@@ -326,7 +325,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
-			registry_config.WithModuleDisable(),
+			registry_config.WithLegacyMode(),
 		),
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
@@ -372,7 +371,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
-					registry_config.WithModuleDisable(),
+					registry_config.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -415,7 +414,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
-					registry_config.WithModuleDisable(),
+					registry_config.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -450,7 +449,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
-					registry_config.WithModuleDisable(),
+					registry_config.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -495,7 +494,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				Registry: registry_config.TestConfigBuilder(
 					registry_config.WithModeUnmanaged(),
-					registry_config.WithModuleDisable(),
+					registry_config.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mcDeckhouse, mcGlobal},

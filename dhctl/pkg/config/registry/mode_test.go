@@ -36,6 +36,13 @@ func TestManifestsNoError(t *testing.T) {
 				WithModeUnmanaged(),
 			),
 		},
+		{
+			name: "mode unmanaged && legacy",
+			input: TestConfigBuilder(
+				WithLegacyMode(),
+				WithModeUnmanaged(),
+			),
+		},
 	}
 
 	for _, tt := range tests {

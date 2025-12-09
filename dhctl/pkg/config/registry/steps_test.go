@@ -87,8 +87,8 @@ func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, sec
 }
 
 func TestCheckRegistryInitialization(t *testing.T) {
-	t.Run("module disabled - should delete init secret", func(t *testing.T) {
-		config := TestConfigBuilder(WithModuleDisable())
+	t.Run("legacy - should delete init secret", func(t *testing.T) {
+		config := TestConfigBuilder(WithLegacyMode())
 		kubeClient := client.NewFakeKubernetesClient()
 
 		// Setup: create non-applied init secret
@@ -116,8 +116,8 @@ func TestCheckRegistryInitialization(t *testing.T) {
 		assert.False(t, isExist, "Init secret should remain deleted")
 	})
 
-	t.Run("module enabled with ready status - should delete init secret after ready", func(t *testing.T) {
-		config := TestConfigBuilder(WithModuleEnable())
+	t.Run("not legacy - should delete init secret after ready", func(t *testing.T) {
+		config := TestConfigBuilder()
 		kubeClient := client.NewFakeKubernetesClient()
 
 		// Setup initial state with applied init secret

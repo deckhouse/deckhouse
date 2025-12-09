@@ -20,7 +20,7 @@ import (
 )
 
 type TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
-type TestConfigUpdateModuleEnabled func() bool
+type TestConfigUpdateLegacyMode func() bool
 type TestConfigUpdateMode func() constant.ModeType
 
 func TestConfigBuilder(opts ...interface{}) Config {
@@ -30,13 +30,13 @@ func TestConfigBuilder(opts ...interface{}) Config {
 	}
 
 	mode := constant.ModeUnmanaged
-	moduleEnabled := true
+	legacyMode := false
 	for _, opt := range opts {
 		switch fn := opt.(type) {
 		case TestConfigUpdateRegistrySettings:
 			fn(&registrySettings)
-		case TestConfigUpdateModuleEnabled:
-			moduleEnabled = fn()
+		case TestConfigUpdateLegacyMode:
+			legacyMode = fn()
 		case TestConfigUpdateMode:
 			mode = fn()
 		}
@@ -49,7 +49,6 @@ func TestConfigBuilder(opts ...interface{}) Config {
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
-		moduleEnabled = true
 	default:
 		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
@@ -57,15 +56,10 @@ func TestConfigBuilder(opts ...interface{}) Config {
 		}
 	}
 
-	cri := constant.CRIContainerdV1
-	if !moduleEnabled {
-		cri = ""
-	}
-
 	config := Config{}
-	if err := config.UseDeckhouseSettings(
+	if err := config.process(
 		deckhouseSettings,
-		cri,
+		legacyMode,
 	); err != nil {
 		panic(err)
 	}
@@ -109,18 +103,6 @@ func WithLicense(license string) TestConfigUpdateRegistrySettings {
 	}
 }
 
-func WithModuleEnable() TestConfigUpdateModuleEnabled {
-	return func() bool {
-		return true
-	}
-}
-
-func WithModuleDisable() TestConfigUpdateModuleEnabled {
-	return func() bool {
-		return false
-	}
-}
-
 func WithModeDirect() TestConfigUpdateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
@@ -130,5 +112,11 @@ func WithModeDirect() TestConfigUpdateMode {
 func WithModeUnmanaged() TestConfigUpdateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
+	}
+}
+
+func WithLegacyMode() TestConfigUpdateLegacyMode {
+	return func() bool {
+		return true
 	}
 }

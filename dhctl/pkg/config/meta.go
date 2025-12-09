@@ -151,6 +151,7 @@ func (m *MetaConfig) prepareRegistry() error {
 			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
 		}
 	}
+	modulePlanned := registry_const.ModuleEnabled(defaultCRI)
 
 	// Extract configuration from initConfig
 	if m.DeckhouseConfig.ImagesRepo != "" ||
@@ -186,7 +187,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 
 		// Check module enable
-		if !registry_const.ModuleEnabled(defaultCRI) {
+		if !modulePlanned {
 			return fmt.Errorf(
 				"registry module cannot be started with defaultCRI '%s'. "+
 					"Please either configure registry in 'initConfiguration.deckhouse', "+
@@ -211,17 +212,17 @@ func (m *MetaConfig) prepareRegistry() error {
 
 	switch {
 	case deckhouseSettings != nil:
-		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings, defaultCRI); err != nil {
+		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
 			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 		return nil
 	case initConfig != nil:
-		if err := m.Registry.UseInitConfig(*initConfig, defaultCRI); err != nil {
+		if err := m.Registry.UseInitConfig(*initConfig); err != nil {
 			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
 		return nil
 	default:
-		if err := m.Registry.UseDefault(defaultCRI); err != nil {
+		if err := m.Registry.UseDefault(modulePlanned); err != nil {
 			return fmt.Errorf("get default registry settings: %w", err)
 		}
 		return nil

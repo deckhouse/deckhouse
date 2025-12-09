@@ -199,23 +199,11 @@ spec:
 `
 	// Registry
 	t.Run("Registry", func(t *testing.T) {
-		t.Run("Module disable", func(t *testing.T) {
-			t.Run("Use default (CE edition config) -> Unmanaged", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
-				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
-				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-				require.Equal(t, registry.Scheme, "HTTPS")
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
-			})
-			t.Run("Use init configuration -> always Unmanaged", func(t *testing.T) {
+		t.Run("InitConfiguration -> always unmanaged && legacy", func(t *testing.T) {
+			t.Run("Without CRI (module disable)", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.ModuleEnabled, false)
+				require.Equal(t, metaConfig.Registry.LegacyMode, true)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
 				registry := metaConfig.Registry.Settings.Remote
 				require.Equal(t, registry.ImagesRepo, "test")
@@ -224,35 +212,36 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
-			t.Run("Use deckhouse moduleConfig -> error", func(t *testing.T) {
-				deckhouseMC := `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  enabled: true
-  settings:
-    registry:
-      mode: Unmanaged
-      unmanaged:
-        imagesRepo: r.example.com/test/
-        username: test-user
-        password: test-password
-        scheme: HTTPS
-        ca: "-----BEGIN CERTIFICATE-----"
-  version: 1
-`
-				_, err := ParseConfigFromData(context.TODO(), deckhouseMC, DummyPreparatorProvider())
-				require.Error(t, err)
+			t.Run("With CRI (module enable)", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, metaConfig.Registry.LegacyMode, true)
+				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+				registry := metaConfig.Registry.Settings.Remote
+				require.Equal(t, registry.ImagesRepo, "test")
+				require.Equal(t, registry.Scheme, "HTTPS")
+				require.Equal(t, registry.Username, "")
+				require.Equal(t, registry.Password, "")
+				require.Equal(t, registry.CA, "")
 			})
 		})
-		t.Run("Module enable", func(t *testing.T) {
-			t.Run("Use default (CE edition config) -> Direct", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
+		t.Run("Default -> CE edition registry", func(t *testing.T) {
+			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
+				require.Equal(t, metaConfig.Registry.LegacyMode, true)
+				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
+				registry := metaConfig.Registry.Settings.Remote
+				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
+				require.Equal(t, registry.Scheme, "HTTPS")
+				require.Equal(t, registry.Username, "")
+				require.Equal(t, registry.Password, "")
+				require.Equal(t, registry.CA, "")
+			})
+			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, metaConfig.Registry.LegacyMode, false)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
 				registry := metaConfig.Registry.Settings.Remote
 				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
@@ -261,20 +250,9 @@ spec:
 				require.Equal(t, registry.Password, "")
 				require.Equal(t, registry.CA, "")
 			})
-			t.Run("Use init configuration -> always Unmanaged", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
-				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
-				require.Equal(t, registry.ImagesRepo, "test")
-				require.Equal(t, registry.Scheme, "HTTPS")
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
-			})
-			t.Run("Use deckhouse moduleConfig", func(t *testing.T) {
-				deckhouseMC := `
+		})
+		t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
+			moduleConfigDeckhouse := `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -293,9 +271,14 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-				metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+deckhouseMC, DummyPreparatorProvider())
+			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
+				_, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse, DummyPreparatorProvider())
+				require.Error(t, err)
+			})
+			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.ModuleEnabled, true)
+				require.Equal(t, metaConfig.Registry.LegacyMode, false)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
 				registry := metaConfig.Registry.Settings.Remote
 				require.Equal(t, registry.ImagesRepo, "r.example.com/test")

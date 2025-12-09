@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
@@ -26,12 +27,13 @@ import (
 
 func TestConfig_UseDefault(t *testing.T) {
 	type input struct {
-		cri constant.CRIType
+		modulePlanned bool
 	}
 	type output struct {
-		mode   constant.ModeType
-		err    bool
-		errMsg string
+		mode       constant.ModeType
+		legacyMode bool
+		err        bool
+		errMsg     string
 	}
 
 	tests := []struct {
@@ -40,23 +42,25 @@ func TestConfig_UseDefault(t *testing.T) {
 		output output
 	}{
 		{
-			name: "containerd: v1 -> Direct",
+			name: "module planned -> direct && no error",
 			input: input{
-				cri: constant.CRIContainerdV1,
+				modulePlanned: true,
 			},
 			output: output{
-				mode: constant.ModeDirect,
-				err:  false,
+				mode:       constant.ModeDirect,
+				legacyMode: false,
+				err:        false,
 			},
 		},
 		{
-			name: "containerd: unknown -> Unmanaged",
+			name: "module not planned -> unmanaged && no error",
 			input: input{
-				cri: constant.CRIType("unknown"),
+				modulePlanned: false,
 			},
 			output: output{
-				mode: constant.ModeUnmanaged,
-				err:  false,
+				mode:       constant.ModeUnmanaged,
+				legacyMode: true,
+				err:        false,
 			},
 		},
 	}
@@ -64,17 +68,17 @@ func TestConfig_UseDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := Config{}
-			err := config.UseDefault(tt.input.cri)
+			err := config.UseDefault(tt.input.modulePlanned)
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.output.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.output.errMsg)
+					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, config)
+				require.NoError(t, err)
 				assert.Equal(t, tt.output.mode, config.Settings.Mode)
+				assert.Equal(t, tt.output.legacyMode, config.LegacyMode)
 			}
 		})
 	}
@@ -83,7 +87,6 @@ func TestConfig_UseDefault(t *testing.T) {
 func TestConfig_UseInitConfig(t *testing.T) {
 	type input struct {
 		initConfig init_config.Config
-		cri        constant.CRIType
 	}
 	type output struct {
 		mode   constant.ModeType
@@ -97,27 +100,12 @@ func TestConfig_UseInitConfig(t *testing.T) {
 		output output
 	}{
 		{
-			name: "containerd: v1 -> Unmanaged",
+			name: "iniConfig -> unmanaged && legacy && no error",
 			input: input{
 				initConfig: init_config.Config{
 					ImagesRepo:     "registry.example.com",
 					RegistryScheme: "HTTPS",
 				},
-				cri: constant.CRIContainerdV1,
-			},
-			output: output{
-				mode: constant.ModeUnmanaged,
-				err:  false,
-			},
-		},
-		{
-			name: "containerd: unknown -> Unmanaged",
-			input: input{
-				initConfig: init_config.Config{
-					ImagesRepo:     "registry.example.com",
-					RegistryScheme: "HTTPS",
-				},
-				cri: constant.CRIType("unknown"),
 			},
 			output: output{
 				mode: constant.ModeUnmanaged,
@@ -129,17 +117,17 @@ func TestConfig_UseInitConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := Config{}
-			err := config.UseInitConfig(tt.input.initConfig, tt.input.cri)
+			err := config.UseInitConfig(tt.input.initConfig)
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.output.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.output.errMsg)
+					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, config)
+				require.NoError(t, err)
 				assert.Equal(t, tt.output.mode, config.Settings.Mode)
+				assert.True(t, config.LegacyMode, "should be legacy mode")
 			}
 		})
 	}
@@ -148,7 +136,6 @@ func TestConfig_UseInitConfig(t *testing.T) {
 func TestConfig_UseDeckhouseSettings(t *testing.T) {
 	type input struct {
 		deckhouse module_config.DeckhouseSettings
-		cri       constant.CRIType
 	}
 	type output struct {
 		err    bool
@@ -161,7 +148,7 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 		output output
 	}{
 		{
-			name: "mode: direct, containerd: v1 -> no errors",
+			name: "direct -> not legacy && no errors",
 			input: input{
 				deckhouse: module_config.DeckhouseSettings{
 					Mode: constant.ModeDirect,
@@ -170,31 +157,13 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 						Scheme:     "HTTPS",
 					},
 				},
-				cri: constant.CRIContainerdV1,
 			},
 			output: output{
 				err: false,
 			},
 		},
 		{
-			name: "mode: direct, containerd: unknown -> error",
-			input: input{
-				deckhouse: module_config.DeckhouseSettings{
-					Mode: constant.ModeDirect,
-					Direct: &module_config.RegistrySettings{
-						ImagesRepo: "registry.example.com",
-						Scheme:     "HTTPS",
-					},
-				},
-				cri: constant.CRIType("unknown"),
-			},
-			output: output{
-				err:    true,
-				errMsg: "is not supported with defaultCRI",
-			},
-		},
-		{
-			name: "mode: unmanaged, containerd: unknown -> no errors",
+			name: "unmanaged -> not legacy && no errors",
 			input: input{
 				deckhouse: module_config.DeckhouseSettings{
 					Mode: constant.ModeUnmanaged,
@@ -203,7 +172,6 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 						Scheme:     "HTTPS",
 					},
 				},
-				cri: constant.CRIType("unknown"),
 			},
 			output: output{
 				err: false,
@@ -214,17 +182,17 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := Config{}
-			err := config.UseDeckhouseSettings(tt.input.deckhouse, tt.input.cri)
+			err := config.UseDeckhouseSettings(tt.input.deckhouse)
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.output.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.output.errMsg)
+					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, config)
+				require.NoError(t, err)
 				assert.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
+				assert.False(t, config.LegacyMode, "should not be legacy mode")
 			}
 		})
 	}

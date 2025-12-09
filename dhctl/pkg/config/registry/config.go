@@ -25,50 +25,52 @@ import (
 type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
-	ModuleEnabled     bool
+	LegacyMode        bool
 }
 
 // UseDefault configures the registry with default CE settings.
 // When no registry configuration is provided:
-// - If Direct mode is supported (based on CRI type), uses Direct mode
+// - If Direct mode is supported, uses Direct mode
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
 func (c *Config) UseDefault(
-	cri constant.CRIType,
+	modulePlanned bool,
 ) error {
+	legacyMode := false
 	userSettings := module_config.DeckhouseSettings{
-		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &module_config.RegistrySettings{},
+		Mode:   constant.ModeDirect,
+		Direct: &module_config.RegistrySettings{},
 	}
-	if constant.ModuleEnabled(cri) {
+	if !modulePlanned {
+		legacyMode = true
 		userSettings = module_config.DeckhouseSettings{
-			Mode:   constant.ModeDirect,
-			Direct: &module_config.RegistrySettings{},
+			Mode:      constant.ModeUnmanaged,
+			Unmanaged: &module_config.RegistrySettings{},
 		}
 	}
-	return c.UseDeckhouseSettings(
+	return c.process(
 		userSettings,
-		cri,
+		legacyMode,
 	)
 }
 
 // UseInitConfig configures registry using legacy initConfiguration.
-// Note: This method maintains backward compatibility and only supports Unmanaged mode.
+// Note: This method maintains backward compatibility and only supports Unmanaged legacy mode.
 func (c *Config) UseInitConfig(
 	initConfig init_config.Config,
-	cri constant.CRIType,
 ) error {
+	legacyMode := true
 	userRegistrySettings, err := initConfig.ToRegistrySettings()
 	if err != nil {
-		return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		return err
 	}
 	userSettings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
 		Unmanaged: &userRegistrySettings,
 	}
-	return c.UseDeckhouseSettings(
+	return c.process(
 		userSettings,
-		cri,
+		legacyMode,
 	)
 }
 
@@ -76,7 +78,17 @@ func (c *Config) UseInitConfig(
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
 func (c *Config) UseDeckhouseSettings(
 	userSettings module_config.DeckhouseSettings,
-	cri constant.CRIType,
+) error {
+	legacyMode := false
+	return c.process(
+		userSettings,
+		legacyMode,
+	)
+}
+
+func (c *Config) process(
+	userSettings module_config.DeckhouseSettings,
+	legacyMode bool,
 ) error {
 	// Prepare settings
 	deckhouseSettings := module_config.DeckhouseSettings{}
@@ -87,16 +99,12 @@ func (c *Config) UseDeckhouseSettings(
 		return fmt.Errorf("validate registry settings: %w", err)
 	}
 
-	// Check if module can be enabled with current CRI
-	moduleEnabled := constant.ModuleEnabled(cri)
-	moduleRequired := constant.ModuleRequired(deckhouseSettings.Mode)
-	if moduleRequired && !moduleEnabled {
+	// This error checks whether the registry can be started in legacy mode.
+	// The error is needed to check the tests of the UseInitConfig and UseDefault methods.
+	if legacyMode && constant.ModuleRequired(deckhouseSettings.Mode) {
 		return fmt.Errorf(
-			"registry mode '%s' is not supported with defaultCRI:'%s'. "+
-				"Please switch to 'Unmanaged' registry mode or use one of defaultCRI: %v",
+			"internal error: cannot run registry in legacy mode with registry mode: '%s'.",
 			deckhouseSettings.Mode,
-			cri,
-			constant.ModuleEnabledCRI,
 		)
 	}
 
@@ -109,17 +117,17 @@ func (c *Config) UseDeckhouseSettings(
 	*c = Config{
 		Settings:          settings,
 		DeckhouseSettings: deckhouseSettings,
-		ModuleEnabled:     moduleEnabled,
+		LegacyMode:        legacyMode,
 	}
 	return nil
 }
 
 func (c *Config) Manifest() *ManifestBuilder {
-	return newManifestBuilder(c.Settings.ToModel(), c.ModuleEnabled)
+	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
 
 func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) {
-	if !c.ModuleEnabled {
+	if c.LegacyMode {
 		return false, nil, nil
 	}
 	ret, err := c.DeckhouseSettings.ToMap()

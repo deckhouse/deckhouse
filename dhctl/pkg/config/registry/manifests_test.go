@@ -38,6 +38,13 @@ func TestModeNoError(t *testing.T) {
 				WithModeUnmanaged(),
 			).DeckhouseSettings,
 		},
+		{
+			name: "mode unmanaged && legacy ",
+			input: TestConfigBuilder(
+				WithModeUnmanaged(),
+				WithLegacyMode(),
+			).DeckhouseSettings,
+		},
 	}
 
 	for _, tt := range tests {

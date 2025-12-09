@@ -43,7 +43,7 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 }
 
 func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	if config.ModuleEnabled {
+	if !config.LegacyMode {
 		if err := checkInit(ctx, kubeClient); err != nil {
 			log.DebugF("Error while checking registry init: %v\n", err)
 			return ErrIsNotReady

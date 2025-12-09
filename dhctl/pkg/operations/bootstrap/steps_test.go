@@ -181,7 +181,7 @@ func TestInstallDeckhouse(t *testing.T) {
 	conf := &config.DeckhouseInstaller{
 		Registry: registry_config.TestConfigBuilder(
 			registry_config.WithModeUnmanaged(),
-			registry_config.WithModuleDisable(),
+			registry_config.WithLegacyMode(),
 		),
 		Bundle:    "minimal",
 		LogLevel:  "Info",

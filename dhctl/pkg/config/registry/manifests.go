@@ -24,16 +24,16 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
-func newManifestBuilder(modeModel ModeModel, moduleEnable bool) *ManifestBuilder {
+func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 	return &ManifestBuilder{
-		modeModel:     modeModel,
-		moduleEnabled: moduleEnable,
+		modeModel:  modeModel,
+		legacyMode: legacyMode,
 	}
 }
 
 type ManifestBuilder struct {
-	modeModel     ModeModel
-	moduleEnabled bool
+	modeModel  ModeModel
+	legacyMode bool
 }
 
 // =======================
@@ -61,7 +61,7 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI func() (PKI, error)
 }
 
 func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
-	if !b.moduleEnabled {
+	if b.legacyMode {
 		return false, nil, nil
 	}
 
@@ -95,7 +95,10 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 	}
 
 	ctx := cfg.ToContext()
-	ctx.RegistryModuleEnable = b.moduleEnabled
+	ctx.RegistryModuleEnable = true
+	if b.legacyMode {
+		ctx.RegistryModuleEnable = false
+	}
 
 	mapCtx, err := ctx.ToMap()
 	if err != nil {
