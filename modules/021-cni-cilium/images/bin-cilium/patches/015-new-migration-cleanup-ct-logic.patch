@@ -1,4 +1,4 @@
-From e6a4e6b7c49fa4a522c250b88037be6ba61cc091 Mon Sep 17 00:00:00 2001
+From 970084ffc4fa5512dd8c7a7bbf1eab4359ed6663 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 24 Nov 2025 13:44:22 +0300
 Subject: [PATCH] new migration cleanup ct logic
@@ -10,7 +10,7 @@ Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
  2 files changed, 48 insertions(+), 3 deletions(-)
 
 diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
-index 59e81f5bd1..a971abf5be 100644
+index 37b0e54781..6c4f4157a7 100644
 --- a/pkg/endpoint/bpf.go
 +++ b/pkg/endpoint/bpf.go
 @@ -9,6 +9,7 @@ import (
@@ -21,14 +21,14 @@ index 59e81f5bd1..a971abf5be 100644
  	"net/netip"
  	"os"
  	"path/filepath"
-@@ -34,6 +35,7 @@ import (
+@@ -35,6 +36,7 @@ import (
  	"github.com/cilium/cilium/pkg/logging"
  	"github.com/cilium/cilium/pkg/logging/logfields"
  	"github.com/cilium/cilium/pkg/maps/ctmap"
 +	"github.com/cilium/cilium/pkg/maps/ipcache"
- 	"github.com/cilium/cilium/pkg/maps/lxcmap"
  	"github.com/cilium/cilium/pkg/maps/policymap"
  	"github.com/cilium/cilium/pkg/option"
+ 	"github.com/cilium/cilium/pkg/policy"
 @@ -924,12 +926,34 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
  	}
  }
