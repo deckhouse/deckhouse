@@ -127,13 +127,16 @@ func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	output, _, err := cmd.Output(ctx)
 	if err != nil {
 		var stderr []byte
-		var ee *exec.ExitError
-		if errors.As(errors.Unwrap(err), &ee) {
-			stderr = ee.Stderr
+		if ee := errors.Unwrap(err); ee != nil {
+			var exitErr *exec.ExitError
+			if errors.As(ee, &exitErr) && len(exitErr.Stderr) > 0 {
+				stderr = exitErr.Stderr
+			}
 		}
 		if len(stderr) == 0 {
 			stderr = []byte(err.Error())
 		}
+
 		return stderr, err
 	}
 
