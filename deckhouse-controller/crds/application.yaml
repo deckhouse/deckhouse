@@ -36,10 +36,10 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Processed')].status
+    - jsonPath: .status.resourceConditions[?(@.type=='Processed')].status
       name: Processed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+    - jsonPath: .status.conditions[?(@.type=='Ready')].message
       name: Message
       type: string
     name: v1alpha1
