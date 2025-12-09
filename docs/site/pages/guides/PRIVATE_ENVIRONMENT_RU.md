@@ -660,3 +660,8 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_main_dashboard.png" alt="Главная страница Harbor...">
 </div>
 
+{% alert level="info" %}
+Обратитите внимание, что браузер может ругаться на самоподписанный сертификат, считая его «небезопасным». Это не так, таким сертификатом можно пользоваться.
+{% endalert %}
+
+
