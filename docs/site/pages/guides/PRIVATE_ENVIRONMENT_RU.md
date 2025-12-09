@@ -644,9 +644,19 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 Теперь нужно настроить Harbor: создать проект и пользователя, под которым будет выполняться работа в этом проекте.
 
-Перейдём на главную страницу Harbor по адресу harbor.local:
+Перейдём на главную страницу Harbor по адресу `harbor.local`:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_main_page" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Главная страница Harbor...">
+</div>
+
+{% alert level="info" %}
+Обратитите внимание, что для доступа по этому доменному имени с рабочей машины нужно также добавить доменное имя `harbor.local` в `/etc/hosts`, указав в качестве назначения IP-адрес машины-бастиона.
+{% endalert %}
+
+Для входа в интерфейс воспользуйтесь логином и паролем, указанными в конфигурационном файле `harbor.yml`.
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_main_dashboard.png" alt="Главная страница Harbor...">
 </div>
 
