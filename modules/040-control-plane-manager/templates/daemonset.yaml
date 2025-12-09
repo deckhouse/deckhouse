@@ -261,6 +261,10 @@ spec:
           value: {{ .Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         livenessProbe:
           httpGet:
             host: 127.0.0.1
