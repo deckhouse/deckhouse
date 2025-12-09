@@ -51,7 +51,7 @@ layout: sidebar-guides
 Устанавливать мы будем latest-версию [из GitHub-репозитория](https://github.com/goharbor/harbor/releases) проекта. Для этого нужно скачать архив с установщиком из нужного релиза, выбрав вариант с `harbor-offline-installer` в названии.
 
 <div style="text-align: center;">
-<img src="/images/gs/guides/private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
+<img src="/images/guides/install_to_private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
 </div>
 
 Скопируйте адрес ссылки. Для версии `harbor-offline-installer-v2.14.1.tgz` ссылка будет выглядеть следующим образом: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
@@ -557,6 +557,8 @@ cache:
 ```
 {% endofftopic %}
 
+###### Установка
+
 Запустите скрипт установки:
 
 ```bash
@@ -632,12 +634,19 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 # a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
 # b.) change or remove the value of 'manage_etc_hosts' in
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
-#
 ```
 Если у вашего провайдера такая же схема, внесите соответствующие изменения и в предложенный файл шаблона, чтобы после перезагрузки настройки не пострадали.
 {% endalert %}
 
 На этом установка Harbor завершена! 🎉
 
+##### Настройка Harbor
 
+Теперь нужно настроить Harbor: создать проект и пользователя, под которым будет выполняться работа в этом проекте.
+
+Перейдём на главную страницу Harbor по адресу harbor.local:
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_main_page" alt="Главная страница Harbor...">
+</div>
 
