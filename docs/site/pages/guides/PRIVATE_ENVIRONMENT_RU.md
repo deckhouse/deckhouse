@@ -664,4 +664,34 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Обратитите внимание, что браузер может ругаться на самоподписанный сертификат, считая его «небезопасным». Это не так, таким сертификатом можно пользоваться.
 {% endalert %}
 
+Создайте новый проект. Для этого нажмите на кнопку «Новый проект» и введите его название: `deckhouse`. Остальные настройки трогать не нужно.
 
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_new_project.png" alt="Главная страница Harbor...">
+</div>
+
+Создайте нового пользователя для этого проекта. Перейдите на вкладку «Пользователи» в левом меню и нажмите «Новый пользователь»:
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_create_new_user.png" alt="Главная страница Harbor...">
+</div>
+
+Задайте ему имя, адрес электронной почты и пароль:
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Главная страница Harbor...">
+</div>
+
+Добавьте созданного пользователя к созданный ранее проект. Перейдите обратно на вкладку «Проекты», выберите проект «deckhouse», перейдите на вкладку «Участники» и добавьте туда созданного пользователя, нажав на кнопку «Пользователь».
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Главная страница Harbor...">
+</div>
+
+Роль пользователя оставьте предложенную по умолчанию: «Администратор проекта»:
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_new_project_user.png" alt="Главная страница Harbor...">
+</div>
+
+На этом настройка Harbor завершена! 🎉
