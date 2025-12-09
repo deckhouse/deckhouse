@@ -1,0 +1,340 @@
+diff --git a/README.md b/README.md
+index db668965a..f57e0c6f4 100644
+--- a/README.md
++++ b/README.md
+@@ -158,6 +158,7 @@ The Default Evictor Plugin is used by default for filtering pods before processi
+ | `ignorePvcPods`           | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"PodsWithPVC"` instead]**<br>Sets whether PVC pods should be evicted or ignored.                                                                                          |
+ | `evictFailedBarePods`     | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"FailedBarePods"` instead]**<br>Allows eviction of pods without owner references and in a failed phase.                                                                   |
+ | `ignorePodsWithoutPDB`    | `bool`                 | `false`       | **[Deprecated: Use `podProtections` with `"PodsWithoutPDB"` instead]**<br>Sets whether pods without PodDisruptionBudget should be evicted or ignored.                                                               |
++| `namespaceLabelSelector`  | `metav1.LabelSelector` |               | limiting the pods which are processed by namespace (see [label filtering](#label-filtering))                                                                                                                        |
+ | `labelSelector`           | `metav1.LabelSelector` |               | (See [label filtering](#label-filtering))                                                                                                                                                                           |
+ | `priorityThreshold`       | `priorityThreshold`    |               | (See [priority filtering](#priority-filtering))                                                                                                                                                                     |
+ | `nodeFit`                 | `bool`                 | `false`       | (See [node fit filtering](#node-fit-filtering))                                                                                                                                                                     |
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor.go b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+index f505886ea..8573af860 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor.go
+@@ -21,12 +21,15 @@ import (
+ 	"strings"
+
+ 	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/klog/v2"
+
+ 	evictionutils "sigs.k8s.io/descheduler/pkg/descheduler/evictions/utils"
++
+ 	nodeutil "sigs.k8s.io/descheduler/pkg/descheduler/node"
+ 	podutil "sigs.k8s.io/descheduler/pkg/descheduler/pod"
+ 	frameworktypes "sigs.k8s.io/descheduler/pkg/framework/types"
+@@ -325,8 +328,28 @@ func (d *DefaultEvictor) PreEvictionFilter(pod *v1.Pod) bool {
+ 			logger.Info("pod does not fit on any other node because of nodeSelector(s), Taint(s), or nodes marked as unschedulable", "pod", klog.KObj(pod))
+ 			return false
+ 		}
++	}
++
++	if d.args.NamespaceLabelSelector == nil {
+ 		return true
+ 	}
++
++	// check pod by namespace label filter
++	indexName := "namespaceWithLabelSelector"
++	indexer, err := getNamespacesListByLabelSelector(indexName, d.args.NamespaceLabelSelector, d.handle)
++	if err != nil {
++		klog.ErrorS(err, "unable to list namespaces", "pod", klog.KObj(pod))
++		return false
++	}
++	objs, err := indexer.ByIndex(indexName, pod.Namespace)
++	if err != nil {
++		klog.ErrorS(err, "unable to list namespaces for namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
++		return false
++	}
++	if len(objs) == 0 {
++		klog.InfoS("pod namespace do not match the namespaceLabelSelector filter in the policy parameter", "pod", klog.KObj(pod))
++		return false
++	}
+ 	return true
+ }
+
+@@ -391,6 +414,41 @@ func getPodIndexerByOwnerRefs(indexName string, handle frameworktypes.Handle) (c
+ 	}); err != nil {
+ 		return nil, err
+ 	}
++	return indexer, nil
++}
++
++func getNamespacesListByLabelSelector(indexName string, labelSelector *metav1.LabelSelector, handle frameworktypes.Handle) (cache.Indexer, error) {
++	nsInformer := handle.SharedInformerFactory().Core().V1().Namespaces().Informer()
++	indexer := nsInformer.GetIndexer()
++
++	// do not reinitialize the indexer, if it's been defined already
++	for name := range indexer.GetIndexers() {
++		if name == indexName {
++			return indexer, nil
++		}
++	}
++
++	if err := nsInformer.AddIndexers(cache.Indexers{
++		indexName: func(obj interface{}) ([]string, error) {
++			ns, ok := obj.(*v1.Namespace)
++			if !ok {
++				return []string{}, errors.New("unexpected object")
++			}
++
++			selector, err := metav1.LabelSelectorAsSelector(labelSelector)
++			if err != nil {
++				return []string{}, errors.New("could not get selector from label selector")
++			}
++			if labelSelector != nil && !selector.Empty() {
++				if !selector.Matches(labels.Set(ns.Labels)) {
++					return []string{}, nil
++				}
++			}
++			return []string{ns.GetName()}, nil
++		},
++	}); err != nil {
++		return nil, err
++	}
+
+ 	return indexer, nil
+ }
+diff --git a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+index 0f2484788..25d57817a 100644
+--- a/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
++++ b/pkg/framework/plugins/defaultevictor/defaultevictor_test.go
+@@ -42,6 +42,7 @@ type testCase struct {
+ 	description             string
+ 	pods                    []*v1.Pod
+ 	nodes                   []*v1.Node
++	namespaces              []*v1.Namespace
+ 	pdbs                    []*policyv1.PodDisruptionBudget
+ 	evictFailedBarePods     bool
+ 	evictLocalStoragePods   bool
+@@ -49,6 +50,7 @@ type testCase struct {
+ 	ignorePvcPods           bool
+ 	priorityThreshold       *int32
+ 	nodeFit                 bool
++	useNamespaceSelector    bool
+ 	minReplicas             uint
+ 	minPodAge               *metav1.Duration
+ 	result                  bool
+@@ -57,6 +59,13 @@ type testCase struct {
+ 	noEvictionPolicy        NoEvictionPolicy
+ }
+
++var namespace = "test"
++var namespaceSelector = &metav1.LabelSelector{
++	MatchLabels: map[string]string{
++		"kubernetes.io/metadata.name": namespace,
++	},
++}
++
+ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
+ 	n1 := test.BuildTestNode("node1", 1000, 2000, 13, nil)
+
+@@ -292,6 +301,71 @@ func TestDefaultEvictorPreEvictionFilter(t *testing.T) {
+ 			},
+ 			result: true,
+ 		},
++		{
++			description: "Pod with namespace matched namespace selector, should be evicted",
++			pods: []*v1.Pod{
++				test.BuildTestPod("p1", 400, 0, n1.Name, func(pod *v1.Pod) {
++					pod.ObjectMeta.Namespace = namespace
++					pod.ObjectMeta.OwnerReferences = test.GetNormalPodOwnerRefList()
++					pod.Spec.NodeSelector = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			nodes: []*v1.Node{
++				test.BuildTestNode("node2", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++				test.BuildTestNode("node3", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			namespaces: []*v1.Namespace{
++				test.BuildTestNamespace("default"),
++				test.BuildTestNamespace(namespace),
++			},
++			evictLocalStoragePods:   false,
++			evictSystemCriticalPods: false,
++			nodeFit:                 true,
++			useNamespaceSelector:    true,
++			result:                  true,
++		},
++		{
++			description: "Pod with namespace does not matched namespace selector, should not be evicted",
++			pods: []*v1.Pod{
++				test.BuildTestPod("p1", 400, 0, n1.Name, func(pod *v1.Pod) {
++					pod.ObjectMeta.OwnerReferences = test.GetNormalPodOwnerRefList()
++					pod.Spec.NodeSelector = map[string]string{
++						nodeLabelKey: "fail",
++					}
++				}),
++			},
++			nodes: []*v1.Node{
++				test.BuildTestNode("node2", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++				test.BuildTestNode("node3", 1000, 2000, 13, func(node *v1.Node) {
++					node.ObjectMeta.Labels = map[string]string{
++						nodeLabelKey: nodeLabelValue,
++					}
++				}),
++			},
++			namespaces: []*v1.Namespace{
++				test.BuildTestNamespace("default"),
++				test.BuildTestNamespace(namespace),
++			},
++			evictLocalStoragePods:   false,
++			evictSystemCriticalPods: false,
++			nodeFit:                 true,
++			useNamespaceSelector:    true,
++			result:                  false,
++		},
+ 	}
+
+ 	for _, test := range testCases {
+@@ -944,9 +1018,11 @@ func TestReinitialization(t *testing.T) {
+
+ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin, error) {
+ 	var objs []runtime.Object
++
+ 	for _, node := range test.nodes {
+ 		objs = append(objs, node)
+ 	}
++
+ 	for _, pod := range test.pods {
+ 		objs = append(objs, pod)
+ 	}
+@@ -954,12 +1030,16 @@ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin
+ 		objs = append(objs, pdb)
+ 	}
+
++	for _, ns := range test.namespaces {
++		objs = append(objs, ns)
++	}
++
+ 	fakeClient := fake.NewSimpleClientset(objs...)
+
+ 	sharedInformerFactory := informers.NewSharedInformerFactory(fakeClient, 0)
+ 	podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
+ 	_ = sharedInformerFactory.Policy().V1().PodDisruptionBudgets().Lister()
+-
++	_ = sharedInformerFactory.Core().V1().Namespaces().Lister()
+ 	getPodsAssignedToNode, err := podutil.BuildGetPodsAssignedToNodeFunc(podInformer)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("build get pods assigned to node function error: %v", err)
+@@ -984,6 +1064,10 @@ func initializePlugin(ctx context.Context, test testCase) (frameworktypes.Plugin
+ 		PodProtections:       test.podProtections,
+ 	}
+
++	if test.useNamespaceSelector {
++		defaultEvictorArgs.NamespaceLabelSelector = namespaceSelector
++	}
++
+ 	evictorPlugin, err := New(
+ 		ctx,
+ 		defaultEvictorArgs,
+diff --git a/pkg/framework/plugins/defaultevictor/defaults.go b/pkg/framework/plugins/defaultevictor/defaults.go
+index cca10adc4..deb7b1751 100644
+--- a/pkg/framework/plugins/defaultevictor/defaults.go
++++ b/pkg/framework/plugins/defaultevictor/defaults.go
+@@ -24,4 +24,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
+ // SetDefaults_DefaultEvictorArgs sets the default values for the
+ // DefaultEvictorArgs configuration.
+ func SetDefaults_DefaultEvictorArgs(obj runtime.Object) {
++	args := obj.(*DefaultEvictorArgs)
++	if args.NamespaceLabelSelector == nil {
++		args.NamespaceLabelSelector = nil
++	}
+ }
+diff --git a/pkg/framework/plugins/defaultevictor/types.go b/pkg/framework/plugins/defaultevictor/types.go
+index 7c6600d47..58f0a209d 100644
+--- a/pkg/framework/plugins/defaultevictor/types.go
++++ b/pkg/framework/plugins/defaultevictor/types.go
+@@ -15,6 +15,7 @@ package defaultevictor
+
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++
+ 	"sigs.k8s.io/descheduler/pkg/api"
+ )
+
+@@ -25,13 +26,14 @@ import (
+ type DefaultEvictorArgs struct {
+ 	metav1.TypeMeta `json:",inline"`
+
+-	NodeSelector      string                 `json:"nodeSelector,omitempty"`
+-	LabelSelector     *metav1.LabelSelector  `json:"labelSelector,omitempty"`
+-	PriorityThreshold *api.PriorityThreshold `json:"priorityThreshold,omitempty"`
+-	NodeFit           bool                   `json:"nodeFit,omitempty"`
+-	MinReplicas       uint                   `json:"minReplicas,omitempty"`
+-	MinPodAge         *metav1.Duration       `json:"minPodAge,omitempty"`
+-	NoEvictionPolicy  NoEvictionPolicy       `json:"noEvictionPolicy,omitempty"`
++	NodeSelector           string                 `json:"nodeSelector,omitempty"`
++	LabelSelector          *metav1.LabelSelector  `json:"labelSelector,omitempty"`
++	NamespaceLabelSelector *metav1.LabelSelector  `json:"namespaceLabelSelector,omitempty"`
++	PriorityThreshold      *api.PriorityThreshold `json:"priorityThreshold,omitempty"`
++	NodeFit                bool                   `json:"nodeFit,omitempty"`
++	MinReplicas            uint                   `json:"minReplicas,omitempty"`
++	MinPodAge              *metav1.Duration       `json:"minPodAge,omitempty"`
++	NoEvictionPolicy       NoEvictionPolicy       `json:"noEvictionPolicy,omitempty"`
+
+ 	// PodProtections holds the list of enabled and disabled protection policies.
+ 	// Users can selectively disable certain default protection rules or enable extra ones.
+diff --git a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
+index 9faf7c10e..cb6700460 100644
+--- a/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
++++ b/pkg/framework/plugins/defaultevictor/zz_generated.deepcopy.go
+@@ -46,6 +46,11 @@ func (in *DefaultEvictorArgs) DeepCopyInto(out *DefaultEvictorArgs) {
+ 		*out = new(v1.Duration)
+ 		**out = **in
+ 	}
++	if in.NamespaceLabelSelector != nil {
++		in, out := &in.NamespaceLabelSelector, &out.NamespaceLabelSelector
++		*out = new(v1.LabelSelector)
++		(*in).DeepCopyInto(*out)
++	}
+ 	in.PodProtections.DeepCopyInto(&out.PodProtections)
+ 	return
+ }
+diff --git a/test/test_utils.go b/test/test_utils.go
+index 5a3169dd1..e44bc2cd1 100644
+--- a/test/test_utils.go
++++ b/test/test_utils.go
+@@ -37,6 +37,22 @@ import (
+ 	utilptr "k8s.io/utils/ptr"
+ )
+
++// BuildTestNamespace creates a test namespace with given parameters.
++func BuildTestNamespace(name string) *v1.Namespace {
++	namespace := &v1.Namespace{
++		TypeMeta: metav1.TypeMeta{
++			Kind:       "Namespace",
++			APIVersion: "v1",
++		},
++		ObjectMeta: metav1.ObjectMeta{
++			Name:   name,
++			UID:    uuid.NewUUID(),
++			Labels: map[string]string{"kubernetes.io/metadata.name": name},
++		},
++	}
++	return namespace
++}
++
+ // BuildTestPod creates a test pod with given parameters.
+ func BuildTestPod(name string, cpu, memory int64, nodeName string, apply func(*v1.Pod)) *v1.Pod {
+ 	pod := &v1.Pod{

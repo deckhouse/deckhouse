@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,13 +65,64 @@ type ApplicationPackage struct {
 type NamespaceName string
 
 type ApplicationPackageStatus struct {
-	Instances             map[NamespaceName][]ApplicationPackageStatusInstance `json:"instances,omitempty"`
-	InstancesOverall      int                                                  `json:"instancesOverall,omitempty"`
-	AvailableRepositories []string                                             `json:"availableRepositories,omitempty"`
+	Installed             map[NamespaceName][]ApplicationPackageStatusInstalled `json:"installed,omitempty"`
+	InstalledOverall      int                                                   `json:"installedOverall,omitempty"`
+	AvailableRepositories []string                                              `json:"availableRepositories,omitempty"`
 }
 
-type ApplicationPackageStatusInstance struct {
+type ApplicationPackageStatusInstalled struct {
 	Name string `json:"name,omitempty"`
+}
+
+func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bool {
+	if len(a.Status.Installed) == 0 {
+		return false
+	}
+
+	for _, v := range a.Status.Installed[NamespaceName(namespace)] {
+		if v.Name == appName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string) *ApplicationPackage {
+	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
+
+	// initialize map if it is nil or empty
+	if len(a.Status.Installed) == 0 {
+		a.Status.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
+	}
+
+	a.Status.Installed[NamespaceName(namespace)] = append(a.Status.Installed[NamespaceName(namespace)], apStatusInstalledApp)
+
+	a.Status.InstalledOverall++
+
+	return a
+}
+
+func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string) *ApplicationPackage {
+	if len(a.Status.Installed) == 0 {
+		return a
+	}
+
+	newSlice := slices.DeleteFunc(a.Status.Installed[NamespaceName(namespace)], func(v ApplicationPackageStatusInstalled) bool {
+		return v.Name == appName
+	})
+
+	if len(a.Status.Installed[NamespaceName(namespace)]) == 0 {
+		delete(a.Status.Installed, NamespaceName(namespace))
+	}
+
+	a.Status.Installed[NamespaceName(namespace)] = newSlice
+
+	if a.Status.InstalledOverall > 0 {
+		a.Status.InstalledOverall--
+	}
+
+	return a
 }
 
 // +kubebuilder:object:root=true

@@ -54,7 +54,7 @@ jobs:
 {!{ tmpl.Exec "add_ssh_keys" . | strings.Indent 6 }!}
       - name: Download custom trivy-db binary and copy image
         env:
-          TRIVY_VERSION: v0.63.0
+          TRIVY_VERSION: v0.67.2
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_REGISTRY_USER: ${{secrets.DECKHOUSE_REGISTRY_USER}}
           DECKHOUSE_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_PASSWORD}}

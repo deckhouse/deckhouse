@@ -78,6 +78,10 @@ func NewMachineScope(
 
 	scope.PatchHelper = patchHelper
 
+	scope.Logger = scope.Logger.WithValues(
+		"machine", machine.Name,
+	)
+
 	return &MachineScope{
 		Scope:         scope,
 		ClusterScope:  clusterScope,

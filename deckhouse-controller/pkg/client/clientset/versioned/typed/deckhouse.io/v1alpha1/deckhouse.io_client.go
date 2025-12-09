@@ -37,6 +37,7 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
+	ObjectKeepersGetter
 	PackageRepositoriesGetter
 	PackageRepositoryOperationsGetter
 }
@@ -92,6 +93,10 @@ func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 
 func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
 	return newModuleUpdatePolicies(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ObjectKeepers() ObjectKeeperInterface {
+	return newObjectKeepers(c)
 }
 
 func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {

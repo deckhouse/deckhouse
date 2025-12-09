@@ -1,4 +1,4 @@
-.github/                        @Nikolay1224
+.github/                        @Nikolay1224 @himax1991
 000-common/                     @name212 @sprait
 002-deckhouse/                  @yalosev @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
@@ -14,7 +14,7 @@
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212
-040-terraform-manager/          @name212 @sprait @aleksey-su
+040-terraform-manager/          @name212 @aleksey-su
 042-kube-dns/                   @apolovov
 050-network-policy-engine/      @apolovov
 101-cert-manager/               @Suselz
@@ -37,7 +37,7 @@
 450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
-470-chrony/                     @name212 @sprait
+470-chrony/                     @name212
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms
 500-openvpn/                    @apolovov
@@ -49,10 +49,13 @@
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
 610-service-with-healthchecks   @apolovov
-800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
+800-deckhouse-tools/            @RomanenkoDenys @name212
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
 candi/                          @name212
+candi/version_map.yml           @sprait
+candi/cloud-providers/          @aleksey-su
+candi/terraform_versions.yml    @aleksey-su
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin @duckhawk
 deckhouse-controller/           @yalosev @ldmonster
@@ -62,7 +65,7 @@ helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
-testing/cloud_layouts/          @Nikolay1224 @KraMorK @Taior
+testing/cloud_layouts/          @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/   @sudoroot-null
 /release.yaml                   @yalosev @nabokihms
 go_lib/registry/                @RaveNoX

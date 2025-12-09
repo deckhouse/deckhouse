@@ -14,7 +14,7 @@
         description: |
           The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
 
-          This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+          This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 120000` is currently configured), or traffic patterns changed.
 
           Affected node: `{{$labels.node}}`
 
@@ -32,6 +32,6 @@
         description: |
           The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
 
-          This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+          This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 65536` is currently configured).
 
           Affected node: `{{$labels.node}}`

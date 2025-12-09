@@ -1,0 +1,18 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  creationTimestamp: null
+  name: missing-follow-objref
+  resourceVersion: "1000"
+spec:
+  mode: FollowObject
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T15:00:00Z"
+    message: FollowObjectRef is required for FollowObject mode
+    reason: MissingFollowObjectRef
+    status: "False"
+    type: Active
+  message: FollowObjectRef is required for FollowObject mode
+  phase: Pending
