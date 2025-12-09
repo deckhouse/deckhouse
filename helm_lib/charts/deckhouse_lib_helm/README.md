@@ -102,6 +102,7 @@
 | [_helm_lib_additional_tolerations_storage_problems](#_helm_lib_additional_tolerations_storage_problems) |
 | [_helm_lib_additional_tolerations_no_csi](#_helm_lib_additional_tolerations_no_csi) |
 | [_helm_lib_additional_tolerations_cloud_provider_uninitialized](#_helm_lib_additional_tolerations_cloud_provider_uninitialized) |
+| [helm_lib_affinity_arch_require](#helm_lib_affinity_arch_require) |
 | **Pod Disruption Budget** |
 | [helm_lib_pdb_daemonset](#helm_lib_pdb_daemonset) |
 | **Priority Class** |
@@ -116,6 +117,7 @@
 | [helm_lib_container_kube_rbac_proxy_resources](#helm_lib_container_kube_rbac_proxy_resources) |
 | **Spec For High Availability** |
 | [helm_lib_pod_anti_affinity_for_ha](#helm_lib_pod_anti_affinity_for_ha) |
+| [helm_lib_affinity_ha_with_arch_require](#helm_lib_affinity_ha_with_arch_require) |
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
@@ -1124,6 +1126,16 @@ list:
 `{{ include "helm_lib_tolerations" (tuple . "any-node" "with-cloud-provider-uninitialized") }} `
 
 
+
+### helm_lib_affinity_arch_require
+
+ Returns nodeAffinity that schedules pods only on specified architectures.
+
+#### Usage
+
+`{{- include "helm_lib_affinity_arch_require" (list . (list "amd64" "arm64")) `
+
+
 ## Pod Disruption Budget
 
 ### helm_lib_pdb_daemonset
@@ -1252,6 +1264,21 @@ list:
 #### Usage
 
 `{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Match labels for podAntiAffinity label selector 
+
+
+### helm_lib_affinity_ha_with_arch_require
+
+ Returns affinity spec for HA components that combines: podAntiAffinity by provided labels (same as helm_lib_pod_anti_affinity_for_ha) and nodeAffinity that schedules pods only on specified architectures. If the list of architectures is not provided, defaults to ["amd64"]. 
+
+#### Usage
+
+`{{- include "helm_lib_affinity_ha_with_arch_require" (list . (dict "app" "test") (list "amd64")) }} `
 
 #### Arguments
 
