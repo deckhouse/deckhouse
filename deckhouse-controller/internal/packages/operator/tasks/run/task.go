@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -31,18 +32,25 @@ type manager interface {
 	RunPackage(ctx context.Context, name string) error
 }
 
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
+}
+
 type task struct {
 	packageName string
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name string, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name string, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -56,8 +64,14 @@ func (t *task) Execute(ctx context.Context) error {
 	// Also starts Helm resource monitoring to detect drift/deletions
 	t.logger.Debug("run package", slog.String("name", t.packageName))
 	if err := t.manager.RunPackage(ctx, t.packageName); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("run package: %w", err)
 	}
+
+	t.status.SetConditionTrue(t.packageName, status.ConditionHelmApplied)
+	t.status.SetConditionTrue(t.packageName, status.ConditionHooksProcessed)
+	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInRuntime)
+	t.status.SetConditionTrue(t.packageName, status.ConditionReadyInCluster)
 
 	return nil
 }

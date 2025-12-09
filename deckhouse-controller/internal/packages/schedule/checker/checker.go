@@ -28,6 +28,7 @@ type Checker interface {
 
 // Result represents the outcome of a checker evaluation.
 type Result struct {
-	Enabled bool   // Whether the package should be enabled based on this check
-	Reason  string // Human-readable reason (typically set when Enabled=false)
+	Enabled bool
+	Reason  string
+	Message string
 }

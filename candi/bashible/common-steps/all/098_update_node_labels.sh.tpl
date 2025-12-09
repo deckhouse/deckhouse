@@ -21,7 +21,14 @@ import sys
 import os
 import json
 
-system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type", "topology.kubernetes.io/region", "topology.kubernetes.io/zone"}
+system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type"}
+
+{{ if ne .nodeGroup.nodeType "Static" }}
+system_lables.update({
+    "topology.kubernetes.io/region",
+    "topology.kubernetes.io/zone",
+})
+{{ end }}
 
 def recursive_glob(base_dir, pattern):
     matches = []

@@ -194,7 +194,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	isHelm, err := s.isHelmChart(app.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("check helm chart: %w", err)
+		return newCheckChartError(err)
 	}
 
 	if !isHelm {
@@ -204,14 +204,14 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create values file: %w", err)
+		return newCreateValuesError(err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
 	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("marshal metadata values: %w", err)
+		return newMarshalRuntimeValuesError(err)
 	}
 
 	// Render chart to get manifests for checksum calculation
@@ -223,7 +223,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("render nelm chart: %w", err)
+		return newRenderError(err)
 	}
 
 	// Calculate checksum to detect changes in rendered manifests
@@ -233,7 +233,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetNamespace(), app.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return newCheckReleaseError(err)
 	}
 
 	if !shouldUpgrade {
@@ -255,7 +255,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("install nelm release: %w", err)
+		return newInstallChartError(err)
 	}
 
 	s.monitorManager.AddMonitor(app.GetNamespace(), app.GetName(), renderedManifests)

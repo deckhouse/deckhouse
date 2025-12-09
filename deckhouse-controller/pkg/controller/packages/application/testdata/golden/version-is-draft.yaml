@@ -11,13 +11,25 @@ spec:
   packageRepository: deckhouse
   version: v1.0.0
 status:
-  conditions:
+  resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ApplicationPackageVersion deckhouse-test-v1.0.0 is draft
+    message: ApplicationPackageVersion deckhouse-test-v1.0.0 is in draft
     reason: VersionIsDraft
     status: "False"
     type: Processed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "1"
+status:
+  availableRepositories:
+  - deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
