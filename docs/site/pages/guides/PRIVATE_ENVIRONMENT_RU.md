@@ -566,6 +566,7 @@ cache:
 {% alert level="info" %}
 Обратитите внимание, что перед запуском установки нужно установить на машину [Docker](https://docs.docker.com/engine/install/) и docker-compose. При их отсутствии скрипт установки покажет ошибку с требованиям предварительно установить нужный софт.
 {% offtopic title="Ошибка в случае их отсутвтия..." %}
+```console
 $ ./install.sh 
 
 [Step 0]: checking if docker is installed ...
@@ -574,5 +575,6 @@ ubuntu@guide-bastion:~/harbor$ sudo ./install.sh
 
 [Step 0]: checking if docker is installed ...
 ✖ Need to install docker(20.10.10+) first and run this script again.
+```
 {% endofftopic %}
 {% endalert %}
