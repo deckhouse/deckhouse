@@ -88,6 +88,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/migration"
+	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/storage"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/462-loki/hooks"
