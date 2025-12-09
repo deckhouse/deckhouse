@@ -16,7 +16,9 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -122,10 +124,17 @@ func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	//	return output, err
 	//}
 
-	output, debug, err := cmd.Output(ctx)
+	output, _, err := cmd.Output(ctx)
 	if err != nil {
-		full := fmt.Sprintf("output: %s, debug: %s", output, debug)
-		return []byte(full), err
+		var stderr []byte
+		var ee *exec.ExitError
+		if errors.As(errors.Unwrap(err), &ee) {
+			stderr = ee.Stderr
+		}
+		if len(stderr) == 0 {
+			stderr = []byte(err.Error())
+		}
+		return stderr, err
 	}
 
 	if strings.Contains(string(output), "SUCCESS") {
