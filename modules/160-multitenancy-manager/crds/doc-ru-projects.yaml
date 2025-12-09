@@ -30,8 +30,7 @@ spec:
     - name: v1alpha2
       schema:
         openAPIV3Schema:
-          description: |
-            Имя проекта (metadata.name) не может быть длиннее 53 символов.
+          description: ""
           properties:
             spec:
               properties:
