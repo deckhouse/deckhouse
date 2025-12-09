@@ -1,3 +1,11 @@
+{{- define "vcd_infra_controller_manager_dns_policy" }}
+{{- if .Values.global.clusterIsBootstrapped }}
+{{- printf "ClusterFirstWithHostNet" }}
+{{- else }}
+{{- printf "Default" }}
+{{- end }}
+{{- end }}
+
 {{- $icmImageName := ""}}
 {{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
   {{- $icmImageName = "infraControllerManagerLegacy" }}
@@ -75,6 +83,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      dnsPolicy: {{ include "vcd_infra_controller_manager_dns_policy" . }}
       automountServiceAccountToken: true
       serviceAccountName: infra-controller-manager
       containers:
