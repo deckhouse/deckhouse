@@ -35,6 +35,7 @@ import (
 
 type MetaConfigPreparator struct {
 	validateKubeConfig bool
+	validateKubeApi bool
 	logger             log.Logger
 }
 
@@ -57,6 +58,12 @@ func (p *MetaConfigPreparator) EnableValidateKubeConfig() *MetaConfigPreparator 
 	return p
 }
 
+func (p *MetaConfigPreparator) EnableValidateKubeConfigWithAPI() *MetaConfigPreparator {
+	p.validateKubeConfig = true
+	p.validateKubeApi = true
+	return p
+}
+
 func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
 	if !p.validateKubeConfig {
 		return nil
@@ -65,6 +72,10 @@ func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.
 	client, err := p.KubeconfigDataBase64(metaConfig)
 	if err != nil {
 		return err
+	}
+
+	if !p.validateKubeApi {
+		return nil
 	}
 
 	return p.whoAmI(ctx, client)
