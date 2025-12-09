@@ -16,8 +16,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestAuthorizeRequest(t *testing.T) {
@@ -620,8 +620,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			}
 
 			handler := &Handler{
-				logger:     log.New(io.Discard, "", 0),
-				kubeclient: fake.NewSimpleClientset(testCase.Namespaces...),
+				logger: log.New(io.Discard, "", 0),
 				cache: &dummyCache{
 					data: map[string]map[string]bool{
 						"test/v1": {
@@ -681,6 +680,8 @@ func TestAuthorizeRequest(t *testing.T) {
 						},
 					},
 				},
+				nsLister: newFakeNamespaceLister(testCase.Namespaces),
+				nsSynced: func() bool { return true },
 			}
 
 			req := &WebhookRequest{
@@ -728,6 +729,42 @@ func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error)
 
 func (d *dummyCache) Check() error {
 	return nil
+}
+
+type fakeNamespaceLister struct {
+	items map[string]*corev1.Namespace
+}
+
+func newFakeNamespaceLister(objects []runtime.Object) *fakeNamespaceLister {
+	items := make(map[string]*corev1.Namespace)
+
+	for _, obj := range objects {
+		if ns, ok := obj.(*corev1.Namespace); ok {
+			nsCopy := ns.DeepCopy()
+			items[nsCopy.Name] = nsCopy
+		}
+	}
+
+	return &fakeNamespaceLister{items: items}
+}
+
+func (l *fakeNamespaceLister) List(selector labels.Selector) ([]*corev1.Namespace, error) {
+	result := make([]*corev1.Namespace, 0, len(l.items))
+	for _, ns := range l.items {
+		if selector.Matches(labels.Set(ns.Labels)) {
+			result = append(result, ns)
+		}
+	}
+
+	return result, nil
+}
+
+func (l *fakeNamespaceLister) Get(name string) (*corev1.Namespace, error) {
+	if ns, ok := l.items[name]; ok {
+		return ns, nil
+	}
+
+	return nil, fmt.Errorf("namespaces %q not found", name)
 }
 
 func TestWrapRegexpTest(t *testing.T) {
