@@ -50,6 +50,7 @@
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
 {{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
+{{ $embeddedModulesMetadata := .Site.Data.dkp.embedded_modules_metadata.modules }}
 {{ $modulesEditions := .Site.Data.modules_all }}
 {{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{ $ctx := $ }}
@@ -112,7 +113,26 @@
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
         <h2 class="button-tile__title">{{ .module }}</h2>
-        <p class="button-tile__descr">{{ if and (index . $lang) (index (index . $lang) "description") }}{{ (index (index . $lang) "description") }}{{ else }}{{ .description }}{{ end }}</p>
+        {{- $moduleDescription := "" }}
+        {{- if and (index . $lang) (index (index . $lang) "description") }}
+          {{ $moduleDescription = (index (index . $lang) "description") }}
+        {{- else }}
+          {{- $moduleDescription = .description }}
+        {{- end }}
+        {{- $moduleStage := "" }}
+        {{- if isset $embeddedModulesMetadata .module }}
+          {{- $moduleStage = index (index $embeddedModulesMetadata .module) "stage" }}
+        {{- end }}
+          {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+            <span>
+              <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (lower $moduleStage) ) }}'>
+                {{- $moduleStage }}
+              </span>
+            </span>
+          {{- end }}
+          <p class="button-tile__descr">
+            {{ $moduleDescription }}
+          </p>
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
 
