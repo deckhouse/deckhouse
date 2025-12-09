@@ -336,7 +336,7 @@ some-image   Ready   false   100%       1m
 
 ### Очистка хранилища образов
 
-{% alert level="warning" %}
+{% alert level="info" %}
 Доступно с [версии 1.2.0](/products/virtualization-platform/documentation/release-notes.html#v120) и выше.
 {% endalert %}
 
