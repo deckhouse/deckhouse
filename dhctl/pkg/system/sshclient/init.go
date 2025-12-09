@@ -16,6 +16,7 @@ package sshclient
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -96,6 +97,35 @@ func NewClientFromFlagsWithHosts(ctx context.Context) (node.SSHClient, error) {
 	}
 
 	return NewClientFromFlags(ctx)
+}
+
+func NewClientFromConfig(ctx context.Context, host, user string, port int, sudoPassword, sshKey string) (node.SSHClient, error) {
+	settings := session.NewSession(session.Input{
+		AvailableHosts: []session.Host{{Host: host}},
+		User:           user,
+		Port:           fmt.Sprintf("%d", port),
+		BecomePass:     sudoPassword,
+	})
+
+	var keys []session.AgentPrivateKey
+	if sshKey != "" {
+		tmpFile, err := os.CreateTemp("", "sshkey-*")
+		if err != nil {
+			return nil, fmt.Errorf("cannot create temp file for SSH key: %w", err)
+		}
+		defer tmpFile.Close()
+		_, err = tmpFile.WriteString(sshKey)
+		if err != nil {
+			return nil, fmt.Errorf("cannot write SSH key to temp file: %w", err)
+		}
+
+		keys = []session.AgentPrivateKey{
+			{Key: tmpFile.Name()},
+		}
+	}
+
+	client := gossh.NewClient(ctx, settings, keys)
+	return client, nil
 }
 
 func IsModernMode() bool {
