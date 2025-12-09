@@ -428,7 +428,7 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 ```
 
-## Cоздание клона существующей ВМ
+## Создание клона существующей ВМ
 
 Клонирование ВМ выполняется с использованием ресурса VirtualMachineOperation с типом операции `Clone`.
 

@@ -188,7 +188,7 @@ How to create an image and store it in PVC in the web interface:
 - Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Load data from link (HTTP)" from the list.
-- In the form that opens, enter the image name in the "mage name" field.
+- In the form that opens, enter the image name in the "Image name" field.
 - In the "Storage" field, select `PersistentVolumeClaim`.
 - In the "Storage class" field, you can select StorageClass or leave the default selection.
 - In the URL field, specify the link to the image.

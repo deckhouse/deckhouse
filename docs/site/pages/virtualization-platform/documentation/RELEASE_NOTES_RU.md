@@ -24,7 +24,7 @@ lang: ru
   - `VirtualMachineOperation` с типом `Clone` - для клонирования существующей виртуальной машины;
   - `VirtualMachineOperation` с типом `Restore` - для восстановления существующей виртуальной машины до состояния из снимка;
   - `VirtualMachineSnapshotOperation` - для создания новой виртуальной машины на основе снимка.
-- [vmsop] Доабвлен ресурс `VirtualMachineSnapshotOperation` для создания виртуальной машины на основе снимка `VirtualMachineSnapshot`.
+- [vmsop] Добавлен ресурс `VirtualMachineSnapshotOperation` для создания виртуальной машины на основе снимка `VirtualMachineSnapshot`.
 - [vmclass] Для ресурса `VirtualMachineClass` версия v1alpha2 помечена как устаревшая (deprecated). Вместо неё рекомендуется использовать версию v1alpha3:
   - в версии v1alpha3 поле `.spec.sizingPolicies.coreFraction` теперь задаётся строкой с указанием процента (например, "50%"), аналогично полю в виртуальной машине.
 - [module] Для ModuleConfig виртуализации добавлена валидация, запрещающая уменьшать размер и изменять выбранный StorageClass для DVCR.
