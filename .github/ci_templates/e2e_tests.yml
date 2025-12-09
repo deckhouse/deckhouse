@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
   LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
@@ -108,6 +108,8 @@
 {!{- else if eq $provider "dvp" }!}
   TEMPLATE_ID: "37c44dea-f0e3-410a-82b3-10e9b615a3a2"
   LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+{!{- else if eq $provider "zvirt" }!}
+  TEMPLATE_ID: "" #TODO to update
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
@@ -309,6 +311,8 @@ run: |
   export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- else if eq $provider "dvp" }!}
   export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+  {!{- else if eq $provider "zvirt" }!}
+  export secret="" #TODO to update
   {!{- end }!}
   {!{- if eq $provider "static" }!}
   export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
@@ -441,7 +445,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
@@ -533,6 +537,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "zvirt" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "secretname" "secretname" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
@@ -864,7 +870,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
@@ -937,6 +943,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "zvirt" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "secretname" "secretname" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}

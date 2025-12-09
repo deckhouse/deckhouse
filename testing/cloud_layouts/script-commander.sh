@@ -45,6 +45,10 @@ Provider specific environment variables:
 
 \$LAYOUT_DVP_KUBECONFIGDATABASE64
 
+  zVirt:
+
+\$SECRETNAME
+
   GCP:
 
 \$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
@@ -250,6 +254,32 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
+      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
+  "zVirt")
+    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64 #TODO upgrade
+    ssh_user="altlinux"
+    bastion_host="185.11.73.171"
+    bastion_user="e2e-user"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"zVirtUsername\": \"${ZVIRT_USERNAME}\",
+      \"zVirtPassword\": \"${ZVIRT_PASSWORD}\",
+      \"zVirtBaseDomain\": \"${MASTERS_BASE_DOMAIN}\",
       \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
