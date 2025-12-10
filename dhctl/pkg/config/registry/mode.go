@@ -60,17 +60,17 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 func (s ModeSettings) ToModel() ModeModel {
 	switch s.Mode {
 	case constant.ModeDirect:
-		return s.directModel()
+		return s.toDirectModel()
 
 	case constant.ModeUnmanaged:
-		return s.unmanagedModel()
+		return s.toUnmanagedModel()
 
 	default:
 		panic(ErrUnknownMode)
 	}
 }
 
-func (s ModeSettings) directModel() ModeModel {
+func (s ModeSettings) toDirectModel() ModeModel {
 	return ModeModel{
 		Mode:                constant.ModeDirect,
 		InClusterImagesRepo: constant.HostWithPath,
@@ -79,7 +79,7 @@ func (s ModeSettings) directModel() ModeModel {
 	}
 }
 
-func (s ModeSettings) unmanagedModel() ModeModel {
+func (s ModeSettings) toUnmanagedModel() ModeModel {
 	return ModeModel{
 		Mode:                constant.ModeUnmanaged,
 		InClusterImagesRepo: s.RemoteData.ImagesRepo,
@@ -98,7 +98,7 @@ type ModeModel struct {
 func (m ModeModel) InClusterData(getPKI getPKI) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
-		return m.directInClusterData(getPKI)
+		return m.toDirectInClusterData(getPKI)
 
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
@@ -113,10 +113,10 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 
 	switch m.Mode {
 	case constant.ModeDirect:
-		mirrors = m.directBashibleMirrors()
+		mirrors = m.toDirectBashibleHosts()
 
 	case constant.ModeUnmanaged:
-		mirrors = m.unmanagedBashibleMirrors()
+		mirrors = m.toUnmanagedBashibleHosts()
 
 	default:
 		return bashible.Config{}, ErrUnknownMode
@@ -137,7 +137,7 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 	return cfg, cfg.Validate()
 }
 
-func (m ModeModel) directInClusterData(getPKI getPKI) (Data, error) {
+func (m ModeModel) toDirectInClusterData(getPKI getPKI) (Data, error) {
 	pki, err := getPKI()
 	if err != nil {
 		return Data{}, fmt.Errorf("get PKI: %w", err)
@@ -152,7 +152,7 @@ func (m ModeModel) directInClusterData(getPKI getPKI) (Data, error) {
 	}, nil
 }
 
-func (m ModeModel) directBashibleMirrors() map[string]bashible.ConfigHosts {
+func (m ModeModel) toDirectBashibleHosts() map[string]bashible.ConfigHosts {
 	host, path := m.RemoteData.AddressAndPath()
 	scheme := strings.ToLower(string(m.RemoteData.Scheme))
 	from := constant.PathRegexp
@@ -183,7 +183,7 @@ func (m ModeModel) directBashibleMirrors() map[string]bashible.ConfigHosts {
 	return ret
 }
 
-func (m ModeModel) unmanagedBashibleMirrors() map[string]bashible.ConfigHosts {
+func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 	host, _ := m.RemoteData.AddressAndPath()
 	scheme := strings.ToLower(string(m.RemoteData.Scheme))
 
