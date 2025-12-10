@@ -110,8 +110,6 @@ func (c *Config) readEnvs() error {
 	if _, ok := os.LookupEnv("ETCD_ARBITER"); ok {
 		c.EtcdArbiter = true
 		log.Info("ETCD_ARBITER mode enabled: running only etcd without control-plane components")
-	} else {
-		c.EtcdArbiter = false
 	}
 
 	if err := c.checkKubernetesVersion(); err != nil {
