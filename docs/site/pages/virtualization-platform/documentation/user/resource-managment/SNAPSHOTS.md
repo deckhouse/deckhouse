@@ -305,7 +305,7 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 ```
 
-## Creating a clone from an existing VM
+### Creating a clone from an existing VM
 
 VM cloning is performed using the VirtualMachineOperation resource with the `Clone` operation type.
 
@@ -350,7 +350,7 @@ The `nameReplacements` and `customization` parameters are configured in the `.sp
 During cloning, temporary snapshots are automatically created for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After cloning is complete, the temporary snapshots are automatically deleted, so they are not visible in the resource list. However, the specification of cloned disks still contains a reference (`dataSource`) to the corresponding snapshot, even if the snapshot itself no longer exists. This is expected behavior and does not indicate a problem: such references remain valid because, by the time the clone starts, all necessary data has already been transferred to the new disks.
 {% endalert %}
 
-## Creating a clone from a VM snapshot
+### Creating a clone from a VM snapshot
 
 Cloning a VM from a snapshot is performed using the VirtualMachineSnapshotOperation resource with the `CreateVirtualMachine` operation type.
 
