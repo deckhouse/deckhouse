@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
@@ -72,9 +72,9 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -98,9 +98,9 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -123,9 +123,9 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("registry.deckhouse.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -258,15 +258,15 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_config.WithSchemeHTTPS(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_mocks.WithSchemeHTTPS(),
 					),
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-						registry_config.WithSchemeHTTPS(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_mocks.WithSchemeHTTPS(),
 					),
 				},
 			},

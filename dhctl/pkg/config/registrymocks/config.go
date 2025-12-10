@@ -12,20 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package registrymocks
 
 import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
 type (
-	TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
-	TestConfigUpdateLegacyMode       func() bool
-	TestConfigUpdateMode             func() constant.ModeType
+	updateRegistrySettings func(*module_config.RegistrySettings)
+	updateLegacyMode       func() bool
+	updateMode             func() constant.ModeType
 )
 
-func TestConfigBuilder(opts ...any) Config {
+func ConfigBuilder(opts ...any) registry.Config {
 	var (
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
@@ -37,13 +39,13 @@ func TestConfigBuilder(opts ...any) Config {
 
 	for _, opt := range opts {
 		switch fn := opt.(type) {
-		case TestConfigUpdateRegistrySettings:
+		case updateRegistrySettings:
 			fn(&registrySettings)
 
-		case TestConfigUpdateLegacyMode:
+		case updateLegacyMode:
 			legacyMode = fn()
 
-		case TestConfigUpdateMode:
+		case updateMode:
 			mode = fn()
 		}
 	}
@@ -64,65 +66,65 @@ func TestConfigBuilder(opts ...any) Config {
 		}
 	}
 
-	var config Config
+	var config registry.Config
 
-	if err := config.process(deckhouseSettings, legacyMode); err != nil {
+	if err := config.Process(deckhouseSettings, legacyMode); err != nil {
 		panic(err)
 	}
 
 	return config
 }
 
-func WithImagesRepo(repo string) TestConfigUpdateRegistrySettings {
+func WithImagesRepo(repo string) updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.ImagesRepo = repo
 	}
 }
 
-func WithSchemeHTTP() TestConfigUpdateRegistrySettings {
+func WithSchemeHTTP() updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.Scheme = constant.SchemeHTTP
 	}
 }
 
-func WithSchemeHTTPS() TestConfigUpdateRegistrySettings {
+func WithSchemeHTTPS() updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.Scheme = constant.SchemeHTTPS
 	}
 }
 
-func WithCredentials(username, password string) TestConfigUpdateRegistrySettings {
+func WithCredentials(username, password string) updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.Username = username
 		rs.Password = password
 	}
 }
 
-func WithCA(ca string) TestConfigUpdateRegistrySettings {
+func WithCA(ca string) updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.CA = ca
 	}
 }
 
-func WithLicense(license string) TestConfigUpdateRegistrySettings {
+func WithLicense(license string) updateRegistrySettings {
 	return func(rs *module_config.RegistrySettings) {
 		rs.License = license
 	}
 }
 
-func WithModeDirect() TestConfigUpdateMode {
+func WithModeDirect() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeDirect
 	}
 }
 
-func WithModeUnmanaged() TestConfigUpdateMode {
+func WithModeUnmanaged() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeUnmanaged
 	}
 }
 
-func WithLegacyMode() TestConfigUpdateLegacyMode {
+func WithLegacyMode() updateLegacyMode {
 	return func() bool {
 		return true
 	}

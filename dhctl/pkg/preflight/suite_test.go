@@ -21,7 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 )
 
 type PreflightChecksTestSuite struct {
@@ -36,9 +36,9 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
 	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 		DevBranch: "pr1111",
 	}

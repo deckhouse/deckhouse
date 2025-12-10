@@ -27,7 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -55,9 +55,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Empty config",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -70,9 +70,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Double install",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -81,9 +81,9 @@ func TestDeckhouseInstall(t *testing.T) {
 					return err
 				}
 				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -96,9 +96,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With docker cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -123,8 +123,8 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With bashible cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
 					),
 				}, func() error {
 					return nil
@@ -148,9 +148,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"Without bashible cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 				}, func() error {
 					return nil
@@ -170,9 +170,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With secrets",
 			func() error {
 				conf := config.DeckhouseInstaller{
-					Registry: registry_config.TestConfigBuilder(
-						registry_config.WithModeUnmanaged(),
-						registry_config.WithLegacyMode(),
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithModeUnmanaged(),
+						registry_mocks.WithLegacyMode(),
 					),
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
@@ -218,9 +218,9 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 	fakeClient := client.NewFakeKubernetesClient()
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithModeUnmanaged(),
-			registry_config.WithLegacyMode(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
 		),
 		DevBranch: "pr1111",
 	}, func() error {
@@ -259,9 +259,9 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 	})
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithModeUnmanaged(),
-			registry_config.WithLegacyMode(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
 		),
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1},
@@ -323,9 +323,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	})
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithModeUnmanaged(),
-			registry_config.WithLegacyMode(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
 		),
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
@@ -369,9 +369,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.TestConfigBuilder(
-					registry_config.WithModeUnmanaged(),
-					registry_config.WithLegacyMode(),
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+					registry_mocks.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -412,9 +412,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.TestConfigBuilder(
-					registry_config.WithModeUnmanaged(),
-					registry_config.WithLegacyMode(),
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+					registry_mocks.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -447,9 +447,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.TestConfigBuilder(
-					registry_config.WithModeUnmanaged(),
-					registry_config.WithLegacyMode(),
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+					registry_mocks.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
@@ -492,9 +492,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			})
 
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-				Registry: registry_config.TestConfigBuilder(
-					registry_config.WithModeUnmanaged(),
-					registry_config.WithLegacyMode(),
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+					registry_mocks.WithLegacyMode(),
 				),
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mcDeckhouse, mcGlobal},

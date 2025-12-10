@@ -25,6 +25,115 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
+type (
+	updateRegistrySettings func(*module_config.RegistrySettings)
+	updateLegacyMode       func() bool
+	updateMode             func() constant.ModeType
+)
+
+func ConfigBuilder(opts ...any) Config {
+	var (
+		mode             = constant.ModeUnmanaged
+		legacyMode       = false
+		registrySettings = module_config.RegistrySettings{
+			ImagesRepo: constant.CEImagesRepo,
+			Scheme:     constant.CEScheme,
+		}
+	)
+
+	for _, opt := range opts {
+		switch fn := opt.(type) {
+		case updateRegistrySettings:
+			fn(&registrySettings)
+
+		case updateLegacyMode:
+			legacyMode = fn()
+
+		case updateMode:
+			mode = fn()
+		}
+	}
+
+	var deckhouseSettings module_config.DeckhouseSettings
+
+	switch mode {
+	case constant.ModeDirect:
+		deckhouseSettings = module_config.DeckhouseSettings{
+			Mode:   constant.ModeDirect,
+			Direct: &registrySettings,
+		}
+
+	default:
+		deckhouseSettings = module_config.DeckhouseSettings{
+			Mode:      constant.ModeUnmanaged,
+			Unmanaged: &registrySettings,
+		}
+	}
+
+	var config Config
+
+	if err := config.Process(deckhouseSettings, legacyMode); err != nil {
+		panic(err)
+	}
+
+	return config
+}
+
+func WithImagesRepo(repo string) updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.ImagesRepo = repo
+	}
+}
+
+func WithSchemeHTTP() updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.Scheme = constant.SchemeHTTP
+	}
+}
+
+func WithSchemeHTTPS() updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.Scheme = constant.SchemeHTTPS
+	}
+}
+
+func WithCredentials(username, password string) updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.Username = username
+		rs.Password = password
+	}
+}
+
+func WithCA(ca string) updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.CA = ca
+	}
+}
+
+func WithLicense(license string) updateRegistrySettings {
+	return func(rs *module_config.RegistrySettings) {
+		rs.License = license
+	}
+}
+
+func WithModeDirect() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeDirect
+	}
+}
+
+func WithModeUnmanaged() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeUnmanaged
+	}
+}
+
+func WithLegacyMode() updateLegacyMode {
+	return func() bool {
+		return true
+	}
+}
+
 func TestConfig_UseDefault(t *testing.T) {
 	type input struct {
 		criSupported bool
@@ -33,8 +142,6 @@ func TestConfig_UseDefault(t *testing.T) {
 	type output struct {
 		mode       constant.ModeType
 		legacyMode bool
-		err        bool
-		errMsg     string
 	}
 
 	tests := []struct {
@@ -50,7 +157,6 @@ func TestConfig_UseDefault(t *testing.T) {
 			output: output{
 				mode:       constant.ModeDirect,
 				legacyMode: false,
-				err:        false,
 			},
 		},
 		{
@@ -61,7 +167,6 @@ func TestConfig_UseDefault(t *testing.T) {
 			output: output{
 				mode:       constant.ModeUnmanaged,
 				legacyMode: true,
-				err:        false,
 			},
 		},
 	}
@@ -71,19 +176,10 @@ func TestConfig_UseDefault(t *testing.T) {
 			var config Config
 
 			err := config.UseDefault(tt.input.criSupported)
+			require.NoError(t, err)
 
-			if tt.output.err {
-				require.Error(t, err)
-
-				if tt.output.errMsg != "" {
-					require.Contains(t, err.Error(), tt.output.errMsg)
-				}
-			} else {
-				require.NoError(t, err)
-
-				assert.Equal(t, tt.output.mode, config.Settings.Mode)
-				assert.Equal(t, tt.output.legacyMode, config.LegacyMode)
-			}
+			assert.Equal(t, tt.output.mode, config.Settings.Mode)
+			assert.Equal(t, tt.output.legacyMode, config.LegacyMode)
 		})
 	}
 }
@@ -94,9 +190,7 @@ func TestConfig_UseInitConfig(t *testing.T) {
 	}
 
 	type output struct {
-		mode   constant.ModeType
-		err    bool
-		errMsg string
+		mode constant.ModeType
 	}
 
 	tests := []struct {
@@ -114,7 +208,6 @@ func TestConfig_UseInitConfig(t *testing.T) {
 			},
 			output: output{
 				mode: constant.ModeUnmanaged,
-				err:  false,
 			},
 		},
 	}
@@ -124,18 +217,10 @@ func TestConfig_UseInitConfig(t *testing.T) {
 			var config Config
 
 			err := config.UseInitConfig(tt.input.initConfig)
-			if tt.output.err {
-				require.Error(t, err)
+			require.NoError(t, err)
 
-				if tt.output.errMsg != "" {
-					require.Contains(t, err.Error(), tt.output.errMsg)
-				}
-			} else {
-				require.NoError(t, err)
-
-				assert.Equal(t, tt.output.mode, config.Settings.Mode)
-				assert.True(t, config.LegacyMode, "should be legacy mode")
-			}
+			assert.Equal(t, tt.output.mode, config.Settings.Mode)
+			assert.True(t, config.LegacyMode, "should be legacy mode")
 		})
 	}
 }
@@ -145,15 +230,9 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 		deckhouse module_config.DeckhouseSettings
 	}
 
-	type output struct {
-		err    bool
-		errMsg string
-	}
-
 	tests := []struct {
-		name   string
-		input  input
-		output output
+		name  string
+		input input
 	}{
 		{
 			name: "direct -> not legacy && no errors",
@@ -165,9 +244,6 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 						Scheme:     "HTTPS",
 					},
 				},
-			},
-			output: output{
-				err: false,
 			},
 		},
 		{
@@ -181,9 +257,6 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 					},
 				},
 			},
-			output: output{
-				err: false,
-			},
 		},
 	}
 
@@ -192,18 +265,10 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 			var config Config
 
 			err := config.UseDeckhouseSettings(tt.input.deckhouse)
-			if tt.output.err {
-				require.Error(t, err)
+			require.NoError(t, err)
 
-				if tt.output.errMsg != "" {
-					require.Contains(t, err.Error(), tt.output.errMsg)
-				}
-			} else {
-				require.NoError(t, err)
-
-				assert.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
-				assert.False(t, config.LegacyMode, "should not be legacy mode")
-			}
+			assert.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
+			assert.False(t, config.LegacyMode, "should not be legacy mode")
 		})
 	}
 }

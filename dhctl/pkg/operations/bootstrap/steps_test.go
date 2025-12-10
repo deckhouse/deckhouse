@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -179,9 +180,9 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &config.DeckhouseInstaller{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithModeUnmanaged(),
-			registry_config.WithLegacyMode(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
 		),
 		Bundle:    "minimal",
 		LogLevel:  "Info",

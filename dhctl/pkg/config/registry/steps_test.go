@@ -105,7 +105,7 @@ func TestCheckRegistryInitialization(t *testing.T) {
 	t.Run("legacy - should delete init secret", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
-		config := TestConfigBuilder(
+		config := ConfigBuilder(
 			WithLegacyMode(),
 		)
 
@@ -141,7 +141,7 @@ func TestCheckRegistryInitialization(t *testing.T) {
 	t.Run("not legacy - should delete init secret after ready", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
-		config := TestConfigBuilder()
+		config := ConfigBuilder()
 
 		// Setup initial state with applied init secret
 		err := createInitSecret(ctx, kubeClient, true)

@@ -22,7 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 )
 
 func (s *PreflightChecksTestSuite) TestEditionBad() {
@@ -36,9 +36,9 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("test.registry.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 	}
 
@@ -64,9 +64,9 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("test.registry.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 	}
 
@@ -92,9 +92,9 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry_config.TestConfigBuilder(
-			registry_config.WithImagesRepo("test.registry.io/test"),
-			registry_config.WithSchemeHTTPS(),
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
 		),
 	}
 

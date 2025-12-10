@@ -26,19 +26,19 @@ func TestManifestsNoError(t *testing.T) {
 	}{
 		{
 			name: "mode direct",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeDirect(),
 			),
 		},
 		{
 			name: "mode unmanaged",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeUnmanaged(),
 			),
 		},
 		{
 			name: "mode unmanaged && legacy",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithLegacyMode(),
 				WithModeUnmanaged(),
 			),
@@ -88,21 +88,21 @@ func TestManifestsLegacyMode(t *testing.T) {
 	}{
 		{
 			name: "mode direct",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeDirect(),
 			),
 			legacyMode: false,
 		},
 		{
 			name: "mode unmanaged",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeUnmanaged(),
 			),
 			legacyMode: false,
 		},
 		{
 			name: "mode unmanaged && legacy",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithLegacyMode(),
 				WithModeUnmanaged(),
 			),

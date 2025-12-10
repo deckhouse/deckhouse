@@ -30,19 +30,19 @@ func TestModeNoError(t *testing.T) {
 	}{
 		{
 			name: "mode direct",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeDirect(),
 			).DeckhouseSettings,
 		},
 		{
 			name: "mode unmanaged",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeUnmanaged(),
 			).DeckhouseSettings,
 		},
 		{
 			name: "mode unmanaged && legacy ",
-			input: TestConfigBuilder(
+			input: ConfigBuilder(
 				WithModeUnmanaged(),
 				WithLegacyMode(),
 			).DeckhouseSettings,
@@ -82,7 +82,7 @@ func TestModeDirect(t *testing.T) {
 	}
 
 	t.Run("Direct mode", func(t *testing.T) {
-		config := TestConfigBuilder(
+		config := ConfigBuilder(
 			WithModeDirect(),
 			WithImagesRepo("r.example.com/test"),
 			WithCredentials("test-user", "test-password"),
@@ -196,7 +196,7 @@ func TestModeUnmanaged(t *testing.T) {
 	}
 
 	t.Run("Unmanaged mode", func(t *testing.T) {
-		config := TestConfigBuilder(
+		config := ConfigBuilder(
 			WithModeUnmanaged(),
 			WithImagesRepo("r.example.com/test"),
 			WithCredentials("test-user", "test-password"),

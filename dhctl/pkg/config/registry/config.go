@@ -41,14 +41,14 @@ func (c *Config) UseDefault(criSupported bool) error {
 			Mode:   constant.ModeDirect,
 			Direct: &module_config.RegistrySettings{},
 		}
-		return c.process(settings, false)
+		return c.Process(settings, false)
 	}
 
 	settings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
 		Unmanaged: &module_config.RegistrySettings{},
 	}
-	return c.process(settings, true)
+	return c.Process(settings, true)
 }
 
 // UseInitConfig configures registry using legacy initConfiguration.
@@ -63,16 +63,16 @@ func (c *Config) UseInitConfig(initConfig init_config.Config) error {
 		Mode:      constant.ModeUnmanaged,
 		Unmanaged: &registrySettings,
 	}
-	return c.process(settings, true)
+	return c.Process(settings, true)
 }
 
 // UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
 func (c *Config) UseDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
-	return c.process(userSettings, false)
+	return c.Process(userSettings, false)
 }
 
-func (c *Config) process(userSettings module_config.DeckhouseSettings, legacyMode bool) error {
+func (c *Config) Process(userSettings module_config.DeckhouseSettings, legacyMode bool) error {
 	// Prepare settings
 	var deckhouseSettings module_config.DeckhouseSettings
 	deckhouseSettings.ApplySettings(userSettings)
