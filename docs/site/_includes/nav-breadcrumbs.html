@@ -1,4 +1,5 @@
 <div class="navigation__container">
+  {%- if page.product_code == kubernetes-platform %}
   <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
     <div>
       {%- if site.mode == 'module' %}
@@ -9,7 +10,6 @@
         <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
       {%- endif %}
 
-  {%- if page.product_code == kubernetes-platform %}
       <!-- module-version-badge -->
       <div id="doc-versions-menu" class="channel-menu submenu-parent">
         {%- unless site.mode == 'module' %}
@@ -20,8 +20,10 @@
           {%- endif %}
         {%- endunless -%}
       </div>
-  {%- endif %}
   </div>
+  {%- else %}
+  <div style="width: 25em;"> </div>
+  {%- endif %}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {% include nav-breadcrumbs-pagepath.html %}
