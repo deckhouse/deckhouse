@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/user/resource-management/sna
 
 Snapshots allow you to capture the current state of a resource for later recovery or cloning: a disk snapshot saves only the data from the selected disk, while a virtual machine snapshot includes the VM settings and the state of all its disks.
 
-### Consistent snapshots
+## Consistent snapshots
 
 Snapshots can be consistent or inconsistent; this is controlled by the `requiredConsistency` parameter. By default, `requiredConsistency` is set to `true`, which means a consistent snapshot is required.
 
