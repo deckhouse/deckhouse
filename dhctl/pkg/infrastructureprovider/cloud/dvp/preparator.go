@@ -53,14 +53,9 @@ func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparat
 	return p
 }
 
-func (p *MetaConfigPreparator) EnableValidateKubeConfig() *MetaConfigPreparator {
+func (p *MetaConfigPreparator) EnableValidateKubeConfig(validateKubeApi bool) *MetaConfigPreparator {
+	p.validateKubeApi = validateKubeApi
 	p.validateKubeConfig = true
-	return p
-}
-
-func (p *MetaConfigPreparator) EnableValidateKubeConfigWithAPI() *MetaConfigPreparator {
-	p.validateKubeConfig = true
-	p.validateKubeApi = true
 	return p
 }
 

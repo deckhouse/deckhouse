@@ -89,14 +89,9 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case dvp.ProviderName:
 			dvpPreparator := dvp.NewMetaConfigPreparator().WithLogger(logger)
 			if params.phase != DhctlPhaseBootstrap {
-				return dvpPreparator
+				return dvpPreparator.EnableValidateKubeConfig(app.PreflightSkipDVPKubeconfigCheck)
 			}
-
-			if app.PreflightSkipDVPKubeconfigCheck {
-				return dvpPreparator.EnableValidateKubeConfig()
-			}
-
-			return dvpPreparator.EnableValidateKubeConfigWithAPI()
+			return dvpPreparator
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
