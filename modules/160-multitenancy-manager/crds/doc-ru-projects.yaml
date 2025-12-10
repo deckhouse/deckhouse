@@ -30,7 +30,6 @@ spec:
     - name: v1alpha2
       schema:
         openAPIV3Schema:
-          description: ""
           properties:
             spec:
               properties:
