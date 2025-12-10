@@ -307,7 +307,6 @@
   "operator-argo": {
     "editions": [
       "ee",
-      "fe",
       "se-plus"
     ],
     "editionsWithRestrictions": [
