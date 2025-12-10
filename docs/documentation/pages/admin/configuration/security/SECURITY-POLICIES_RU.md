@@ -511,7 +511,7 @@ spec:
 Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper.
 Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
 
-#### Встроенная политика для подов с heritage: deckhouse
+#### Встроенная политика для подов с лейблом `heritage: deckhouse`
 
 Для защиты системных компонентов под управлением Deckhouse
 в модуле `admission-policy-engine` предусмотрена встроенная политика `D8DenyExecHeritage`,

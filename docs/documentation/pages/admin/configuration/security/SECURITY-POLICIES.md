@@ -505,7 +505,7 @@ spec:
 The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper.
 This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
-#### Built-in policy for heritage: deckhouse Pods
+#### Built-in policy for `heritage: deckhouse` label on Pods
 
 To protect system components managed by Deckhouse,
 the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage`
