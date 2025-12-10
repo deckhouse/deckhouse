@@ -184,10 +184,10 @@ func CreateDeckhouseManifests(
 	tasks := []actions.ManifestTask{
 		{
 			Name: `Namespace "d8-system"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.DeckhouseNamespace("d8-system")
 			},
-			CreateFunc: func(manifest interface{}) error {
+			CreateFunc: func(manifest any) error {
 				_, err := kubeCl.
 					CoreV1().
 					Namespaces().
@@ -199,7 +199,7 @@ func CreateDeckhouseManifests(
 				}
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(manifest any) error {
 				_, err := kubeCl.
 					CoreV1().
 					Namespaces().
@@ -311,10 +311,10 @@ func CreateDeckhouseManifests(
 
 	tasks = append(tasks, actions.ManifestTask{
 		Name: `Secret "deckhouse-registry"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.DeckhouseRegistrySecret(deckhouseRegistrySecretData)
 		},
-		CreateFunc: func(manifest interface{}) error {
+		CreateFunc: func(manifest any) error {
 			_, err = kubeCl.
 				CoreV1().
 				Secrets("d8-system").
@@ -326,7 +326,7 @@ func CreateDeckhouseManifests(
 			}
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
+		UpdateFunc: func(manifest any) error {
 			_, err := kubeCl.
 				CoreV1().
 				Secrets("d8-system").
@@ -346,10 +346,10 @@ func CreateDeckhouseManifests(
 	if isExist {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "registry-bashible-config"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData)
 			},
-			CreateFunc: func(manifest interface{}) error {
+			CreateFunc: func(manifest any) error {
 				_, err = kubeCl.
 					CoreV1().
 					Secrets("d8-system").
@@ -361,7 +361,7 @@ func CreateDeckhouseManifests(
 				}
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(manifest any) error {
 				_, err := kubeCl.
 					CoreV1().
 					Secrets("d8-system").

@@ -103,9 +103,10 @@ func (state *State) clearConditions() {
 func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	// Process PKI
 	if inputs.InitSecret.CA != nil {
-		state.PKI.CA = &pki.CertModel{}
-		state.PKI.CA.Cert = inputs.InitSecret.CA.Cert
-		state.PKI.CA.Key = inputs.InitSecret.CA.Key
+		state.PKI.CA = &pki.CertModel{
+			Cert: inputs.InitSecret.CA.Cert,
+			Key:  inputs.InitSecret.CA.Key,
+		}
 	}
 
 	_, err := state.PKI.Process(log)

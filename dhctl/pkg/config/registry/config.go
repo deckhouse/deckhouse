@@ -22,6 +22,8 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
+type settingsData map[string]any
+
 type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
@@ -108,7 +110,7 @@ func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
 
-func (c *Config) DeckhouseSettingsToMap() (exist bool, settings map[string]any, err error) {
+func (c *Config) DeckhouseSettingsToMap() (exist bool, settings settingsData, err error) {
 	if c.LegacyMode {
 		return false, nil, nil
 	}

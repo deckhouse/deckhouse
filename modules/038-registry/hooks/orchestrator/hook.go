@@ -192,11 +192,12 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {
 		input.Logger.Info("Init secret snapshot found, trying to load init config")
+
 		if err = yaml.Unmarshal(initSecret.Config, &initConfig); err != nil {
 			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
+		} else {
+			inputs.InitSecret = initConfig
 		}
-
-		inputs.InitSecret = initConfig
 	}
 
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
