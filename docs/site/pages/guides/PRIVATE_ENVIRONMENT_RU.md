@@ -686,7 +686,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 На этом настройка Harbor завершена! 🎉
 
-## Копироване образов DKP в приватный registry
+## Копироване образов DKP в приватный container registry
 
-Следующим шагом будет копирование образов компонентов DKP из geristry Фланта в Harbor.
+Следующим шагом будет копирование образов компонентов DKP из registry Фланта в Harbor.
 
+{% alert level="info" %}
+Для дальнейших действий в этом разделе понадобится установленна утилита Deckhouse CLI.
+{% endalert %}
