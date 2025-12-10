@@ -5,6 +5,7 @@ bashible: &bashible
       distributions:
         - name: ubuntu
           ids: [ubuntu]
+          bundle: ubuntu-lts
         - name: debian
           ids: [debian]
         - name: astra
