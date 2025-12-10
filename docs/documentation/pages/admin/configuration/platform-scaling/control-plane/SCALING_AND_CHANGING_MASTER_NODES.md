@@ -42,6 +42,10 @@ Transitioning from 2 to 1 master node requires manual etcd adjustment. All other
 
 ### Common scaling scenarios
 
+{% alert level="warning" %}
+For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure quorum.
+{% endalert %}
+
 DKP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
 
 1. **Single-master → Multi-master**:
@@ -67,8 +71,6 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
 
    - Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-   > **Important**. An odd number of master nodes is required to maintain etcd quorum stability.
-
 1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a cloud cluster**:
 
    - In the cloud provider settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
@@ -78,11 +80,11 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
 1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a static cluster**:
 
    - Create a NodeGroup for the arbiter node and add the node to the cluster.
-   - Remove the labels `node-role.kubernetes.io/control-plane=""` and `node-role.kubernetes.io/master=""` from the extra master nodes.
+   - Remove the labels `node-role.kubernetes.io/control-plane=""`, `node-role.kubernetes.io/master=""` and `node.deckhouse.io/group-""` from the extra master node.
    - For **bare-metal clusters**:
-     - To correctly remove the nodes from `etcd`:
+     - To correctly remove the node from `etcd`:
        - Run `d8 k delete node <node-name>`;
-       - Power off the corresponding VMs or servers.
+       - Power off the corresponding VM or server.
 
    [More details](../../high-reliability-and-availability/enable.html#configuring-in-a-static-cluster).
 
