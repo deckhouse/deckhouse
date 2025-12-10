@@ -128,7 +128,7 @@ func TestData_AuthBase64(t *testing.T) {
 
 func TestData_DockerCfg(t *testing.T) {
 	type output = struct {
-		auths map[string]interface{}
+		auths map[string]any
 		err   bool
 	}
 
@@ -145,8 +145,8 @@ func TestData_DockerCfg(t *testing.T) {
 				Password:   "pass",
 			},
 			output: output{
-				auths: map[string]interface{}{
-					"registry.example.com": map[string]interface{}{
+				auths: map[string]any{
+					"registry.example.com": map[string]any{
 						"username": "user",
 						"password": "pass",
 						"auth":     "dXNlcjpwYXNz", // "user:pass"
@@ -163,8 +163,8 @@ func TestData_DockerCfg(t *testing.T) {
 				Password:   "",
 			},
 			output: output{
-				auths: map[string]interface{}{
-					"registry.example.com": map[string]interface{}{
+				auths: map[string]any{
+					"registry.example.com": map[string]any{
 						"auth": "Og==", // ":"
 					},
 				},
@@ -179,8 +179,8 @@ func TestData_DockerCfg(t *testing.T) {
 				Password:   "pass",
 			},
 			output: output{
-				auths: map[string]interface{}{
-					"registry.example.com": map[string]interface{}{
+				auths: map[string]any{
+					"registry.example.com": map[string]any{
 						"username": "user",
 						"password": "pass",
 						"auth":     "dXNlcjpwYXNz", // "user:pass"
@@ -197,8 +197,8 @@ func TestData_DockerCfg(t *testing.T) {
 				Password:   "pass",
 			},
 			output: output{
-				auths: map[string]interface{}{
-					"registry.example.com:8080": map[string]interface{}{
+				auths: map[string]any{
+					"registry.example.com:8080": map[string]any{
 						"username": "user",
 						"password": "pass",
 						"auth":     "dXNlcjpwYXNz", // "user:pass"
@@ -215,8 +215,8 @@ func TestData_DockerCfg(t *testing.T) {
 				Password:   "secret",
 			},
 			output: output{
-				auths: map[string]interface{}{
-					"localhost:5000": map[string]interface{}{
+				auths: map[string]any{
+					"localhost:5000": map[string]any{
 						"username": "admin",
 						"password": "secret",
 						"auth":     "YWRtaW46c2VjcmV0", // "admin:secret"
@@ -263,7 +263,7 @@ func TestData_DockerCfg(t *testing.T) {
 			assert.Equal(t, dockerCfg, decoded)
 
 			// Compare with test case
-			var dockerCfgJson map[string]interface{}
+			var dockerCfgJson map[string]any
 			err = json.Unmarshal(dockerCfg, &dockerCfgJson)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output.auths, dockerCfgJson["auths"])

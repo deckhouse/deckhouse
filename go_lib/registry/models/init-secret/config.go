@@ -25,12 +25,12 @@ type Config struct {
 	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
 }
 
-func (c Config) ToMap() map[string]interface{} {
-	result := make(map[string]interface{})
+func (c Config) ToMap() map[string]any {
+	result := make(map[string]any)
 
 	if c.CA != nil {
 		if c.CA.Cert != "" || c.CA.Key != "" {
-			caMap := make(map[string]interface{})
+			caMap := make(map[string]any)
 
 			if c.CA.Cert != "" {
 				caMap["cert"] = c.CA.Cert

@@ -80,15 +80,15 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][
 // =======================
 // Context
 // =======================
-func (b *ManifestBuilder) KubeadmTplCtx() map[string]interface{} {
+func (b *ManifestBuilder) KubeadmTplCtx() map[string]any {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
-	return map[string]interface{}{
+	return map[string]any{
 		"address": address,
 		"path":    path,
 	}
 }
 
-func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]interface{}, error) {
+func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]any, error) {
 	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return nil, err

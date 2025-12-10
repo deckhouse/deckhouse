@@ -74,7 +74,7 @@ func validateRegistryDockerCfg(cfg string, repo string) error {
 	}
 
 	var creds struct {
-		Auths map[string]interface{} `json:"auths"`
+		Auths map[string]any `json:"auths"`
 	}
 
 	if err = json.Unmarshal(regcrd, &creds); err != nil {

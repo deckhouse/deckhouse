@@ -32,13 +32,13 @@ type DeckhouseSettings struct {
 	Unmanaged *RegistrySettings `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
 }
 
-func (settings DeckhouseSettings) ToMap() (map[string]interface{}, error) {
+func (settings DeckhouseSettings) ToMap() (map[string]any, error) {
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return nil, fmt.Errorf("marshal deckhouse registry settings: %w", err)
 	}
 
-	var ret map[string]interface{}
+	var ret map[string]any
 	if err := json.Unmarshal(data, &ret); err != nil {
 		return nil, fmt.Errorf("unmarshal deckhouse registry settings: %w", err)
 	}

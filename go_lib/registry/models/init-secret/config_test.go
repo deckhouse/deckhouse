@@ -26,7 +26,7 @@ func TestContextToMap(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  Config
-		result map[string]interface{}
+		result map[string]any
 	}{
 		{
 			name: "with all fields",
@@ -36,8 +36,8 @@ func TestContextToMap(t *testing.T) {
 					Key:  "key",
 				},
 			},
-			result: map[string]interface{}{
-				"ca": map[string]interface{}{
+			result: map[string]any{
+				"ca": map[string]any{
 					"cert": "cert",
 					"key":  "key",
 				},
@@ -47,7 +47,7 @@ func TestContextToMap(t *testing.T) {
 		{
 			name:   "without optional fields",
 			input:  Config{},
-			result: map[string]interface{}{},
+			result: map[string]any{},
 		},
 	}
 	for _, tt := range tests {

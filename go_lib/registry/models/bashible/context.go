@@ -105,31 +105,31 @@ func (m ContextMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }
 
-func (c Context) ToMap() (map[string]interface{}, error) {
-	proxies := make([]interface{}, 0, len(c.ProxyEndpoints))
+func (c Context) ToMap() (map[string]any, error) {
+	proxies := make([]any, 0, len(c.ProxyEndpoints))
 	for _, ep := range c.ProxyEndpoints {
 		proxies = append(proxies, ep)
 	}
 
-	hosts := make(map[string]interface{}, len(c.Hosts))
+	hosts := make(map[string]any, len(c.Hosts))
 	for hostName, host := range c.Hosts {
-		mirrors := make([]interface{}, 0, len(host.Mirrors))
+		mirrors := make([]any, 0, len(host.Mirrors))
 		for _, mirror := range host.Mirrors {
-			auth := map[string]interface{}{
+			auth := map[string]any{
 				"username": mirror.Auth.Username,
 				"password": mirror.Auth.Password,
 				"auth":     mirror.Auth.Auth,
 			}
 
-			rewrites := make([]interface{}, 0, len(mirror.Rewrites))
+			rewrites := make([]any, 0, len(mirror.Rewrites))
 			for _, rw := range mirror.Rewrites {
-				rewrites = append(rewrites, map[string]interface{}{
+				rewrites = append(rewrites, map[string]any{
 					"from": rw.From,
 					"to":   rw.To,
 				})
 			}
 
-			mirrors = append(mirrors, map[string]interface{}{
+			mirrors = append(mirrors, map[string]any{
 				"host":     mirror.Host,
 				"scheme":   mirror.Scheme,
 				"ca":       mirror.CA,
@@ -137,12 +137,12 @@ func (c Context) ToMap() (map[string]interface{}, error) {
 				"rewrites": rewrites,
 			})
 		}
-		hosts[hostName] = map[string]interface{}{
+		hosts[hostName] = map[string]any{
 			"mirrors": mirrors,
 		}
 	}
 
-	ret := map[string]interface{}{
+	ret := map[string]any{
 		"registryModuleEnable": c.RegistryModuleEnable,
 		"mode":                 c.Mode,
 		"version":              c.Version,

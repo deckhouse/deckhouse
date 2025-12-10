@@ -134,7 +134,7 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-	assert := func(t *testing.T, tplCtx map[string]interface{}, expect map[string]interface{}) {
+	assert := func(t *testing.T, tplCtx map[string]any, expect map[string]any) {
 		metaConfig := generateMetaConfig(t, tpl, tplCtx, false)
 		installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
 		require.NoError(t, err)
@@ -145,22 +145,22 @@ spec:
 	t.Run("InitConfiguration -> always empty", func(t *testing.T) {
 		t.Run("Without CRI (module disable) -> empty", func(t *testing.T) {
 			assert(t,
-				map[string]interface{}{
+				map[string]any{
 					"enableCRI": false,
 					"manifests": []string{initConfig},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bundle":   "Default",
 					"logLevel": "Info",
 				})
 		})
 		t.Run("With CRI (module enable) -> empty", func(t *testing.T) {
 			assert(t,
-				map[string]interface{}{
+				map[string]any{
 					"enableCRI": true,
 					"manifests": []string{initConfig},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bundle":   "Default",
 					"logLevel": "Info",
 				})
@@ -169,25 +169,25 @@ spec:
 	t.Run("Default -> CE edition registry", func(t *testing.T) {
 		t.Run("Without CRI (module disable) -> empty", func(t *testing.T) {
 			assert(t,
-				map[string]interface{}{
+				map[string]any{
 					"enableCRI": false,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bundle":   "Default",
 					"logLevel": "Info",
 				})
 		})
 		t.Run("With CRI (module enable) -> direct", func(t *testing.T) {
 			assert(t,
-				map[string]interface{}{
+				map[string]any{
 					"enableCRI": true,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bundle":   "Default",
 					"logLevel": "Info",
-					"registry": map[string]interface{}{
+					"registry": map[string]any{
 						"mode": "Direct",
-						"direct": map[string]interface{}{
+						"direct": map[string]any{
 							"imagesRepo": "registry.deckhouse.io/deckhouse/ce",
 							"scheme":     "HTTPS",
 						},
@@ -197,7 +197,7 @@ spec:
 	})
 	t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
 		t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
-			tplCtx := map[string]interface{}{
+			tplCtx := map[string]any{
 				"enableCRI": false,
 				"manifests": []string{moduleConfigDeckhouse},
 			}
@@ -205,16 +205,16 @@ spec:
 		})
 		t.Run("With CRI (module enable) -> from moduleConfig", func(t *testing.T) {
 			assert(t,
-				map[string]interface{}{
+				map[string]any{
 					"enableCRI": true,
 					"manifests": []string{moduleConfigDeckhouse},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bundle":   "Default",
 					"logLevel": "Info",
-					"registry": map[string]interface{}{
+					"registry": map[string]any{
 						"mode": "Unmanaged",
-						"unmanaged": map[string]interface{}{
+						"unmanaged": map[string]any{
 							"imagesRepo": "r.example.com/test",
 							"username":   "test-user",
 							"password":   "test-password",

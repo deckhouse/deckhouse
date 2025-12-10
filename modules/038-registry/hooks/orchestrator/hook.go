@@ -325,9 +325,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Patch init secret
 	if initSecret.IsExist && !initSecret.Applied {
 		input.Logger.Debug("Marking init secret as applied by setting annotation")
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
+		patch := map[string]any{
+			"metadata": map[string]any{
+				"annotations": map[string]any{
 					initSecretAppliedAnnotation: "",
 				},
 			},

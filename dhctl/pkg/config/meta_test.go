@@ -235,8 +235,8 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 func TestPrepareRegistry(t *testing.T) {
 	t.Run("With CRI (module enable)", func(t *testing.T) {
 		t.Run("InitConfig -> unmanaged && legacy", func(t *testing.T) {
-			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-				"initConfiguration": map[string]interface{}{
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"initConfiguration": map[string]any{
 					"imagesRepo":        "r.example.com/test/",
 					"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
 				},
@@ -251,7 +251,7 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, registry.CA, "")
 		})
 		t.Run("Default -> CE edition registry && direct && not legacy", func(t *testing.T) {
-			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 			require.Equal(t, cfg.Registry.LegacyMode, false)
 			require.Equal(t, cfg.Registry.Settings.Mode, "Direct")
 			registry := cfg.Registry.Settings.Remote
@@ -262,7 +262,7 @@ func TestPrepareRegistry(t *testing.T) {
 			require.Equal(t, registry.CA, "")
 		})
 		t.Run("ModuleConfig Deckhouse -> from moduleConfig && not legacy", func(t *testing.T) {
-			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
 				"manifests": []string{`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

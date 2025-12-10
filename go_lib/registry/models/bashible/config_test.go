@@ -177,7 +177,7 @@ func TestConfigValidate(t *testing.T) {
 
 func TestConfigToContext(t *testing.T) {
 	type result struct {
-		toMap map[string]interface{}
+		toMap map[string]any
 		err   bool
 	}
 

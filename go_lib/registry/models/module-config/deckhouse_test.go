@@ -43,7 +43,7 @@ func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 
 func TestDeckhouseSettings_ToMap(t *testing.T) {
 	registrySettings := registrySettingsBuilder()
-	registrySettingsMap := map[string]interface{}{
+	registrySettingsMap := map[string]any{
 		"imagesRepo": "test:80/a/b/c/d",
 		"scheme":     "HTTPS",
 		"username":   "test-user",
@@ -55,7 +55,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  DeckhouseSettings
-		output map[string]interface{}
+		output map[string]any
 	}{
 		{
 			name: "mode direct",
@@ -63,7 +63,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 				Mode:   constant.ModeDirect,
 				Direct: registrySettings,
 			},
-			output: map[string]interface{}{
+			output: map[string]any{
 				"mode":   "Direct",
 				"direct": registrySettingsMap,
 			},
@@ -74,7 +74,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 				Mode:      constant.ModeUnmanaged,
 				Unmanaged: registrySettings,
 			},
-			output: map[string]interface{}{
+			output: map[string]any{
 				"mode":      "Unmanaged",
 				"unmanaged": registrySettingsMap,
 			},
