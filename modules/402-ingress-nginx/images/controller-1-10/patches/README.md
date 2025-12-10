@@ -127,3 +127,6 @@ This patch adds a metric that reflects current GeoIP version in use (0 - no geoi
 
 ### 022-skip-tls-verification-maxmind.patch
 Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
+
+### 023-nginx-config-metrics.patch
+Adds duration time and RSS size for `nginx -t`.

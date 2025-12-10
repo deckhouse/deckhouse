@@ -89,53 +89,54 @@
         ```bash
         d8 k -n d8-ingress-nginx logs $(d8 k -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
         ```
-  - alert: NginxIngressAdmissionConfigSizeWarning
-    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_config_size) > 4 * 1024 * 1024
+  - alert: NginxIngressConfigTestMemoryWarning
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_config_last_test_max_rss_bytes) > 512 * 1024 * 1024
     for: 10m
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress NGINX admission configuration is getting large."
+      summary: "Ingress NGINX config test memory usage is high."
       description: |-
-        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is now testing a NGINX configuration of {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 4 MiB).
+        The controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is using about {{ printf "%.1f" ($value / 1024 / 1024) }} MiB of memory while running NGINX configuration tests (nginx -t) (> 512 MiB).
 
         Consider splitting ingresses between multiple controllers or reducing the configuration size.
 
-        This alert is based on metrics scraped from the validator webhook.
+        This alert is based on metrics scraped from the controller pod (`nginx_ingress_controller_config_last_test_max_rss_bytes`).
 
-  - alert: NginxIngressAdmissionConfigSizeCritical
-    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_config_size) > 8 * 1024 * 1024
+  - alert: NginxIngressConfigTestMemoryCritical
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_config_last_test_max_rss_bytes) > 1024 * 1024 * 1024
     for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress NGINX admission configuration is too large."
+      summary: "Ingress NGINX config test memory usage is too high."
       description: |-
-        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is now testing a NGINX configuration of {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 8 MiB).
+        The controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is using about {{ printf "%.1f" ($value / 1024 / 1024 / 1024) }} GiB of memory while running NGINX configuration tests (nginx -t) (> 1 GiB).
 
-        Such a large configuration may cause high memory usage or crashes during validations or reloads. Split ingresses between multiple controllers or reduce the configuration size.
+        Such a high memory usage during configuration tests may cause OOM kills or crashes. Split ingresses between multiple controllers or reduce the configuration size.
 
-        This alert is based on metrics scraped from the validator webhook.
+        This alert is based on metrics scraped from the controller pod (`nginx_ingress_controller_config_last_test_max_rss_bytes`).
 
-  - alert: NginxIngressAdmissionRenderSlow
-    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_admission_render_duration_seconds) > 30
+  - alert: NginxIngressConfigTestSlow
+    expr: max by (controller_namespace, controller_class, controller_pod) (nginx_ingress_controller_config_last_test_duration_seconds) > 10
     for: 5m
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress NGINX admission rendering is slow."
+      summary: "Ingress NGINX configuration test is slow."
       description: |-
-        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is rendering configuration for more than 30s (current: {{ printf "%.1f" $value }}s).
+        The controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is running NGINX configuration tests (nginx -t) for more than 10s (current: {{ printf "%.1f" $value }}s).
 
-        Long rendering may indicate excessive ingress configuration size or performance issues. Consider splitting ingresses between multiple controllers or simplifying the configuration.
+        Long configuration tests may indicate excessive ingress configuration size or performance issues. Consider splitting ingresses between multiple controllers or simplifying the configuration.
 
-        This alert is based on metrics scraped from the validator webhook.
+        This alert is based on metrics scraped from the controller pod (`nginx_ingress_controller_config_last_test_duration_seconds`).
+
 
   - alert: NginxIngressPodIsRestartingTooOften
     expr: |

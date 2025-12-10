@@ -71,18 +71,3 @@ subjects:
 - kind: ServiceAccount
   name: ingress-nginx
   namespace: d8-ingress-nginx
----
-# kube-rbac-proxy needs tokenreview/sar rights to validate Prometheus token for validator metrics
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: d8:ingress-nginx:validator:d8-rbac-proxy
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:rbac-proxy
-subjects:
-- kind: ServiceAccount
-  name: validator
-  namespace: d8-ingress-nginx

@@ -14,11 +14,6 @@ rules:
   verbs: ["get"]
 - apiGroups: ["apps"]
   resources:
-  - "deployments/prometheus-validator-metrics"
-  resourceNames: ["ingress-nginx"]
-  verbs: ["get"]
-- apiGroups: ["apps"]
-  resources:
   - "daemonsets/prometheus-metrics"
   resourceNames: ["proxy-failover"]
   verbs: ["get"]
