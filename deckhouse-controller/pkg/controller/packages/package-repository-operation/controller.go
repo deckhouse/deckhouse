@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -216,7 +217,7 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
-		r.logger.Debug("operation already completed", slog.String("name", operation.Name))
+		res, err = r.handleCompletedState(ctx, operation)
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
 
@@ -526,6 +527,45 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 
 	// Requeue to process next package
 	return ctrl.Result{Requeue: true}, nil
+}
+
+func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	logger := r.logger.With(slog.String("name", operation.Name))
+	logger.Debug("handling completed state")
+	defer logger.Debug("handling completed state complete")
+
+	// List all operations for the same repository
+	operations := new(v1alpha1.PackageRepositoryOperationList)
+	err := r.client.List(ctx, operations, client.MatchingLabels{
+		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepository,
+	})
+	if err != nil {
+		return res, fmt.Errorf("list operations: %w", err)
+	}
+
+	logger.Debug("found operations for the same repository", slog.Int("count", len(operations.Items)))
+
+	if len(operations.Items) <= 5 {
+		logger.Debug("not enough operations to delete")
+		return res, nil
+	}
+
+	// sort operations by creation timestamp descending
+	sort.Slice(operations.Items, func(i, j int) bool {
+		return operations.Items[i].CreationTimestamp.Before(&operations.Items[j].CreationTimestamp)
+	})
+
+	// delete all operations except the most recent 5
+	for _, op := range operations.Items[5:] {
+		logger.Debug("deleting old operation", slog.String("name", op.Name))
+		if err := r.client.Delete(ctx, &op); err != nil {
+			return res, fmt.Errorf("delete old operation: %w", err)
+		}
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
