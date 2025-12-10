@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -174,6 +175,9 @@ func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1a
 	disksToDetach := make([]string, 0)
 	disksToDelete := make([]string, 0)
 	vmHostname, err := c.GetVMHostname(vm)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	vmbdas, err := c.listVMBDAByHostname(ctx, vmHostname)
 	if err != nil {
@@ -289,13 +293,15 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		return err
 	}
 
+	vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
+
 	vmbda = &v1alpha2.VirtualMachineBlockDeviceAttachment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha2.VirtualMachineBlockDeviceAttachmentKind,
 			APIVersion: v1alpha2.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname),
+			Name:      vmBDAName,
 			Namespace: c.namespace,
 			Labels: map[string]string{
 				attachmentDiskNameLabel:    diskName,
@@ -313,6 +319,11 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 
 	err = c.client.Create(ctx, vmbda)
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	err = c.WaitDiskAttaching(ctx, vmBDAName)
+	if err != nil {
 		return err
 	}
 
@@ -448,4 +459,21 @@ func (c *ComputeService) RemoveVMLabelByHostname(ctx context.Context, hostname, 
 	before := vm.DeepCopy()
 	delete(vm.Labels, key)
 	return c.client.Patch(ctx, vm, client.MergeFrom(before))
+}
+
+func (c *ComputeService) WaitDiskAttaching(ctx context.Context, vmBDAName string) error {
+	klog.Infof("WaitDiskAttaching vmBDA %s", vmBDAName)
+	return c.Wait(ctx, vmBDAName, &v1alpha2.VirtualMachineBlockDeviceAttachment{}, func(obj client.Object) (bool, error) {
+		vmBDA, ok := obj.(*v1alpha2.VirtualMachineBlockDeviceAttachment)
+		if !ok {
+			return false, fmt.Errorf("expected a VirtualMachineBlockDeviceAttachment but got a %T", obj)
+		}
+		klog.Infof("Phase vmBDA %s: %s", vmBDAName, vmBDA.Status.Phase)
+
+		if vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
+			return false, fmt.Errorf("disk attaching error to the vm, please check status VirtualMachineBlockDeviceAttachment %s in the parent cluster", vmBDAName)
+		}
+
+		return vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
+	})
 }
