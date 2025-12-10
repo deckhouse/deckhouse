@@ -50,13 +50,11 @@ spec:
         name: {{ $template_name }}
   {{- if $ng.nodeDrainTimeoutSecond }}
       nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeDeletionTimeout: 10m
-      nodeVolumeDetachTimeout: 10m
   {{- else }}
       nodeDrainTimeout: 10m
+  {{- end }}
       nodeDeletionTimeout: 10m
       nodeVolumeDetachTimeout: 10m
-  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
