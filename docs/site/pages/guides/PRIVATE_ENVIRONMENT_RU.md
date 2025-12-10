@@ -685,3 +685,8 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 </div>
 
 На этом настройка Harbor завершена! 🎉
+
+## Копироване образов DKP в приватный registry
+
+Следующим шагом будет копирование образов компонентов DKP из geristry Фланта в Harbor.
+
