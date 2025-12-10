@@ -205,7 +205,7 @@ spec:
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.LegacyMode, true)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
+				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, registry.ImagesRepo, "test")
 				require.Equal(t, registry.Scheme, "HTTPS")
 				require.Equal(t, registry.Username, "")
@@ -217,7 +217,7 @@ spec:
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.LegacyMode, true)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
+				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, registry.ImagesRepo, "test")
 				require.Equal(t, registry.Scheme, "HTTPS")
 				require.Equal(t, registry.Username, "")
@@ -231,7 +231,7 @@ spec:
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.LegacyMode, true)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
+				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 				require.Equal(t, registry.Scheme, "HTTPS")
 				require.Equal(t, registry.Username, "")
@@ -243,7 +243,7 @@ spec:
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.LegacyMode, false)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Direct")
-				registry := metaConfig.Registry.Settings.Remote
+				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 				require.Equal(t, registry.Scheme, "HTTPS")
 				require.Equal(t, registry.Username, "")
@@ -280,7 +280,7 @@ spec:
 				require.NoError(t, err)
 				require.Equal(t, metaConfig.Registry.LegacyMode, false)
 				require.Equal(t, metaConfig.Registry.Settings.Mode, "Unmanaged")
-				registry := metaConfig.Registry.Settings.Remote
+				registry := metaConfig.Registry.Settings.RemoteData
 				require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 				require.Equal(t, registry.Scheme, "HTTPS")
 				require.Equal(t, registry.Username, "test-user")
@@ -439,7 +439,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
 		t.Run("Registry CE edition config", func(t *testing.T) {
-			registry := metaConfig.Registry.Settings.Remote
+			registry := metaConfig.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Username, "")

@@ -28,28 +28,28 @@ type (
 )
 
 type ModeSettings struct {
-	Mode   constant.ModeType
-	Remote Data
+	Mode       constant.ModeType
+	RemoteData Data
 }
 
 func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {
 	switch {
 	case settings.Direct != nil:
-		remote := Data{}
+		var remote Data
 		remote.FromRegistrySettings(*settings.Direct)
 
 		return ModeSettings{
-			Mode:   constant.ModeDirect,
-			Remote: remote,
+			Mode:       constant.ModeDirect,
+			RemoteData: remote,
 		}, nil
 
 	case settings.Unmanaged != nil:
-		remote := Data{}
+		var remote Data
 		remote.FromRegistrySettings(*settings.Unmanaged)
 
 		return ModeSettings{
-			Mode:   constant.ModeUnmanaged,
-			Remote: remote,
+			Mode:       constant.ModeUnmanaged,
+			RemoteData: remote,
 		}, nil
 
 	default:
@@ -74,17 +74,17 @@ func (s ModeSettings) directModel() ModeModel {
 	return ModeModel{
 		Mode:                constant.ModeDirect,
 		InClusterImagesRepo: constant.HostWithPath,
-		RemoteImagesRepo:    s.Remote.ImagesRepo,
-		RemoteData:          s.Remote,
+		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
+		RemoteData:          s.RemoteData,
 	}
 }
 
 func (s ModeSettings) unmanagedModel() ModeModel {
 	return ModeModel{
 		Mode:                constant.ModeUnmanaged,
-		InClusterImagesRepo: s.Remote.ImagesRepo,
-		RemoteImagesRepo:    s.Remote.ImagesRepo,
-		RemoteData:          s.Remote,
+		InClusterImagesRepo: s.RemoteData.ImagesRepo,
+		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
+		RemoteData:          s.RemoteData,
 	}
 }
 

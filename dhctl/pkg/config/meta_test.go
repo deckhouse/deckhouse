@@ -243,7 +243,7 @@ func TestPrepareRegistry(t *testing.T) {
 			})
 			require.Equal(t, cfg.Registry.LegacyMode, true)
 			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-			registry := cfg.Registry.Settings.Remote
+			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Username, "a")
@@ -254,7 +254,7 @@ func TestPrepareRegistry(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 			require.Equal(t, cfg.Registry.LegacyMode, false)
 			require.Equal(t, cfg.Registry.Settings.Mode, "Direct")
-			registry := cfg.Registry.Settings.Remote
+			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Password, "")
@@ -285,7 +285,7 @@ spec:
 			})
 			require.Equal(t, cfg.Registry.LegacyMode, false)
 			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
-			registry := cfg.Registry.Settings.Remote
+			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
 			require.Equal(t, registry.Scheme, "HTTPS")
 			require.Equal(t, registry.Username, "test-user")

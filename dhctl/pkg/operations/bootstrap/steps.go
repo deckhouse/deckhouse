@@ -496,7 +496,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry.Settings.Remote, config.RppSignCheck, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry.Settings.RemoteData, config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}

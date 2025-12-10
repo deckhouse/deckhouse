@@ -70,7 +70,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
-	registry := pc.metaConfig.Registry.Settings.Remote
+	registry := pc.metaConfig.Registry.Settings.RemoteData
 	registryAddress, _ := registry.AddressAndPath()
 	if shouldSkipProxyCheck(registryAddress, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
@@ -138,7 +138,7 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 		return nil
 	}
 
-	registry := pc.metaConfig.Registry.Settings.Remote
+	registry := pc.metaConfig.Registry.Settings.RemoteData
 	image := pc.installConfig.GetRemoteImage(true)
 
 	log.DebugF("Image: %s\n", image)
@@ -160,7 +160,7 @@ func prepareRegistryRequest(
 	metaConfig *config.MetaConfig,
 	authData string,
 ) (*http.Request, error) {
-	registry := metaConfig.Registry.Settings.Remote
+	registry := metaConfig.Registry.Settings.RemoteData
 	registryAddress, _ := registry.AddressAndPath()
 
 	registryURL := &url.URL{
@@ -187,7 +187,7 @@ func prepareAuthRequest(
 	authData string,
 	metaConfig *config.MetaConfig,
 ) (*http.Request, error) {
-	registry := metaConfig.Registry.Settings.Remote
+	registry := metaConfig.Registry.Settings.RemoteData
 	_, registryPath := registry.AddressAndPath()
 
 	authURLValues := url.Values{}
@@ -210,7 +210,7 @@ func prepareAuthRequest(
 }
 
 func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
-	registry := metaConfig.Registry.Settings.Remote
+	registry := metaConfig.Registry.Settings.RemoteData
 
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()

@@ -93,7 +93,7 @@ func TestModeDirect(t *testing.T) {
 		t.Run("modeSettings", func(t *testing.T) {
 			expect := ModeSettings{
 				Mode: constant.ModeDirect,
-				Remote: Data{
+				RemoteData: Data{
 					ImagesRepo: "r.example.com/test",
 					Scheme:     "HTTPS",
 					CA:         "-----BEGIN CERTIFICATE-----",
@@ -207,7 +207,7 @@ func TestModeUnmanaged(t *testing.T) {
 		t.Run("modeSettings", func(t *testing.T) {
 			expect := ModeSettings{
 				Mode: constant.ModeUnmanaged,
-				Remote: Data{
+				RemoteData: Data{
 					ImagesRepo: "r.example.com/test",
 					Scheme:     "HTTPS",
 					CA:         "-----BEGIN CERTIFICATE-----",
