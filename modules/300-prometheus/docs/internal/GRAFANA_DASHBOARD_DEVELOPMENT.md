@@ -5,20 +5,75 @@ type:
 search: making Grafana graphs
 ---
 
-1. The [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) custom resource allows you to create Grafana dashboards. The [shell-operator](https://github.com/flant/shell-operator) sidecar container runs along with the main container in the Grafana Pod and monitors that resource. The hook creates/deletes/edits the specific dashboard in response to a corresponding event using some special mechanism.
-2. In modules, dashboard manifests are located at `<module_root>/monitoring/grafana-dashboards/`. They are automatically converted to [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) CRs, while:
-   * each subdirectory in the above directory corresponds to a Folder in Grafana,
-   * and each file corresponds to a Dashboard in Grafana.
-3. If you need to add a new Folder, just create a directory in the `grafana-dashboards/` and add at least one JSON manifest to it.
-4. You do not need to edit Dashboard files directly (unless you want to do a minor quick fix). Instead:
-   * Open the Dashboard in Grafana:
-     * if the Dashboard already exists, open it and click the ["Make editable" button](../images/grafana_make_editable.jpg);
-     * if the Dashboard is a new one, then create it (in any Folder — it will be moved to the folder that corresponds to the repository directory);
-     * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
-   * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
-   * [Export the Dashboard to JSON](../images/grafana_export.jpg) and save it to a file (the new or existing one).
-5. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
-6. Note that system Dashboards must be stored in `d8`-prefixed `GrafanaDashboardDefinition` custom resources.
+## Self-service dashboard management mechanism in the Observability module
+
+The Observability module adds new dashboard types, including namespace-scoped resources.
+
+This allows users to create and manage their own dashboards without requiring permissions for cluster-level objects.
+
+Previously, dashboards could only be created using the GrafanaDashboardDefinition resource, which required permissions to cluster-level objects. The new mechanism introduces resources that operate within a specific namespace.
+
+### Supported resource types
+
+- **ObservabilityDashboard** — dashboards within a namespace.
+
+Available in the Deckhouse web interface: **Monitoring → Projects**.
+
+- **ClusterObservabilityDashboard** — dashboards for monitoring cluster components.
+
+Available in the Deckhouse web interface: **Monitoring → System**.
+
+- **ClusterObservabilityPropagatedDashboard** — allows you to expand the list of dashboards from the two previous categories.
+
+These dashboards are automatically added in the Deckhouse web interface and appear in the following sections:
+- **Monitoring → System**
+- **Monitoring → Projects**
+  Available to users with rights to the corresponding namespace or system partition.
+
+> Converting existing dashboards from the GrafanaDashboardDefinition resource to the new types is done manually.
+
+### Supported annotations
+
+- **metadata.deckhouse.io/category** — sets the folder (category) in the interface;
+- **metadata.deckhouse.io/title** — sets the displayed dashboard title. If not specified, the title from the JSON
+  manifest will be used.
+
+### Custom Data Source Support
+
+Data sources previously created through the **GrafanaAdditionalDatasource** resource continue to work and are available in the Deckhouse web interface:
+- **Data Overview**
+- **Dashboards**
+
+### Which dashboard type should I choose?
+
+The choice of a type depends on the tasks and context of use.
+
+#### ObservabilityDashboard
+
+- **When to choose:** For monitoring resources within a specific namespace.
+- **Advantages:** Available only to users with access to this namespace, simplifying management and delimiting permissions.
+
+#### ClusterObservabilityDashboard
+
+- **When to choose:** For monitoring all cluster components with system-wide coverage.
+- **Advantages:** Suitable for operators and administrators who need global cluster visibility.
+
+#### ClusterObservabilityPropagatedDashboard
+
+- **When to choose:** For automatically distributing dashboards to all users with access to specific namespaces or system partitions.
+- **Advantages:** Convenient centralized distribution of shared dashboards useful to multiple users.
+  Send feedback
+  Translation results available
+
+To configure creating a dashboard as ClusterObservabilityPropagatedDashboard:
+
+1. Add the `propagated-` prefix to the JSON file containing the dashboard model.
+
+2. In [lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/templates/_monitoring_grafana_dashboards.tpl#L76), normalization is used where all slashes are converted to dashes.
+
+3. Dashboard type determination:
+    - A file named `propagated-pod.json` will create a ClusterObservabilityPropagatedDashboard (COPD)
+    - A file named `pod.json` will create a ClusterObservabilityDashboard (COD)
 
 ## How do I quickly optimize a third-party Dashboard?
 
@@ -62,36 +117,226 @@ When making changes to the complex Dashboards that use templates, try to edit th
 
 Do not try to generate Grafana Dashboard using Helm. A better approach is to create an Issue in Grafana requesting the required functionality.
 
-## Dashboard requirements
+## Settings before adding the first graph
 
-### The job must be specified explicitly
+### Adding the `ds_prometheus` variable
 
-You must always [explicitly specify the job](prometheus_rules_development.html#specify-the-job-explicitly-in-all-cases) to ensure zero conflicts in the metric names (the same applies to the development of Prometheus rules).
+Grafana can have multiple Prometheus instances available, each with different data granularity and retention periods.
 
-### The user must be able to choose the Prometheus instance
+To ensure convenient data source selection, you must:
 
-Our Grafanas may have several Prometheus instances available (with different data granularity and storage periods). That means that the user must be able to choose the Prometheus server. To do this, you need to:
-* [create](../images/grafana_ds_prometheus_variable.jpg) a `$ds_prometheus` variable;
-* [set](../images/grafana_ds_prometheus_select_in_panel.jpg) the `$ds_prometheus` as the data source in each panel (instead of setting the specific Prometheus instance).
+- Create the `$ds_prometheus` variable (instructions below).
+- Specify `$ds_prometheus` as the **Data Source** for each dashboard, rather than a specific Prometheus instance.
 
-### Graph Tooltip must be in Shared crosshair mode
+The data source is specified using the `$ds_prometheus` variable.
 
-One of the crucial features that graphs provide is the ability to analyze correlations visually. However, to perform such an analysis, you need to compare the same point on the time axis on different graphs. You can easily do that if graphs have the same size and are positioned under each other (but that doesn't look lovely). The problem is, in some cases, graphs cannot have the same size.
+Configure this in **Dashboard settings → Variables**.
 
-Thus, always [use](../images/grafana_graph_tooltip.jpg) the Graph Tooltip in the Shared crosshair mode. It helps much in analyzing correlations visually: hover the mouse pointer over one of the graphs, and a bar will appear on all other graphs at the same point on the time axis.
+![Setting the $ds_prometheus variable](/docs/documentation/images/prometheus/ds_prometheus_var.png)
 
-We do not recommend using the more sophisticated Shared tooltip mode since it overloads the user with too much information.
+### Time options
 
-### The units are crucial
+#### Time zone
 
-A graph without a unit of measurement is always misleading! What does the graph shows - rpm or rps, bits or bytes? The unit of measurement put on a graph makes it possible for the user to understand what the graph shows. In Grafana, you can explicitly specify the unit of measurement (and you should do that!).
+In the **General** tab of the dashboard settings, find the **Time zone** parameter and set it to **Browser time**.
 
-In addition, it is better to use typical units of measurement such as:
-* The data transfer rate is usually measured in bits per second, not in bytes per second;
-* The number of operations is usually specified on a per-second basis (and not on a per-minute one - iops, rps, etc.);
-* The volume of data is always measured in bytes, not bits.
+### Shared crosshair
 
-### Data accuracy and granularity
+One of the key features of graphs is visual correlation analysis.
+
+For effective data comparison, it is important to be able to compare the same point in time across different graphs.
+
+If the graphs are the same size and positioned one above the other, this is straightforward. However, it is not always possible (and not always aesthetically pleasing) to make all graphs the same size.
+
+It is recommended to enable **Shared crosshair** mode for the **Graph Tooltip** parameter—it significantly simplifies visual correlation analysis.
+When you hover over one chart, a vertical line displaying the same time will appear on all other charts.
+
+This setting is available in:
+**Dashboard settings → Panel options → Shared Crosshair**
+
+>️ Using the **Shared tooltip** mode is not recommended, as it clutters the interface with unnecessary information.
+
+## Basic Rules for Graphs
+
+### Title
+
+- Should be **short, clear, and unambiguous**, in **English**.
+- **Bad Examples:**
+- `Network Stuff` — too general, uninformative
+- `Router Data` — unclear what data is being displayed
+
+- **Good Examples:**
+- `Avg Upstream Response Time`
+- `Upstream Response Time`
+
+### Legend
+
+#### Basic Principles
+
+- Display **only key series** to keep graphs readable and uncluttered.
+- The number of series displayed should be limited.
+
+#### Defining Key Series
+
+1. **Total / Aggregate** — summary values, for example:
+    - Total number of pods in a namespace (`sum by (namespace)`)
+    - Total CPU consumption (`sum by (cluster)`)
+    - Total memory
+
+1. **Main Sections** — labels most often used to analyze graphs:
+    - `namespace`
+    - `node`
+    - `cluster`
+
+1. **Service labels** (e.g. `pod`, `container`) are rarely key and usually clutter the graph.
+
+#### Limiting the number of series
+
+- Use Prometheus aggregation functions:
+- `sum by (namespace)` instead of displaying all pods
+- `avg by (node)` to average metrics across nodes
+
+**Example:**
+Instead of displaying the `container_cpu_usage_seconds_total` metric for all pods in the cluster (hundreds of lines), we plot a `sum by (namespace)` graph and leave only a few key `namespaces`. This makes the graph clear and easy to analyze.
+
+#### Displaying summary values (Total)
+
+For metrics where it is important to see the summary value (e.g., number of pods, total memory used), we recommend adding a separate Total.
+
+**Total formatting rules:**
+- Marker color — yellow
+- Line and area below the graph — transparent
+
+> Detailed instructions on customizing the Total display style are provided in the "Additional Requirements" section.
+
+#### Legend Placement
+
+- Selected based on **maximum informativeness and convenience**:
+- **Side** — if it's important to give the user the ability to hide/show elements
+- **Bottom** — if this is easier to see
+
+- The legend displays **key metrics**: max, min, mean/avg.
+
+### Description
+
+- Should provide a **complete understanding of what the graph displays**.
+- **Bad example:** `This graph shows important data about the network` — too general, uninformative
+- **Good example:** `This graph shows the requested CPU resources higher than the actual CPU consumption. In other words, it shows CPU resources that can be "freed" without affecting the service.`
+
+### Data Source and Units
+
+#### Units
+
+- Units of measurement must be indicated on the graph. - Configuration is performed via: **All → Standard options → Unit**
+
+**Select units of measurement:**
+
+1. **Memory (RAM, cache, buffers, swap) and disk (FS usage, inode usage, volume usage)**
+   Use binary units: KiB, MiB, GiB, TiB
+
+2. **Network (traffic, speed, packets)**
+   Units are measured per second: Kbps, Mbps, Gbps (in Grafana — bits/sec SI)
+
+3. **CPU**
+   Displayed in **cores** or **milliCPUs (m)**
+
+### Select the presentation format (percentages or absolute values)
+
+#### Defining the format
+
+- When designing a graph, it is important to choose whether to display **percentages** or **absolute values**.
+
+##### CPU
+
+- **Percentage:** displays the load, clearly indicating how much the resource is being used, but it's difficult to compare different graphs.
+- Settings: **All → Standard options → Unit → percent**
+- **Absolute values:** cores or CPU seconds, ensure comparability.
+- Settings: **All → Standard options → Unit → select the desired value or define your own**
+
+> You can add deficit/surplus indicators: throttling, free resource volume, etc.
+
+#### Multiple graph types
+
+- If possible, display different indicators simultaneously: usage, deficit, and surplus.
+
+### Visualization Types
+
+#### Selecting a type
+
+- Selected based on the volatility and nature of the data.
+
+#### Highly volatile metrics (e.g., CPU)
+
+- Recommended display as **bars**
+
+#### Low-volatility metrics
+
+- Use **lines**
+
+#### Discrete or one-time values
+
+- Use the **step** line style
+
+### Removing visual noise
+
+- Hide unnecessary lines that create clutter on the chart.
+
+### Stacked Graphs
+
+#### General Rules
+
+- Stack only values that add up to the total
+- Do not stack dissimilar values with different units
+
+#### Hybrid Situations
+
+- In cases where a combination of different metrics is required (e.g., process sum and total limit), use combined solutions and explicitly indicate this on the graph.
+- Configuration is performed via Overrides: select the field with the desired name and apply the desired style.
+
+![Stacking Configuration](/docs/documentation/images/prometheus/grafana_stacking.png)
+
+### Sorting
+
+#### Basic Principles
+
+- Always consider the sorting order of lines on graphs and rows in tables.
+- Display the most significant values for the user first to ensure the graph or table is as informative and easy to analyze as possible.
+
+### Data Accuracy and Detail
+
+#### Displaying a Chart Starting from Zero
+
+For most metrics, it's more accurate to display the chart starting from **zero**.
+
+To set this:
+
+- Go to **All → Axis → Scale**
+- Set **Soft min = 0**
+
+This will ensure the chart starts at zero, with the upper limit determined automatically.
+
+#### Scale
+
+Choosing between **linear** and **logarithmic** scales should be a conscious decision.
+
+Use **logarithmic scale** if one of the following conditions is met:
+
+- **Wide Range of Values:**
+  A logarithmic scale is useful when the data spans a wide range—for example, values varying from units to thousands or millions.
+
+This allows you to better discern details and trends.
+
+- **Analyzing Proportions and Percentage Changes:**
+  On a logarithmic scale, equal distances on an axis correspond to equal percentage changes.
+
+This is useful when analyzing metrics where relative rather than absolute differences are important.
+
+- **Visualizing Exponential Growth:**
+  A logarithmic scale makes exponential trends more visible, whereas on a linear scale, such data would appear as a sharp jump.
+
+Use a linear scale in all other cases.
+
+> The setting is performed via: **All → Axis → Scale**
 
 Granted, in some cases, the level of detail makes it difficult to track global trends. However, the opposite is true much more often — due to insufficient detail, part of the data required for analysis is not displayed. To preserve the accuracy of data:
 1. **always use the `rate` function instead of `irate`**;
@@ -99,9 +344,9 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 3. **use Resolution 1/1 in al cases**;
 4. **never set the Min step**;
 
-    ![Data accuracy and granularity](../images/grafana_accuracy.jpg)
+   ![Data accuracy and granularity](../images/grafana_accuracy.jpg)
 
-    **Reasons and details:**
+   **Reasons and details:**
       <ul dir="auto">
         <li>You can specify <code>step</code> in the Prometheus's API request. Suppose we have three hours of data and set a <code>step</code> of 30 seconds. In this case, we will get 360 data points (3 hours *60 minutes* 2 points per minute), and they can easily fit on the graph. Now suppose we have data for 24 hours. In this case, the 30-second step does not make any sense since you cannot fit 2880 data points on a screen (unless, of course, you have a 4K monitor - but still, each data point will have the size of a pixel, and the human eye cannot discern so much tightly packed information). To solve this problem, Grafana implements a tricky mechanism to auto-determine the step size. It works as follows:
         <ul>
@@ -150,7 +395,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 
 5. **use `$__range` as the range for the range vectors in the avg/max/min_over_time functions**;
 
-#### The absence of data must be obvious
+### The absence of data must be obvious
 
 Grafana provides three modes for displaying the Null Value (no data).
 * You should never use the `connected` mode since it is highly misleading!
@@ -161,14 +406,16 @@ Grafana provides three modes for displaying the Null Value (no data).
 |-------------------------|------------------------------------------------|-----------------------------------------------------------|
 | ![connected](../images/grafana_null_value_connected.jpg) | ![null](../images/grafana_null_value_null.jpg) | ![null as zero](../images/grafana_null_value_as_zero.jpg) |
 
-#### The precision should be consistent with goals
+If there is no data on the graph, a dash ("No Value") should be displayed.
+
+### The precision should be consistent with goals
 
 * There is no reason to display values precisely to five decimal places if your error rate is 10%. The typical user will notice only the first two-three most significant digits anyway.
 * If you have tens of thousands (or even millions) of requests over 3 hours (the default period for a Dashboard), does the precise value make sense? Maybe, the order of the number of requests is sufficient in this case?
 
 Pay attention: the precision of the value must match the goals of using the indicator.
 
-#### Display data for the last 3 hours by default (auto-refresh every 30 seconds)
+### Display data for the last 3 hours by default (auto-refresh every 30 seconds)
 
 The three-hour display period is optimal (and should be used as default) since this is the maximum one for a fully detailed view.
 * With the `scrape_interval` set to `30s` (the most commonly used value), three hours of data fully fit even on graphs with a size of 1/4 of the screen width (meaning all 30-second data points are displayed) - no approximation or conversion is needed.
@@ -177,7 +424,42 @@ The three-hour display period is optimal (and should be used as default) since t
 
 It makes sense to set automatic updates every 30 seconds since Prometheus scrapes the data every 30 seconds. Thus, new data flow to it at regular intervals.
 
-#### Before pushing new dashboards, you have to remove all references to the existing domains
+## Additional Requirements
+
+### Collapsed Non-Essential Chart Series
+
+- All **non-essential series** on dashboards must be **collapsed by default**.
+- To do this, specify the following in the JSON configuration of the series:
+
+```json
+"collapsed": true
+```
+
+### Total Tooltip Requirements
+
+- For the **Total Tooltip**, additional steps are required:
+- Make it **invisible on the chart** via **Edit panel → Overrides**
+
+![Hide total](/docs/documentation/images/prometheus/hide_total.png)
+
+- Also add a transform for it (Edit panel->Transform data)
+
+![Transform for total](/docs/documentation/images/prometheus/transform_for_total.png)
+
+### 3. Remaining Tooltip Requirements
+
+- For all **other tooltips**, the following steps are required:
+- Configure **descending sorting** via **Edit panel → All**
+
+![Sort for other tooltip](/docs/documentation/images/prometheus/sort_other_tooltip.png)
+
+### 4. Sorting in the Legend
+
+- In the legend, all values should be sorted in descending order by the Mean column.
+
+## Useful notes
+
+### Before pushing new dashboards, you have to remove all references to the existing domains
 
 Before pushing changes to the repository, you have to make sure that there are no domains in the JSON file that may have been imported from Grafana.
 
