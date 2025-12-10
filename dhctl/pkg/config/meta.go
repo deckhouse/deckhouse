@@ -151,7 +151,7 @@ func (m *MetaConfig) prepareRegistry() error {
 			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
 		}
 	}
-	modulePlanned := registry_const.ModuleEnabled(defaultCRI)
+	criSupported := registry_const.IsCRISupported(defaultCRI)
 
 	// Extract configuration from initConfig
 	if m.DeckhouseConfig.ImagesRepo != "" ||
@@ -186,15 +186,15 @@ func (m *MetaConfig) prepareRegistry() error {
 			)
 		}
 
-		// Check module enable
-		if !modulePlanned {
+		// Check CRI
+		if !criSupported {
 			return fmt.Errorf(
 				"registry module cannot be started with defaultCRI '%s'. "+
 					"Please either configure registry in 'initConfiguration.deckhouse', "+
 					"or use a supported defaultCRI type with the existing configuration in "+
 					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
 				defaultCRI,
-				registry_const.ModuleEnabledCRI,
+				registry_const.SupportedCRI,
 			)
 		}
 
@@ -222,7 +222,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 		return nil
 	default:
-		if err := m.Registry.UseDefault(modulePlanned); err != nil {
+		if err := m.Registry.UseDefault(criSupported); err != nil {
 			return fmt.Errorf("get default registry settings: %w", err)
 		}
 		return nil

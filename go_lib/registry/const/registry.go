@@ -39,7 +39,7 @@ var (
 	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
 
-	ModuleEnabledCRI     = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	SupportedCRI         = []CRIType{CRIContainerdV1, CRIContainerdV2}
 	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
 
@@ -55,8 +55,8 @@ func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 	return proxyEndpoints
 }
 
-func ModuleEnabled(cri CRIType) bool {
-	return slices.Contains(ModuleEnabledCRI, cri)
+func IsCRISupported(cri CRIType) bool {
+	return slices.Contains(SupportedCRI, cri)
 }
 
 func ModuleRequired(mode ModeType) bool {

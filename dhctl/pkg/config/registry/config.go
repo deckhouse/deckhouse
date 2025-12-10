@@ -33,65 +33,47 @@ type Config struct {
 // - If Direct mode is supported, uses Direct mode
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
-func (c *Config) UseDefault(
-	modulePlanned bool,
-) error {
-	legacyMode := false
-	userSettings := module_config.DeckhouseSettings{
-		Mode:   constant.ModeDirect,
-		Direct: &module_config.RegistrySettings{},
-	}
-	if !modulePlanned {
-		legacyMode = true
-		userSettings = module_config.DeckhouseSettings{
-			Mode:      constant.ModeUnmanaged,
-			Unmanaged: &module_config.RegistrySettings{},
+func (c *Config) UseDefault(criSupported bool) error {
+	if criSupported {
+		settings := module_config.DeckhouseSettings{
+			Mode:   constant.ModeDirect,
+			Direct: &module_config.RegistrySettings{},
 		}
+		return c.process(settings, false)
 	}
-	return c.process(
-		userSettings,
-		legacyMode,
-	)
+
+	settings := module_config.DeckhouseSettings{
+		Mode:      constant.ModeUnmanaged,
+		Unmanaged: &module_config.RegistrySettings{},
+	}
+	return c.process(settings, true)
 }
 
 // UseInitConfig configures registry using legacy initConfiguration.
 // Note: This method maintains backward compatibility and only supports Unmanaged legacy mode.
-func (c *Config) UseInitConfig(
-	initConfig init_config.Config,
-) error {
-	legacyMode := true
-	userRegistrySettings, err := initConfig.ToRegistrySettings()
+func (c *Config) UseInitConfig(initConfig init_config.Config) error {
+	registrySettings, err := initConfig.ToRegistrySettings()
 	if err != nil {
 		return err
 	}
-	userSettings := module_config.DeckhouseSettings{
+
+	settings := module_config.DeckhouseSettings{
 		Mode:      constant.ModeUnmanaged,
-		Unmanaged: &userRegistrySettings,
+		Unmanaged: &registrySettings,
 	}
-	return c.process(
-		userSettings,
-		legacyMode,
-	)
+
+	return c.process(settings, true)
 }
 
 // UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
-func (c *Config) UseDeckhouseSettings(
-	userSettings module_config.DeckhouseSettings,
-) error {
-	legacyMode := false
-	return c.process(
-		userSettings,
-		legacyMode,
-	)
+func (c *Config) UseDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
+	return c.process(userSettings, false)
 }
 
-func (c *Config) process(
-	userSettings module_config.DeckhouseSettings,
-	legacyMode bool,
-) error {
+func (c *Config) process(userSettings module_config.DeckhouseSettings, legacyMode bool) error {
 	// Prepare settings
-	deckhouseSettings := module_config.DeckhouseSettings{}
+	var deckhouseSettings module_config.DeckhouseSettings
 	deckhouseSettings.ApplySettings(userSettings)
 
 	// Validate
@@ -119,6 +101,7 @@ func (c *Config) process(
 		DeckhouseSettings: deckhouseSettings,
 		LegacyMode:        legacyMode,
 	}
+
 	return nil
 }
 
@@ -126,10 +109,11 @@ func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
 
-func (c *Config) DeckhouseSettingsToMap() (bool, map[string]interface{}, error) {
+func (c *Config) DeckhouseSettingsToMap() (bool, map[string]any, error) {
 	if c.LegacyMode {
 		return false, nil, nil
 	}
+
 	ret, err := c.DeckhouseSettings.ToMap()
 	return true, ret, err
 }
