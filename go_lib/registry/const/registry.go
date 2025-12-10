@@ -27,11 +27,6 @@ const (
 	Path       = "/system/deckhouse"
 	PathRegexp = "^system/deckhouse"
 	Scheme     = "https"
-
-	UnknownVersion  = "unknown"
-	LicenseUsername = "license-token"
-	CEImagesRepo    = "registry.deckhouse.io/deckhouse/ce"
-	CEScheme        = SchemeHTTPS
 )
 
 var (
