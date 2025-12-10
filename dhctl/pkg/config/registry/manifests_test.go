@@ -72,3 +72,57 @@ func TestManifestsNoError(t *testing.T) {
 		})
 	}
 }
+
+func TestManifestsLegacyMode(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      Config
+		legacyMode bool
+	}{
+		{
+			name: "mode direct",
+			input: TestConfigBuilder(
+				WithModeDirect(),
+			),
+			legacyMode: false,
+		},
+		{
+			name: "mode unmanaged",
+			input: TestConfigBuilder(
+				WithModeUnmanaged(),
+			),
+			legacyMode: false,
+		},
+		{
+			name: "mode unmanaged && legacy",
+			input: TestConfigBuilder(
+				WithLegacyMode(),
+				WithModeUnmanaged(),
+			),
+			legacyMode: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("BashibleTplCtx -> registry module enabled when not in legacy mode", func(t *testing.T) {
+				ctx, err := tt.input.Manifest().
+					BashibleTplCtx(GeneratePKI)
+				require.NoError(t, err)
+
+				isModuleEnabled := ctx["registryModuleEnable"].(bool)
+				expectedModuleEnabled := !tt.legacyMode
+				require.Equal(t, expectedModuleEnabled, isModuleEnabled)
+			})
+
+			t.Run("RegistryBashibleConfigSecretData -> exists when not in legacy mode", func(t *testing.T) {
+				exists, _, err := tt.input.Manifest().
+					RegistryBashibleConfigSecretData()
+				require.NoError(t, err)
+
+				expectedExists := !tt.legacyMode
+				require.Equal(t, expectedExists, exists)
+			})
+		})
+	}
+}

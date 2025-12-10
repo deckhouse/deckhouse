@@ -95,7 +95,7 @@ func TestModeDirect(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
-			require.EqualValues(t, config.Settings, expect)
+			require.EqualValues(t, expect, config.Settings)
 		})
 
 		t.Run("modeModel", func(t *testing.T) {
@@ -111,7 +111,7 @@ func TestModeDirect(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
-			require.EqualValues(t, config.Settings.ToModel(), expect)
+			require.EqualValues(t, expect, config.Settings.ToModel())
 		})
 
 		t.Run("InclusterData", func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestModeDirect(t *testing.T) {
 				Username:   "test-user",
 				Password:   "test-password",
 			}
-			require.EqualValues(t, actual, expect)
+			require.EqualValues(t, expect, actual)
 		})
 
 		t.Run("BashibleConfig", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestModeDirect(t *testing.T) {
 					},
 				},
 			}
-			require.EqualValues(t, actual, expect)
+			require.EqualValues(t, expect, actual)
 		})
 	})
 }
@@ -193,7 +193,7 @@ func TestModeUnmanaged(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
-			require.EqualValues(t, config.Settings, expect)
+			require.EqualValues(t, expect, config.Settings)
 		})
 
 		t.Run("modeModel", func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestModeUnmanaged(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
-			require.EqualValues(t, config.Settings.ToModel(), expect)
+			require.EqualValues(t, expect, config.Settings.ToModel())
 		})
 
 		t.Run("InclusterData", func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestModeUnmanaged(t *testing.T) {
 				Username:   "test-user",
 				Password:   "test-password",
 			}
-			require.EqualValues(t, actual, expect)
+			require.EqualValues(t, expect, actual)
 		})
 
 		t.Run("BashibleConfig", func(t *testing.T) {
@@ -253,7 +253,7 @@ func TestModeUnmanaged(t *testing.T) {
 					},
 				},
 			}
-			require.EqualValues(t, actual, expect)
+			require.EqualValues(t, expect, actual)
 		})
 	})
 }
