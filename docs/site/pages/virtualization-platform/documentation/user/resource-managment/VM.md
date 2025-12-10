@@ -222,13 +222,13 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
 The `VirtualMachine` resource is used to create a virtual machine, its parameters allow you to configure:
 
-- [virtual machine class](/products/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html)
-- resources required for virtual machine operation (processor, memory, disks and images);
-- rules of virtual machine placement on cluster nodes;
-- bootloader settings and optimal parameters for the guest OS;
-- virtual machine startup policy and policy for applying changes;
-- initial configuration scenarios (cloud-init);
-- list of block devices.
+- [Virtual machine class](/products/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html)
+- Resources required for virtual machine operation (processor, memory, disks and images).
+- Rules of virtual machine placement on cluster nodes.
+- Bootloader settings and optimal parameters for the guest OS.
+- Virtual machine startup policy and policy for applying changes.
+- Initial configuration scenarios (cloud-init).
+- List of block devices.
 
 The full description of virtual machine configuration parameters can be found at [link](/modules/virtualization/cr.html#virtualmachine)
 
@@ -259,7 +259,7 @@ spec:
       packages:
         - nginx
         - qemu-guest-agent
-      run_cmd:
+      runcmd:
         - systemctl daemon-reload
         - systemctl enable --now nginx.service
         - systemctl enable --now qemu-guest-agent.service
@@ -325,7 +325,7 @@ How to create a virtual machine in the web interface:
   packages:
     - nginx
     - qemu-guest-agent
-  run_cmd:
+  runcmd:
     - systemctl daemon-reload
     - systemctl enable --now nginx.service
     - systemctl enable --now qemu-guest-agent.service
@@ -403,7 +403,7 @@ A virtual machine (VM) goes through several phases in its existence, from creati
 
   The VM is migrated to another node in the cluster (live migration).
   - Features:
-    - VM migration is supported only for non-local disks, the `type: Migratable` condition displays information about whether the VM can migrate or not.
+    - The `type: Migratable` condition indicates whether the VM can be migrated.
   - Possible issues:
     - Incompatibility of processor instructions (when using host or host-passthrough processor types).
     - Difference in kernel versions on hypervisor nodes.
@@ -576,6 +576,143 @@ status:
         coresPerSocket: 1
 ```
 
+### Initialization scripts
+
+Initialization scripts are used for the initial configuration of a virtual machine when it is started.
+
+The following initialization scripts are supported:
+
+- [Cloud-Init](https://cloudinit.readthedocs.io).
+- [Sysprep](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/sysprep--system-preparation--overview).
+
+#### Cloud-Init
+
+Cloud-Init is a tool for automatically configuring virtual machines on first boot. It allows you to perform a wide range of configuration tasks without manual intervention.
+
+{% alert level="warning" %}
+Cloud-Init configuration is written in YAML format and must start with the `#cloud-config` header at the beginning of the configuration block. For information about other possible headers and their purpose, see the [official Cloud-Init documentation](https://cloudinit.readthedocs.io/en/latest/explanation/format.html#headers-and-content-types).
+{% endalert %}
+
+The main capabilities of Cloud-Init include:
+
+- Creating users, setting passwords, and adding SSH keys for access.
+- Automatically installing necessary software on first boot.
+- Running arbitrary commands and scripts for system configuration.
+- Automatically starting and enabling system services (for example, [`qemu-guest-agent`](#guest-os-agent)).
+
+##### Typical usage scenarios
+
+1. Adding an SSH key for a [pre-installed user](/products/virtualization-platform/documentation/user/resource-management/images.html#image-resources-table) that may already be present in the cloud image (for example, the `ubuntu` user in official Ubuntu images). The name of such a user depends on the image. Check the documentation for your distribution.
+
+   ```yaml
+   #cloud-config
+   ssh_authorized_keys:
+     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+   ```
+
+1. Creating a user with a password and SSH key:
+
+   ```yaml
+   #cloud-config
+   users:
+     - name: cloud
+       passwd: "$6$rounds=4096$saltsalt$..."
+       lock_passwd: false
+       sudo: ALL=(ALL) NOPASSWD:ALL
+       shell: /bin/bash
+       ssh-authorized-keys:
+         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+   ssh_pwauth: True
+   ```
+
+   To generate a password hash, use the command `mkpasswd --method=SHA-512 --rounds=4096`.
+
+1. Installing packages and services:
+
+   ```yaml
+   #cloud-config
+   package_update: true
+   packages:
+     - nginx
+     - qemu-guest-agent
+   runcmd:
+     - systemctl daemon-reload
+     - systemctl enable --now nginx.service
+     - systemctl enable --now qemu-guest-agent.service
+   ```
+
+##### Using Cloud-Init
+
+The Cloud-Init script can be embedded directly into the virtual machine specification, but its size is limited to a maximum of 2048 bytes:
+
+```yaml
+spec:
+  provisioning:
+    type: UserData
+    userData: |
+      #cloud-config
+      package_update: true
+      ...
+```
+
+For longer scenarios and/or when private data is involved, the script for initial initialization of the virtual machine can be created in a Secret resource. An example of a Secret with a Cloud-Init script is shown below:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-init-example
+data:
+  userData: <base64 data>
+type: provisioning.virtualization.deckhouse.io/cloud-init
+```
+
+A fragment of the virtual machine configuration when using the Cloud-Init initialization script stored in a Secret:
+
+```yaml
+spec:
+  provisioning:
+    type: UserDataRef
+    userDataRef:
+      kind: Secret
+      name: cloud-init-example
+```
+
+{% alert level="info" %}
+The value of the `.data.userData` field must be Base64 encoded. To encode it, you can use the `base64 -w 0` command or `echo -n "content" | base64`.
+{% endalert %}
+
+#### Sysprep
+
+When configuring virtual machines running Windows using Sysprep, only the Secret-based option is supported.
+
+An example of a Secret with a Sysprep script is shown below:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sysprep-example
+data:
+  unattend.xml: <base64 data>
+type: provisioning.virtualization.deckhouse.io/sysprep
+```
+
+{% alert level="info" %}
+The value of the `.data.unattend.xml` field must be Base64 encoded. To encode, you can use the command `base64 -w 0` or `echo -n "content" | base64`.
+{% endalert %}
+
+A fragment of the virtual machine configuration using the Sysprep initialization script in a Secret:
+
+```yaml
+spec:
+  provisioning:
+    type: SysprepRef
+    sysprepRef:
+      kind: Secret
+      name: sysprep-example
+```
+
 ### Guest OS agent
 
 To improve VM management efficiency, it is recommended to install the QEMU Guest Agent, a tool that enables communication between the hypervisor and the operating system inside the VM.
@@ -639,46 +776,11 @@ You can automate the installation of the agent for Linux OS using a cloud-init i
   package_update: true
   packages:
     - qemu-guest-agent
-  run_cmd:
+  runcmd:
     - systemctl enable --now qemu-guest-agent.service
 ```
 
-### User Configuration for Cloud Images
-
-When using cloud images (with cloud-init support), you must specify an SSH key or a password for the pre-installed user, or create a new user with a password or SSH key via cloud-init. Otherwise, it will be impossible to log in to the virtual machine!
-
-Examples:
-
-1. Setting a password for an existing user (for example, `ubuntu` is often present in official cloud images):
-
-   In many cloud images, the default user is already predefined (e.g., `ubuntu` in Ubuntu Cloud Images), and its name cannot always be overridden via the `cloud-init` `users` block. In such cases, it is recommended to use dedicated cloud-init parameters for managing the default user.
-
-   In a cloud image, you can add a public SSH key for the default user using the `ssh_authorized_keys` parameter at the root level of cloud-init:
-
-   ```yaml
-   #cloud-config
-   ssh_authorized_keys:
-     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
-   ```
-
-1. Creating a new user with a password and SSH key:
-
-   ```yaml
-   #cloud-config
-   users:
-     - name: cloud
-       passwd: "$6$rounds=4096$QktreHgVzeZy70h3$C8c4gjzYMY75.C7IjN1.GgrjMSdeyG79W.hZgsTNnlrJIzuB48qzCui8KP1par.OvCEV3Xi8FzRiqqZ74LOK6."
-       lock_passwd: false
-       sudo: ALL=(ALL) NOPASSWD:ALL
-       shell: /bin/bash
-       ssh-authorized-keys:
-         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
-   ssh_pwauth: True
-   ```
-
-{% alert level="info" %}
-The value of the `passwd` field is a hashed password (for example, you can generate it using `mkpasswd --method=SHA-512 --rounds=4096`).
-{% endalert %}
+QEMU Guest Agent does not require additional configuration after installation. However, to ensure application-level snapshot consistency (without stopping services), you can add scripts that are executed automatically in the guest OS before and after filesystem `freeze` and `thaw` operations. The scripts must be executable and placed in a special directory, whose path depends on the Linux distribution in use:
 
 ### Connecting to a virtual machine
 
@@ -844,6 +946,10 @@ Apply the following patch to the virtual machine to change the number of cores f
 
 ```bash
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
+
+# Alternatively, apply the changes by editing the resource.
+
+d8 k edit vm linux-vm
 ```
 
 Example output:
@@ -935,79 +1041,6 @@ How to perform the operation in the web interface:
 - Enable the "Auto-apply changes" switch.
 - Click on the "Save" button that appears.
 
-### Initialization scripts
-
-Initialization scripts are intended for the initial configuration of a virtual machine when it is started.
-
-The initial initial initialization scripts supported are:
-
-- [CloudInit](https://cloudinit.readthedocs.io)
-- [Sysprep](https://learn.microsoft.com/ru-ru/windows-hardware/manufacture/desktop/sysprep--system-preparation--overview).
-
-The CloudInit script can be embedded directly into the virtual machine specification, but this script is limited to a maximum length of 2048 bytes:
-
-```yaml
-spec:
-  provisioning:
-    type: UserData
-    userData: |
-      #cloud-config
-      package_update: true
-      ...
-```
-
-For longer scenarios and/or the presence of private data, the script for initial initial initialization of the virtual machine can be created in Secret. An example of Secret with a CloudInit script is shown below:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cloud-init-example
-data:
-  userData: <base64 data>
-type: provisioning.virtualization.deckhouse.io/cloud-init
-```
-
-A fragment of the virtual machine configuration using the CloudInit initialization script stored in Secret:
-
-```yaml
-spec:
-  provisioning:
-    type: UserDataRef
-    userDataRef:
-      kind: Secret
-      name: cloud-init-example
-```
-
-Note: The value of the `.data.userData` field must be Base64 encoded.
-
-To configure Windows virtual machines using Sysprep, only the Secret variant is supported.
-
-An example of Secret with Sysprep script is shown below:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sysprep-example
-data:
-  unattend.xml: <base64 data>
-type: provisioning.virtualization.deckhouse.io/sysprep
-```
-
-Note: The value of the `.data.unattend.xml` field must be Base64 encoded.
-
-Fragment of virtual machine configuration using Sysprep initialization script in Secret:
-
-```yaml
-spec:
-  provisioning:
-    type: SysprepRef
-    sysprepRef:
-      kind: Secret
-      name: sysprep-example
-```
-
 ### Placement of VMs by nodes
 
 The following methods can be used to manage the placement of virtual machines (placement parameters) across nodes:
@@ -1029,7 +1062,15 @@ All of the above parameters (including the `.spec.nodeSelector` parameter from V
 - Use combinations of labels instead of single restrictions. For example, instead of required for a single label (e.g. env=prod), use several preferred conditions.
 - Consider the order in which interdependent VMs are launched. When using Affinity between VMs (for example, the backend depends on the database), launch the VMs referenced by the rules first to avoid lockouts.
 - Plan backup nodes for critical workloads. For VMs with strict requirements (e.g., AntiAffinity), provide backup nodes to avoid downtime in case of failure or maintenance.
-- Consider existing `taints` on nodes.
+- Consider existing `taints` on nodes. If necessary, you can add appropriate `tolerations` to the VM. An example of using `tolerations` to allow scheduling on nodes with the `node.deckhouse.io/group=:NoSchedule` taint is provided below.
+
+```yaml
+spec:
+  tolerations:
+    - key: "node.deckhouse.io/group"
+      operator: "Exists"
+      effect: "NoSchedule"
+```
 
 {% alert level="info" %}
 When changing placement parameters:
@@ -1511,7 +1552,7 @@ How to publish a VM service using Ingress in the web interface:
 
 ### Live virtual machine migration
 
-Live virtual machine (VM) migration is the process of moving a running VM from one physical host to another without shutting it down. This feature plays a key role in the management of virtualized infrastructure, ensuring application continuity during maintenance, load balancing, or upgrades.
+Live virtual machine (VM) migration is the process of moving a running VM from one physical host to another without shutting it down. This feature plays a key role in managing virtualized infrastructure, ensuring application continuity during maintenance, load balancing, or upgrades.
 
 #### How live migration works
 
@@ -1519,129 +1560,50 @@ The live migration process involves several steps:
 
 1. **Creation of a new VM instance**
 
-   A new VM is created on the target host in a suspended state. Its configuration (CPU, disks, network) is copied from the source node.
+   A new VM is created on the target node in a suspended state. Its configuration (CPU, disks, network) is copied from the source node.
 
-1. **Primary Memory Transfer**
+1. **Primary memory transfer**
 
    The entire RAM of the VM is copied to the target node over the network. This is called primary transfer.
 
-1. **Change Tracking (Dirty Pages)**
+   1. **Change tracking (Dirty Pages)**
 
-   While memory is being transferred, the VM continues to run on the source node and may change some memory pages. These pages are called dirty pages and the hypervisor marks them.
+      While memory is being transferred, the VM continues to run on the source node and may change some memory pages. These pages are called dirty pages, and the hypervisor marks them.
 
 1. **Iterative synchronization**.
 
-   After the initial transfer, only the modified pages are resent. This process is repeated in several cycles:
+   After the initial transfer, only the modified pages are sent again. This process is repeated over several cycles:
 
    - The higher the load on the VM, the more "dirty" pages appear, and the longer the migration takes.
    - With good network bandwidth, the amount of unsynchronized data gradually decreases.
 
-1. **Final synchronization and switching**.
+1. **Final synchronization and switching**
 
    When the number of dirty pages becomes minimal, the VM on the source node is suspended (typically for 100 milliseconds):
 
    - The remaining memory changes are transferred to the target node.
    - The state of the CPU, devices, and open connections are synchronized.
-   - The VM is started on the new node and the source copy is deleted.
+   - The VM is started on the new node, and the source copy is deleted.
+
+Until the VM switches to the new node (Phase 5), the VM on the source node continues to operate normally and provide services to users.
 
 ![Migration](/images/virtualization-platform/migration.png)
 
-{% alert level="warning" %}
-For successful live migration, all disks attached to the VM must be accessible on the target nodes to which the migration is planned.
+#### Requirements and limitations
 
-If a disk uses storage with local disks, such storage must be available to create a new local volume on the target node.
+For successful live migration, certain requirements must be met. Failure to meet these requirements can lead to limitations and issues during migration.
 
-Otherwise, migration will not be possible.
-{% endalert %}
+- Disk availability: All disks attached to the VM must be accessible on the target node, otherwise migration will be impossible. For network storage (NFS, Ceph, etc.), this requirement is usually met automatically, as disks are accessible on all cluster nodes. For local storage, the situation is different: the storage system must be available on the target node to create a new local volume. If local storage exists only on the source node, migration cannot be performed.
 
-{% alert level="warning" %}
-Network speed plays an important role. If bandwidth is low, there are more iterations and VM downtime can increase. In the worst case, the migration may not complete at all.
+- Network bandwidth: Network speed is critical for live migration. With low bandwidth, the number of memory synchronization iterations increases, VM downtime during the final stage of migration increases, and in the worst case, migration may not complete due to a timeout. To manage the migration process, configure the live migration policy [`.spec.liveMigrationPolicy`](#configuring-migration-policy) in the virtual machine settings. For network problems, use the AutoConverge mechanism (see the [Migration with insufficient network bandwidth](#migration-with-insufficient-network-bandwidth) section).
 
-To manage the migration process, configure the live migration policy using [`.spec.liveMigrationPolicy`](#configuring-migration-policy) in the VM settings.
-{% endalert %}
+- Kernel versions on nodes: For stable live migration operation, all cluster nodes must use the same Linux kernel version. Differences in kernel versions can lead to incompatible interfaces, system calls, and resource handling features, which can disrupt the virtual machine migration process.
 
-#### AutoConverge mechanism
+- CPU compatibility: CPU compatibility depends on the CPU type specified in the virtual machine class. When using the `Host` type, migration is only possible between nodes with similar CPU types: migration between nodes with Intel and AMD processors does not work, and it also does not work between different CPU generations due to differences in instruction sets. When using the `HostPassthrough` type, the VM can only migrate to a node with exactly the same processor as on the source node. To ensure migration compatibility between nodes with different processors, use the `Discovery`, `Model`, or `Features` types in the virtual machine class.
 
-If the network struggles to handle data transfer and the number of "dirty" pages keeps growing, the AutoConverge mechanism can be useful. It helps complete migration even with low network bandwidth.
+- Migration execution time: A completion timeout is set for live migration, which is calculated using the formula: `Completion timeout = 800 seconds × (Memory size in GiB + Disk size in GiB (if Block Migration is used))`. If migration does not complete within this time, the operation is considered failed and is canceled automatically. For example, for a virtual machine with 4 GiB of memory and 20 GiB of disk, the timeout will be `800 seconds × (4 GiB + 20 GiB) = 19200 seconds (320 minutes or ~5.3 hours)`. With low network speed or high load on the VM, migration may not complete within the allotted time.
 
-The working principles of AutoConverge mechanism:
-
-1. **VM CPU slowdown**.
-
-   The hypervisor gradually reduces the CPU frequency of the source VM. This reduces the rate at which new "dirty" pages appear. The higher the load on the VM, the greater the slowdown.
-
-1. **Synchronization acceleration**.
-
-   Once the data transfer rate exceeds the memory change rate, final synchronization is started and the VM switches to the new node.
-
-1. **Automatic Termination**
-
-   Final synchronization is started when the data transfer rate exceeds the memory change rate.
-
-AutoConverge is a kind of "insurance" that ensures that the migration completes even if the network struggles to handle data transfer. However, CPU slowdown can affect the performance of applications running on the VM, so its use should be monitored.
-
-#### Configuring migration policy
-
-To configure migration behavior, use the  `.spec.liveMigrationPolicy` parameter in the VM configuration. The following options are available:
-
-- `AlwaysSafe`: Migration is performed without slowing down the CPU (AutoConverge is not used). Suitable for cases where maximizing VM performance is important but requires high network bandwidth.
-- `PreferSafe` (default): Migration runs without AutoConverge, but CPU slowdown can be enabled manually if the migration fails to complete. This is done by using the VirtualMachineOperation resource with `type=Evict` and `force=true`.
-- `AlwaysForced`: Migration always uses AutoConverge, meaning the CPU is slowed down when necessary. This ensures that the migration completes even if the network is bad, but may degrade VM performance.
-- `PreferForced`: By default migration goes with AutoConverge, but slowdown can be manually disabled via VirtualMachineOperation with the parameter `type=Evict` and `force=false`.
-
-#### Migration types
-
-Migration can be performed manually by the user, or automatically by the following system events:
-
-- Updating the "firmware" of a virtual machine.
-- Redistribution of load in the cluster.
-- Transferring a node into maintenance mode (Node drain).
-- When you change [VM placement settings](#placement-of-vms-by-nodes) (not available in Community edition).
-
-The trigger for live migration is the appearance of the `VirtualMachineOperations` resource with the `Evict` type.
-
-The table shows the `VirtualMachineOperations` resource name prefixes with the `Evict` type that are created for live migrations caused by system events:
-
-| Type of system event            | Resource name prefix   |
-|---------------------------------|------------------------|
-| Firmware update                 | firmware-update-*      |
-| Load shifting                   | evacuation-*           |
-| Drain node                      | evacuation-*           |
-| Modify placement parameters     | nodeplacement-update-* |
-| Disk storage migration          | volume-migration-*     |
-
-This resource can be in the following states:
-
-- `Pending`: The operation is pending.
-- `InProgress`: Live migration is in progress.
-- `Completed`: Live migration of the virtual machine has been completed successfully.
-- `Failed`: Live migration of the virtual machine has failed.
-
-Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
-
-You can view active operations using the command:
-
-```bash
-d8 k get vmop
-```
-
-Example output:
-
-```console
-NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
-firmware-update-fnbk2   Completed   Evict   static-vm-node-00   148m
-```
-
-You can interrupt any live migration while it is in the `Pending`, `InProgress` phase by deleting the corresponding `VirtualMachineOperations` resource.
-
-How to view active operations in the web interface:
-
-- Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" → "Virtual Machines" section.
-- Select the required VM from the list and click on its name.
-- Go to the "Events" tab.
-
-#### How to perform a live migration of a virtual machine using `VirtualMachineOperations`
+#### How to perform a live VM migration
 
 Let's look at an example. Before starting the migration, view the current status of the virtual machine:
 
@@ -1658,15 +1620,17 @@ linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 
 We can see that it is currently running on the `virtlab-pt-1` node.
 
-To migrate a virtual machine from one host to another, taking into account the virtual machine placement requirements, the command is used:
+To migrate a virtual machine from one node to another while taking into account VM placement requirements, use the following command:
 
 ```bash
-d8 v evict -n <namespace> <vm-name>
+d8 v evict -n <namespace> <vm-name> [--force]
 ```
 
-execution of this command leads to the creation of the `VirtualMachineOperations` resource.
+Running this command creates a VirtualMachineOperations resource.
 
-You can also start the migration by creating a `VirtualMachineOperations` (`vmop`) resource with the `Evict` type manually:
+When used during virtual machine migration, the `--force` flag activates a special mechanism called AutoConverge (for more details, see the [Migration with insufficient network bandwidth](#migration-with-insufficient-network-bandwidth) section). This mechanism automatically reduces the CPU load of the virtual machine (slows down its CPU) when it is necessary to speed up the completion of migration and help it complete successfully, even when the virtual machine memory transfer is too slow. Use this flag if a standard migration cannot complete due to high virtual machine activity.
+
+You can also start the migration by creating a VirtualMachineOperations (`vmop`) resource with the `Evict` type manually:
 
 ```yaml
 d8 k create -f - <<EOF
@@ -1679,6 +1643,8 @@ spec:
   virtualMachineName: linux-vm
   # operation to evict
   type: Evict
+  # Allow CPU slowdown by AutoConverge mechanism to guarantee that migration will complete.
+  force: true
 EOF
 ```
 
@@ -1691,12 +1657,14 @@ d8 k get vm -w
 Example output:
 
 ```console
-NAME                                   PHASE       NODE           IPADDRESS     AGE
+NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+
+You can interrupt any live migration while it is in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
 How to perform a live VM migration in the web interface:
 
@@ -1705,6 +1673,111 @@ How to perform a live VM migration in the web interface:
 - Select the desired virtual machine from the list and click the ellipsis button.
 - Select "Migrate" from the pop-up menu.
 - Confirm or cancel the migration in the pop-up window.
+
+#### Configuring migration policy
+
+The migration policy determines when to use the AutoConverge mechanism (CPU slowdown) to guarantee migration completion.
+
+The AutoConverge mechanism helps complete migration even with low network bandwidth, guaranteeing that the migration will complete successfully. However, it slows down the virtual machine's CPU, which can affect the performance of applications running on the virtual machine.
+
+The AutoConverge mechanism works in two stages:
+
+1. **Virtual machine CPU slowdown**
+
+   The hypervisor gradually reduces the CPU frequency of the source virtual machine. This reduces the rate at which new "dirty" pages appear. The higher the load on the virtual machine, the greater the slowdown.
+
+1. **Automatic migration completion**
+
+   Once the data transfer rate exceeds the memory change rate, final synchronization is started, and the virtual machine switches to the new node.
+
+To configure the migration policy, use the [`.spec.liveMigrationPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-livemigrationpolicy) parameter in the virtual machine configuration. The following options are available:
+
+- `AlwaysSafe`: Migration is always performed without slowing down the CPU (AutoConverge is not used). Suitable for cases where maximum virtual machine performance is important, but it requires high network bandwidth.
+- `PreferSafe` (used as the default policy): Migration is performed without slowing down the CPU (AutoConverge is not used). However, you can start migration with CPU slowdown using the VirtualMachineOperation resource with parameters `type=Evict` and `force=true`.
+- `AlwaysForced`: Migration always uses AutoConverge, meaning the CPU is slowed down when necessary. This guarantees migration completion even with poor network, but may reduce virtual machine performance.
+- `PreferForced`: Migration uses AutoConverge, meaning the CPU is slowed down when necessary. However, you can start migration without slowing down the CPU using the VirtualMachineOperation resource with parameters `type=Evict` and `force=false`.
+
+#### Migration with insufficient network bandwidth
+
+During live migration of a virtual machine, a situation may arise when network bandwidth is insufficient to transfer data faster than it changes in the virtual machine's memory. In this case, the number of "dirty" pages continues to grow, and the migration may not complete within the timeout.
+
+To solve this problem, the AutoConverge mechanism is used, which is configured through the [migration policy](#configuring-migration-policy).
+
+To determine whether network bandwidth is insufficient for live migration of a virtual machine, check the graphs in the "Namespace / Virtual Machine" → "VM Status details" → "Live migration memory metrics" section:
+
+- **Processed memory rate** is less than **Dirty memory rate**.
+- **Remaining memory rate** does not decrease for a long time.
+
+This means that the network has become a bottleneck for migration.
+
+Example of a situation where migration cannot be completed due to insufficient network bandwidth: memory is continuously changed inside the virtual machine using stress-ng.
+
+![Livemigration example](/images/virtualization-platform/livemigration-example.png)
+
+Example of performing migration of the same virtual machine using the `--force` flag of the `d8 v evict` command (which enables the AutoConverge mechanism): here you can clearly see that the CPU frequency decreases step by step to reduce the memory change rate.
+
+![Livemigration example AutoConverge](/images/virtualization-platform/livemigration-example-autoconverge.png)
+
+If the network limits the migration speed, you can:
+
+1. Wait for the operation to complete with an error due to timeout.
+1. Cancel the current migration operation by deleting the vmop object:
+
+   ```bash
+   d8 k delete vmop <operation-name>
+   ```
+
+   Then restart the migration using the `--force` flag to enable the AutoConverge mechanism. Using the `--force` flag must comply with the current [virtual machine migration policy](#configuring-migration-policy).
+
+#### System-initiated migrations
+
+Migration can be performed automatically by the following system events:
+
+- Updating the "firmware" of a virtual machine.
+- Redistribution of load in the cluster.
+- Transferring a node into maintenance mode (Node drain).
+- When you change [VM placement settings](#placement-of-vms-by-nodes) (not available in Community edition).
+
+The trigger for live migration is the appearance of the VirtualMachineOperations resource with the `Evict` type.
+
+The table shows the VirtualMachineOperations resource name prefixes with the `Evict` type that are created for live migrations caused by system events:
+
+| Type of system event               | Resource name prefix     |
+|------------------------------------|--------------------------|
+| Firmware update                    | `firmware-update-*`      |
+| Load redistribution in the cluster | `evacuation-*`           |
+| Node drain                         | `evacuation-*`           |
+| VM placement settings change       | `nodeplacement-update-*` |
+| Disk storage migration             | `volume-migration-*`     |
+
+This resource can be in the following states:
+
+- `Pending`: The operation is pending.
+- `InProgress`: Live migration is in progress.
+- `Completed`: Live migration of the virtual machine has completed successfully.
+- `Failed`: Live migration of the virtual machine has failed.
+
+You can view active operations using the command:
+
+```bash
+d8 k get vmop
+```
+
+Example output:
+
+```txt
+NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
+firmware-update-fnbk2   Completed   Evict   linux-vm            148m
+```
+
+To cancel the migration, delete the corresponding resource.
+
+How to view active operations in the web interface:
+
+1. Go to the "Projects" tab and select the desired project.
+1. Go to the "Virtualization" → "Virtual Machines" section.
+1. Select the required VM from the list and click on its name.
+1. Go to the "Events" tab.
 
 #### Live migration of virtual machine when changing placement parameters (not available in CE edition)
 
@@ -1825,6 +1898,10 @@ Remove the `.metadata.ownerReferences` blocks from the resource found:
 
 ```bash
 d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferences":null}}'
+
+# Alternatively, apply the changes by editing the resource.
+
+d8 k edit vmip linux-vm-7prpx
 ```
 
 After the virtual machine is deleted, the `vmip` resource is preserved and can be reused again in the newly created virtual machine:
@@ -1850,23 +1927,21 @@ EOF
 
 ### Additional network interfaces
 
-Virtual machines can be connected not only to the main cluster network interface but also to additional networks provided by the `SDN` module. Such networks include project Networks and ClusterNetworks.
-
-Additional networks are defined in the `.spec.networks` configuration block. If this block is absent (default value), the VM is connected only to the main cluster network.
-
 {% alert level="warning" %}
-Changes to the list of additional networks (adding or removing) take effect only after the VM is rebooted.
+To work with additional networks, the `sdn` module must be enabled.
 {% endalert %}
 
-{% alert level="info" %}
-To avoid changing the order of network interfaces inside the guest OS, always add new networks to the end of the `.spec.networks` list.
-{% endalert %}
+Virtual machines can be connected to additional networks: project networks (`Network`) or cluster networks (`ClusterNetwork`).
 
-Conditions and limitations:
+To do this, specify the desired networks in the configuration section `.spec.networks`. If this block is not specified (which is the default behavior), the VM will use only the main cluster network.
 
-- The `SDN` module is required to work with additional networks.
-- The order of networks in `.spec.networks` determines the sequence in which interfaces are attached to the VM bus.
-- Configuration of network parameters (IP addresses, gateways, DNS, etc.) in additional networks must be performed manually inside the guest OS (for example, via cloud-init).
+Important considerations when working with additional network interfaces:
+
+- The order of listing networks in `.spec.networks` determines the order in which interfaces are connected inside the virtual machine.
+- Adding or removing additional networks takes effect only after the VM is rebooted.
+- To preserve the order of network interfaces inside the guest operating system, it is recommended to add new networks to the end of the `.spec.networks` list (do not change the order of existing ones).
+- Network security policies (NetworkPolicy) do not apply to additional network interfaces.
+- Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
 
 Example of connecting a VM to the project network `user-net`:
 

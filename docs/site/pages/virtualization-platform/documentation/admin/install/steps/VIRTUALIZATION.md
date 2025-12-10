@@ -107,7 +107,29 @@ The `.spec.settings.dvcr.storage` block configures a persistent volume for stori
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `sds-replicated-thin-r1`).
 
 {% alert level="warning" %}
-The storage serving this storage class (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter) must be accessible on the nodes where DVCR is running (system nodes, or worker nodes if there are no system nodes).
+Migrating images when changing the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter value is not supported.
+
+When you change the DVCR StorageClass, all images stored in DVCR will be lost.
+{% endalert %}
+
+To change the DVCR StorageClass, perform the following steps:
+
+1. Change the value of the [`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) parameter.
+
+1. Delete the old PVC for DVCR using the following command:
+
+   ```shell
+   d8 k -n d8-virtualization delete pvc -l app=dvcr
+   ```
+
+1. Restart DVCR by running the following command:
+
+   ```shell
+   d8 k -n d8-virtualization rollout restart deployment dvcr
+   ```
+
+{% alert level="warning" %}
+The storage that serves the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` StorageClass must be accessible from the nodes where DVCR runs (system nodes, or worker nodes if there are no system nodes).
 {% endalert %}
 
 ### Network settings
