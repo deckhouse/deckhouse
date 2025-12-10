@@ -306,7 +306,8 @@
   },
   "operator-argo": {
     "editions": [
-      "ee"
+      "ee",
+      "se-plus"
     ],
     "editionsWithRestrictions": [
       "cse-pro"
