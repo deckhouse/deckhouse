@@ -23,6 +23,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
+type (
+	getPKI func() (PKI, error)
+)
+
 type ModeSettings struct {
 	Mode   constant.ModeType
 	Remote Data
@@ -91,7 +95,7 @@ type ModeModel struct {
 	RemoteData          Data
 }
 
-func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (Data, error) {
+func (m ModeModel) InClusterData(getPKI getPKI) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
 		return m.directInClusterData(getPKI)
@@ -133,10 +137,10 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 	return cfg, cfg.Validate()
 }
 
-func (m ModeModel) directInClusterData(getPKI func() (PKI, error)) (Data, error) {
+func (m ModeModel) directInClusterData(getPKI getPKI) (Data, error) {
 	pki, err := getPKI()
 	if err != nil {
-		return Data{}, err
+		return Data{}, fmt.Errorf("get PKI: %w", err)
 	}
 
 	return Data{

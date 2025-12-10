@@ -54,7 +54,7 @@ func (c *Config) UseDefault(criSupported bool) error {
 func (c *Config) UseInitConfig(initConfig init_config.Config) error {
 	registrySettings, err := initConfig.ToRegistrySettings()
 	if err != nil {
-		return err
+		return fmt.Errorf("get registry settings: %w", err)
 	}
 
 	settings := module_config.DeckhouseSettings{
@@ -108,7 +108,7 @@ func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
 
-func (c *Config) DeckhouseSettingsToMap() (bool, map[string]any, error) {
+func (c *Config) DeckhouseSettingsToMap() (exist bool, settings map[string]any, err error) {
 	if c.LegacyMode {
 		return false, nil, nil
 	}

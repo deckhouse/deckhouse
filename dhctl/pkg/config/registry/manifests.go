@@ -24,6 +24,11 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
+type (
+	secretData  map[string][]byte
+	contextData map[string]any
+)
+
 func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 	return &ManifestBuilder{
 		modeModel:  modeModel,
@@ -39,17 +44,17 @@ type ManifestBuilder struct {
 // =======================
 // Secrets
 // =======================
-func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI func() (PKI, error)) (map[string][]byte, error) {
+func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI getPKI) (secretData, error) {
 	inClusterData, err := b.modeModel.InClusterData(getPKI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get incluster data: %w", err)
 	}
 
 	address, path := inClusterData.AddressAndPath()
 
 	dockerCfg, err := inClusterData.DockerCfg()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get docker config: %w", err)
 	}
 
 	ret := deckhouse_registry.Config{
@@ -62,38 +67,38 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI func() (PKI, error)
 	return ret.ToMap(), nil
 }
 
-func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
+func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (exist bool, data secretData, err error) {
 	if b.legacyMode {
 		return false, nil, nil
 	}
 
 	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
-		return true, nil, err
+		return true, nil, fmt.Errorf("get bashible config: %w", err)
 	}
 
 	cfgYaml, err := yaml.Marshal(cfg)
 	if err != nil {
 		return true, nil, fmt.Errorf("marshal bashible config: %w", err)
 	}
-	return true, map[string][]byte{"config": cfgYaml}, nil
+	return true, secretData{"config": cfgYaml}, nil
 }
 
 // =======================
 // Context
 // =======================
-func (b *ManifestBuilder) KubeadmTplCtx() map[string]any {
+func (b *ManifestBuilder) KubeadmTplCtx() contextData {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
-	return map[string]any{
+	return contextData{
 		"address": address,
 		"path":    path,
 	}
 }
 
-func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]any, error) {
+func (b *ManifestBuilder) BashibleTplCtx(getPKI getPKI) (contextData, error) {
 	bashibleCfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get bashible config: %w", err)
 	}
 
 	bashibleCtx := bashibleCfg.ToContext()
@@ -105,7 +110,7 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 
 	ret, err := bashibleCtx.ToMap()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("map bashible context: %w", err)
 	}
 
 	initCfg, err := getPKI()
