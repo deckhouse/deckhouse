@@ -408,14 +408,14 @@
         To check the module releases status, run the following command:
 
         ```bash
-        kubectl get mr -l module={{ $labels.moduleName }}
+        d8 k get mr -l module={{ $labels.moduleName }}
         ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
 
         This major release has from-to version constraints that must be met before applying the update.
         To check the update instructions (from-to versions), run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        d8 k get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
         This will show you the update paths including the from-to versions defined in the release.{{ end }}

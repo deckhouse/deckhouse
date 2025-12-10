@@ -10,7 +10,7 @@ alerts:
         Check the status of the instances in the cluster with the following command:
 
         ```shell
-        kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}
+        d8 k get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}
         ```
       summary: |
         There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
@@ -439,7 +439,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -604,7 +604,7 @@ alerts:
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        d8 k -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
         ```
       summary: |
         Cloud data discoverer cannot get data from the cloud.
@@ -619,7 +619,7 @@ alerts:
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        d8 k -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
         ```
       summary: |
         Cloud data discoverer cannot save data to a Kubernetes resource.
@@ -653,7 +653,7 @@ alerts:
         To check the Pod's status, run the following command:
 
         ```shell
-        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
         ```
       summary: |
         The cluster-autoscaler Pod is NOT Running.
@@ -673,7 +673,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
       summary: |
         Too many cluster-autoscaler restarts detected.
@@ -694,19 +694,19 @@ alerts:
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
            ```
       summary: |
         Cluster-autoscaler target is missing in Prometheus.
@@ -733,7 +733,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
       summary: |
         Cluster-autoscaler is issuing too many errors.
@@ -1180,13 +1180,13 @@ alerts:
         - To check the Deployment's status:
 
           ```shell
-          kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
+          d8 k -n d8-monitoring get deployment grafana-v10 -o json | jq .status
           ```
 
         - To check a Pod's status:
 
           ```shell
-          kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
+          d8 k -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
       summary: |
         One or more Grafana Pods are NOT Running.
@@ -1231,7 +1231,7 @@ alerts:
         To investigate the issue, check the logs:
 
         ```shell
-        kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
+        d8 k -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
         ```
       summary: |
         Excessive Grafana restarts detected.
@@ -1252,19 +1252,19 @@ alerts:
         1. Check the availability and status of Grafana Pods:
 
            ```shell
-           kubectl -n d8-monitoring get pods -l app=grafana-v10
+           d8 k -n d8-monitoring get pods -l app=grafana-v10
            ```
 
         2. Check the availability of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring get deployment grafana-v10
+           d8 k -n d8-monitoring get deployment grafana-v10
            ```
 
         3. Examine the status of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment grafana-v10
+           d8 k -n d8-monitoring describe deployment grafana-v10
            ```
       summary: |
         Grafana target is missing in Prometheus.
@@ -1940,7 +1940,7 @@ alerts:
         To check the Pod's status, run the following command:
 
         ```shell
-        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
         ```
       summary: |
         The machine-controller-manager Pod is NOT Running.
@@ -1960,7 +1960,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
+        d8 k -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
         ```
       summary: |
         Too many machine-controller-manager restarts detected.
@@ -1980,19 +1980,19 @@ alerts:
         1. Check availability and status of `machine-controller-manager` Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
            ```
 
         2. Verify availability of the `machine-controller-manager` Deployment:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get deployment machine-controller-manager
            ```
 
         3. Check the Deployment’s status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager describe deployment machine-controller-manager
            ```
       summary: |
         Machine-controller-manager target is missing in Prometheus.
@@ -2118,14 +2118,14 @@ alerts:
         To check the module releases status, run the following command:
 
         ```bash
-        kubectl get mr -l module={{ $labels.moduleName }}
+        d8 k get mr -l module={{ $labels.moduleName }}
         ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
 
         This major release has from-to version constraints that must be met before applying the update.
         To check the update instructions (from-to versions), run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        d8 k get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
         This will show you the update paths including the from-to versions defined in the release.{{ end }}
@@ -2628,19 +2628,19 @@ alerts:
         1. Check the StatefulSet status:
 
            ```shell
-           kubectl -n d8-monitoring describe statefulset prometheus-longterm
+           d8 k -n d8-monitoring describe statefulset prometheus-longterm
            ```
 
         2. Inspect the PersistentVolumeClaim (if used):
 
            ```shell
-           kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+           d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
            ```
 
         3. Inspect the Pod's state:
 
            ```shell
-           kubectl -n d8-monitoring describe pod prometheus-longterm-0
+           d8 k -n d8-monitoring describe pod prometheus-longterm-0
            ```
       summary: |
         Prometheus-longterm target is missing in Prometheus.
@@ -2865,7 +2865,7 @@ alerts:
         To get more details, check the Pod logs:
 
         ```shell
-        kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+        d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
         ```
       summary: |
         Terraform-state-exporter has encountered errors.
@@ -2965,13 +2965,13 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
       summary: |
         Terraform-state-exporter Pod is not Ready.
@@ -2990,13 +2990,13 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
       summary: |
         Terraform-state-exporter Pod is not Running.
@@ -3015,13 +3015,13 @@ alerts:
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
 
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
       summary: |
         Terraform-state-exporter target is missing in Prometheus.
@@ -3040,13 +3040,13 @@ alerts:
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
 
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
       summary: |
         Prometheus can't scrape terraform-state-exporter.
@@ -3060,7 +3060,7 @@ alerts:
       description: |-
         The following modules use the Trickster component:
 
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
         * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
         * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -3069,13 +3069,13 @@ alerts:
         1. Inspect the Deployment's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment trickster
+           d8 k -n d8-monitoring describe deployment trickster
            ```
 
         2. Inspect the Pod's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app=trickster
+           d8 k -n d8-monitoring describe pod -l app=trickster
            ```
 
         3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -3083,7 +3083,7 @@ alerts:
            Make sure Prometheus is running:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
            ```
       summary: |
         Trickster target is missing in Prometheus.
@@ -3097,7 +3097,7 @@ alerts:
       description: |-
         The following modules use the Trickster component:
 
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
         * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
         * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -3106,13 +3106,13 @@ alerts:
         1. Inspect the Deployment's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment trickster
+           d8 k -n d8-monitoring describe deployment trickster
            ```
 
         2. Inspect the Pod's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app=trickster
+           d8 k -n d8-monitoring describe pod -l app=trickster
            ```
 
         3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -3120,7 +3120,7 @@ alerts:
            Make sure Prometheus is running:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
            ```
       summary: |
         Trickster target is missing in Prometheus.
@@ -3587,7 +3587,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -3978,7 +3978,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -3997,13 +3997,13 @@ alerts:
         To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
+        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
         ```
 
         To get a list of the Ingress objects using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
+        d8 k get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
         ```
       summary: |
         Deprecated GeoIP version 1 is used in the cluster.
@@ -4020,7 +4020,7 @@ alerts:
         For details, check the logs:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs {{$labels.pod}}
+        d8 k -n d8-cloud-instance-manager logs {{$labels.pod}}
         ```
 
         Troubleshooting options:
@@ -4880,13 +4880,13 @@ alerts:
         1. Check the deployment details:
 
            ```bash
-           kubectl -n kube-system describe deployment -l k8s-app=kube-dns
+           d8 k -n kube-system describe deployment -l k8s-app=kube-dns
            ```
 
         2. Check the pod details:
 
            ```bash
-           kubectl -n kube-system describe pod -l k8s-app=kube-dns
+           d8 k -n kube-system describe pod -l k8s-app=kube-dns
            ```
       summary: |
         Kube-dns or CoreDNS are not being monitored.
@@ -5684,7 +5684,20 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.  \nThis may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.\n\nTo resolve the issue, add the following to the `master` NodeGroup spec:\n\n```yaml\n  nodeTemplate:\n    taints:\n    - effect: NoSchedule\n      key: node-role.kubernetes.io/control-plane\n```\n\nNote that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.\n"
+      description: |
+        The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.
+        This may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.
+
+        To resolve the issue, add the following to the `master` NodeGroup spec:
+
+        ```yaml
+          nodeTemplate:
+            taints:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/control-plane
+        ```
+
+        Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.
       summary: |
         The master NodeGroup is missing the required control-plane taint.
       severity: "4"
@@ -5732,7 +5745,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5740,13 +5753,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -5785,7 +5798,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5793,13 +5806,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -5837,7 +5850,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5845,13 +5858,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -6689,7 +6702,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.

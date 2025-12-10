@@ -23,9 +23,9 @@
     summary: The `{{`{{ $labels.image }}`}}` image is missing from the registry.
     description: |
       Deckhouse has detected that the `{{`{{ $labels.image }}`}}` image is missing from the container registry.
-      
+
       To resolve this issue, check whether the `{{`{{ $labels.image }}`}}` image is available in the following sources:
-      
+
       - The `{{`{{ $labels.namespace }}`}}` namespace.
       - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
       - The `{{`{{ $labels.container }}`}}` container in the registry.
@@ -50,7 +50,7 @@
     summary: The `{{`{{ $labels.image }}`}}` image name is incorrect.
     description: |
       Deckhouse has detected that the `{{`{{ $labels.image }}`}}` image name is incorrect.
-      
+
       To resolve this issue, check that the `{{`{{ $labels.image }}`}}` image name is spelled correctly in the following sources:
 
       - The `{{`{{ $labels.namespace }}`}}` namespace.
@@ -79,7 +79,7 @@
       Deckhouse has detected that the container registry is not available for the `{{`{{ $labels.image }}`}}` image.
 
       To resolve this issue, investigate the possible causes in the following sources:
-      
+
       - The `{{`{{ $labels.namespace }}`}}` namespace.
       - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
       - The `{{`{{ $labels.container }}`}}` container in the registry.
@@ -164,9 +164,9 @@
       - The `{{`{{ $labels.container }}`}}` container in the registry.
 
       To resolve this issue, review the exporter logs:
-      
+
       ```bash
-      kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+      d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
       ```
 
 {{- end }}

@@ -22,7 +22,7 @@
         For details, check the logs:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs {{`{{$labels.pod}}`}}
+        d8 k -n d8-cloud-instance-manager logs {{`{{$labels.pod}}`}}
         ```
 
         Troubleshooting options:
