@@ -270,13 +270,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	configConfigurationErrorMetricsLabels := map[string]string{
-		"version": release.GetVersion().String(),
-		"module":  release.GetModuleName(),
-		"error":   "",
-	}
-
-	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 0, configConfigurationErrorMetricsLabels)
+	r.resetConfigurationErrorMetric(release)
 
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
@@ -399,6 +393,19 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// resetConfigurationErrorMetric resets the ModuleConfigurationError metric to 0 for the given release.
+// This should be called at the beginning of each reconcile to ensure the metric reflects
+// the current state (no errors) before validation checks are performed.
+func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelease) {
+	configConfigurationErrorMetricsLabels := map[string]string{
+		"version": release.GetVersion().String(),
+		"module":  release.GetModuleName(),
+		"error":   "",
+	}
+
+	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 0, configConfigurationErrorMetricsLabels)
 }
 
 // patchManualRelease modify deckhouse release with approved status
