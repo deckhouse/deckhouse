@@ -104,8 +104,12 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
   swapoff "$SWAPFILE" 2>/dev/null || true
   rm -f "$SWAPFILE"
-  bb-log-info "Creating swapfile with dd"
-  dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SIZE_NUM * 1024)) status=progress
+  if command -v fallocate >/dev/null 2>&1 && fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
+    bb-log-info "Swapfile created with fallocate"
+  else
+    bb-log-info "fallocate unavailable or failed, using dd (may take time)"
+    dd if=/dev/zero of="$SWAPFILE" bs=64M count=$((SIZE_NUM * 16)) status=progress
+  fi
   chmod 600 "$SWAPFILE"
   mkswap "$SWAPFILE"
   bb-log-info "Swapfile formatted successfully"
