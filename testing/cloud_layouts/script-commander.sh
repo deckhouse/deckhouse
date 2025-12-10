@@ -1250,6 +1250,9 @@ function run-test() {
   if [[ "$PROVIDER" == "Static" ]]; then
     echo "Provider = $PROVIDER: switch registry"
     registry_id=$(create_registry "${DECKHOUSE_E2E_DOCKERCFG}")
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
+    fi
   elif [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
     echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
     registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
