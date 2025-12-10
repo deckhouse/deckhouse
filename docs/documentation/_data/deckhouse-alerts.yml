@@ -2632,19 +2632,19 @@ alerts:
         1. Check the StatefulSet status:
 
            ```shell
-           kubectl -n d8-monitoring describe statefulset prometheus-longterm
+           d8 k -n d8-monitoring describe statefulset prometheus-longterm
            ```
 
         2. Inspect the PersistentVolumeClaim (if used):
 
            ```shell
-           kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+           d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
            ```
 
         3. Inspect the Pod's state:
 
            ```shell
-           kubectl -n d8-monitoring describe pod prometheus-longterm-0
+           d8 k -n d8-monitoring describe pod prometheus-longterm-0
            ```
       summary: |
         Prometheus-longterm target is missing in Prometheus.
@@ -3591,7 +3591,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
