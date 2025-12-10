@@ -343,7 +343,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 func configFromSecret(secret v1core.Secret) (Params, error) {
 	ret := Params{
-		Mode:       string(secret.Data["mode"]),
+		Mode:       registry_const.ToModeType(string(secret.Data["mode"])),
 		ImagesRepo: string(secret.Data["imagesRepo"]),
 		UserName:   string(secret.Data["username"]),
 		Password:   string(secret.Data["password"]),

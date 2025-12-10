@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 
@@ -140,9 +139,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 
 func (m *MetaConfig) prepareRegistry() error {
 	var (
-		defaultCRI        string
+		defaultCRI        registry_const.CRIType
 		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
-		initConfig        *initconfig.Config
+		initConfig        *registry_initconfig.Config
 	)
 
 	// Extract defaultCRI

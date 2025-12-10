@@ -37,10 +37,10 @@ const (
 )
 
 type (
-	ModeType      = string
-	CheckModeType = string
-	SchemeType    = string
-	CRIType       = string
+	ModeType      string
+	CheckModeType string
+	SchemeType    string
+	CRIType       string
 )
 
 func ToModeType(mode string) ModeType {
@@ -68,7 +68,7 @@ func ToCheckModeType(mode string) CheckModeType {
 }
 
 func ToScheme(scheme string) SchemeType {
-	if strings.EqualFold(scheme, SchemeHTTP) {
+	if strings.EqualFold(scheme, string(SchemeHTTP)) {
 		return SchemeHTTP
 	}
 	return SchemeHTTPS

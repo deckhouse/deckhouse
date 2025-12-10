@@ -25,8 +25,8 @@ import (
 )
 
 type (
-	secretData  map[string][]byte
-	contextData map[string]any
+	secretData  = map[string][]byte
+	contextData = map[string]any
 )
 
 func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {

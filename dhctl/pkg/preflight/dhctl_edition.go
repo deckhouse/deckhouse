@@ -90,7 +90,7 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 	image := pc.installConfig.GetRemoteImage(true)
 
 	var versionTagRef name.Reference
-	if strings.ToLower(registry.Scheme) == "http" {
+	if strings.ToLower(string(registry.Scheme)) == "http" {
 		versionTagRef, err = name.ParseReference(image, name.Insecure)
 	} else {
 		versionTagRef, err = name.ParseReference(image)
@@ -127,7 +127,7 @@ func (pc *Checker) prepareTLS() (*http.Client, error) {
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
 	registry := pc.metaConfig.Registry.Settings.RemoteData
-	if strings.ToLower(registry.Scheme) == "http" || len(registry.CA) == 0 {
+	if strings.ToLower(string(registry.Scheme)) == "http" || len(registry.CA) == 0 {
 		client.Transport = httpTransport
 		return client, nil
 	}

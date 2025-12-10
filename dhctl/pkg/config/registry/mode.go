@@ -24,7 +24,7 @@ import (
 )
 
 type (
-	getPKI func() (PKI, error)
+	getPKI = func() (PKI, error)
 )
 
 type ModeSettings struct {
@@ -123,7 +123,7 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 	}
 
 	cfg := bashible.Config{
-		Mode:       m.Mode,
+		Mode:       string(m.Mode),
 		ImagesBase: m.InClusterImagesRepo,
 		Hosts:      mirrors,
 	}

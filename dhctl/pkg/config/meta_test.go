@@ -26,6 +26,8 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -242,10 +244,10 @@ func TestPrepareRegistry(t *testing.T) {
 				},
 			})
 			require.Equal(t, cfg.Registry.LegacyMode, true)
-			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeUnmanaged)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
 			require.Equal(t, registry.Username, "a")
 			require.Equal(t, registry.Password, "b")
 			require.Equal(t, registry.CA, "")
@@ -253,10 +255,10 @@ func TestPrepareRegistry(t *testing.T) {
 		t.Run("Default -> CE edition registry && direct && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 			require.Equal(t, cfg.Registry.LegacyMode, false)
-			require.Equal(t, cfg.Registry.Settings.Mode, "Direct")
+			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeDirect)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
 			require.Equal(t, registry.Password, "")
 			require.Equal(t, registry.Username, "")
 			require.Equal(t, registry.CA, "")
@@ -284,10 +286,10 @@ spec:
 				},
 			})
 			require.Equal(t, cfg.Registry.LegacyMode, false)
-			require.Equal(t, cfg.Registry.Settings.Mode, "Unmanaged")
+			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeUnmanaged)
 			registry := cfg.Registry.Settings.RemoteData
 			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-			require.Equal(t, registry.Scheme, "HTTPS")
+			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
 			require.Equal(t, registry.Username, "test-user")
 			require.Equal(t, registry.Password, "test-password")
 			require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")

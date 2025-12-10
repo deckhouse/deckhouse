@@ -85,7 +85,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer tun.Stop()
 
 	registryURL := &url.URL{
-		Scheme: strings.ToLower(registry.Scheme),
+		Scheme: strings.ToLower(string(registry.Scheme)),
 		Host:   registryAddress,
 		Path:   "/v2/",
 	}
@@ -164,7 +164,7 @@ func prepareRegistryRequest(
 	registryAddress, _ := registry.AddressAndPath()
 
 	registryURL := &url.URL{
-		Scheme: strings.ToLower(registry.Scheme),
+		Scheme: strings.ToLower(string(registry.Scheme)),
 		Host:   registryAddress,
 		Path:   registryPath,
 	}
@@ -215,7 +215,7 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.ToLower(registry.Scheme) == "http" {
+	if strings.ToLower(string(registry.Scheme)) == "http" {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}

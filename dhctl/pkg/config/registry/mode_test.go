@@ -154,7 +154,7 @@ func TestModeDirect(t *testing.T) {
 			require.NoError(t, err)
 
 			expect := bashible.Config{
-				Mode:           constant.ModeDirect,
+				Mode:           string(constant.ModeDirect),
 				Version:        actual.Version,
 				ImagesBase:     constant.HostWithPath,
 				ProxyEndpoints: nil,
@@ -264,7 +264,7 @@ func TestModeUnmanaged(t *testing.T) {
 			require.NoError(t, err)
 
 			expect := bashible.Config{
-				Mode:           constant.ModeUnmanaged,
+				Mode:           string(constant.ModeUnmanaged),
 				Version:        actual.Version,
 				ImagesBase:     "r.example.com/test",
 				ProxyEndpoints: nil,

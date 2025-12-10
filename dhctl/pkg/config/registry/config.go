@@ -22,7 +22,7 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-type settingsData map[string]any
+type settingsData = map[string]any
 
 type Config struct {
 	Settings          ModeSettings

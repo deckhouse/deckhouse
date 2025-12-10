@@ -246,7 +246,7 @@ func (b *ConfigBuilder) build() (*Config, error) {
 	}
 
 	ret := Config{
-		Mode:           mode,
+		Mode:           string(mode),
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: b.proxyEndpoints(),
 		Hosts:          b.hosts(),
