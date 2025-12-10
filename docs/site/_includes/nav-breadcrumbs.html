@@ -9,6 +9,7 @@
         <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
       {%- endif %}
 
+  {%- if page.product_code == kubernetes-platform %}
       <!-- module-version-badge -->
       <div id="doc-versions-menu" class="channel-menu submenu-parent">
         {%- unless site.mode == 'module' %}
@@ -19,6 +20,7 @@
           {%- endif %}
         {%- endunless -%}
       </div>
+  {%- endif %}
   </div>
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
