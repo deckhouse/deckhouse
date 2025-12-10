@@ -1,0 +1,21 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-disallowed-custom-resources
+tests:
+  - name: operation-policy
+    template: ../../templates/operation/disallowed-custom-resources.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-container
+        object: disallowed-container.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-init-container
+        object: disallowed-initcontainer.yaml
+        assertions:
+          - violations: yes

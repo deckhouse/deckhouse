@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed
+  namespace: default
+spec:
+  containers:
+  - name: foo
+    image: gpu-compute
+    resources:
+      limits:
+        disallowed-gpu/gpu: "1"
