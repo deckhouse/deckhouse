@@ -13,7 +13,7 @@ To properly restore the cluster, follow these steps on the master node:
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
