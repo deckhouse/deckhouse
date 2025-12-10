@@ -19,12 +19,12 @@
         1. Check the deployment details:
 
            ```bash
-           kubectl -n kube-system describe deployment -l k8s-app=kube-dns
+           d8 k -n kube-system describe deployment -l k8s-app=kube-dns
            ```
 
         2. Check the pod details:
 
            ```bash
-           kubectl -n kube-system describe pod -l k8s-app=kube-dns
+           d8 k -n kube-system describe pod -l k8s-app=kube-dns
            ```
 {{- end }}
