@@ -25,12 +25,12 @@ func Test(t *testing.T) {
 // TODO: remove fake crd modules
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-zvirt"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-dynamix"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
       prefix: sandbox
-      provider: Zvirt
+      provider: Dynamix
     clusterDomain: cluster.local
     clusterType: Cloud
     defaultCRI: Containerd
@@ -52,34 +52,64 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
+  cniSecretData: "REVDT0RJUlVZIE9CUkFUTk8gQllTVFJP"
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
-    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
-    kind: ZvirtClusterConfiguration
-    layout: Standard
-    masterNodeGroup:
-      instanceClass:
-        etcdDiskSizeGb: 10
-        memory: 8192
-        numCPUs: 4
-        rootDiskSizeGb: 50
-        storageDomainID: fdc40068-1975-46a3-a1db-7b3731316d87
-        template: awesome-template
-        vnicProfileID: ad0bfe09-f7a3-4f88-b6af-b71680a82ca4
-      replicas: 1
+    kind: DynamixClusterConfiguration
+    layout: StandardWithInternalNetwork
+    sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCu..."
+    location: dynamix
+    account: acc_user
+    nodeNetworkCIDR: "10.241.32.0/24"
+    nameservers:
+      - "10.0.0.10"
     provider:
-      caBundle: ""
+      controllerUrl: "https://controller.example.com"
+      oAuth2Url: "https://sso.example.com"
+      appId: "example-app-id"
+      appSecret: "example-app-secret"
       insecure: true
-      password: imsostrong
-      server: https://zvirt.example.com/api
-      username: user
-    sshPublicKey: ssh-rsa deadbeef
+    masterNodeGroup:
+      replicas: 1
+      instanceClass:
+        numCPUs: 6
+        memory: 16384
+        rootDiskSizeGb: 50
+        etcdDiskSizeGb: 15
+        imageName: "dynamix-image-1.0"
+        storageEndpoint: "SharedTatlin_G1_SEP"
+        pool: "pool_a"
+        externalNetwork: "extnet_vlan_1700"
+    nodeGroups:
+      - name: worker
+        replicas: 2
+        instanceClass:
+          numCPUs: 4
+          memory: 8192
+          rootDiskSizeGb: 50
+          imageName: "dynamix-image-1.0"
+          externalNetwork: "extnet_vlan_1700"
   providerDiscoveryData:
     apiVersion: deckhouse.io/v1
-    kind: ZvirtCloudProviderDiscoveryData
-    storageDomains: []
+    kind: DynamixCloudProviderDiscoveryData
     zones:
-      - default`
+      - zone-1
+    storageEndpoints:
+      - name: Default
+        pools:
+          - pool_a
+          - pool_b
+        isEnabled: true
+        isDefault: true
+  storageClasses:
+    - name: dynamix-ssd
+      storageEndpoint: SharedTatlin_G1_SEP
+      pool: pool_a
+      allowVolumeExpansion: true
+    - name: dynamix-hdd
+      storageEndpoint: SharedTatlin_G1_SEP
+      pool: pool_b
+      allowVolumeExpansion: false`
 
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
@@ -113,27 +143,27 @@ const tolerationsAnyNodeWithUninitialized = `
 - key: node.kubernetes.io/unreachable
 - key: node.kubernetes.io/network-unavailable`
 
-var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
+var _ = Describe("Module :: cloud-provider-dynamix :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-dynamix/candi")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/dynamix", "/deckhouse/ee/modules/030-cloud-provider-dynamix/candi")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-dynamix/candi")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
+		err = os.Symlink("/deckhouse/candi/cloud-providers/dynamix", "/deckhouse/ee/modules/030-cloud-provider-dynamix/candi")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("zVirt Suite A", func() {
+	Context("dynamix Suite A", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderZvirt", moduleValuesA)
+			f.ValuesSetFromYaml("cloudProviderDynamix", moduleValuesA)
 			f.HelmRender()
 		})
 
@@ -142,33 +172,32 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 
 			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("zvirt"))))
+			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dynamix"))))
 
-			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager")
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-dynamix", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
-- --cloud-provider=zvirt
+- --cloud-provider=dynamix
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node,cloud-node-lifecycle,service-lb-controller
 - --bind-address=127.0.0.1
 - --secure-port=10471
 - --v=4`))
 
-			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller")
+			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-dynamix", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
 			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 
-			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-zvirt", "csi-node")
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-dynamix", "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 
-			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-data-discoverer")
+			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-dynamix", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
-
 		})
 	})
 })
