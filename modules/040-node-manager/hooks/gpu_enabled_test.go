@@ -72,6 +72,17 @@ metadata:
 spec:
   providerID: static:///22d24f3645e885e88693cb5b235977af5acdc6c21efac9c075b56b618a1b5337
 `
+	gpuNodeCustomYaml = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-gpu-custom
+  labels:
+    node.deckhouse.io/group: worker-gpu-custom
+spec:
+  providerID: static:///22d24f3645e885e88693cb5b235977af5acdc6c21efac9c075b56b618a1b537
+`
 	ngsYaml = `
 ---
 apiVersion: deckhouse.io/v1
@@ -100,6 +111,21 @@ metadata:
   name: worker
 spec:
   nodeType: Static
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-gpu-custom
+spec:
+  gpu:
+    sharing: mig
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 1g.10gb
+  nodeType: Static
 `
 )
 
@@ -122,7 +148,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 
 	Context("Set GPU label on node", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(ngsYaml + gpuNode0Yaml + gpuNode1Yaml + workerNodeYaml + gpuNode2Yaml)
+			f.KubeStateSet(ngsYaml + gpuNode0Yaml + gpuNode1Yaml + workerNodeYaml + gpuNode2Yaml + gpuNodeCustomYaml)
+			f.ValuesSet("nodeManager.internal.customMIGNames.worker-gpu-custom", "custom-worker-gpu-custom-12345678")
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 
 			f.RunGoHook()
@@ -170,14 +197,27 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
             "name": "worker-0"
         }
       `
+			expectedWorkerGpuCustomLabels := `
+        {
+            "labels": {
+              "node.deckhouse.io/gpu": "",
+              "node.deckhouse.io/group": "worker-gpu-custom",
+              "node.deckhouse.io/device-gpu.config": "mig",
+              "nvidia.com/mig.config": "custom-worker-gpu-custom-12345678"
+            },
+            "name": "worker-gpu-custom"
+        }
+      `
 			workerGpu0 := f.KubernetesGlobalResource("Node", "worker-gpu-0")
 			workerGpu1 := f.KubernetesGlobalResource("Node", "worker-gpu-1")
 			workerGpu2 := f.KubernetesGlobalResource("Node", "worker-gpu-2")
+			workerGpuCustom := f.KubernetesGlobalResource("Node", "worker-gpu-custom")
 			worker := f.KubernetesGlobalResource("Node", "worker-0")
 
 			Expect(workerGpu0.Field("metadata")).To(MatchJSON(expectedWorkerGpu0Labels))
 			Expect(workerGpu1.Field("metadata")).To(MatchJSON(expectedWorkerGpu1Labels))
 			Expect(workerGpu2.Field("metadata")).To(MatchJSON(expectedWorkerGpu2Labels))
+			Expect(workerGpuCustom.Field("metadata")).To(MatchJSON(expectedWorkerGpuCustomLabels))
 			Expect(worker.Field("metadata")).To(MatchJSON(expectedWorkerLabels))
 
 		})
