@@ -68,7 +68,7 @@ func TestModeNoError(t *testing.T) {
 	}
 }
 
-func TestManifestsDirectMode(t *testing.T) {
+func TestModeDirect(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
 	getPKI := func() (PKI, error) {
@@ -166,7 +166,7 @@ func TestManifestsDirectMode(t *testing.T) {
 	})
 }
 
-func TestManifestsUnmanagedMode(t *testing.T) {
+func TestModeUnmanaged(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
 	getPKI := func() (PKI, error) {
