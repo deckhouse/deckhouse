@@ -1,9 +1,20 @@
-{% assign stage = include.stage %}
-{%- if stage %}
-{%- assign stage_long = stage | append: "_long" %}
-{%- if site.data.i18n.features[stage_long][page.lang] %}
+{%- assign stage = include.stage %}
+{%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
+{%- if stage and site.data.i18n.features[stage_long][page.lang] %}
+  {%- capture alert_content %}
+{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <i data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}<i>
+  {% endcapture %}
+  {%- if stage == "Experimental" or stage == "Preview" %}
 {% alert level="warning" %}
-{{ site.data.i18n.features[stage_long][page.lang] }}
+{{ alert_content }}
 {% endalert %}
-{%- endif %}
+  {%- elsif stage == "Deprecated" %}
+{% alert level="danger" %}
+{{ alert_content }}
+{% endalert %}
+  {%- else %}
+{% alert level="info" %}
+{{ alert_content }}
+{% endalert %}
+  {%- endif %}
 {%- endif %}
