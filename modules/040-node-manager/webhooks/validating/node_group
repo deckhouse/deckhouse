@@ -101,8 +101,8 @@ kubernetes:
     apiVersion: v1
     kind: nodes
     group: main
-    executeHookOnEvent: ["Added", "Modified", "Deleted"]
-    executeHookOnSynchronization: true
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
     labelSelector:
       matchLabels:
