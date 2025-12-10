@@ -52,17 +52,17 @@
         The Deployment is in the `MinimumReplicasUnavailable` state.
 
         Troubleshooting options:
-        
+
         - To check the Deployment's status:
-        
+
           ```shell
-          kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
+          d8 k -n d8-monitoring get deployment grafana-v10 -o json | jq .status
           ```
 
         - To check a Pod's status:
-        
+
           ```shell
-          kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
+          d8 k -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
 
   - alert: D8GrafanaTargetDown
@@ -106,19 +106,19 @@
         1. Check the availability and status of Grafana Pods:
 
            ```shell
-           kubectl -n d8-monitoring get pods -l app=grafana-v10
+           d8 k -n d8-monitoring get pods -l app=grafana-v10
            ```
 
         2. Check the availability of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring get deployment grafana-v10
+           d8 k -n d8-monitoring get deployment grafana-v10
            ```
 
         3. Examine the status of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment grafana-v10
+           d8 k -n d8-monitoring describe deployment grafana-v10
            ```
 
 - name: d8.grafana.malfunctioning
@@ -148,11 +148,11 @@
         Grafana has restarted {{`{{ $value }}`}} times in the last hour.
 
         Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
-      
+
         To investigate the issue, check the logs:
 
         ```shell
-        kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
+        d8 k -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
         ```
 
   - alert: D8GrafanaDeprecatedCustomDashboardDefinition
