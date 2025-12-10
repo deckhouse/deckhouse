@@ -102,7 +102,7 @@ weight: 50
 
 ---
 
-### настройки апрувов
+### Настройки апрувов
 
 ![Настройки апрувов](/images/code/approval_rules_settings_ru.png)
 
