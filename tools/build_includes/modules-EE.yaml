@@ -69,11 +69,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
   stageDependencies:
