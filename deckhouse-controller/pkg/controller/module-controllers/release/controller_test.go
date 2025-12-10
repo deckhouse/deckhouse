@@ -34,6 +34,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	promdto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -49,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -63,6 +65,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
 )
 
@@ -1875,4 +1878,176 @@ func repeatTest(fn func()) {
 	for range repeatCount {
 		fn()
 	}
+}
+
+func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
+	// Disable golden file checking for these tests
+	suite.testDataFileName = ""
+
+	const moduleName = "test-module"
+
+	suite.Run("metric is reset to 0 with correct labels", func() {
+
+		// Setup metric storage with new registry to isolate metrics
+		metricStorage := metricstorage.NewMetricStorage(
+			metricstorage.WithNewRegistry(),
+			metricstorage.WithLogger(log.NewNop()),
+		)
+
+		// Register the metric first
+		_, err := metricStorage.RegisterGauge(
+			metrics.ModuleConfigurationError,
+			[]string{"module", "version", "error"},
+			options.WithHelp("Gauge indicating module configuration errors"),
+		)
+		require.NoError(suite.T(), err)
+
+		release := &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-module-v1.2.3",
+			},
+			Spec: v1alpha1.ModuleReleaseSpec{
+				ModuleName: moduleName,
+				Version:    "1.2.3",
+			},
+		}
+
+		r := &reconciler{
+			metricStorage: metricStorage,
+		}
+
+		// Call the function
+		r.resetConfigurationErrorMetric(release)
+
+		// Gather metrics and verify
+		metricFamilies, err := metricStorage.Gather()
+		require.NoError(suite.T(), err)
+
+		// Find the ModuleConfigurationError metric family
+		var found bool
+		for _, family := range metricFamilies {
+			if family.GetName() == metrics.ModuleConfigurationError {
+				found = true
+				require.Len(suite.T(), family.GetMetric(), 1, "%s should have exactly one metric", metrics.ModuleConfigurationError)
+
+				metric := family.GetMetric()[0]
+
+				// Verify value is 0
+				require.NotNil(suite.T(), metric.GetGauge())
+				assert.Equal(suite.T(), 0.0, metric.GetGauge().GetValue(), "%s metric value should be 0", metrics.ModuleConfigurationError)
+
+				// Verify labels
+				labels := make(map[string]string)
+				for _, labelPair := range metric.GetLabel() {
+					labels[labelPair.GetName()] = labelPair.GetValue()
+				}
+
+				assert.Equal(suite.T(), moduleName, labels["module"], "module label should match")
+				assert.Equal(suite.T(), "1.2.3", labels["version"], "version label should match")
+				assert.Equal(suite.T(), "", labels["error"], "error label should be empty")
+			}
+		}
+		require.True(suite.T(), found, "%s metric should be found", metrics.ModuleConfigurationError)
+	})
+
+	suite.Run("metric is reset when function is called directly", func() {
+		metricStorage := metricstorage.NewMetricStorage(
+			metricstorage.WithNewRegistry(),
+			metricstorage.WithLogger(log.NewNop()),
+		)
+
+		_, err := metricStorage.RegisterGauge(
+			metrics.ModuleConfigurationError,
+			[]string{"module", "version", "error"},
+		)
+		require.NoError(suite.T(), err)
+
+		release := &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-module-v1.0.0"},
+			Spec: v1alpha1.ModuleReleaseSpec{
+				ModuleName: moduleName,
+				Version:    "1.0.0",
+			},
+		}
+
+		r := &reconciler{
+			metricStorage: metricStorage,
+		}
+
+		// First, set metric to 1 to simulate previous error state
+		metricStorage.GaugeSet(
+			metrics.ModuleConfigurationError,
+			1,
+			map[string]string{
+				"module":  release.GetModuleName(),
+				"version": release.GetVersion().String(),
+				"error":   "previous error",
+			},
+		)
+
+		// Verify metric is set to 1
+		metricFamilies, err := metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		initialValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), 1.0, initialValue, "%s metric should be 1 before reset", metrics.ModuleConfigurationError)
+
+		// Call the reset function
+		r.resetConfigurationErrorMetric(release)
+
+		// Verify metric is reset to 0
+		metricFamilies, err = metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		resetValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), 0.0, resetValue, "%s metric should be reset to 0 after calling reset function", metrics.ModuleConfigurationError)
+
+		// Verify error label is empty
+		labels := suite.getMetricLabels(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), "", labels["error"], "error label should be empty after reset")
+	})
+}
+
+// Helper function to get metric value from gathered metrics
+func (suite *ReleaseControllerTestSuite) getMetricValue(metricFamilies []*promdto.MetricFamily, metricName string, release *v1alpha1.ModuleRelease) float64 {
+	for _, family := range metricFamilies {
+		if family.GetName() != metricName {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			labels := make(map[string]string)
+			for _, labelPair := range metric.GetLabel() {
+				labels[labelPair.GetName()] = labelPair.GetValue()
+			}
+
+			if labels["module"] == release.GetModuleName() && labels["version"] == release.GetVersion().String() {
+				if metric.GetGauge() != nil {
+					return metric.GetGauge().GetValue()
+				}
+			}
+		}
+	}
+
+	return -1 // Not found
+}
+
+// Helper function to get metric labels from gathered metrics
+func (suite *ReleaseControllerTestSuite) getMetricLabels(metricFamilies []*promdto.MetricFamily, metricName string, release *v1alpha1.ModuleRelease) map[string]string {
+	for _, family := range metricFamilies {
+		if family.GetName() != metricName {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			labels := make(map[string]string)
+			for _, labelPair := range metric.GetLabel() {
+				labels[labelPair.GetName()] = labelPair.GetValue()
+			}
+
+			if labels["module"] == release.GetModuleName() && labels["version"] == release.GetVersion().String() {
+				return labels
+			}
+		}
+	}
+
+	return nil
 }
