@@ -61,17 +61,30 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
        - Run `d8 k delete node <node-name>`;
        - Power off the corresponding VMs or servers.
 
-{% alert level="warning" %}
-In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
-{% endalert %}
+   > **Important**. In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
 
 1. **Changing the number of master nodes in a cloud cluster**:
 
    - Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-{% alert level="warning" %}
-An odd number of master nodes is required to maintain etcd quorum stability.
-{% endalert %}
+   > **Important**. An odd number of master nodes is required to maintain etcd quorum stability.
+
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a cloud cluster**:
+
+   - In the cloud provider settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
+
+   [More details](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
+
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a static cluster**:
+
+   - Create a NodeGroup for the arbiter node and add the node to the cluster.
+   - Remove the labels `node-role.kubernetes.io/control-plane=""` and `node-role.kubernetes.io/master=""` from the extra master nodes.
+   - For **bare-metal clusters**:
+     - To correctly remove the nodes from `etcd`:
+       - Run `d8 k delete node <node-name>`;
+       - Power off the corresponding VMs or servers.
+
+   [More details](../../high-reliability-and-availability/enable.html#configuring-in-a-static-cluster).
 
 ### Removing the master role from a node without deleting the node itself
 
