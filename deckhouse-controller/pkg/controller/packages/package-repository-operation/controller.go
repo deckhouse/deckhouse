@@ -50,6 +50,8 @@ const (
 
 	// TODO: unify constant
 	packageTypeApplication = "Application"
+
+	cleanupOldOperationsCount = 5
 )
 
 type reconciler struct {
@@ -547,18 +549,18 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 
 	logger.Debug("found operations for the same repository", slog.Int("count", len(operations.Items)))
 
-	if len(operations.Items) <= 5 {
+	if len(operations.Items) <= cleanupOldOperationsCount {
 		logger.Debug("not enough operations to delete")
 		return res, nil
 	}
 
 	// sort operations by creation timestamp descending
 	sort.Slice(operations.Items, func(i, j int) bool {
-		return operations.Items[i].CreationTimestamp.Before(&operations.Items[j].CreationTimestamp)
+		return !operations.Items[i].CreationTimestamp.Before(&operations.Items[j].CreationTimestamp)
 	})
 
 	// delete all operations except the most recent 5
-	for _, op := range operations.Items[5:] {
+	for _, op := range operations.Items[cleanupOldOperationsCount:] {
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {
 			return res, fmt.Errorf("delete old operation: %w", err)
