@@ -17,49 +17,56 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-func TestModeNoError(t *testing.T) {
+func TestManifestsNoError(t *testing.T) {
 	tests := []struct {
 		name  string
-		input module_config.DeckhouseSettings
+		input Config
 	}{
 		{
 			name: "mode direct",
 			input: TestConfigBuilder(
 				WithModeDirect(),
-			).DeckhouseSettings,
+			),
 		},
 		{
 			name: "mode unmanaged",
 			input: TestConfigBuilder(
 				WithModeUnmanaged(),
-			).DeckhouseSettings,
+			),
 		},
 		{
-			name: "mode unmanaged && legacy ",
+			name: "mode unmanaged && legacy",
 			input: TestConfigBuilder(
-				WithModeUnmanaged(),
 				WithLegacyMode(),
-			).DeckhouseSettings,
+				WithModeUnmanaged(),
+			),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings, err := newModeSettings(tt.input)
-			require.NoError(t, err)
-			model := settings.ToModel()
-
-			t.Run("InClusterData", func(t *testing.T) {
-				_, err := model.InClusterData(GeneratePKI)
+			t.Run("DeckhouseRegistrySecretData", func(t *testing.T) {
+				_, err := tt.input.Manifest().
+					DeckhouseRegistrySecretData(GeneratePKI)
 				require.NoError(t, err)
 			})
 
-			t.Run("BashibleConfig", func(t *testing.T) {
-				_, err := model.BashibleConfig()
+			t.Run("RegistryBashibleConfigSecretData", func(t *testing.T) {
+				_, _, err := tt.input.Manifest().
+					RegistryBashibleConfigSecretData()
+				require.NoError(t, err)
+			})
+
+			t.Run("KubeadmTplCtx", func(t *testing.T) {
+				_ = tt.input.Manifest().
+					KubeadmTplCtx()
+			})
+
+			t.Run("BashibleTplCtx", func(t *testing.T) {
+				_, err := tt.input.Manifest().
+					BashibleTplCtx(GeneratePKI)
 				require.NoError(t, err)
 			})
 		})
