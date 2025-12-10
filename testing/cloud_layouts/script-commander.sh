@@ -265,11 +265,14 @@ function prepare_environment() {
     ;;
 
   "zVirt")
-    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64 #TODO upgrade
+    ZVIRT_BASE_DOMAIN="${LAYOUT_ZVIRT_BASE_DOMAIN}"
+    ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
+    ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
     ssh_user="altlinux"
-    bastion_host="185.11.73.171"
+    bastion_host="31.184.210.185"
     bastion_user="e2e-user"
-    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+    bastion_port="8022"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
 
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -279,12 +282,12 @@ function prepare_environment() {
       \"masterCount\": \"${MASTERS_COUNT}\",
       \"zVirtUsername\": \"${ZVIRT_USERNAME}\",
       \"zVirtPassword\": \"${ZVIRT_PASSWORD}\",
-      \"zVirtBaseDomain\": \"${MASTERS_BASE_DOMAIN}\",
-      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"zVirtBaseDomain\": \"${ZVIRT_BASE_DOMAIN}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
