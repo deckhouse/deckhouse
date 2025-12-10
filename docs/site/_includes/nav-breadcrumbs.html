@@ -1,4 +1,5 @@
 <div class="navigation__container">
+  {%- if page.product_code == 'kubernetes-platform' %}
   <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
     <div>
       {%- if site.mode == 'module' %}
@@ -20,6 +21,9 @@
         {%- endunless -%}
       </div>
   </div>
+  {%- else %}
+  <div style="width: 25em;"> </div>
+  {%- endif %}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {% include nav-breadcrumbs-pagepath.html %}
