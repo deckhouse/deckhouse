@@ -31,18 +31,26 @@ const (
 	certificateCommonName = "registry-ca"
 )
 
-type PKI = init_secret.Config
-type CertKey = init_secret.CertKey
+type (
+	PKI     = init_secret.Config
+	CertKey = init_secret.CertKey
+)
 
 func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
-	secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+	secret, err := kubeClient.
+		CoreV1().
+		Secrets(secretsNamespace).
+		Get(ctx, initSecretName, metav1.GetOptions{})
+
 	if err != nil {
 		return PKI{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
+
 	var ret PKI
 	if err := yaml.Unmarshal(secret.Data["config"], &ret); err != nil {
 		return PKI{}, fmt.Errorf("unmarshal secret data: %w", err)
 	}
+
 	return ret, nil
 }
 
@@ -63,5 +71,6 @@ func GeneratePKI() (PKI, error) {
 		Cert: string(cert),
 		Key:  string(key),
 	}
+
 	return ret, nil
 }

@@ -35,9 +35,11 @@ func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 		Password:   "test-password",
 		CheckMode:  constant.CheckModeDefault,
 	}
+
 	for _, opt := range opts {
 		opt(&settings)
 	}
+
 	return &settings
 }
 
@@ -198,8 +200,9 @@ func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registrySettings := RegistrySettings{}
+			var registrySettings RegistrySettings
 			registrySettings.ApplySettings(tt.input)
+
 			require.Equal(t, tt.expected, registrySettings)
 		})
 	}

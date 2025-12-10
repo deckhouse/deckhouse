@@ -36,10 +36,12 @@ const (
 	CRIContainerdV2 CRIType = "ContainerdV2"
 )
 
-type ModeType = string
-type CheckModeType = string
-type SchemeType = string
-type CRIType = string
+type (
+	ModeType      = string
+	CheckModeType = string
+	SchemeType    = string
+	CRIType       = string
+)
 
 func ToModeType(mode string) ModeType {
 	val := strings.ToLower(mode)

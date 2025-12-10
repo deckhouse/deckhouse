@@ -49,14 +49,18 @@ func (settings *DeckhouseSettings) ApplySettings(userSettings DeckhouseSettings)
 	*settings = DeckhouseSettings{
 		Mode: userSettings.Mode,
 	}
+
 	switch settings.Mode {
 	case constant.ModeDirect:
-		direct := RegistrySettings{}
+		var direct RegistrySettings
 		direct.ApplySettings(userSettings.Direct)
+
 		settings.Direct = &direct
+
 	case constant.ModeUnmanaged:
-		unmanaged := RegistrySettings{}
+		var unmanaged RegistrySettings
 		unmanaged.ApplySettings(userSettings.Unmanaged)
+
 		settings.Unmanaged = &unmanaged
 	}
 }
@@ -114,21 +118,27 @@ func (settings *RegistrySettings) ApplySettings(userSettings *RegistrySettings) 
 	if userSettings.ImagesRepo != "" {
 		settings.ImagesRepo = userSettings.ImagesRepo
 	}
+
 	if userSettings.Scheme != "" {
 		settings.Scheme = userSettings.Scheme
 	}
+
 	if userSettings.CA != "" {
 		settings.CA = userSettings.CA
 	}
+
 	if userSettings.Username != "" {
 		settings.Username = userSettings.Username
 	}
+
 	if userSettings.Password != "" {
 		settings.Password = userSettings.Password
 	}
+
 	if userSettings.License != "" {
 		settings.License = userSettings.License
 	}
+
 	if userSettings.CheckMode != "" {
 		settings.CheckMode = userSettings.CheckMode
 	}

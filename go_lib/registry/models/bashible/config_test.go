@@ -195,17 +195,21 @@ func TestConfigToContext(t *testing.T) {
 				ProxyEndpoints: []string{"192.168.1.1"},
 				Hosts: map[string]ConfigHosts{
 					"registry.d8-system.svc": {
-						Mirrors: []ConfigMirrorHost{{
-							Host:   "r.example.com",
-							Scheme: "https",
-							CA:     "==exampleCA==",
-							Auth: ConfigAuth{
-								Username: "user",
-								Password: "password",
-								Auth:     "auth"},
-							Rewrites: []ConfigRewrite{{
-								From: "^deckhouse/system",
-								To:   "deckhouse/ce"}}},
+						Mirrors: []ConfigMirrorHost{
+							{
+								Host:   "r.example.com",
+								Scheme: "https",
+								CA:     "==exampleCA==",
+								Auth: ConfigAuth{
+									Username: "user",
+									Password: "password",
+									Auth:     "auth",
+								},
+								Rewrites: []ConfigRewrite{{
+									From: "^deckhouse/system",
+									To:   "deckhouse/ce",
+								}},
+							},
 						},
 					},
 				},
@@ -218,17 +222,21 @@ func TestConfigToContext(t *testing.T) {
 				ProxyEndpoints:       []string{"192.168.1.1"},
 				Hosts: map[string]ContextHosts{
 					"registry.d8-system.svc": {
-						Mirrors: []ContextMirrorHost{{
-							Host:   "r.example.com",
-							Scheme: "https",
-							CA:     "==exampleCA==",
-							Auth: ContextAuth{
-								Username: "user",
-								Password: "password",
-								Auth:     "auth"},
-							Rewrites: []ContextRewrite{{
-								From: "^deckhouse/system",
-								To:   "deckhouse/ce"}}},
+						Mirrors: []ContextMirrorHost{
+							{
+								Host:   "r.example.com",
+								Scheme: "https",
+								CA:     "==exampleCA==",
+								Auth: ContextAuth{
+									Username: "user",
+									Password: "password",
+									Auth:     "auth",
+								},
+								Rewrites: []ContextRewrite{{
+									From: "^deckhouse/system",
+									To:   "deckhouse/ce",
+								}},
+							},
 						},
 					},
 				},
@@ -243,11 +251,13 @@ func TestConfigToContext(t *testing.T) {
 				ProxyEndpoints: nil,
 				Hosts: map[string]ConfigHosts{
 					"registry.d8-system.svc": {
-						Mirrors: []ConfigMirrorHost{{
-							Host:     "r.example.com",
-							Scheme:   "http",
-							Auth:     ConfigAuth{},
-							Rewrites: nil},
+						Mirrors: []ConfigMirrorHost{
+							{
+								Host:     "r.example.com",
+								Scheme:   "http",
+								Auth:     ConfigAuth{},
+								Rewrites: nil,
+							},
 						},
 					},
 				},
@@ -260,11 +270,13 @@ func TestConfigToContext(t *testing.T) {
 				ProxyEndpoints:       nil,
 				Hosts: map[string]ContextHosts{
 					"registry.d8-system.svc": {
-						Mirrors: []ContextMirrorHost{{
-							Host:     "r.example.com",
-							Scheme:   "http",
-							Auth:     ContextAuth{},
-							Rewrites: nil},
+						Mirrors: []ContextMirrorHost{
+							{
+								Host:     "r.example.com",
+								Scheme:   "http",
+								Auth:     ContextAuth{},
+								Rewrites: nil,
+							},
 						},
 					},
 				},
@@ -273,10 +285,14 @@ func TestConfigToContext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, tt.input.Validate())
+			err := tt.input.Validate()
+			require.NoError(t, err)
+
 			ctx := tt.input.ToContext()
 			require.Equal(t, tt.result, ctx)
-			require.NoError(t, ctx.Validate())
+
+			err = ctx.Validate()
+			require.NoError(t, err)
 		})
 	}
 }

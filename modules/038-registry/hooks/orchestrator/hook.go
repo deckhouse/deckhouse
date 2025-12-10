@@ -184,19 +184,21 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values := moduleValues.Get()
 
 	var (
-		inputs Inputs
-		err    error
+		initConfig init_secret.Config
+		inputs     Inputs
+		err        error
 	)
 
-	var initConfig init_secret.Config
 	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {
 		input.Logger.Info("Init secret snapshot found, trying to load init config")
 		if err = yaml.Unmarshal(initSecret.Config, &initConfig); err != nil {
 			err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
 		}
+
 		inputs.InitSecret = initConfig
 	}
+
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		input.Logger.Warn(
 			"Cannot get init config, the state will be processed without it",

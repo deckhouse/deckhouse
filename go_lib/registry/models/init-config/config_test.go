@@ -22,15 +22,17 @@ import (
 	"fmt"
 	"testing"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
 func generateDockerCfg(host, username, password string) string {
-	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
-	return fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, host, auth)
+	auth := fmt.Sprintf("%s:%s", username, password)
+	authBase64 := base64.StdEncoding.EncodeToString([]byte(auth))
+	return fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, host, authBase64)
 }
 
 // generateOldDockerCfg generates a Docker config in the legacy format.
@@ -59,6 +61,7 @@ func generateOldDockerCfg(host, username, password string) string {
 	if err != nil {
 		panic(err)
 	}
+
 	return string(data)
 }
 

@@ -27,17 +27,22 @@ func TestGeneratePKI(t *testing.T) {
 	t.Run("Generate PKI", func(t *testing.T) {
 		pki, err := GeneratePKI()
 		require.NoError(t, err)
+
 		assert.NotNil(t, pki.CA)
 	})
 }
 
 func TestGetPKI(t *testing.T) {
 	t.Run("Get PKI", func(t *testing.T) {
+		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
-		require.NoError(t, createInitSecret(t.Context(), kubeClient, false))
 
-		pki, err := GetPKI(t.Context(), kubeClient)
+		err := createInitSecret(ctx, kubeClient, false)
 		require.NoError(t, err)
+
+		pki, err := GetPKI(ctx, kubeClient)
+		require.NoError(t, err)
+
 		assert.NotNil(t, pki.CA)
 	})
 }

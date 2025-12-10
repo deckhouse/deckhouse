@@ -53,15 +53,20 @@ func TestModeNoError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			settings, err := newModeSettings(tt.input)
 			require.NoError(t, err)
-			model := settings.ToModel()
 
 			t.Run("InClusterData", func(t *testing.T) {
-				_, err := model.InClusterData(GeneratePKI)
+				_, err := settings.
+					ToModel().
+					InClusterData(GeneratePKI)
+
 				require.NoError(t, err)
 			})
 
 			t.Run("BashibleConfig", func(t *testing.T) {
-				_, err := model.BashibleConfig()
+				_, err := settings.
+					ToModel().
+					BashibleConfig()
+
 				require.NoError(t, err)
 			})
 		})
@@ -71,6 +76,7 @@ func TestModeNoError(t *testing.T) {
 func TestModeDirect(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
+
 	getPKI := func() (PKI, error) {
 		return pki, nil
 	}
@@ -95,10 +101,15 @@ func TestModeDirect(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
+
 			require.EqualValues(t, expect, config.Settings)
 		})
 
 		t.Run("modeModel", func(t *testing.T) {
+			actual := config.
+				Settings.
+				ToModel()
+
 			expect := ModeModel{
 				Mode:                constant.ModeDirect,
 				InClusterImagesRepo: constant.HostWithPath,
@@ -111,11 +122,16 @@ func TestModeDirect(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
-			require.EqualValues(t, expect, config.Settings.ToModel())
+
+			require.EqualValues(t, expect, actual)
 		})
 
 		t.Run("InclusterData", func(t *testing.T) {
-			actual, err := config.Settings.ToModel().InClusterData(getPKI)
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(getPKI)
+
 			require.NoError(t, err)
 
 			expect := Data{
@@ -125,18 +141,21 @@ func TestModeDirect(t *testing.T) {
 				Username:   "test-user",
 				Password:   "test-password",
 			}
+
 			require.EqualValues(t, expect, actual)
 		})
 
 		t.Run("BashibleConfig", func(t *testing.T) {
-			actual, err := config.Settings.ToModel().BashibleConfig()
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig()
+
 			require.NoError(t, err)
-			require.NotEmpty(t, actual.Version)
-			actual.Version = ""
 
 			expect := bashible.Config{
 				Mode:           constant.ModeDirect,
-				Version:        "",
+				Version:        actual.Version,
 				ImagesBase:     constant.HostWithPath,
 				ProxyEndpoints: nil,
 				Hosts: map[string]bashible.ConfigHosts{
@@ -161,6 +180,8 @@ func TestModeDirect(t *testing.T) {
 					},
 				},
 			}
+
+			require.NotEmpty(t, actual.Version)
 			require.EqualValues(t, expect, actual)
 		})
 	})
@@ -169,6 +190,7 @@ func TestModeDirect(t *testing.T) {
 func TestModeUnmanaged(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
+
 	getPKI := func() (PKI, error) {
 		return pki, nil
 	}
@@ -193,6 +215,7 @@ func TestModeUnmanaged(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
+
 			require.EqualValues(t, expect, config.Settings)
 		})
 
@@ -209,11 +232,16 @@ func TestModeUnmanaged(t *testing.T) {
 					Password:   "test-password",
 				},
 			}
+
 			require.EqualValues(t, expect, config.Settings.ToModel())
 		})
 
 		t.Run("InclusterData", func(t *testing.T) {
-			actual, err := config.Settings.ToModel().InClusterData(getPKI)
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(getPKI)
+
 			require.NoError(t, err)
 
 			expect := Data{
@@ -223,18 +251,21 @@ func TestModeUnmanaged(t *testing.T) {
 				Username:   "test-user",
 				Password:   "test-password",
 			}
+
 			require.EqualValues(t, expect, actual)
 		})
 
 		t.Run("BashibleConfig", func(t *testing.T) {
-			actual, err := config.Settings.ToModel().BashibleConfig()
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig()
+
 			require.NoError(t, err)
-			require.NotEmpty(t, actual.Version)
-			actual.Version = ""
 
 			expect := bashible.Config{
 				Mode:           constant.ModeUnmanaged,
-				Version:        "",
+				Version:        actual.Version,
 				ImagesBase:     "r.example.com/test",
 				ProxyEndpoints: nil,
 				Hosts: map[string]bashible.ConfigHosts{
@@ -253,6 +284,8 @@ func TestModeUnmanaged(t *testing.T) {
 					},
 				},
 			}
+
+			require.NotEmpty(t, actual.Version)
 			require.EqualValues(t, expect, actual)
 		})
 	})

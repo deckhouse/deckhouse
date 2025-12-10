@@ -39,6 +39,7 @@ func (d *Data) FromRegistrySettings(settings module_config.RegistrySettings) {
 		Username:   settings.Username,
 		Password:   settings.Password,
 	}
+
 	if settings.License != "" {
 		d.Username = constant.LicenseUsername
 		d.Password = settings.License
@@ -49,14 +50,14 @@ func (d Data) AuthBase64() string {
 	if d.Username == "" {
 		return ""
 	}
+
 	auth := fmt.Sprintf("%s:%s", d.Username, d.Password)
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 func (d Data) DockerCfg() ([]byte, error) {
 	address, _ := d.AddressAndPath()
-	cfg, err := helpers.DockerCfgFromCreds(d.Username, d.Password, address)
-	return cfg, err
+	return helpers.DockerCfgFromCreds(d.Username, d.Password, address)
 }
 
 func (d Data) DockerCfgBase64() (string, error) {

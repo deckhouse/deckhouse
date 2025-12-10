@@ -46,18 +46,20 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI func() (PKI, error)
 	}
 
 	address, path := inClusterData.AddressAndPath()
+
 	dockerCfg, err := inClusterData.DockerCfg()
 	if err != nil {
 		return nil, err
 	}
-	regCfg := deckhouse_registry.Config{
+
+	ret := deckhouse_registry.Config{
 		Address:      address,
 		Path:         path,
 		Scheme:       strings.ToLower(string(inClusterData.Scheme)),
 		CA:           inClusterData.CA,
 		DockerConfig: dockerCfg,
 	}
-	return regCfg.ToMap(), nil
+	return ret.ToMap(), nil
 }
 
 func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, map[string][]byte, error) {
@@ -89,18 +91,19 @@ func (b *ManifestBuilder) KubeadmTplCtx() map[string]any {
 }
 
 func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string]any, error) {
-	cfg, err := b.modeModel.BashibleConfig()
+	bashibleCfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := cfg.ToContext()
-	ctx.RegistryModuleEnable = true
+	bashibleCtx := bashibleCfg.ToContext()
+
+	bashibleCtx.RegistryModuleEnable = true
 	if b.legacyMode {
-		ctx.RegistryModuleEnable = false
+		bashibleCtx.RegistryModuleEnable = false
 	}
 
-	mapCtx, err := ctx.ToMap()
+	ret, err := bashibleCtx.ToMap()
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +113,6 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI func() (PKI, error)) (map[string
 		return nil, fmt.Errorf("get PKI: %w", err)
 	}
 
-	mapCtx["init"] = initCfg.ToMap()
-	return mapCtx, nil
+	ret["init"] = initCfg.ToMap()
+	return ret, nil
 }

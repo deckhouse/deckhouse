@@ -19,36 +19,44 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
-type TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
-type TestConfigUpdateLegacyMode func() bool
-type TestConfigUpdateMode func() constant.ModeType
+type (
+	TestConfigUpdateRegistrySettings func(*module_config.RegistrySettings)
+	TestConfigUpdateLegacyMode       func() bool
+	TestConfigUpdateMode             func() constant.ModeType
+)
 
 func TestConfigBuilder(opts ...any) Config {
-	registrySettings := module_config.RegistrySettings{
-		ImagesRepo: constant.CEImagesRepo,
-		Scheme:     constant.CEScheme,
-	}
+	var (
+		mode             = constant.ModeUnmanaged
+		legacyMode       = false
+		registrySettings = module_config.RegistrySettings{
+			ImagesRepo: constant.CEImagesRepo,
+			Scheme:     constant.CEScheme,
+		}
+	)
 
-	mode := constant.ModeUnmanaged
-	legacyMode := false
 	for _, opt := range opts {
 		switch fn := opt.(type) {
 		case TestConfigUpdateRegistrySettings:
 			fn(&registrySettings)
+
 		case TestConfigUpdateLegacyMode:
 			legacyMode = fn()
+
 		case TestConfigUpdateMode:
 			mode = fn()
 		}
 	}
 
 	var deckhouseSettings module_config.DeckhouseSettings
+
 	switch mode {
 	case constant.ModeDirect:
 		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:   constant.ModeDirect,
 			Direct: &registrySettings,
 		}
+
 	default:
 		deckhouseSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
@@ -56,13 +64,12 @@ func TestConfigBuilder(opts ...any) Config {
 		}
 	}
 
-	config := Config{}
-	if err := config.process(
-		deckhouseSettings,
-		legacyMode,
-	); err != nil {
+	var config Config
+
+	if err := config.process(deckhouseSettings, legacyMode); err != nil {
 		panic(err)
 	}
+
 	return config
 }
 

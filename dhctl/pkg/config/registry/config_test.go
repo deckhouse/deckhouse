@@ -27,8 +27,9 @@ import (
 
 func TestConfig_UseDefault(t *testing.T) {
 	type input struct {
-		modulePlanned bool
+		criSupported bool
 	}
+
 	type output struct {
 		mode       constant.ModeType
 		legacyMode bool
@@ -42,9 +43,9 @@ func TestConfig_UseDefault(t *testing.T) {
 		output output
 	}{
 		{
-			name: "module planned -> direct && no error",
+			name: "criSupported -> direct && no error",
 			input: input{
-				modulePlanned: true,
+				criSupported: true,
 			},
 			output: output{
 				mode:       constant.ModeDirect,
@@ -53,9 +54,9 @@ func TestConfig_UseDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "module not planned -> unmanaged && no error",
+			name: "not criSupported -> unmanaged && no error",
 			input: input{
-				modulePlanned: false,
+				criSupported: false,
 			},
 			output: output{
 				mode:       constant.ModeUnmanaged,
@@ -67,16 +68,19 @@ func TestConfig_UseDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := Config{}
-			err := config.UseDefault(tt.input.modulePlanned)
+			var config Config
+
+			err := config.UseDefault(tt.input.criSupported)
 
 			if tt.output.err {
 				require.Error(t, err)
+
 				if tt.output.errMsg != "" {
 					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
 				require.NoError(t, err)
+
 				assert.Equal(t, tt.output.mode, config.Settings.Mode)
 				assert.Equal(t, tt.output.legacyMode, config.LegacyMode)
 			}
@@ -88,6 +92,7 @@ func TestConfig_UseInitConfig(t *testing.T) {
 	type input struct {
 		initConfig init_config.Config
 	}
+
 	type output struct {
 		mode   constant.ModeType
 		err    bool
@@ -116,16 +121,18 @@ func TestConfig_UseInitConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := Config{}
-			err := config.UseInitConfig(tt.input.initConfig)
+			var config Config
 
+			err := config.UseInitConfig(tt.input.initConfig)
 			if tt.output.err {
 				require.Error(t, err)
+
 				if tt.output.errMsg != "" {
 					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
 				require.NoError(t, err)
+
 				assert.Equal(t, tt.output.mode, config.Settings.Mode)
 				assert.True(t, config.LegacyMode, "should be legacy mode")
 			}
@@ -137,6 +144,7 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 	type input struct {
 		deckhouse module_config.DeckhouseSettings
 	}
+
 	type output struct {
 		err    bool
 		errMsg string
@@ -181,16 +189,18 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := Config{}
-			err := config.UseDeckhouseSettings(tt.input.deckhouse)
+			var config Config
 
+			err := config.UseDeckhouseSettings(tt.input.deckhouse)
 			if tt.output.err {
 				require.Error(t, err)
+
 				if tt.output.errMsg != "" {
 					require.Contains(t, err.Error(), tt.output.errMsg)
 				}
 			} else {
 				require.NoError(t, err)
+
 				assert.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
 				assert.False(t, config.LegacyMode, "should not be legacy mode")
 			}

@@ -18,8 +18,9 @@ package bashible
 
 import (
 	"fmt"
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"slices"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 var (
@@ -117,6 +118,7 @@ func (c Config) ToContext() Context {
 		host := ContextHosts{
 			Mirrors: make([]ContextMirrorHost, 0, len(hosts.Mirrors)),
 		}
+
 		for _, m := range hosts.Mirrors {
 			mirror := ContextMirrorHost{
 				Host:   m.Host,
@@ -128,12 +130,16 @@ func (c Config) ToContext() Context {
 					Auth:     m.Auth.Auth,
 				},
 			}
+
 			for _, rw := range m.Rewrites {
 				mirror.Rewrites = append(mirror.Rewrites, ContextRewrite(rw))
 			}
+
 			host.Mirrors = append(host.Mirrors, mirror)
 		}
+
 		ret.Hosts[key] = host
 	}
+
 	return ret
 }

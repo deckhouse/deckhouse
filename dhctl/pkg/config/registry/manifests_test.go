@@ -48,25 +48,32 @@ func TestManifestsNoError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Run("DeckhouseRegistrySecretData", func(t *testing.T) {
-				_, err := tt.input.Manifest().
+				_, err := tt.input.
+					Manifest().
 					DeckhouseRegistrySecretData(GeneratePKI)
+
 				require.NoError(t, err)
 			})
 
 			t.Run("RegistryBashibleConfigSecretData", func(t *testing.T) {
-				_, _, err := tt.input.Manifest().
+				_, _, err := tt.input.
+					Manifest().
 					RegistryBashibleConfigSecretData()
+
 				require.NoError(t, err)
 			})
 
 			t.Run("KubeadmTplCtx", func(t *testing.T) {
-				_ = tt.input.Manifest().
+				_ = tt.input.
+					Manifest().
 					KubeadmTplCtx()
 			})
 
 			t.Run("BashibleTplCtx", func(t *testing.T) {
-				_, err := tt.input.Manifest().
+				_, err := tt.input.
+					Manifest().
 					BashibleTplCtx(GeneratePKI)
+
 				require.NoError(t, err)
 			})
 		})
@@ -106,18 +113,23 @@ func TestManifestsLegacyMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Run("BashibleTplCtx -> registry module enabled when not in legacy mode", func(t *testing.T) {
-				ctx, err := tt.input.Manifest().
+				ctx, err := tt.input.
+					Manifest().
 					BashibleTplCtx(GeneratePKI)
+
 				require.NoError(t, err)
 
 				isModuleEnabled := ctx["registryModuleEnable"].(bool)
 				expectedModuleEnabled := !tt.legacyMode
+
 				require.Equal(t, expectedModuleEnabled, isModuleEnabled)
 			})
 
 			t.Run("RegistryBashibleConfigSecretData -> exists when not in legacy mode", func(t *testing.T) {
-				exists, _, err := tt.input.Manifest().
+				exists, _, err := tt.input.
+					Manifest().
 					RegistryBashibleConfigSecretData()
+
 				require.NoError(t, err)
 
 				expectedExists := !tt.legacyMode

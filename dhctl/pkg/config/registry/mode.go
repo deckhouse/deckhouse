@@ -33,29 +33,37 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 	case settings.Direct != nil:
 		remote := Data{}
 		remote.FromRegistrySettings(*settings.Direct)
+
 		return ModeSettings{
 			Mode:   constant.ModeDirect,
 			Remote: remote,
 		}, nil
+
 	case settings.Unmanaged != nil:
 		remote := Data{}
 		remote.FromRegistrySettings(*settings.Unmanaged)
+
 		return ModeSettings{
 			Mode:   constant.ModeUnmanaged,
 			Remote: remote,
 		}, nil
+
+	default:
+		return ModeSettings{}, ErrUnknownMode
 	}
-	return ModeSettings{}, ErrUnknownMode
 }
 
 func (s ModeSettings) ToModel() ModeModel {
 	switch s.Mode {
 	case constant.ModeDirect:
 		return s.directModel()
+
 	case constant.ModeUnmanaged:
 		return s.unmanagedModel()
+
+	default:
+		panic(ErrUnknownMode)
 	}
-	panic(ErrUnknownMode)
 }
 
 func (s ModeSettings) directModel() ModeModel {
@@ -87,19 +95,25 @@ func (m ModeModel) InClusterData(getPKI func() (PKI, error)) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
 		return m.directInClusterData(getPKI)
+
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
+
+	default:
+		return Data{}, ErrUnknownMode
 	}
-	return Data{}, ErrUnknownMode
 }
 
 func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 	var mirrors map[string]bashible.ConfigHosts
+
 	switch m.Mode {
 	case constant.ModeDirect:
 		mirrors = m.directBashibleMirrors()
+
 	case constant.ModeUnmanaged:
 		mirrors = m.unmanagedBashibleMirrors()
+
 	default:
 		return bashible.Config{}, ErrUnknownMode
 	}
@@ -109,10 +123,12 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 		ImagesBase: m.InClusterImagesRepo,
 		Hosts:      mirrors,
 	}
+
 	version, err := pki.ComputeHash(&cfg)
 	if err != nil {
 		return bashible.Config{}, fmt.Errorf("compute version: %w", err)
 	}
+
 	cfg.Version = version
 	return cfg, cfg.Validate()
 }
@@ -138,42 +154,50 @@ func (m ModeModel) directBashibleMirrors() map[string]bashible.ConfigHosts {
 	from := constant.PathRegexp
 	to := strings.TrimLeft(path, "/")
 
-	cfgMirror := bashible.ConfigMirrorHost{
-		Host:   host,
-		Scheme: scheme,
-		CA:     m.RemoteData.CA,
-		Auth: bashible.ConfigAuth{
-			Username: m.RemoteData.Username,
-			Password: m.RemoteData.Password,
+	ret := map[string]bashible.ConfigHosts{
+		constant.Host: {
+			Mirrors: []bashible.ConfigMirrorHost{
+				{
+					Host:   host,
+					Scheme: scheme,
+					CA:     m.RemoteData.CA,
+					Auth: bashible.ConfigAuth{
+						Username: m.RemoteData.Username,
+						Password: m.RemoteData.Password,
+					},
+					Rewrites: []bashible.ConfigRewrite{
+						{
+							From: from,
+							To:   to,
+						},
+					},
+				},
+			},
 		},
-		Rewrites: []bashible.ConfigRewrite{{
-			From: from,
-			To:   to,
-		}},
 	}
 
-	return map[string]bashible.ConfigHosts{
-		constant.Host: {
-			Mirrors: []bashible.ConfigMirrorHost{cfgMirror}},
-	}
+	return ret
 }
 
 func (m ModeModel) unmanagedBashibleMirrors() map[string]bashible.ConfigHosts {
 	host, _ := m.RemoteData.AddressAndPath()
 	scheme := strings.ToLower(string(m.RemoteData.Scheme))
 
-	cfgMirror := bashible.ConfigMirrorHost{
-		Host:   host,
-		Scheme: scheme,
-		CA:     m.RemoteData.CA,
-		Auth: bashible.ConfigAuth{
-			Username: m.RemoteData.Username,
-			Password: m.RemoteData.Password,
+	ret := map[string]bashible.ConfigHosts{
+		host: {
+			Mirrors: []bashible.ConfigMirrorHost{
+				{
+					Host:   host,
+					Scheme: scheme,
+					CA:     m.RemoteData.CA,
+					Auth: bashible.ConfigAuth{
+						Username: m.RemoteData.Username,
+						Password: m.RemoteData.Password,
+					},
+				},
+			},
 		},
 	}
 
-	return map[string]bashible.ConfigHosts{
-		host: {
-			Mirrors: []bashible.ConfigMirrorHost{cfgMirror}},
-	}
+	return ret
 }

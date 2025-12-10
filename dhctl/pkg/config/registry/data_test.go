@@ -71,9 +71,10 @@ func TestData_FromRegistrySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := Data{}
-			d.FromRegistrySettings(tt.input)
-			assert.Equal(t, tt.output, d)
+			var data Data
+			data.FromRegistrySettings(tt.input)
+
+			assert.Equal(t, tt.output, data)
 		})
 	}
 }
@@ -120,8 +121,7 @@ func TestData_AuthBase64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.input.AuthBase64()
-			assert.Equal(t, tt.output, result)
+			assert.Equal(t, tt.output, tt.input.AuthBase64())
 		})
 	}
 }
@@ -243,6 +243,7 @@ func TestData_DockerCfg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// get dockerCfg
 			dockerCfg, err := tt.input.DockerCfg()
+
 			if tt.output.err {
 				assert.Error(t, err)
 				return
@@ -251,6 +252,7 @@ func TestData_DockerCfg(t *testing.T) {
 
 			// get dockerCfg base64
 			dockerCfgBase64, err := tt.input.DockerCfgBase64()
+
 			if tt.output.err {
 				assert.Error(t, err)
 				return
@@ -264,8 +266,10 @@ func TestData_DockerCfg(t *testing.T) {
 
 			// Compare with test case
 			var dockerCfgJson map[string]any
+
 			err = json.Unmarshal(dockerCfg, &dockerCfgJson)
 			assert.NoError(t, err)
+
 			assert.Equal(t, tt.output.auths, dockerCfgJson["auths"])
 		})
 	}
@@ -337,6 +341,7 @@ func TestData_AddressAndPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			addr, path := tt.input.AddressAndPath()
+
 			assert.Equal(t, tt.output.address, addr)
 			assert.Equal(t, tt.output.path, path)
 		})

@@ -61,7 +61,6 @@ func (c *Config) UseInitConfig(initConfig init_config.Config) error {
 		Mode:      constant.ModeUnmanaged,
 		Unmanaged: &registrySettings,
 	}
-
 	return c.process(settings, true)
 }
 

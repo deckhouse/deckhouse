@@ -47,17 +47,21 @@ func (config Config) ToRegistrySettings() (module_config.RegistrySettings, error
 
 	// Validate and pars dockerCfg
 	address, _ := helpers.SplitAddressAndPath(config.ImagesRepo)
+
 	if err := validateRegistryDockerCfg(config.RegistryDockerCfg, address); err != nil {
 		return module_config.RegistrySettings{}, fmt.Errorf("failed to validate registryDockerCfg: %w", err)
 	}
+
 	dockerCfgDecode, err := base64.StdEncoding.DecodeString(config.RegistryDockerCfg)
 	if err != nil {
 		return module_config.RegistrySettings{}, fmt.Errorf("failed to decode registryDockerCfg: %w", err)
 	}
+
 	username, password, err := helpers.CredsFromDockerCfg(dockerCfgDecode, address)
 	if err != nil {
 		return module_config.RegistrySettings{}, err
 	}
+
 	registrySettings.Username = username
 	registrySettings.Password = password
 	return registrySettings, nil

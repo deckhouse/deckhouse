@@ -107,14 +107,18 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 		state.PKI.CA.Cert = inputs.InitSecret.CA.Cert
 		state.PKI.CA.Key = inputs.InitSecret.CA.Key
 	}
+
 	_, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
 	// Set Bashible ActualParams
-	var bashibleActualParams *bashible.ModeParams
-	var bashibleUnmanagedParams *bashible.UnmanagedModeParams
+	var (
+		bashibleActualParams    *bashible.ModeParams
+		bashibleUnmanagedParams *bashible.UnmanagedModeParams
+	)
+
 	switch inputs.Params.Mode {
 	case registry_const.ModeDirect:
 		bashibleActualParams = &bashible.ModeParams{
@@ -126,6 +130,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 				Password:   inputs.Params.Password,
 			},
 		}
+
 		bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
 			ImagesRepo: inputs.Params.ImagesRepo,
 			Scheme:     inputs.Params.Scheme,
@@ -133,6 +138,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			Username:   inputs.Params.UserName,
 			Password:   inputs.Params.Password,
 		}
+
 	case registry_const.ModeUnmanaged:
 		// Only for configurable unmanaged mode
 		if inputs.Params.ImagesRepo != "" {
@@ -145,6 +151,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 					Password:   inputs.Params.Password,
 				},
 			}
+
 			bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
 				ImagesRepo: inputs.Params.ImagesRepo,
 				Scheme:     inputs.Params.Scheme,
@@ -154,6 +161,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			}
 		}
 	}
+
 	state.Bashible.ActualParams = bashibleActualParams
 	state.Bashible.UnmanagedParams = bashibleUnmanagedParams
 	return nil
