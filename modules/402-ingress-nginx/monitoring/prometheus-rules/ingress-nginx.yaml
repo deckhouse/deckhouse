@@ -97,11 +97,11 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress-NGINX: admission config is getting large"
+      summary: "Ingress NGINX admission configuration is getting large."
       description: |-
-        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 4 MiB).
+        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is now testing a NGINX configuration of {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 4 MiB).
 
-        Consider splitting ingresses between multiple controllers or reducing configuration size.
+        Consider splitting ingresses between multiple controllers or reducing the configuration size.
 
         This alert is based on metrics scraped from the validator webhook.
 
@@ -113,11 +113,11 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress-NGINX: admission config is too large"
+      summary: "Ingress NGINX admission configuration is too large."
       description: |-
-        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} now tests NGINX configuration of size {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 8 MiB).
+        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is now testing a NGINX configuration of {{ printf "%.1f" ($value / 1024 / 1024) }} MiB (> 8 MiB).
 
-        This may cause high memory usage or crashes during validation or reload. Split ingresses between controllers or reduce configuration size.
+        Such a large configuration may cause high memory usage or crashes during validations or reloads. Split ingresses between multiple controllers or reduce the configuration size.
 
         This alert is based on metrics scraped from the validator webhook.
 
@@ -129,11 +129,11 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: "Ingress-NGINX: admission render is slow"
+      summary: "Ingress NGINX admission rendering is slow."
       description: |-
-        Admission webhook of controller {{ $labels.controller_class }} in namespace {{ $labels.controller_namespace }} renders configuration longer than 30s (current: {{ printf "%.1f" $value }}s).
+        The admission webhook of the controller `{{ $labels.controller_class }}` in the namespace `{{ $labels.controller_namespace }}` is rendering configuration for more than 30s (current: {{ printf "%.1f" $value }}s).
 
-        Long render may indicate heavy ingress configuration or performance issues. Consider splitting ingresses between controllers or simplifying configuration.
+        Long rendering may indicate excessive ingress configuration size or performance issues. Consider splitting ingresses between multiple controllers or simplifying the configuration.
 
         This alert is based on metrics scraped from the validator webhook.
 
