@@ -27,19 +27,19 @@
           1. Check the StatefulSet status:
 
              ```shell
-             kubectl -n d8-monitoring describe statefulset prometheus-longterm
+             d8 k -n d8-monitoring describe statefulset prometheus-longterm
              ```
 
           2. Inspect the PersistentVolumeClaim (if used):
 
              ```shell
-             kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+             d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
              ```
 
           3. Inspect the Pod's state:
 
              ```shell
-             kubectl -n d8-monitoring describe pod prometheus-longterm-0
+             d8 k -n d8-monitoring describe pod prometheus-longterm-0
              ```
 {{- end }}
 
