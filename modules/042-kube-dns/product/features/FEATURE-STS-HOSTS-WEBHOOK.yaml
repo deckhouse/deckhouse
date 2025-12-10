@@ -1,0 +1,59 @@
+title-en: StatefulSet pods /etc/hosts injection webhook
+title-ru: Webhook для инъекции в /etc/hosts подов StatefulSet
+description-en: |
+  Automatic webhook-based injection of cluster domain aliases into `/etc/hosts` file for StatefulSet pods.
+  Required for services (like RabbitMQ) that need to resolve pod FQDNs before becoming Ready.
+  Works by mutating StatefulSet pods to add an init container that renders `/etc/hosts` with cluster domain aliases.
+description-ru: |
+  Автоматическая инъекция алиасов домена кластера в файл `/etc/hosts` для подов StatefulSet через webhook.
+  Необходимо для сервисов (таких как RabbitMQ), которым нужно разрешать FQDN подов до того, как они станут Ready.
+  Работает путем мутации подов StatefulSet для добавления init контейнера, который рендерит `/etc/hosts` с алиасами домена кластера.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Webhook активируется только при наличии clusterDomainAliases в конфигурации
+  - Работает только для StatefulSet подов с указанным subdomain
+  - Критично для RabbitMQ, Elasticsearch и других сервисов, требующих раннего DNS разрешения
+  - Init контейнер автоматически добавляется в поды StatefulSet
+  - Webhook использует мутацию для добавления init контейнера перед запуском пода
+  - Решает проблему, когда kubelet не поддерживает clusterDomainAliases в /etc/hosts
+user-notes-en: |
+  **Important for users:**
+  - Webhook is activated only when clusterDomainAliases are configured
+  - Works only for StatefulSet pods with specified subdomain
+  - Critical for RabbitMQ, Elasticsearch and other services requiring early DNS resolution
+  - Init container is automatically added to StatefulSet pods
+  - Webhook uses mutation to add init container before pod startup
+  - Solves the problem when kubelet doesn't support clusterDomainAliases in /etc/hosts
+configuration-example: |
+  Webhook works automatically when clusterDomainAliases are set:
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      clusterDomainAliases:
+      - foo.bar
+  ```
+  Then StatefulSet pods will automatically get aliases in /etc/hosts.
+related-features:
+  - FEATURE-CLUSTER-DOMAIN-ALIASES
+troubleshooting-ru: |
+  - **Проблема:** Webhook не работает
+    - **Решение:** Проверьте наличие clusterDomainAliases и что webhook активен: `kubectl get mutatingwebhookconfiguration`
+  - **Проблема:** /etc/hosts не содержит алиасы
+    - **Решение:** Убедитесь, что StatefulSet имеет subdomain и что webhook deployment работает
+troubleshooting-en: |
+  - **Issue:** Webhook not working
+    - **Solution:** Check that clusterDomainAliases are set and webhook is active: `kubectl get mutatingwebhookconfiguration`
+  - **Issue:** /etc/hosts doesn't contain aliases
+    - **Solution:** Ensure StatefulSet has subdomain and webhook deployment is running
+user-stories:
+  - en: My RabbitMQ cluster fails to bootstrap because pods can't resolve peer FQDNs during the Ready check. The webhook automatically injects cluster domain aliases into /etc/hosts before pods start, ensuring names resolve immediately and the cluster forms successfully.
+    ru: Мой кластер RabbitMQ не может запуститься, потому что поды не могут разрешить FQDN пиров во время проверки Ready. Webhook автоматически инъектирует алиасы домена кластера в /etc/hosts до запуска подов, гарантируя немедленное разрешение имен и успешное формирование кластера.
+    scope: Payload
+  - en: Services like Elasticsearch and RabbitMQ need pod FQDNs available before they become Ready, but kubelet doesn't populate /etc/hosts with cluster domain aliases. The webhook solves this transparently, injecting aliases via an init container so these services work out of the box without manual configuration.
+    ru: Сервисы типа Elasticsearch и RabbitMQ нуждаются в FQDN подов, доступных до того, как они станут Ready, но kubelet не заполняет /etc/hosts алиасами домена кластера. Webhook решает это прозрачно, инъектируя алиасы через init контейнер, чтобы эти сервисы работали из коробки без ручной настройки.
+    scope: System
+

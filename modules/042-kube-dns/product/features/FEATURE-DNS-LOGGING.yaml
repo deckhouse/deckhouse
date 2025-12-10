@@ -1,0 +1,52 @@
+title-en: DNS query logging
+title-ru: Логирование DNS запросов
+description-en: |
+  Ability to enable CoreDNS logging for debugging and monitoring DNS queries.
+  When enabled, CoreDNS will log all DNS queries it processes.
+description-ru: |
+  Возможность включить логирование CoreDNS для отладки и мониторинга DNS запросов.
+  При включении CoreDNS будет логировать все обрабатываемые DNS запросы.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Логирование по умолчанию отключено для снижения нагрузки
+  - Включайте только при необходимости отладки DNS проблем
+  - Логи могут быть очень объемными в продакшене
+  - Логи доступны через `kubectl logs` для подов CoreDNS
+  - Рекомендуется использовать для диагностики проблем с разрешением доменов
+user-notes-en: |
+  **Important for users:**
+  - Logging is disabled by default to reduce load
+  - Enable only when debugging DNS issues
+  - Logs can be very verbose in production
+  - Logs are available via `kubectl logs` for CoreDNS pods
+  - Recommended for diagnosing domain resolution issues
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      enableLogs: true
+  ```
+related-features:
+  - FEATURE-PROMETHEUS-MONITORING
+troubleshooting-ru: |
+  - **Проблема:** Логи слишком объемные
+    - **Решение:** Отключите логирование после диагностики: `enableLogs: false`
+  - **Проблема:** Нужно найти конкретный DNS запрос
+    - **Решение:** Используйте grep для фильтрации: `kubectl logs -n kube-system <coredns-pod> | grep <domain>`
+troubleshooting-en: |
+  - **Issue:** Logs are too verbose
+    - **Solution:** Disable logging after diagnostics: `enableLogs: false`
+  - **Issue:** Need to find specific DNS query
+    - **Solution:** Use grep to filter: `kubectl logs -n kube-system <coredns-pod> | grep <domain>`
+user-stories:
+  - en: When users report "service not found" errors, I need visibility into what DNS queries are actually happening. Enabling DNS logging shows me every domain being queried, helping me identify whether the issue is with DNS resolution, incorrect domain names, or network connectivity.
+    ru: Когда пользователи сообщают об ошибках "service not found", мне нужна видимость того, какие DNS запросы реально происходят. Включение логирования DNS показывает мне каждый запрашиваемый домен, помогая определить, связана ли проблема с DNS разрешением, неправильными доменными именами или сетевым подключением.
+    scope: System
+  - en: My app can't connect to an external API, and I suspect DNS is the culprit. With DNS logging enabled, I can trace exactly which domains my pods are querying and see if requests are failing, timing out, or returning unexpected results.
+    ru: Мое приложение не может подключиться к внешнему API, и я подозреваю, что проблема в DNS. С включенным логированием DNS я могу отследить точно, какие домены запрашивают мои поды, и увидеть, терпят ли запросы неудачу, таймаутят или возвращают неожиданные результаты.
+    scope: Payload
+

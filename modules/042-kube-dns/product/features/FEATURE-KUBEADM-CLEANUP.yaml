@@ -1,0 +1,51 @@
+title-en: Automatic kubeadm CoreDNS cleanup
+title-ru: Автоматическая очистка CoreDNS от kubeadm
+description-en: |
+  Automatic removal of kubeadm-installed CoreDNS resources (Deployment, ConfigMap, RBAC) when the module is enabled.
+  Ensures clean state and prevents conflicts with Deckhouse-managed CoreDNS.
+description-ru: |
+  Автоматическое удаление ресурсов CoreDNS, установленных kubeadm (Deployment, ConfigMap, RBAC), при включении модуля.
+  Обеспечивает чистое состояние и предотвращает конфликты с CoreDNS, управляемым Deckhouse.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Модуль автоматически удаляет все ресурсы CoreDNS от kubeadm при включении
+  - Если развертываете собственный CoreDNS, НЕ используйте имена `coredns` или `system:coredns`
+  - Используйте альтернативные имена (например, `infra-dns`) для предотвращения автоматического удаления
+  - Удаляются: Deployment, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding
+  - Это гарантирует отсутствие конфликтов между kubeadm и Deckhouse DNS
+user-notes-en: |
+  **Important for users:**
+  - Module automatically removes all kubeadm CoreDNS resources when enabled
+  - If deploying your own CoreDNS, DO NOT use names `coredns` or `system:coredns`
+  - Use alternative names (e.g., `infra-dns`) to prevent automatic removal
+  - Removed: Deployment, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding
+  - This ensures no conflicts between kubeadm and Deckhouse DNS
+configuration-example: |
+  Cleanup happens automatically. To verify:
+  ```bash
+  # Check that kubeadm CoreDNS resources are removed
+  kubectl get deployment -n kube-system coredns  # Should not exist
+  kubectl get configmap -n kube-system coredns  # Should not exist
+  
+  # Check Deckhouse resources exist
+  kubectl get deployment -n kube-system d8-kube-dns
+  ```
+related-features: []
+troubleshooting-ru: |
+  - **Проблема:** Собственный CoreDNS удален
+    - **Решение:** Переименуйте ресурсы - не используйте имена `coredns` или `system:coredns`
+  - **Проблема:** Конфликт между kubeadm и Deckhouse DNS
+    - **Решение:** Убедитесь, что модуль kube-dns включен - он автоматически удалит ресурсы kubeadm
+troubleshooting-en: |
+  - **Issue:** Custom CoreDNS removed
+    - **Solution:** Rename resources - do not use names `coredns` or `system:coredns`
+  - **Issue:** Conflict between kubeadm and Deckhouse DNS
+    - **Solution:** Ensure kube-dns module is enabled - it will automatically remove kubeadm resources
+user-stories:
+  - en: After migrating from kubeadm to Deckhouse, we had duplicate CoreDNS deployments causing conflicts. The module automatically removes kubeadm-installed resources, eliminating these conflicts and ensuring a single, consistent DNS implementation.
+    ru: После миграции с kubeadm на Deckhouse у нас были дублирующиеся CoreDNS деплойменты, вызывающие конфликты. Модуль автоматически удаляет ресурсы, установленные kubeadm, устраняя эти конфликты и обеспечивая единую, согласованную DNS реализацию.
+    scope: System
+  - en: Manually cleaning up old kubeadm DNS resources is error-prone and time-consuming. Automatic cleanup means I can enable the module and immediately start configuring DNS features, without worrying about leftover resources causing issues.
+    ru: Ручная очистка старых DNS ресурсов kubeadm подвержена ошибкам и отнимает время. Автоматическая очистка означает, что я могу включить модуль и сразу начать настраивать DNS функции, не беспокоясь о том, что оставшиеся ресурсы вызовут проблемы.
+    scope: System
+

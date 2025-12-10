@@ -1,0 +1,62 @@
+title-en: DNS load balancing
+title-ru: Балансировка нагрузки DNS
+description-en: |
+  Built-in round-robin load balancing for DNS responses.
+  Distributes DNS queries across multiple upstream nameservers when multiple servers are configured.
+description-ru: |
+  Встроенная round-robin балансировка нагрузки для DNS ответов.
+  Распределяет DNS запросы между несколькими upstream nameservers при настройке нескольких серверов.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Round-robin балансировка работает автоматически при указании нескольких upstream nameservers
+  - Обеспечивает отказоустойчивость: если один DNS сервер недоступен, запросы идут на другие
+  - Распределяет нагрузку равномерно между всеми доступными DNS серверами
+  - Работает как для глобальных upstreamNameservers, так и для stub зон
+  - Рекомендуется указывать минимум 2 DNS сервера для высокой доступности
+user-notes-en: |
+  **Important for users:**
+  - Round-robin load balancing works automatically when multiple upstream nameservers are specified
+  - Provides high availability: if one DNS server is unavailable, queries go to others
+  - Distributes load evenly across all available DNS servers
+  - Works for both global upstreamNameservers and stub zones
+  - It's recommended to specify at least 2 DNS servers for high availability
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      # Multiple servers = automatic load balancing
+      upstreamNameservers:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+      stubZones:
+      - zone: internal.local
+        upstreamNameservers:
+        - 192.168.1.10
+        - 192.168.1.11
+  ```
+related-features:
+  - FEATURE-UPSTREAM-NAMESERVERS
+  - FEATURE-STUB-ZONES
+troubleshooting-ru: |
+  - **Проблема:** Один DNS сервер перегружен
+    - **Решение:** Добавьте больше DNS серверов в список для лучшего распределения нагрузки
+  - **Проблема:** Запросы идут только на один сервер
+    - **Решение:** Проверьте доступность всех серверов - недоступные серверы пропускаются
+troubleshooting-en: |
+  - **Issue:** One DNS server overloaded
+    - **Solution:** Add more DNS servers to the list for better load distribution
+  - **Issue:** Queries going to only one server
+    - **Solution:** Check availability of all servers - unavailable servers are skipped
+user-stories:
+  - en: Relying on a single DNS server creates a single point of failure. By configuring multiple upstream nameservers, CoreDNS automatically distributes queries across them, ensuring DNS resolution continues working even if one server goes down or becomes unresponsive.
+    ru: Зависимость от одного DNS сервера создает единую точку отказа. Настраивая несколько upstream nameservers, CoreDNS автоматически распределяет запросы между ними, гарантируя, что DNS разрешение продолжает работать, даже если один сервер падает или становится недоступным.
+    scope: System
+  - en: With thousands of pods making DNS queries, a single DNS server would become a bottleneck. Round-robin distribution spreads the load evenly across all configured servers, preventing any single server from being overwhelmed and improving overall DNS performance.
+    ru: С тысячами подов, делающих DNS запросы, один DNS сервер стал бы узким местом. Round-robin распределение равномерно распределяет нагрузку между всеми настроенными серверами, предотвращая перегрузку любого отдельного сервера и улучшая общую производительность DNS.
+    scope: System
+

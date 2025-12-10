@@ -1,0 +1,56 @@
+title-en: Upstream DNS servers configuration
+title-ru: Настройка upstream DNS серверов
+description-en: |
+  Ability to configure a list of recursive DNS servers that CoreDNS will use to resolve external domains.
+  By default, the `/etc/resolv.conf` list is used.
+description-ru: |
+  Возможность настроить список рекурсивных DNS серверов, которые CoreDNS будет использовать для разрешения внешних доменов.
+  По умолчанию используется список из `/etc/resolv.conf`.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Если не указаны upstreamNameservers, CoreDNS использует DNS серверы из `/etc/resolv.conf` узлов кластера
+  - Рекомендуется указывать несколько DNS серверов для отказоустойчивости (например, 8.8.8.8 и 8.8.4.4)
+  - Для корпоративных кластеров обычно указывают внутренние корпоративные DNS серверы
+  - Можно указать порт для DNS сервера: `8.8.8.8:53`
+user-notes-en: |
+  **Important for users:**
+  - If upstreamNameservers are not specified, CoreDNS uses DNS servers from `/etc/resolv.conf` of cluster nodes
+  - It's recommended to specify multiple DNS servers for high availability (e.g., 8.8.8.8 and 8.8.4.4)
+  - For corporate clusters, internal corporate DNS servers are usually specified
+  - You can specify a port for DNS server: `8.8.8.8:53`
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      upstreamNameservers:
+      - 8.8.8.8
+      - 8.8.4.4
+      # Или корпоративные DNS:
+      # - 192.168.1.10:53
+      # - 192.168.1.11:53
+  ```
+related-features:
+  - FEATURE-LOAD-BALANCING
+  - FEATURE-TRANSPORT-PROTOCOL-MODE
+troubleshooting-ru: |
+  - **Проблема:** DNS запросы не проходят
+    - **Решение:** Проверьте доступность DNS серверов через тестовый под: `kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup google.com 8.8.8.8`. Или проверьте логи CoreDNS: `kubectl logs -n kube-system <coredns-pod> -c coredns | grep -i error`
+  - **Проблема:** Медленное разрешение внешних доменов
+    - **Решение:** Убедитесь, что указаны несколько DNS серверов для балансировки нагрузки. Проверьте сетевую задержку до DNS серверов
+troubleshooting-en: |
+  - **Issue:** DNS queries not working
+    - **Solution:** Check DNS server accessibility via test pod: `kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup google.com 8.8.8.8`. Or check CoreDNS logs: `kubectl logs -n kube-system <coredns-pod> -c coredns | grep -i error`
+  - **Issue:** Slow external domain resolution
+    - **Solution:** Ensure multiple DNS servers are specified for load balancing. Check network latency to DNS servers
+user-stories:
+  - en: When managing a production cluster, I need to point DNS resolution to trusted upstream servers (e.g., 8.8.8.8) instead of relying on node defaults, ensuring consistent and reliable name resolution across all workloads.
+    ru: При управлении продакшн кластером мне нужно направить DNS разрешение на доверенные upstream серверы (например, 8.8.8.8) вместо использования дефолтных настроек узлов, обеспечивая согласованное и надежное разрешение имен для всей нагрузки.
+    scope: System
+  - en: To comply with corporate security policies, I must route all DNS queries through our internal DNS infrastructure, which ensures that filtering, logging, and access control rules are consistently applied to every pod in the cluster.
+    ru: Для соответствия корпоративным политикам безопасности я должен направлять все DNS запросы через нашу внутреннюю DNS инфраструктуру, что гарантирует применение правил фильтрации, логирования и контроля доступа ко всем подам в кластере.
+    scope: System
+

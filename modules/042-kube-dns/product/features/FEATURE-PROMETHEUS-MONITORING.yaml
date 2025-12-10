@@ -1,0 +1,62 @@
+title-en: Prometheus monitoring integration
+title-ru: Интеграция с мониторингом Prometheus
+description-en: |
+  Built-in Prometheus metrics endpoint for CoreDNS.
+  Automatic PodMonitor creation for Prometheus Operator to scrape CoreDNS metrics.
+  Includes Grafana dashboard for DNS monitoring.
+description-ru: |
+  Встроенный endpoint метрик Prometheus для CoreDNS.
+  Автоматическое создание PodMonitor для Prometheus Operator для сбора метрик CoreDNS.
+  Включает Grafana дашборд для мониторинга DNS.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Метрики доступны на порту 9153 внутри пода CoreDNS
+  - PodMonitor создается автоматически при наличии модуля operator-prometheus
+  - Grafana дашборд находится в `monitoring/grafana-dashboards/kubernetes-cluster/dns/`
+  - Метрики включают: количество запросов, время ответа, ошибки, кэш статистику
+  - Доступ к метрикам защищен через kube-rbac-proxy
+  - Полезно для мониторинга производительности DNS и выявления проблем
+user-notes-en: |
+  **Important for users:**
+  - Metrics are available on port 9153 inside CoreDNS pod
+  - PodMonitor is created automatically when operator-prometheus module is present
+  - Grafana dashboard is located in `monitoring/grafana-dashboards/kubernetes-cluster/dns/`
+  - Metrics include: request count, response time, errors, cache statistics
+  - Metrics access is protected via kube-rbac-proxy
+  - Useful for monitoring DNS performance and identifying issues
+configuration-example: |
+  Metrics are enabled automatically. To access:
+  ```bash
+  # Check PodMonitor (if operator-prometheus module is enabled)
+  kubectl get podmonitor -n d8-monitoring d8-kube-dns
+  
+  # Query metrics via kube-rbac-proxy (recommended)
+  kubectl port-forward -n kube-system <coredns-pod> 9154:9154
+  curl -k https://localhost:9154/metrics
+  
+  # Or access metrics directly from inside the pod (port 9153)
+  kubectl exec -n kube-system <coredns-pod> -c coredns -- wget -qO- http://127.0.0.1:9153/metrics
+  ```
+related-features:
+  - FEATURE-DNS-LOGGING
+troubleshooting-ru: |
+  - **Проблема:** Метрики не собираются
+    - **Решение:** Проверьте наличие модуля operator-prometheus: `kubectl get moduleconfig operator-prometheus`. Проверьте PodMonitor: `kubectl get podmonitor -n d8-monitoring d8-kube-dns`. Проверьте, что поды CoreDNS имеют метки `k8s-app: kube-dns`
+  - **Проблема:** Нет данных в Grafana
+    - **Решение:** Убедитесь, что Prometheus правильно настроен для сбора метрик из namespace kube-system. Проверьте ServiceMonitor/PodMonitor конфигурацию. Проверьте, что kube-rbac-proxy работает: `kubectl logs -n kube-system <coredns-pod> -c kube-rbac-proxy`
+troubleshooting-en: |
+  - **Issue:** Metrics not being collected
+    - **Solution:** Check that operator-prometheus module is present: `kubectl get moduleconfig operator-prometheus`. Check PodMonitor: `kubectl get podmonitor -n d8-monitoring d8-kube-dns`. Ensure CoreDNS pods have labels `k8s-app: kube-dns`
+  - **Issue:** No data in Grafana
+    - **Solution:** Ensure Prometheus is properly configured to scrape metrics from kube-system namespace. Check ServiceMonitor/PodMonitor configuration. Verify kube-rbac-proxy is working: `kubectl logs -n kube-system <coredns-pod> -c kube-rbac-proxy`
+user-stories:
+  - en: When DNS becomes a bottleneck, I need metrics to understand what's happening. Prometheus integration provides query rates, response times, and cache hit ratios, giving me the data needed to tune CoreDNS configuration and scale resources appropriately.
+    ru: Когда DNS становится узким местом, мне нужны метрики, чтобы понять, что происходит. Интеграция с Prometheus предоставляет частоту запросов, время отклика и коэффициенты попадания в кэш, давая мне данные, необходимые для настройки конфигурации CoreDNS и масштабирования ресурсов соответствующим образом.
+    scope: System
+  - en: Instead of waiting for users to report DNS issues, I monitor query volumes and error rates in Grafana. This lets me spot problems early—like sudden spikes in failed queries or unusual domain patterns—and fix them before applications are impacted.
+    ru: Вместо ожидания, пока пользователи сообщат о проблемах DNS, я мониторю объемы запросов и частоту ошибок в Grafana. Это позволяет мне обнаруживать проблемы рано—например, внезапные всплески неудачных запросов или необычные паттерны доменов—и исправлять их до того, как приложения будут затронуты.
+    scope: System
+  - en: My application makes many DNS lookups, and I want to optimize them. By analyzing DNS metrics filtered by namespace, I can see which domains are queried most frequently, identify unnecessary lookups, and optimize my application's DNS usage patterns.
+    ru: Мое приложение делает много DNS lookup, и я хочу их оптимизировать. Анализируя DNS метрики, отфильтрованные по namespace, я могу видеть, какие домены запрашиваются наиболее часто, идентифицировать ненужные lookup и оптимизировать паттерны использования DNS моим приложением.
+    scope: Payload
+

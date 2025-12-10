@@ -1,0 +1,66 @@
+title-en: Stub zones
+title-ru: Stub зоны
+description-en: |
+  Ability to redirect one or more domains to another DNS server for all workloads in the cluster.
+  Each stub zone can have its own upstream nameservers, cache TTL, and transport protocol mode.
+description-ru: |
+  Возможность перенаправить один или несколько доменов на другой DNS-сервер для всей нагрузки в кластере.
+  Каждая stub зона может иметь свои upstream nameservers, cache TTL и режим транспортного протокола.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Stub зоны используются для интеграции с внешними DNS системами (Consul, etcd, внутренние DNS)
+  - Каждая stub зона требует обязательного указания zone и upstreamNameservers
+  - По умолчанию cacheTTLSeconds = 30 секунд, можно настроить от 1 до 3600 секунд
+  - Можно настроить отдельный transportProtocolMode для каждой stub зоны
+  - Пример использования: интеграция с Consul service discovery (zone: consul.local)
+user-notes-en: |
+  **Important for users:**
+  - Stub zones are used to integrate with external DNS systems (Consul, etcd, internal DNS)
+  - Each stub zone requires mandatory zone and upstreamNameservers parameters
+  - Default cacheTTLSeconds = 30 seconds, can be configured from 1 to 3600 seconds
+  - You can configure separate transportProtocolMode for each stub zone
+  - Example use case: integration with Consul service discovery (zone: consul.local)
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+        - 10.150.0.1
+        cacheTTLSeconds: 3600
+        transportProtocolMode: PreferUDP
+      - zone: internal.company.local
+        upstreamNameservers:
+        - 192.168.1.10
+        - 192.168.1.11
+        transportProtocolMode: ForceTCP
+  ```
+related-features:
+  - FEATURE-TRANSPORT-PROTOCOL-MODE
+  - FEATURE-DNS-CACHE
+troubleshooting-ru: |
+  - **Проблема:** Stub зона не работает
+    - **Решение:** Проверьте, что указаны оба обязательных параметра: zone и upstreamNameservers
+  - **Проблема:** Запросы к stub зоне медленные
+    - **Решение:** Увеличьте cacheTTLSeconds для этой зоны или используйте PreferUDP вместо ForceTCP
+troubleshooting-en: |
+  - **Issue:** Stub zone not working
+    - **Solution:** Ensure both required parameters are specified: zone and upstreamNameservers
+  - **Issue:** Stub zone queries are slow
+    - **Solution:** Increase cacheTTLSeconds for this zone or use PreferUDP instead of ForceTCP
+user-stories:
+  - en: Our infrastructure uses Consul for service discovery with its own DNS zone (consul.local). I need to route queries for this zone to Consul's DNS servers, enabling seamless integration where any pod can resolve consul services without manual DNS configuration.
+    ru: Наша инфраструктура использует Consul для service discovery со своей DNS зоной (consul.local). Мне нужно направлять запросы для этой зоны на DNS серверы Consul, обеспечивая бесшовную интеграцию, где любой под может разрешать сервисы Consul без ручной настройки DNS.
+    scope: System
+  - en: My microservices depend on Consul service discovery, but I don't want to modify DNS settings in every deployment. With stub zones, my pods automatically resolve consul.service.consul domains through the configured upstream, eliminating per-pod DNS configuration overhead.
+    ru: Мои микросервисы зависят от service discovery Consul, но я не хочу изменять настройки DNS в каждом деплойменте. С stub зонами мои поды автоматически разрешают домены consul.service.consul через настроенный upstream, устраняя необходимость настройки DNS для каждого пода.
+    scope: Payload
+  - en: Internal DNS records change infrequently, so I configure longer cache TTLs for stub zones pointing to our corporate DNS. This reduces query volume to internal DNS servers while maintaining acceptable freshness for our use case.
+    ru: Внутренние DNS записи меняются редко, поэтому я настраиваю более длинные TTL кэша для stub зон, указывающих на корпоративный DNS. Это снижает объем запросов к внутренним DNS серверам, сохраняя приемлемую актуальность для нашего случая использования.
+    scope: System
+
