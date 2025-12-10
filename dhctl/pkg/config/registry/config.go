@@ -110,7 +110,12 @@ func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
 
-func (c *Config) DeckhouseSettingsToMap() (exist bool, settings settingsData, err error) {
+// DeckhouseSettingsToMap converts registry settings to a map.
+// Returns:
+//   - bool: true if settings exist
+//   - settingsData: map of registry settings
+//   - error
+func (c *Config) DeckhouseSettingsToMap() (bool, settingsData, error) {
 	if c.LegacyMode {
 		return false, nil, nil
 	}

@@ -148,7 +148,12 @@ func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1
 	return conditions, nil
 }
 
-func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (exist bool, applied bool, err error) {
+// getInitSecretStatus checks the status of the init secret.
+// Returns:
+//   - bool: true if secret exist
+//   - bool: true if secret is applied
+//   - error
+func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (bool, bool, error) {
 	secret, err := kubeClient.
 		CoreV1().
 		Secrets(secretsNamespace).
@@ -161,7 +166,7 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (exi
 		return false, false, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}
 
-	_, applied = secret.Annotations[initSecretAppliedAnnotation]
+	_, applied := secret.Annotations[initSecretAppliedAnnotation]
 	return true, applied, nil
 }
 

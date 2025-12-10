@@ -41,9 +41,6 @@ type ManifestBuilder struct {
 	legacyMode bool
 }
 
-// =======================
-// Secrets
-// =======================
 func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI getPKI) (secretData, error) {
 	inClusterData, err := b.modeModel.InClusterData(getPKI)
 	if err != nil {
@@ -67,7 +64,12 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI getPKI) (secretData
 	return ret.ToMap(), nil
 }
 
-func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (exist bool, data secretData, err error) {
+// RegistryBashibleConfigSecretData creates bashible config secret data.
+// Returns:
+//   - bool: true if secret exist
+//   - secretData: map bytes of secret data
+//   - error
+func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, secretData, error) {
 	if b.legacyMode {
 		return false, nil, nil
 	}
@@ -84,9 +86,6 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (exist bool, data s
 	return true, secretData{"config": cfgYaml}, nil
 }
 
-// =======================
-// Context
-// =======================
 func (b *ManifestBuilder) KubeadmTplCtx() contextData {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
 	return contextData{
