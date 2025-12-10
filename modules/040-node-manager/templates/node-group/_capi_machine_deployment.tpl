@@ -49,10 +49,9 @@ spec:
         namespace: d8-cloud-instance-manager
         name: {{ $template_name }}
   {{- if $ng.nodeDrainTimeoutSecond }}
-      drainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
       nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeDeletionTimeout: {{$ng.nodeDrainTimeoutSecond}}s
-      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+      nodeDeletionTimeout: 10m
+      nodeVolumeDetachTimeout: 10m
   {{- else }}
       nodeDrainTimeout: 10m
       nodeDeletionTimeout: 10m
