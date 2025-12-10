@@ -219,7 +219,7 @@ EOF
     customTolerationKeys=$(context::jq -e -r 'if (.snapshots.deckhouse_config | length) > 0 then .snapshots.deckhouse_config[0].filterResult else {} end' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
     for taint in $(jq -e -r '.[].key' <<< "$taints"); do
       # Skip 'standart' taints
-      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' ]]; then
+      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' || $taint = 'node.deckhouse.io/etcd-arbiter' ]]; then
         continue
       fi
       if ! printf '%s\n' "${customTolerationKeys[@]}" | grep -q -E "^$taint\$"; then

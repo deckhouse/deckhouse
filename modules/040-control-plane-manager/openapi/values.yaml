@@ -41,6 +41,10 @@ properties:
         type: integer
         minimum: 0
         x-examples: [3]
+      hasEtcdArbiterNode:
+        type: boolean
+        default: false
+        x-examples: [false]
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'

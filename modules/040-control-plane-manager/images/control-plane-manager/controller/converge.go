@@ -35,6 +35,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Generate etcd performance patch before converge phase
+func generateEtcdPerformancePatch() error {
+	log.Info("phase: generate etcd performance patch")
+	params := GetEtcdPerformanceParams()
+	if err := GenerateEtcdPerformancePatch(params); err != nil {
+		return fmt.Errorf("failed to generate etcd performance patch: %w", err)
+	}
+	return nil
+}
+
 // Synchronize extra files with the destination directory,
 // ensuring the destination contains exactly the same set of files as in the config.
 func syncExtraFiles() error {
@@ -99,7 +109,16 @@ func syncExtraFiles() error {
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+
+	var components []string
+	if config.EtcdArbiter {
+		components = []string{"etcd"}
+		log.Info("ETCD_ARBITER mode: skipping control-plane components")
+	} else {
+		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+	}
+
+	for _, v := range components {
 		if err := convergeComponent(v); err != nil {
 			return err
 		}
@@ -145,6 +164,9 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
+			if config.EtcdArbiter {
+				log.Info("etcd-arbiter mode: joining etcd cluster using kubeadm")
+			}
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
