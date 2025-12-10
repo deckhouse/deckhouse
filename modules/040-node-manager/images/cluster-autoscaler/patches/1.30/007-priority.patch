@@ -1,0 +1,68 @@
+diff --git a/cluster-autoscaler/expander/priority/priority.go b/cluster-autoscaler/expander/priority/priority.go
+index de277433b..f4bb751ac 100644
+--- a/cluster-autoscaler/expander/priority/priority.go
++++ b/cluster-autoscaler/expander/priority/priority.go
+@@ -155,26 +155,34 @@ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[
+ 		found := false
+ 		matchedPriority := -1
+ 
++		// Find the HIGHEST priority that matches this node group
+ 		for prio, nameRegexpList := range priorities {
+ 			if !p.groupIDMatchesList(id, nameRegexpList) {
+ 				continue
+ 			}
+ 			found = true
+-			matchedPriority = prio
+-			klog.V(2).Infof("Priority expander: NodeGroup %s matches priority %d", id, prio)
++			if prio > matchedPriority {
++				matchedPriority = prio
++				klog.V(2).Infof("Priority expander: NodeGroup %s matches priority %d (higher than previous %d)", id, prio, nodeGroupPriorities[id])
++			} else {
++				klog.V(2).Infof("Priority expander: NodeGroup %s matches priority %d (keeping higher priority %d)", id, prio, matchedPriority)
++			}
++		}
++
++		if found {
++			nodeGroupPriorities[id] = matchedPriority
++			klog.V(1).Infof("Priority expander: NodeGroup %s assigned highest matching priority %d", id, matchedPriority)
+ 
+-			if prio < maxPrio {
+-				klog.V(2).Infof("Priority expander: NodeGroup %s priority %d is lower than current max %d, skipping", id, prio, maxPrio)
++			if matchedPriority < maxPrio {
++				klog.V(2).Infof("Priority expander: NodeGroup %s priority %d is lower than current max %d, skipping", id, matchedPriority, maxPrio)
+ 				continue
+ 			}
+-			if prio > maxPrio {
+-				klog.V(1).Infof("Priority expander: NodeGroup %s priority %d is higher than current max %d, replacing best options", id, prio, maxPrio)
+-				maxPrio = prio
++			if matchedPriority > maxPrio {
++				klog.V(1).Infof("Priority expander: NodeGroup %s priority %d is higher than current max %d, replacing best options", id, matchedPriority, maxPrio)
++				maxPrio = matchedPriority
+ 				best = nil
+ 			}
+ 			best = append(best, option)
+-			nodeGroupPriorities[id] = prio
+-			break
+ 		}
+ 
+ 		if !found {
+@@ -182,8 +190,6 @@ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[
+ 				"The group won't be used.", id)
+ 			klog.V(1).Info(msg)
+ 			p.logConfigWarning(cm, "PriorityConfigMapNotMatchedGroup", msg)
+-		} else {
+-			klog.V(1).Infof("Priority expander: NodeGroup %s assigned priority %d", id, matchedPriority)
+ 		}
+ 	}
+ 
+@@ -206,7 +212,10 @@ func (p *priority) BestOptions(expansionOptions []expander.Option, nodeInfo map[
+ func (p *priority) groupIDMatchesList(id string, nameRegexpList []*regexp.Regexp) bool {
+ 	for _, re := range nameRegexpList {
+ 		if re.FindStringIndex(id) != nil {
++			klog.V(2).Infof("Priority expander: NodeGroup %s MATCHES pattern %s", id, re.String())
+ 			return true
++		} else {
++			klog.V(2).Infof("Priority expander: NodeGroup %s does NOT match pattern %s", id, re.String())
+ 		}
+ 	}
+ 	return false
