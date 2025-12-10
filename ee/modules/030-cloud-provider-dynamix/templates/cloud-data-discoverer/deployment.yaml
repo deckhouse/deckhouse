@@ -72,7 +72,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       dnsPolicy: {{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }}
-      automountServiceAccountToken: true
       serviceAccountName: cloud-data-discoverer
       containers:
       - name: cloud-data-discoverer
