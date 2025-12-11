@@ -40,7 +40,7 @@ const (
 
 	// requeueInterval is the interval at which the controller will requeue the PackageRepository
 	// after successful reconciliation to trigger periodic scanning
-	requeueInterval = 10 * time.Second
+	requeueInterval = 6 * time.Hour
 )
 
 type reconciler struct {
