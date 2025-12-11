@@ -10,6 +10,8 @@ spec:
     resources:
       limits:
         disallowed-gpu/gpu: "1"
+      requests:
+        disallowed-gpu/gpu: "1"
   containers:
     - name: foo
       image: cpu-compute
