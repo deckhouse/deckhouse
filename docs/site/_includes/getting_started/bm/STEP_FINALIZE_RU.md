@@ -261,7 +261,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {% alert type="info" %}
 {% offtopic title="Добавление двух и более worker-узлов..." %}
 **Bootstrap-скрипт**:  
-Используйте ту же NodeGroup `worker` и тот же bootstrap-скрипт.  
+Используйте тот же ресурс NodeGroup `worker` и тот же bootstrap-скрипт, которые вы использовали при добавлении первого узла. 
 Для каждого дополнительного узла:
 
 - Подготовьте чистую виртуальную машину  
@@ -269,13 +269,13 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
   `echo <Base64-КОД-СКРИПТА> | base64 -d | bash`  
 
 **CAPS**:  
-Если вы используете CAPS и хотите больше статических узлов в NodeGroup `worker`:
+Если вы используете CAPS и хотите добавить статические узлы в NodeGroup `worker`:
 
-- Увеличьте <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> в ресурсе NodeGroup `worker` до нужного количества узлов.  
-- Создайте по одному ресурсу StaticInstance для каждого нового узла, указав:  
-  - метку `role: worker`
-  - IP-адрес этого узла в поле <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a> 
-  - ссылку на <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> в <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>
+1. Увеличьте значение <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> в ресурсе NodeGroup `worker` до нужного количества узлов.  
+1. Создайте по одному ресурсу StaticInstance для каждого нового узла, указав:  
+   - лейбл `role: worker`;
+   - IP-адрес этого узла в поле <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>;
+   - ссылку на <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> в <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
 {%- endofftopic %}
 {% endalert %}
 

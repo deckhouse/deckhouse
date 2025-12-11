@@ -30,7 +30,7 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 {%- if page.platform_type == "cloud" %}
 
 {% alert level="info" title="Добавление дополнительных узлов в облаке" %}
-Если вам потребуется добавить дополнительные узлы в облачном кластере (например, увеличить количество worker-узлов), воспользуйтесь [руководством по масштабированию кластера](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+Если вам потребуется добавить дополнительные узлы в облачном кластере (например, увеличить количество worker-узлов), воспользуйтесь [руководством по масштабированию кластера](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
 {% endalert %}
 
 {%- endif %}

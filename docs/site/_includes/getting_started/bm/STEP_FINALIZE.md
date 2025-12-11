@@ -253,7 +253,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {% alert type="info" %}
 {% offtopic title="Adding two or more worker nodes..." %}
 **Bootstrap script**:  
-Use the same NodeGroup `worker` and the same bootstrap script.  
+Use the same NodeGroup `worker` and the same bootstrap script you used to add the first node.
 For each additional node:
 
 - Prepare a clean virtual machine  
@@ -261,13 +261,13 @@ For each additional node:
   `echo <BASE64-SCRIPT-CODE> | base64 -d | bash`  
 
 **CAPS**:  
-If you use CAPS and want more static nodes in the `worker` NodeGroup:
+If you use CAPS and want to add more static nodes in the `worker` NodeGroup:
 
-- Increase <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> in the NodeGroup `worker` resource to the required number of nodes.  
-- Create one StaticInstance resource for each new node, specifying:  
-  - the label `role: worker`
-  - the IP address of this node in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a> 
-  - a reference to <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>
+1. Increase the value of <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> in the NodeGroup `worker` resource up to the required number of nodes.  
+1. Create one StaticInstance resource for each new node, specifying:  
+   - The label `role: worker`.
+   - The IP address of this node in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>.
+   - A reference to <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
 {%- endofftopic %}
 {% endalert %}
 
