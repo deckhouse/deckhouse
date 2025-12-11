@@ -409,6 +409,14 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 // This should be called at the beginning of each reconcile to ensure the metric reflects
 // the current state (no errors) before validation checks are performed.
 func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelease) {
+	// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
+	r.log.Debug(
+		"[PR16940]: RESET configuration error metrics",
+		slog.String("release", release.GetName()),
+		slog.String("module", release.GetModuleName()),
+		slog.String("version", release.GetVersion().String()),
+	)
+
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
@@ -1393,6 +1401,13 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		if strings.Contains(err.Error(), "is required") ||
 			strings.Contains(err.Error(), "is a forbidden property") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
+			// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
+			r.log.Debug(
+				"[PR16940]: SET configuration error metrics",
+				slog.String("release", release.GetName()),
+				slog.String("module", release.GetModuleName()),
+				slog.String("version", release.GetVersion().String()),
+			)
 			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
 				configConfigurationErrorMetricsLabels,
@@ -1453,6 +1468,13 @@ func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Def
 		}
 
 		if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
+			// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
+			r.log.Debug(
+				"[PR16940]: SET configuration error metrics",
+				slog.String("release", release.GetName()),
+				slog.String("module", release.GetModuleName()),
+				slog.String("version", release.GetVersion().String()),
+			)
 			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
 				map[string]string{
 					"version": release.GetVersion().String(),
