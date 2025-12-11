@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.17.8
+	github.com/flant/addon-operator v1.17.9-0.20251211162108-603327a6c798
 	github.com/flant/kube-client v1.5.1
 	github.com/flant/shell-operator v1.12.3
 	github.com/go-openapi/spec v0.22.0
