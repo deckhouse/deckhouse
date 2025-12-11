@@ -777,8 +777,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   ```
+
+   Проверьте версию `etcdutl` с помощью команды:
+
+   ```shell
    etcdutl version
    ```
 

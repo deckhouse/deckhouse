@@ -137,7 +137,7 @@ index 463751ed..a4a1f2cb 100644
  github.com/prometheus/client_golang v1.23.0/go.mod h1:i/o0R9ByOnHX0McrTMTyhYvKE4haaf2mW08I+jGAjEE=
  github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
 diff --git a/server/handlers.go b/server/handlers.go
-index 93266b8d..17688448 100644
+index 93266b8d..1474c49b 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -11,7 +11,6 @@ import (
@@ -160,7 +160,7 @@ index 93266b8d..17688448 100644
  		return a, nil
  	}
  	if err := s.storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
-@@ -558,63 +562,81 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -558,52 +562,52 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		"connector_id", authReq.ConnectorID, "username", claims.Username,
  		"preferred_username", claims.PreferredUsername, "email", email, "groups", claims.Groups)
  
@@ -233,6 +233,8 @@ index 93266b8d..17688448 100644
  		}
  	}
  
+-	// we can skip the redirect to /approval and go ahead and send code if it's not required
+-	if s.skipApproval && !authReq.ForceApprovalPrompt {
 +	// Update existing OfflineSession obj with new RefreshTokenRef.
 +	if err := s.storage.UpdateOfflineSessions(ctx, identity.UserID, authReq.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 +		if len(identity.ConnectorData) > 0 {
@@ -244,19 +246,12 @@ index 93266b8d..17688448 100644
 +		return "", false, err
 +	}
 +
- 	// we can skip the redirect to /approval and go ahead and send code if it's not required
- 	if s.skipApproval && !authReq.ForceApprovalPrompt {
++	// we can skip the redirect to /approval and /totp and go ahead and send code if it's not required
++	if s.skipApproval && !authReq.ForceApprovalPrompt && !s.totp.enabledForConnector(authReq.ConnectorID) {
  		return "", true, nil
  	}
  
-+	// we can skip the redirect to /approval and /totp and go ahead and send code if it's not required
-+	if s.skipApproval && !authReq.ForceApprovalPrompt && !s.totp.enabledForConnector(authReq.ConnectorID) {
-+		return "", true, nil
-+	}
-+
- 	// an HMAC is used here to ensure that the request ID is unpredictable, ensuring that an attacker who intercepted the original
- 	// flow would be unable to poll for the result at the /approval endpoint
- 	h := hmac.New(sha256.New, authReq.HMACKey)
+@@ -613,8 +617,21 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  	h.Write([]byte(authReq.ID))
  	mac := h.Sum(nil)
  
@@ -280,7 +275,7 @@ index 93266b8d..17688448 100644
  }
  
  func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
-@@ -636,7 +658,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+@@ -636,7 +653,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
  		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
  		return
  	}
@@ -2343,3 +2338,5 @@ index 00000000..2a77b8d3
 +</div>
 +
 +{{ template "footer.html" . }}
+
+

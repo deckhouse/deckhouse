@@ -368,6 +368,10 @@ Where:
 
 ### Pre-Installation Checks
 
+{% alert level="info" %}
+Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{% endalert %}
+
 {% offtopic title="Diagram of pre-installation checks execution..." %}
 ![Diagram of pre-installation checks execution](../images/installing/preflight-checks.png)
 {% endofftopic %}
@@ -397,7 +401,11 @@ List of checks performed by the installer before starting Deckhouse installation
      - at least 60 GB of disk space with 400+ IOPS performance;
      - Linux kernel version 5.8 or newer;
      - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
-     - access to standard OS package repositories.
+     - access to standard OS package repositories;
+     - **When using `ContainerdV2`** as the default container runtime on cluster nodes:
+        - Support for `CgroupsV2`;
+        - Systemd version `244`;
+        - Support for the `erofs` kernel module.
    - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.

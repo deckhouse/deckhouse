@@ -83,6 +83,10 @@ Features of the configurations listed in the table above:
 * **Typical** — This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 
+{% alert level="info" %}
+Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{% endalert %}
+
 ## Deciding on the amount of resources needed for nodes
 
 <table>
