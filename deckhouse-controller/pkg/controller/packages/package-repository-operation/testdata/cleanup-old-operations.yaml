@@ -1,0 +1,205 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:00:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:03:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-2
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:06:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-3
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:09:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-4
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:12:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-5
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:15:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-6
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-7
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-8
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-9
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-10
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-11
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:18:00Z"
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-12
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Completed
+---
