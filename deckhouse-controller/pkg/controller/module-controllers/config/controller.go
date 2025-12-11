@@ -216,6 +216,10 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
+	if basicModule == nil {
+		r.logger.Warn("basic module not found", slog.String("name", moduleConfig.Name))
+	}
+
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
 	}
