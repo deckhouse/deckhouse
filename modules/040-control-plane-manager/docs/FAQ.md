@@ -320,24 +320,24 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Update the master nodes following the [instructions](#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster).
 1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster).
 
-## How to configure HA with two master nodes and an arbiter node?
+## How to configure HA mode with two master nodes and an arbiter node?
 
-The Deckhouse Kubernetes Platform allows you to configure HA with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+Deckhouse Kubernetes Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
 
 Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
 
 Requirements for the arbiter node:
 
-* At least 2 CPU cores;
-* At least 4 GB of RAM;
-* At least 8 GB of disk space for etcd.
+* At least 2 CPU cores
+* At least 4 GB of RAM
+* At least 8 GB of disk space for etcd
 
 The network latency requirements for the arbiter node are similar to those for the master nodes.
 
 ### Configuring in a cloud cluster
 
 The example below applies to a cloud cluster with three master nodes.
-To configure HA with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
+To configure HA mode with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
 
 To do this, follow these steps:
 
@@ -346,7 +346,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 {% endalert %}
 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
-1. Copy the resulting archive outside the cluster (e.g., to a local machine).
+1. Copy the resulting archive outside the cluster (for example, to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
 1. Make sure the DKP queue is empty:
 
@@ -370,7 +370,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   Change the cloud provider settings
+   Change the cloud provider settings:
 
    * Set `masterNodeGroup.replicas` to `2`.
    * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
@@ -389,14 +389,14 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
            - europe-west3-b
          instanceClass:
            machineType: n1-standard-4
-       # ... the rest of the manifesto
+       # ... the rest of the manifest
      ```
 
    * Save your changes.
 
    > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
    >
-   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look as follows:
    >
    > ```yaml
    > externalIPAddresses:
@@ -409,13 +409,13 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
    ```
 
-   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+   > **Important**. For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in OpenStack itself.
    >
-   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   > For example, when deleting the `cloud-demo-master-2` node in the OpenStack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
    >
-   > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+   > If the `kubernetes-data` disk remains, there may be problems with etcd operation as the number of master nodes increases.
 
-1. Check the Deckhouse queue and make sure that there are no errors with the command:
+1. Check the Deckhouse queue with the following command and make sure there are no errors:
 
    ```shell
    d8 system queue list
@@ -423,7 +423,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 ### Configuring in a static cluster
 
-To configure HA with two master nodes and an arbiter node in a static cluster, follow these steps:
+To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
 
 1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
@@ -440,7 +440,7 @@ To configure HA with two master nodes and an arbiter node in a static cluster, f
          taints:
            - key: node.deckhouse.io/etcd-arbiter
              effect: NoSchedule
-     # ... the rest of the manifesto
+     # ... the rest of the manifest
      ```
 
 1. Add a node to the cluster that will be used as an arbiter node in a [way that is convenient](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster) for you.

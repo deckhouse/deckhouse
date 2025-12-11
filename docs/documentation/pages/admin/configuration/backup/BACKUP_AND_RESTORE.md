@@ -127,8 +127,8 @@ To properly restore a multi-master cluster, follow these steps:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
    - In a static cluster, manually remove the additional master nodes.
-   - In a static cluster with HA based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
-   - In a cloud cluster with HA based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
+   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
 

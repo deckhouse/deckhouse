@@ -75,18 +75,17 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
 
    - In the cloud provider settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-   [More details](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
+     For details on configuring HA mode with 2 master nodes and 1 arbiter node in a cloud cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
 
 1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a static cluster**:
 
    - Create a NodeGroup for the arbiter node and add the node to the cluster.
    - Remove the labels `node-role.kubernetes.io/control-plane=""`, `node-role.kubernetes.io/master=""` and `node.deckhouse.io/group-""` from the extra master node.
-   - For **bare-metal clusters**:
-     - To correctly remove the node from `etcd`:
-       - Run `d8 k delete node <node-name>`;
-       - Power off the corresponding VM or server.
+   - To correctly remove the node from etcd in **bare-metal clusters**:
+     - Run `d8 k delete node <node-name>`.
+     - Power off the corresponding VM or server.
 
-   [More details](../../high-reliability-and-availability/enable.html#configuring-in-a-static-cluster).
+     For details on configuring HA mode with 2 master nodes and 1 arbiter node in a static cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-static-cluster).
 
 ### Removing the master role from a node without deleting the node itself
 
