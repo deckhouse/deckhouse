@@ -307,16 +307,15 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		return res, nil
 	}
 
-	// TODO(Glitchy-Sheep): Enable this or remove after metrics reset is tested
 	// add finalizer for metrics reset on deletion (so the release resource will be deleted only after metrics are reset)
-	// if !controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset) {
-	// 	controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset)
-	// 	if err := r.client.Update(ctx, release); err != nil {
-	// 		r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
-	// 		return ctrl.Result{Requeue: true}, nil
-	// 	}
-	// 	return ctrl.Result{Requeue: true}, nil
-	// }
+	if !controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	switch release.GetPhase() {
 	case "":
@@ -418,12 +417,10 @@ func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelea
 		slog.String("version", release.GetVersion().String()),
 	)
 
-	configConfigurationErrorMetricsLabels := map[string]string{
-		"module":  release.GetModuleName(),
-		"version": release.GetVersion().String(),
-	}
-
-	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 0, configConfigurationErrorMetricsLabels)
+	r.metricStorage.Grouped().ExpireGroupMetricByName(
+		metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String()),
+		metrics.ModuleConfigurationError,
+	)
 }
 
 // patchManualRelease modify deckhouse release with approved status
@@ -1386,11 +1383,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 
-	configConfigurationErrorMetricsLabels := map[string]string{
-		"module":  release.GetModuleName(),
-		"version": release.GetVersion().String(),
-	}
-
 	if err = def.Validate(values, logger); err != nil {
 		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
@@ -1399,16 +1391,18 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 		if strings.Contains(err.Error(), "is required") ||
 			strings.Contains(err.Error(), "is a forbidden property") {
-			// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
-			r.log.Debug(
-				"[PR16940]: SET configuration error metrics",
-				slog.String("release", release.GetName()),
-				slog.String("module", release.GetModuleName()),
-				slog.String("version", release.GetVersion().String()),
-			)
-			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
 				1,
-				configConfigurationErrorMetricsLabels,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -1466,18 +1460,18 @@ func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Def
 		}
 
 		if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
-			// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
-			r.log.Debug(
-				"[PR16940]: SET configuration error metrics",
-				slog.String("release", release.GetName()),
-				slog.String("module", release.GetModuleName()),
-				slog.String("version", release.GetVersion().String()),
-			)
-			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
-				map[string]string{
-					"module":  release.GetModuleName(),
-					"version": release.GetVersion().String(),
-				},
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
+				1,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -1789,13 +1783,13 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 
 	// TODO(Glitchy-Sheep): Enable this or remove after metrics reset is tested
 	// // The metric is already reset in the handleRelease function, so we can release the finalizer
-	// if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset) {
-	// 	controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset)
-	// 	if err := r.client.Update(ctx, release); err != nil {
-	// 		r.log.Error("failed to remove metrics finalizer from module release", slog.String("release", release.GetName()), log.Err(err))
-	// 		return ctrl.Result{}, err
-	// 	}
-	// }
+	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to remove metrics finalizer from module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
 
 	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed) {
 		r.activeApplyCount.Add(1)

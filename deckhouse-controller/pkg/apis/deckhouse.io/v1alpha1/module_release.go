@@ -45,11 +45,10 @@ const (
 	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
 	ModuleReleaseLabelUpdatePolicy             = "modules.deckhouse.io/update-policy"
 	ModuleReleaseFinalizerExistOnFs            = "modules.deckhouse.io/exist-on-fs"
-	// TODO(Glitchy-Sheep): Enable this or remove after metrics reset is tested
-	// ModuleReleaseFinalizerMetricsReset ensures that the ModuleConfigurationError metric is reset to 0
+	// ModuleReleaseFinalizerMetricsRegistered ensures that the ModuleConfigurationError metric is reset to 0
 	// before the ModuleRelease resource is deleted. Without this finalizer, the resource could be removed
 	// before the reconciler has a chance to clear the metric, leaving stale error metrics in Prometheus.
-	// ModuleReleaseFinalizerMetricsReset           = "modules.deckhouse.io/metrics-reset"
+	ModuleReleaseFinalizerMetricsRegistered      = "modules.deckhouse.io/metrics-registered"
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
 	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
