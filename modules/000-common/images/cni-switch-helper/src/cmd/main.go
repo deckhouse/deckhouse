@@ -155,7 +155,7 @@ func startWebhookServer(probeAddr string) error {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
 
-		const webhookServerPort = 9443
+		const webhookServerPort = 42443
 		server := &http.Server{
 			Addr:         fmt.Sprintf(":%d", webhookServerPort),
 			Handler:      mux,
