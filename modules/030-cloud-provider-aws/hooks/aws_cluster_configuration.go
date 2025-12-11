@@ -143,6 +143,14 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
+	if raw, ok := metaCfg.ProviderClusterConfig["publicNetworkAllowList"]; ok && len(raw) != 0 {
+		var publicNetworkAllowList []string
+		if err := json.Unmarshal(raw, &publicNetworkAllowList); err != nil {
+			return err
+		}
+		input.Values.Set("cloudProviderAws.internal.publicNetworkAllowList", publicNetworkAllowList)
+	}
+
 	input.Values.Set("cloudProviderAws.internal.keyName", discoveryData.KeyName)
 	input.Values.Set("cloudProviderAws.internal.loadBalancerSecurityGroup", discoveryData.LoadBalancerSecurityGroup)
 	input.Values.Set("cloudProviderAws.internal.zones", discoveryData.Zones)
