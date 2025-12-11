@@ -6,6 +6,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare "<= 1.32" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "InPlacePodVerticalScaling=true" | join "," }}
+{{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
