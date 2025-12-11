@@ -105,7 +105,7 @@ fi
 # Recreate swapfile if size differs or doesn't exist
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
-  swapoff "$SWAPFILE" 2>/dev/null || true
+  swapoff "$SWAPFILE" 2>/dev/null
   rm -f "$SWAPFILE"
   if command -v fallocate >/dev/null 2>&1 && fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
     bb-log-info "Swapfile created with fallocate"
