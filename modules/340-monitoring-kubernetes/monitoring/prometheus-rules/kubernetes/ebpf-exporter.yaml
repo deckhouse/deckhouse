@@ -25,6 +25,23 @@
         kube_pod_container_info * on (uid) group_left
         max by (uid) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", ".+burstable/pod(.*)"))
       )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod) (
+        label_replace(
+          kube_pod_info,
+          "uid", "$1", "uid", "(.+)"
+        )
+        * on (uid) group_left()
+          max by (uid) (
+            label_replace(
+              ebpf_exporter_oom_kills{cgroup_path=~".*kubepods/pod.*"},
+              "uid", "$1",
+              "cgroup_path", ".+kubepods/pod(.*)"
+            )
+          )
+      )
+  
   - alert: EbpfExporterKernelNotSupported
     expr: min by (job, node) (ebpf_exporter_btf_support_unavailable_in_kernel{job="ebpf-exporter"}) == 1
     for: 3m
