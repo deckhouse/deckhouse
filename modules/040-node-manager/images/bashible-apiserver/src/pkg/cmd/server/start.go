@@ -109,7 +109,7 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
