@@ -51,6 +51,7 @@ const (
 	// TODO: unify constant
 	packageTypeApplication = "Application"
 
+	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
 )
 
@@ -219,7 +220,7 @@ func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepo
 	case v1alpha1.PackageRepositoryOperationPhaseProcessing:
 		res, err = r.handleProcessingState(ctx, operation)
 	case v1alpha1.PackageRepositoryOperationPhaseCompleted:
-		res, err = r.handleCompletedState(ctx, operation)
+		err = r.handleCompletedState(ctx, operation)
 	default:
 		r.logger.Warn("unknown phase", slog.String("phase", operation.Status.Phase))
 
@@ -531,9 +532,8 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
+// handleCompletedState is used to process operations in completed phase (cleanup old operations for the same repository)
+func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
 	logger := r.logger.With(slog.String("name", operation.Name))
 	logger.Debug("handling completed state")
 	defer logger.Debug("handling completed state complete")
@@ -544,14 +544,14 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepository,
 	})
 	if err != nil {
-		return res, fmt.Errorf("list operations: %w", err)
+		return fmt.Errorf("list operations: %w", err)
 	}
 
 	logger.Debug("found operations for the same repository", slog.Int("count", len(operations.Items)))
 
 	if len(operations.Items) <= cleanupOldOperationsCount {
 		logger.Debug("not enough operations to delete")
-		return res, nil
+		return nil
 	}
 
 	// sort operations by creation timestamp descending
@@ -563,11 +563,11 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	for _, op := range operations.Items[cleanupOldOperationsCount:] {
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {
-			return res, fmt.Errorf("delete old operation: %w", err)
+			return fmt.Errorf("delete old operation: %w", err)
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
 func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
