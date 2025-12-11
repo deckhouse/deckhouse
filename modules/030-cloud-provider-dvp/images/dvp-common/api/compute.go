@@ -85,6 +85,10 @@ func (c *ComputeService) CreateVM(ctx context.Context, machine *v1alpha2.Virtual
 	return machine, nil
 }
 
+func (c *ComputeService) UpdateVM(ctx context.Context, vm *v1alpha2.VirtualMachine) error {
+	return c.client.Update(ctx, vm)
+}
+
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
 	var instance v1alpha2.VirtualMachine
 
@@ -308,6 +312,14 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 				attachmentDiskNameLabel:    diskName,
 				attachmentMachineNameLabel: vmHostname,
 			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "virtualization.deckhouse.io/v1alpha2",
+					Kind:       "VirtualMachine",
+					Name:       vm.Name,
+					UID:        vm.UID,
+				},
+			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
 			VirtualMachineName: vm.Name,
@@ -402,11 +414,19 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
-func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte, vmName string, vmUID types.UID) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "virtualization.deckhouse.io/v1alpha2",
+					Kind:       "VirtualMachine",
+					Name:       vmName,
+					UID:        vmUID,
+				},
+			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},

@@ -67,7 +67,7 @@ func (d *DiskService) ListDisksByName(ctx context.Context, diskName string) (*v1
 	return &virtualDiskList, nil
 }
 
-func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize int64, diskStorageClass string) (*v1alpha2.VirtualDisk, error) {
+func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize int64, diskStorageClass string, ownerRefs []metav1.OwnerReference) (*v1alpha2.VirtualDisk, error) {
 	vmd := v1alpha2.VirtualDisk{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha2.VirtualDiskKind,
@@ -79,6 +79,7 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 			Labels: map[string]string{
 				diskNameLabel: diskName,
 			},
+			OwnerReferences: ownerRefs,
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
 			PersistentVolumeClaim: v1alpha2.VirtualDiskPersistentVolumeClaim{
@@ -107,6 +108,7 @@ func (d *DiskService) CreateDiskFromDataSource(
 	diskSize resource.Quantity,
 	diskStorageClass string,
 	imageDataSource *v1alpha2.VirtualDiskDataSource,
+	ownerRefs []metav1.OwnerReference,
 ) (*v1alpha2.VirtualDisk, error) {
 	vmd := v1alpha2.VirtualDisk{
 		TypeMeta: metav1.TypeMeta{
@@ -119,6 +121,7 @@ func (d *DiskService) CreateDiskFromDataSource(
 			Labels: map[string]string{
 				diskNameLabel: diskName,
 			},
+			OwnerReferences: ownerRefs,
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
 			DataSource: imageDataSource,
