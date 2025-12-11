@@ -732,5 +732,18 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Выполните команду:
 
 ```bash
-d8 
+d8 mirror pull --source="registry.deckhouse.ru/deckhouse/ee" --license="<ЛИЦЕНЗИОННЫЙ КЛЮЧ>" $(pwd)/d8.tar
 ```
+
+Не забудьте изменить в команде следующие параметры:
+
+* `<ЛИЦЕНЗИОННЫЙ КЛЮЧ>` — ваш лицензионный ключ;
+* в адресе registry путь к вашей редакции DKP:
+  * `be` — для Basic Edition;
+  * `se` — для Standart Edition;
+  * `se-plus` — для Standart Edition+;
+  * `ee` — для Enterprise Edition;
+
+
+
+
