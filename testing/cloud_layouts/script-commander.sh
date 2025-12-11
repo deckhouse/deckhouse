@@ -605,7 +605,7 @@ d8 mirror pull d8-modules \
   --include-module commander-agent --include-module commander --include-module prompp  --include-module pod-reloader  --include-module runtime-audit-engine --no-platform  --no-security-db
 
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+  --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 d8 mirror push d8-modules "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
