@@ -51,7 +51,7 @@ const (
 	// TODO: unify constant
 	packageTypeApplication = "Application"
 
-	cleanupOldOperationsCount = 5
+	cleanupOldOperationsCount = 10
 )
 
 type reconciler struct {
