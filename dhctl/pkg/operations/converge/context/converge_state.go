@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	apiv1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"

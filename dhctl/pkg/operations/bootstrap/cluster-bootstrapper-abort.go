@@ -180,11 +180,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				StateCache:             stateCache,
 				InfrastructureContext:  b.InfrastructureContext,
 				PhasedExecutionContext: b.PhasedExecutionContext,
-				SSHClientProvider:      staticSSHClientProvider,
-				LoggerProvider:         loggerProvider,
-				TmpDir:                 b.TmpDir,
-				IsDebug:                b.IsDebug,
-				CommanderMode:          b.CommanderMode,
+
+				SSHClientProvider: staticSSHClientProvider,
+				LoggerProvider:    loggerProvider,
+
+				TmpDir:        b.TmpDir,
+				IsDebug:       b.IsDebug,
+				CommanderMode: b.CommanderMode,
 			})
 
 			if err != nil {

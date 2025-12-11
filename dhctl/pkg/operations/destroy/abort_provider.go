@@ -111,6 +111,9 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		StateLoader:  terraStateLoader,
 
 		CommanderMode: a.params.CommanderMode,
+
+		// for abort we cannot have resources
+		SkipResources: true,
 	}), nil
 }
 
@@ -123,7 +126,8 @@ func (a *abortDestroyerProvider) Static(context.Context, *config.MetaConfig) (De
 		KubeProvider:         a.kubeProvider(),
 		LoggerProvider:       a.params.LoggerProvider,
 		PhasedActionProvider: phaseProvider,
-		TmpDir:               a.params.TmpDir,
+
+		TmpDir: a.params.TmpDir,
 	}), nil
 }
 
