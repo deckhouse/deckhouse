@@ -35,20 +35,20 @@ spec:
                   filterVerb:
                     type: string
                     description: |
-                      This verb is appended to the URLPrefix when issuing a filter call to the extender.
-                      If not set, defaults to "filter".
-                      Set an "" if you do not want to add this extender.
+                      Verb appended to `URLPrefix` when issuing a `filter` call to the scheduler extender.
+                      If omitted, defaults to `filter`.
+                      Set to an empty string `""` to disable `filter` calls for this extender.
                   preemptVerb:
                     type: string
                     description: |
-                      This verb is appended to the URLPrefix when issuing the preempt call to the extender.
-                      Leave empty if you don't want to add this extender ("" are equivalent).
+                      Verb appended to `URLPrefix` when issuing a `preempt` call to this extender.
+                      Leave empty (`""`) to disable `preempt` calls for this extender.
                   prioritizeVerb:
                     type: string
                     description: |
-                      This verb is appended to the URLPrefix when issuing the prioritize call to extender.
-                      If not set, defaults to "prioritize".
-                      Set an "" if you do not want to add this extender.
+                      Verb appended to `URLPrefix` when issuing a `prioritize` call to this extender.
+                      If omitted, defaults to `prioritize`.
+                      Set to an empty string `""` to disable `prioritize` calls for this extender.
                   weight:
                     type: integer
                     description: |
