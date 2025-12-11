@@ -537,6 +537,7 @@ function bootstrap_static() {
 
   if [[ ${PROVIDER} == "Static" ]]; then
     if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      echo "Release branch ${DEV_BRANCH} on ${PROVIDER} provider detected"
       export DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
     fi
     echo "DECKHOUSE_DOCKERCFG=$(${DECKHOUSE_DOCKERCFG} | base64)" #todo debug
