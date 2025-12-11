@@ -77,7 +77,11 @@ metallb:
         - .
 monitoring-kubernetes:
     - version: 2
+      description:
+        en: If the `.ebpfExporterEnabled` field is set to `true`, add `.oomKillsExporterEnabled=true`. Then, delete the `skipRegistryCertVerification` field from the object.
+        ru: Если для поля `.ebpfExporterEnabled` установлено значение `true`, добавьте поле `.oomKillsExporterEnabled=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта.
       conversions:
+        - if .ebpfExporterEnabled == true then .oomKillsExporterEnabled=true end
         - del(.ebpfExporterEnabled)
 node-manager:
     - version: 2
