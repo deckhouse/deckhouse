@@ -263,9 +263,12 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 		return fmt.Errorf("failed to register %s: %w", ModuleSizeBytesTotal, err)
 	}
 
+	// ModuleConfigurationError uses different labels than other module metrics
+	// because it tracks configuration errors per module version, not per source
+	moduleConfigErrorLabels := []string{"module", "version"}
 	_, err = metricStorage.RegisterGauge(
 		ModuleConfigurationError,
-		moduleLabels,
+		moduleConfigErrorLabels,
 		options.WithHelp("Gauge indicating module configuration errors (1.0 = error present, 0.0 = no error)"),
 	)
 	if err != nil {

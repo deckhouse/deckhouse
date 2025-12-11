@@ -1897,7 +1897,7 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 		// Register the metric first
 		_, err := metricStorage.RegisterGauge(
 			metrics.ModuleConfigurationError,
-			[]string{"module", "version", "error"},
+			[]string{"module", "version"},
 			options.WithHelp("Gauge indicating module configuration errors"),
 		)
 		require.NoError(suite.T(), err)
@@ -1914,6 +1914,7 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 
 		r := &reconciler{
 			metricStorage: metricStorage,
+			log:           log.NewNop(),
 		}
 
 		// Call the function
@@ -1944,7 +1945,6 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 
 				assert.Equal(suite.T(), moduleName, labels["module"], "module label should match")
 				assert.Equal(suite.T(), "1.2.3", labels["version"], "version label should match")
-				assert.Equal(suite.T(), "", labels["error"], "error label should be empty")
 			}
 		}
 		require.True(suite.T(), found, "%s metric should be found", metrics.ModuleConfigurationError)
@@ -1958,7 +1958,7 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 
 		_, err := metricStorage.RegisterGauge(
 			metrics.ModuleConfigurationError,
-			[]string{"module", "version", "error"},
+			[]string{"module", "version"},
 		)
 		require.NoError(suite.T(), err)
 
@@ -1972,6 +1972,7 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 
 		r := &reconciler{
 			metricStorage: metricStorage,
+			log:           log.NewNop(),
 		}
 
 		// First, set metric to 1 to simulate previous error state
@@ -1981,7 +1982,6 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 			map[string]string{
 				"module":  release.GetModuleName(),
 				"version": release.GetVersion().String(),
-				"error":   "previous error",
 			},
 		)
 
@@ -1999,10 +1999,6 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 		require.NoError(suite.T(), err)
 		resetValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
 		assert.Equal(suite.T(), 0.0, resetValue, "%s metric should be reset to 0 after calling reset function", metrics.ModuleConfigurationError)
-
-		// Verify error label is empty
-		labels := suite.getMetricLabels(metricFamilies, metrics.ModuleConfigurationError, release)
-		assert.Equal(suite.T(), "", labels["error"], "error label should be empty after reset")
 	})
 }
 
