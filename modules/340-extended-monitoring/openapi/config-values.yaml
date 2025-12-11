@@ -86,8 +86,7 @@ properties:
               type: string
               enum: [HTTP, HTTPS]
         description: |
-          Scheme for checking availability of image from this mirror. You can't use this option if mirrors are not setted.
-          If extendedMonitoring.imageAvailability.registry.scheme is setted to HTTP than this scheme will be used for all checks.
+          Scheme used to check image availability on this mirror. This option is available only if `mirror` are configured. If `extendedMonitoring.imageAvailability.registry.scheme` is set to `HTTP`, HTTP will be used for all checks regardless of the mirror scheme configuration.
       forceCheckDisabledControllers:
         type: array
         x-examples:

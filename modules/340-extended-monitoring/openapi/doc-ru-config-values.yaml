@@ -33,7 +33,7 @@ properties:
       mirrorsSchemes:
         type: array
         description: |
-          Протокол доступа к зеркалу container registry. Вы не сможете использовать данную опцию если не установили mirrors.
+          Протокол доступа к зеркалам container registry. Опция доступна только при заданном параметре `mirrors`.
       forceCheckDisabledControllers:
         description: |
           Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
