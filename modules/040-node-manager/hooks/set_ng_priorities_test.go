@@ -89,7 +89,7 @@ spec:
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.ValuesGet("nodeManager.internal.clusterAutoscalerPriorities").String()
-			Expect(m).To(Equal(`{"1":[".*"],"20":["^test-ng1-[0-9a-zA-Z]+$"],"50":["^test-ng2-[0-9a-zA-Z]+$"]}`))
+			Expect(m).To(Equal(`{"1":[".*"],"20":[".*test-ng1-[0-9a-zA-Z]+$"],"50":[".*test-ng2-[0-9a-zA-Z]+$"]}`))
 		})
 	})
 
