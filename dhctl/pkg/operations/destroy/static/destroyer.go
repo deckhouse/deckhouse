@@ -40,8 +40,8 @@ import (
 
 type DestroyerParams struct {
 	SSHClientProvider    sshclient.SSHProvider
-	State                *State
 	KubeProvider         kube.ClientProviderWithCleanup
+	State                *State
 	LoggerProvider       log.LoggerProvider
 	PhasedActionProvider phases.DefaultActionProvider
 

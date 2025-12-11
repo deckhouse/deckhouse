@@ -37,13 +37,18 @@ type (
 		// Run
 		// if action should stop run should return ErrShouldStop
 		Run(phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error
-		CompleteSub(phase OperationSubPhase)
+		CompleteSub(phase OperationSubPhase) error
 	}
 
 	ActionProvider[OperationPhaseDataT any] func() PhaseAction[OperationPhaseDataT]
-
-	DefaultActionProvider ActionProvider[DefaultContextType]
 )
+
+type (
+	DefaultActionFunc     = ActionFunc[DefaultContextType]
+	DefaultPhaseAction    = PhaseAction[DefaultContextType]
+	DefaultActionProvider = ActionProvider[DefaultContextType]
+)
+
 type PhaseActionWithStateCache[OperationPhaseDataT any] struct {
 	stateCache   dstate.Cache
 	phaseContext PhasedExecutionContext[OperationPhaseDataT]
@@ -84,8 +89,27 @@ func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(phase OperationPhas
 	return a.phaseContext.CompletePhase(a.stateCache, completeData)
 }
 
-func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) {
+func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) error {
 	a.phaseContext.CompleteSubPhase(phase)
+	return nil
+}
+
+type phaseActionWithError[OperationPhaseDataT any] struct {
+	err error
+}
+
+func newPhaseActionWithError[OperationPhaseDataT any](err error) PhaseAction[OperationPhaseDataT] {
+	return &phaseActionWithError[OperationPhaseDataT]{
+		err: err,
+	}
+}
+
+func (a *phaseActionWithError[OperationPhaseDataT]) Run(phase OperationPhase, _ bool, _ ActionFunc[OperationPhaseDataT]) error {
+	return fmt.Errorf("Phase '%s' cannot be run: %w", phase, a.err)
+}
+
+func (a *phaseActionWithError[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) error {
+	return fmt.Errorf("SubPhase '%s' cannot be complete: %w", phase, a.err)
 }
 
 type (
@@ -100,15 +124,19 @@ type (
 		Run(action PipelineAction[OperationPhaseDataT]) error
 		GetLastState() DhctlState
 		// ActionInPipeline
-		// should return ErrPipelineDidNotStart if call before call run
-		ActionInPipeline() (PhaseAction[OperationPhaseDataT], error)
+		// can return with actions which returns ErrPipelineDidNotStart if call before call run
+		ActionInPipeline() PhaseAction[OperationPhaseDataT]
 	}
 
 	PipelineProvider[OperationPhaseDataT any]         func(opts ...PipelineOptsFunc) Pipeline[OperationPhaseDataT]
 	PreparedPipelineProvider[OperationPhaseDataT any] func() Pipeline[OperationPhaseDataT]
+)
 
-	DefaultPipelineProvider         func(opts ...PipelineOptsFunc) Pipeline[DefaultContextType]
-	PreparedDefaultPipelineProvider func() Pipeline[DefaultContextType]
+type (
+	DefaultPipeline                 = Pipeline[DefaultContextType]
+	DefaultPipelinePhaseSwitcher    = PipelinePhaseSwitcher[DefaultContextType]
+	DefaultPipelineProvider         = PipelineProvider[DefaultContextType]
+	PreparedDefaultPipelineProvider = PreparedPipelineProvider[DefaultContextType]
 )
 
 type PipelineOpts struct {
@@ -200,12 +228,12 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) GetLastState() DhctlState 
 	return p.phaseContext.GetLastState()
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) ActionInPipeline() (PhaseAction[OperationPhaseDataT], error) {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) ActionInPipeline() PhaseAction[OperationPhaseDataT] {
 	if !p.isStarted() {
-		return nil, ErrPipelineDidNotStart
+		return newPhaseActionWithError[OperationPhaseDataT](ErrPipelineDidNotStart)
 	}
 
-	return NewPhaseActionWithStateCache(p.phaseContext, p.stateCache), nil
+	return NewPhaseActionWithStateCache(p.phaseContext, p.stateCache)
 }
 
 func (p *PipelineWithStateCache[OperationPhaseDataT]) phaseSwitcher(phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error {
@@ -263,5 +291,17 @@ func NewDefaultPipelineWithStateCacheProvider(context DefaultPhasedExecutionCont
 func NewDefaultPipelineWithStateCacheProviderOpts(context DefaultPhasedExecutionContext, stateCache dstate.Cache, opts ...PipelineOptsFunc) PreparedDefaultPipelineProvider {
 	return func() Pipeline[DefaultContextType] {
 		return NewPipelineWithStateCache(context, stateCache, opts...)
+	}
+}
+
+func NewDefaultPhaseActionProviderFromPipeline(pipeline Pipeline[DefaultContextType]) DefaultActionProvider {
+	return func() PhaseAction[DefaultContextType] {
+		return pipeline.ActionInPipeline()
+	}
+}
+
+func NewPhaseActionProviderFromPipeline[OperationPhaseDataT any](pipeline Pipeline[OperationPhaseDataT]) ActionProvider[OperationPhaseDataT] {
+	return func() PhaseAction[OperationPhaseDataT] {
+		return pipeline.ActionInPipeline()
 	}
 }

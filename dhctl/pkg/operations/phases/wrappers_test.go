@@ -27,15 +27,9 @@ import (
 
 func TestPipelineWrapper(t *testing.T) {
 	loggerProvider := log.DefaultLoggerProvider
-	loggerProviderOpt := func(o *PipelineOpts) {
-		o.LoggerProvider = loggerProvider
-	}
+	loggerProviderOpt := WithPipelineLoggerProvider(loggerProvider)
 
-	pipelineNameOpt := func(name string) PipelineOptsFunc {
-		return func(o *PipelineOpts) {
-			o.PipelineName = name
-		}
-	}
+	pipelineNameOpt := WithPipelineName
 
 	type (
 		contextType  = DefaultContextType
@@ -43,9 +37,9 @@ func TestPipelineWrapper(t *testing.T) {
 		actionType   = PipelineAction[contextType]
 		pipelineType = Pipeline[contextType]
 
-		beforeAfterTestType               = func() error
-		beforeAfterTestActionProviderType = func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType
-		testActionProviderType            = func(t *testing.T, testName string, state dstate.Cache, pipeline pipelineType) actionType
+		beforeAfterTestType         = func() error
+		afterTestActionProviderType = func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType
+		testActionProviderType      = func(t *testing.T, testName string, state dstate.Cache, pipeline pipelineType) actionType
 	)
 
 	logger := loggerProvider()
@@ -98,10 +92,7 @@ func TestPipelineWrapper(t *testing.T) {
 	tests := []struct {
 		name string
 
-		beforeRun      beforeAfterTestActionProviderType
-		beforeRunError error
-
-		afterRun      beforeAfterTestActionProviderType
+		afterRun      afterTestActionProviderType
 		afterRunError error
 
 		actionProvider testActionProviderType
@@ -110,40 +101,7 @@ func TestPipelineWrapper(t *testing.T) {
 		expectedState DhctlState
 	}{
 		{
-			name: "get action without start pipeline",
-
-			beforeRun: func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType {
-				return func() error {
-					logger.LogInfoF("before run: %s\n", testName)
-					_, err := pipeline.ActionInPipeline()
-					if err != nil {
-						return err
-					}
-					return nil
-
-				}
-			},
-			beforeRunError: ErrPipelineDidNotStart,
-
-			afterRun:      emptyBeforeAfter,
-			afterRunError: nil,
-
-			actionProvider: func(t *testing.T, testName string, state dstate.Cache, pipeline pipelineType) actionType {
-				return func(switcher switcherType) error {
-					logger.LogInfoF("action run: %s\n", testName)
-					return nil
-				}
-			},
-			actionErr: nil,
-
-			expectedState: nil,
-		},
-
-		{
 			name: "pipeline already started",
-
-			beforeRun:      emptyBeforeAfter,
-			beforeRunError: nil,
 
 			afterRun:      emptyBeforeAfter,
 			afterRunError: nil,
@@ -161,9 +119,6 @@ func TestPipelineWrapper(t *testing.T) {
 
 		{
 			name: "double start pipeline",
-
-			beforeRun:      emptyBeforeAfter,
-			beforeRunError: nil,
 
 			afterRun: func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType {
 				return func() error {
@@ -187,9 +142,6 @@ func TestPipelineWrapper(t *testing.T) {
 		{
 			name: "action returns error",
 
-			beforeRun:      emptyBeforeAfter,
-			beforeRunError: nil,
-
 			afterRun:      emptyBeforeAfter,
 			afterRunError: nil,
 
@@ -211,9 +163,6 @@ func TestPipelineWrapper(t *testing.T) {
 		{
 			name: "action succeeds",
 
-			beforeRun:      emptyBeforeAfter,
-			beforeRunError: nil,
-
 			afterRun:      emptyBeforeAfter,
 			afterRunError: nil,
 
@@ -234,9 +183,6 @@ func TestPipelineWrapper(t *testing.T) {
 
 		{
 			name: "switch state save last state",
-
-			beforeRun:      emptyBeforeAfter,
-			beforeRunError: nil,
 
 			afterRun:      emptyBeforeAfter,
 			afterRunError: nil,
@@ -270,6 +216,7 @@ func TestPipelineWrapper(t *testing.T) {
 			require.NoError(t, err)
 			return
 		}
+		require.Error(t, err, msg, expectedErr)
 		require.True(t, errors.Is(err, expectedErr), err.Error())
 	}
 
@@ -279,11 +226,8 @@ func TestPipelineWrapper(t *testing.T) {
 			pipelineProvider, _ := getPipeline(tt.name, state)
 			pipeline := pipelineProvider()
 
-			err := tt.beforeRun(tt.name, state, pipeline)()
-			assertTypedError(t, err, tt.beforeRunError, "before action")
-
 			action := tt.actionProvider(t, tt.name, state, pipeline)
-			err = pipeline.Run(action)
+			err := pipeline.Run(action)
 			assertTypedError(t, err, tt.actionErr, "action")
 
 			err = tt.afterRun(tt.name, state, pipeline)()
@@ -293,17 +237,78 @@ func TestPipelineWrapper(t *testing.T) {
 		})
 	}
 
+	t.Run("get action without start pipeline", func(t *testing.T) {
+		state := cache.NewTestCache()
+		pipelineProvider, _ := getPipeline("should stop returns nil and not continue", state)
+		pipeline := pipelineProvider()
+
+		actionNotStart := pipeline.ActionInPipeline()
+
+		notChanged := true
+
+		err := actionNotStart.Run(WaitStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			logger.LogInfoLn("Start actionNotStart never printed")
+
+			err := state.Save("not saved", []byte("yes"))
+			require.NoError(t, err)
+
+			notChanged = false
+
+			return nil, nil
+		})
+
+		require.Error(t, err, "action not started")
+		require.True(t, errors.Is(err, ErrPipelineDidNotStart))
+		require.True(t, notChanged)
+		require.Equal(t, DhctlState(nil), pipeline.GetLastState())
+	})
+
+	t.Run("action phase switcher returns should stop", func(t *testing.T) {
+		state := cache.NewTestCache()
+		pipelineProvider, ctx := getPipeline("action phase switcher returns should stop", state)
+		pipeline := pipelineProvider()
+
+		notChanged := true
+		var switcherErr error
+
+		err := pipeline.Run(func(switcher switcherType) error {
+			logger.LogInfoLn("Start pipeline phase switcher returns should stop")
+			if err := writeTestState(state); err != nil {
+				return err
+			}
+
+			logger.LogInfoLn("Set should stop")
+			ctx.stopOperationCondition = true
+
+			if err := switcher(WaitStaticDestroyerNodeUserPhase, false, nil); err != nil {
+				switcherErr = err
+				return err
+			}
+
+			actionNotStart := pipeline.ActionInPipeline()
+			return actionNotStart.Run(DeleteResourcesPhase, false, func() (contextType, error) {
+				logger.LogInfoLn("Start actionNotStart never printed")
+				notChanged = false
+				return nil, state.Save("not saved", []byte("yes"))
+			})
+		})
+
+		require.NoError(t, err, "pipeline should be stopped")
+		require.True(t, errors.Is(switcherErr, ErrShouldStop))
+		require.True(t, notChanged)
+		require.Equal(t, DhctlState(nil), pipeline.GetLastState())
+	})
+
 	t.Run("should stop returns nil and not continue", func(t *testing.T) {
 		state := cache.NewTestCache()
 		pipelineProvider, ctx := getPipeline("should stop returns nil and not continue", state)
 		pipeline := pipelineProvider()
 
 		err := pipeline.Run(func(switcher switcherType) error {
-			logger.LogInfoLn("Start pipeline")
-			actionWithState, err := pipeline.ActionInPipeline()
-			require.NoError(t, err)
+			logger.LogInfoLn("Start pipeline should stop action")
+			actionWithState := pipeline.ActionInPipeline()
 
-			err = actionWithState.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			err := actionWithState.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 				logger.LogInfoLn("Start actionWithState")
 				return nil, writeTestState(state)
 			})
@@ -313,8 +318,7 @@ func TestPipelineWrapper(t *testing.T) {
 			logger.LogInfoLn("Set should stop")
 			ctx.stopOperationCondition = true
 
-			actionShouldStop, err := pipeline.ActionInPipeline()
-			require.NoError(t, err)
+			actionShouldStop := pipeline.ActionInPipeline()
 
 			notChanged := true
 

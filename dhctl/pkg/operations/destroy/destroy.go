@@ -16,7 +16,6 @@ package destroy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -58,6 +57,7 @@ type Params struct {
 	NodeInterface node.Interface
 	StateCache    dhctlstate.Cache
 
+	// todo pass pipeline provider here
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	OnProgressFunc         phases.OnProgressFunc
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
@@ -75,16 +75,25 @@ type Params struct {
 	IsDebug        bool
 }
 
+func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
+	if p.PhasedExecutionContext != nil {
+		return p.PhasedExecutionContext
+	}
+
+	return phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy, p.OnPhaseFunc, p.OnProgressFunc,
+	)
+}
+
 type ClusterDestroyer struct {
 	stateCache       dhctlstate.Cache
 	configPreparator metaConfigPopulator
+	loggerProvider   log.LoggerProvider
+
+	pipeline phases.DefaultPipeline
 
 	d8Destroyer   *deckhouse.Destroyer
 	infraProvider *infraDestroyerProvider
-
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-
-	loggerProvider log.LoggerProvider
 }
 
 // NewClusterDestroyer
@@ -114,16 +123,16 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
 	}
 
-	var pec phases.DefaultPhasedExecutionContext
-	if params.PhasedExecutionContext != nil {
-		pec = params.PhasedExecutionContext
-	} else {
-		pec = phases.NewDefaultPhasedExecutionContext(
-			phases.OperationDestroy, params.OnPhaseFunc, params.OnProgressFunc,
-		)
-	}
+	pec := params.getExecutionContext()
 
-	phaseActionProvider := phases.NewDefaultPhaseActionProviderWithStateCache(pec, params.StateCache)
+	pipeline := phases.NewDefaultPipelineWithStateCacheProviderOpts(
+		pec,
+		params.StateCache,
+		phases.WithPipelineLoggerProvider(params.LoggerProvider),
+		phases.WithPipelineName("cluster-destroyer"),
+	)()
+
+	phaseActionProvider := phases.NewDefaultPhaseActionProviderFromPipeline(pipeline)
 
 	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(sshClientProvider)
 
@@ -164,11 +173,13 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}
 
 	infraProvider := &infraDestroyerProvider{
-		stateCache:     params.StateCache,
-		kubeProvider:   kubeProvider,
-		loggerProvider: params.LoggerProvider,
-		commanderMode:  params.CommanderMode,
-		skipResources:  params.SkipResources,
+		stateCache:           params.StateCache,
+		kubeProvider:         kubeProvider,
+		loggerProvider:       params.LoggerProvider,
+		phasesActionProvider: phaseActionProvider,
+
+		commanderMode: params.CommanderMode,
+		skipResources: params.SkipResources,
 		cloudStateProvider: func() (controller.StateLoader, *controller.ClusterInfra, error) {
 			return terraStateLoader, controller.NewClusterInfraWithOptions(
 				terraStateLoader,
@@ -182,42 +193,30 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 				},
 			), nil
 		},
+
+		sshClientProvider: sshClientProvider,
+		tmpDir:            params.TmpDir,
 	}
 
 	return &ClusterDestroyer{
 		stateCache:       params.StateCache,
 		configPreparator: terraStateLoader,
+		loggerProvider:   params.LoggerProvider,
+
+		pipeline: pipeline,
 
 		d8Destroyer:   d8Destroyer,
 		infraProvider: infraProvider,
-
-		PhasedExecutionContext: pec,
-
-		loggerProvider: params.LoggerProvider,
 	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
-		return err
-	}
-	defer d.PhasedExecutionContext.Finalize(d.stateCache)
-
-	err := d.destroyWithPhaseExecutor(ctx, autoApprove)
-
-	if err == nil {
-		return d.PhasedExecutionContext.CompletePipeline(d.stateCache)
-	}
-
-	if errors.Is(err, phases.ErrShouldStop) {
-		log.SafeProvideLogger(d.loggerProvider).LogDebugLn("Destroy phase execution context: should stop")
-		return nil
-	}
-
-	return err
+	return d.pipeline.Run(func(switcher phases.DefaultPipelinePhaseSwitcher) error {
+		return d.destroy(ctx, autoApprove)
+	})
 }
 
-func (d *ClusterDestroyer) destroyWithPhaseExecutor(ctx context.Context, autoApprove bool) error {
+func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
 	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
 		return err
 	}
