@@ -231,7 +231,7 @@ To ensure DKP functions correctly with KESL installed, follow these steps:
 
 ## KCS configuration features
 
-Kaspersky Container Security (KCS) requires extended access rights to the OS kernel in order to monitor the execution environment. Specifically, the kcs-ih (Image Hub) component must run in privileged mode. To do this, certain process privilege management mechanisms at the Linux OS kernel level must be disabled. For more details, see the [Kaspersky Container Security](https://support.kaspersky.com/container-security/2.1/306180) documentation.
+Kaspersky Container Security (KCS) requires extended access rights to the OS kernel in order to monitor the execution environment. Specifically, the `kcs-ih` (Image Hub) component must run in privileged mode. To do this, certain process privilege management mechanisms at the Linux OS kernel level must be disabled. For more details, see the [Kaspersky Container Security](https://support.kaspersky.com/container-security/2.1/306180) documentation.
 
 To enable KCS runtime monitoring in a DKP cluster, assign the label `security.deckhouse.io/pod-policy=privileged` to the namespace where KCS components are located.
 
