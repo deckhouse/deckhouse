@@ -2307,7 +2307,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3528,7 +3528,7 @@ jobs:
       LAYOUT: Static
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
