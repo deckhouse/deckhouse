@@ -73,6 +73,10 @@ To configure HA mode with two master nodes and an arbiter node in a cloud cluste
 To do this, follow these steps:
 
 {% alert level="warning" %}
+The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
+{% endalert %}
+
+{% alert level="warning" %}
 If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
 {% endalert %}
 
