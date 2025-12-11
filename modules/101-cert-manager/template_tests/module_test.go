@@ -133,6 +133,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node.deckhouse.io/etcd-arbiter
 - key: node-role.kubernetes.io/control-plane
 - key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
