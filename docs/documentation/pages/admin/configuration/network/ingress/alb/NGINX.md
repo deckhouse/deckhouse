@@ -455,7 +455,7 @@ spec:
 In this example:
 
 - The Ingress controller is exposed on node ports through the `HostPort` inlet.
-- The [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) arameter allows connections to the controller only from the listed subnets.
+- The [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
 - Even if an external load balancer or client can set its own `X-Forwarded-*` header values, the decision whether to allow the connection to reach the controller is made based on the actual source address, not on headers.
 - Administrative Ingress resources (in this example `admin-ingress`) are served by this controller according to the configured Ingress class.
 
