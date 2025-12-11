@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	storagev1 "k8s.io/api/storage/v1"
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -249,4 +250,49 @@ func (c *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) erro
 	return c.Wait(ctx, vmdName, &v1alpha2.VirtualDisk{}, func(obj client.Object) (bool, error) {
 		return obj == nil, nil
 	})
+}
+
+func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, source string, snapshotClass string) (*snapshotv1.VolumeSnapshot, error) {
+	volumeSnapshot := &snapshotv1.VolumeSnapshot{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "VolumeSnapshot",
+			APIVersion: "snapshot.storage.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-", name),
+			Namespace:    c.namespace,
+		},
+		Spec: snapshotv1.VolumeSnapshotSpec{
+			Source: snapshotv1.VolumeSnapshotSource{
+				PersistentVolumeClaimName: &source,
+			},
+			VolumeSnapshotClassName: &snapshotClass,
+		},
+	}
+
+	err := c.client.Create(ctx, volumeSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	return volumeSnapshot, nil
+}
+
+func (c *DiskService) DeleteVolumeSnapshot(ctx context.Context, id string) error {
+	volumeSnapshot := &snapshotv1.VolumeSnapshot{}
+
+	err := c.client.Get(ctx, types.NamespacedName{
+		Namespace: c.namespace,
+		Name:      id,
+	}, volumeSnapshot)
+
+	if err != nil {
+		return err
+	}
+
+	err = c.client.Delete(ctx, volumeSnapshot)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
