@@ -18,9 +18,10 @@ package service
 
 import (
 	"context"
-	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
+
+	"dvp-csi-driver/pkg/utils"
 
 	dvpapi "dvp-common/api"
 
@@ -130,6 +131,7 @@ func (c *ControllerService) CreateVolume(
 		diskName,
 		requiredSize,
 		dvpStorageClass,
+		nil,
 	)
 	if err != nil {
 		msg := fmt.Errorf("error from parent DVP cluster while creating disk %s: %v", diskName, err)
