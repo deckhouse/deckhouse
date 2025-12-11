@@ -81,7 +81,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
 	}
 
-	var dataField string
+	// var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))
 	for key := range cspec.ExtraLabels {
 		keys = append(keys, key)
@@ -89,12 +89,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 
 	sort.Strings(keys)
 	for _, k := range keys {
-		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
-			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
-		} else {
-			labels[k] = cspec.ExtraLabels[k]
-		}
+		labels[k] = fmt.Sprintf("{{ %s }}", k)
 	}
 
 	tls := CommonTLS{

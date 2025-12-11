@@ -23,31 +23,31 @@
     }
   },
   "transforms": {
-    "transform/destination/test-es-dest/00_elastic_dedot": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/source/test-source/02_clean_up"
-      ],
-      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
-      "type": "remap"
-    },
-    "transform/destination/test-es-dest/01_ratelimit": {
+    "transform/destination/test-es-dest/00_ratelimit": {
       "exclude": {
         "source": "{ false }|| { exists(.bar) }|| { if is_boolean(.foo) || is_float(.foo) {\n    data, err = to_string(.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .foo);\n} }|| { if is_boolean(.foo) || is_float(.foo) {\n    data, err = to_string(.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .foo);\n} }|| { match!(.foo, r'^wvrr$') }|| { if exists(.foo) \u0026\u0026 is_string(.foo) {\n    matched = false\n    matched0, err = match(.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n} }",
         "type": "vrl"
       },
       "inputs": [
-        "transform/destination/test-es-dest/00_elastic_dedot"
+        "transform/source/test-source/02_clean_up"
       ],
       "key_field": "namespace",
       "threshold": 500,
       "type": "throttle",
       "window_secs": 60
     },
+    "transform/destination/test-es-dest/01_elastic_dedot": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-es-dest/00_ratelimit"
+      ],
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "type": "remap"
+    },
     "transform/destination/test-es-dest/02_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-es-dest/01_ratelimit"
+        "transform/destination/test-es-dest/01_elastic_dedot"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"

@@ -23,26 +23,26 @@
     }
   },
   "transforms": {
-    "transform/destination/test-es-dest/00_elastic_dedot": {
+    "transform/destination/test-es-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/09_clean_up"
       ],
-      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.\"X-Device-Id\") { .\"X-Device-Id\"=.parsed_data.\"X-Device-Id\" } \n .\"X-Device-Version\"=\"X-Device-Version\" \n if exists(.parsed_data.ap_p[0].a) { .app=.parsed_data.ap_p[0].a } \n .foo=\"bar\"",
       "type": "remap"
     },
-    "transform/destination/test-es-dest/01_extra_fields": {
+    "transform/destination/test-es-dest/01_elastic_dedot": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-es-dest/00_elastic_dedot"
+        "transform/destination/test-es-dest/00_extra_fields"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.\"X-Device-Id\") { .\"X-Device-Id\"=.parsed_data.\"X-Device-Id\" } \n .\"X-Device-Version\"=\"X-Device-Version\" \n if exists(.parsed_data.ap_p[0].a) { .app=.parsed_data.ap_p[0].a } \n .foo=\"bar\"",
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
     },
     "transform/destination/test-es-dest/02_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-es-dest/01_extra_fields"
+        "transform/destination/test-es-dest/01_elastic_dedot"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"

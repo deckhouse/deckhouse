@@ -8,12 +8,28 @@
     }
   },
   "transforms": {
-    "transform/destination/test-splunk-dest/00_splunk_datetime": {
+    "transform/destination/test-splunk-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.pod_labels.app) { .app=.parsed_data.pod_labels.app }",
+      "type": "remap"
+    },
+    "transform/destination/test-splunk-dest/01_splunk_datetime": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-splunk-dest/00_extra_fields"
+      ],
       "source": "if exists(.\"timestamp\") {\n  .\"datetime\" = .\"timestamp\"\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-splunk-dest/02_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-splunk-dest/01_splunk_datetime"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_local_timezone": {
@@ -37,7 +53,7 @@
     "destination/cluster/test-splunk-dest": {
       "type": "splunk_hec_logs",
       "inputs": [
-        "transform/destination/test-splunk-dest/00_splunk_datetime"
+        "transform/destination/test-splunk-dest/02_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false
