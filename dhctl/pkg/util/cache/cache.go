@@ -91,10 +91,10 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 func (s *StateCache) Save(name string, content []byte) error {
 	path := s.GetPath(name)
 	if err := os.WriteFile(path, content, 0o600); err != nil {
-		log.ErrorF("Can't save infrastructure state in cache: %v", err)
-	} else {
-		log.DebugF("Saved infrastructure state in cache: %s\n", path)
+		return err
 	}
+
+	log.DebugF("Saved infrastructure state in cache: %s\n", path)
 
 	return nil
 }

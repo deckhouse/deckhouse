@@ -1,17 +1,3 @@
-// Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package destroy
 
 import (
@@ -24,21 +10,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
-type kubeClientProviderWithCleanup interface {
-	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
-	cleanup(stopSSH bool)
-}
-
 type kubeClientProvider struct {
-	sshClientProvider SSHProvider
+	sshClientProvider sshclient.SSHProvider
 	sshClient         node.SSHClient
 
 	kubeCl *client.KubernetesClient
 }
 
-func newKubeClientProvider(sshClientProvider SSHProvider) *kubeClientProvider {
+func newKubeClientProvider(sshClientProvider sshclient.SSHProvider) *kubeClientProvider {
 	return &kubeClientProvider{
 		sshClientProvider: sshClientProvider,
 	}
@@ -65,7 +47,7 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	return kubeCl, err
 }
 
-func (p *kubeClientProvider) cleanup(stopSSH bool) {
+func (p *kubeClientProvider) Cleanup(stopSSH bool) {
 	if !govalue.IsNil(p.kubeCl) {
 		p.kubeCl.KubeProxy.StopAll()
 		p.kubeCl = nil
@@ -77,12 +59,16 @@ func (p *kubeClientProvider) cleanup(stopSSH bool) {
 	}
 }
 
-type kubeClientErrorProvider struct{}
+type kubeClientErrorProvider struct {
+	msg string
+}
 
-func newKubeClientSkipResourcesErrorProvider() *kubeClientErrorProvider {
-	return &kubeClientErrorProvider{}
+func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
+	return &kubeClientErrorProvider{
+		msg: msg,
+	}
 }
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
-	return nil, fmt.Errorf("Unable to get kube client: skip resources flag was provided")
+	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }
-func (p *kubeClientErrorProvider) cleanup(bool) {}
+func (p *kubeClientErrorProvider) Cleanup(bool) {}

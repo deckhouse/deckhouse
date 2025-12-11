@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -43,6 +44,11 @@ import (
 var (
 	nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 )
+
+type NodeIP struct {
+	InternalIP string
+	ExternalIP string
+}
 
 func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
 	var cloudData string
@@ -231,8 +237,8 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 			}
 
 			for _, c := range node.Status.Conditions {
-				if c.Type == apiv1.NodeReady {
-					if c.Status == apiv1.ConditionTrue {
+				if c.Type == corev1.NodeReady {
+					if c.Status == corev1.ConditionTrue {
 						return nil
 					}
 				}
@@ -261,8 +267,8 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 
 			for _, node := range nodes.Items {
 				for _, c := range node.Status.Conditions {
-					if c.Type == apiv1.NodeReady {
-						if c.Status == apiv1.ConditionTrue {
+					if c.Type == corev1.NodeReady {
+						if c.Status == corev1.ConditionTrue {
 							readyNodes[node.Name] = struct{}{}
 						}
 					}
@@ -291,7 +297,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := len(nodes)
-			var nodesList apiv1.NodeList
+			var nodesList corev1.NodeList
 
 			for _, nodeName := range nodes {
 				node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -305,8 +311,8 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 
 			for _, node := range nodesList.Items {
 				for _, c := range node.Status.Conditions {
-					if c.Type == apiv1.NodeReady {
-						if c.Status == apiv1.ConditionTrue {
+					if c.Type == corev1.NodeReady {
+						if c.Status == corev1.ConditionTrue {
 							ready := true
 							if checker != nil {
 								var err error
@@ -430,36 +436,43 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", global.ConvergeNodeUserName), 30, 5*time.Second).
-		RunContext(ctx, func() error {
-			present := make(map[string]bool)
+func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx) ([]NodeIP, error) {
+	var nodeIPs []NodeIP
 
-			nodesForClient, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-				LabelSelector: "node.deckhouse.io/group=master",
-			})
-			if err != nil {
-				return err
+	var nodes *corev1.NodeList
+	err := retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
+		var err error
+		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+
+		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+		if err != nil {
+			log.DebugF("Cannot get nodes. Got error: %v", err)
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.DebugF("Cannot get nodes after 5 attemts")
+		return []NodeIP{}, err
+	}
+
+	for _, node := range nodes.Items {
+		var ip NodeIP
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				ip.InternalIP = addr.Address
 			}
-
-			for _, node := range nodesForClient.Items {
-				present[node.Name] = false
-
-				if node.Annotations != nil {
-					value, ok := node.Annotations[global.ConvergerNodeUserAnnotation]
-					if ok && value == "true" {
-						present[node.Name] = true
-					}
-				}
-
+			if addr.Type == "ExternalIP" {
+				ip.ExternalIP = addr.Address
 			}
+		}
+		nodeIPs = append(nodeIPs, ip)
+	}
 
-			for node, ok := range present {
-				if !ok {
-					return fmt.Errorf("NodeUser %s is not present on %s yet", global.ConvergeNodeUserName, node)
-				}
-			}
-
-			return nil
-		})
+	return nodeIPs, nil
 }

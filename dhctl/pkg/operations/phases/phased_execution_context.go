@@ -30,6 +30,8 @@ type OnPhaseFuncData[OperationPhaseDataT any] struct {
 	NextPhaseCritical   bool
 }
 
+type DefaultContextType = any
+
 type (
 	OnPhaseFunc[OperationPhaseDataT any] func(data OnPhaseFuncData[OperationPhaseDataT]) error
 
@@ -45,8 +47,8 @@ type (
 		GetLastState() DhctlState
 	}
 
-	DefaultPhasedExecutionContext PhasedExecutionContext[any]
-	DefaultOnPhaseFunc            OnPhaseFunc[any]
+	DefaultPhasedExecutionContext PhasedExecutionContext[DefaultContextType]
+	DefaultOnPhaseFunc            OnPhaseFunc[DefaultContextType]
 )
 
 type phasedExecutionContext[OperationPhaseDataT any] struct {
@@ -64,8 +66,8 @@ type phasedExecutionContext[OperationPhaseDataT any] struct {
 
 func NewDefaultPhasedExecutionContext(
 	operation Operation, onPhaseFunc DefaultOnPhaseFunc, onProgressFunc OnProgressFunc,
-) *phasedExecutionContext[any] {
-	return NewPhasedExecutionContext[any](operation, OnPhaseFunc[any](onPhaseFunc), onProgressFunc)
+) *phasedExecutionContext[DefaultContextType] {
+	return NewPhasedExecutionContext[DefaultContextType](operation, OnPhaseFunc[DefaultContextType](onPhaseFunc), onProgressFunc)
 }
 
 func NewPhasedExecutionContext[OperationPhaseDataT any](

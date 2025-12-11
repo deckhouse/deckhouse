@@ -278,9 +278,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:  s.params.TmpDir,
-		Logger:  loggerFor,
-		IsDebug: s.params.IsDebug,
+		TmpDir:         s.params.TmpDir,
+		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
+		IsDebug:        s.params.IsDebug,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

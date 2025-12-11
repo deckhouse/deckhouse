@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package sshclient
 
 import (
@@ -23,6 +24,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
+
+type SSHProvider func() (node.SSHClient, error)
+
+type ClientOptions struct {
+	InitializeNewAgent bool
+}
 
 func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClient, error) {
 
@@ -50,15 +57,11 @@ func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (nod
 	return NewInitClientFromFlags(ctx, askPassword)
 }
 
-type ClienOptions struct {
-	InitializeNewAgent bool
-}
-
 func NewClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) node.SSHClient {
-	return NewClientWithOptions(ctx, sess, privateKeys, ClienOptions{})
+	return NewClientWithOptions(ctx, sess, privateKeys, ClientOptions{})
 }
 
-func NewClientWithOptions(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, clientOptions ClienOptions) node.SSHClient {
+func NewClientWithOptions(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, clientOptions ClientOptions) node.SSHClient {
 
 	switch {
 	case app.SSHLegacyMode:
