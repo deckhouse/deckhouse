@@ -19,7 +19,7 @@ spec:
     kind: Deployment
     name: report-updater
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: report-updater

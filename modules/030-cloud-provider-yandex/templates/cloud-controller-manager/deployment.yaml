@@ -19,7 +19,7 @@ spec:
     kind: Deployment
     name: cloud-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "yandex-cloud-controller-manager"

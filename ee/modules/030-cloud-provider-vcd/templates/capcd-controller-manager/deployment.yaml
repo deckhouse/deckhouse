@@ -38,7 +38,7 @@ spec:
     kind: Deployment
     name: capcd-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "capcd-controller-manager"

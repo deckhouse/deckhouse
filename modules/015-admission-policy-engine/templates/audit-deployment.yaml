@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: gatekeeper-audit
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: manager

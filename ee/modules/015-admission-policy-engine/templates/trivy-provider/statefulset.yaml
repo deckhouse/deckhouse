@@ -20,7 +20,7 @@ spec:
     kind: StatefulSet
     name: trivy-provider
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: trivy-provider

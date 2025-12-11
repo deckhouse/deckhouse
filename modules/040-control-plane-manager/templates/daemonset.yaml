@@ -1,4 +1,5 @@
 {{- define "control_plane_manager_resources" }}
+{{- define "control_plane_manager_resources" }}
 cpu: 25m
 memory: 40Mi
 {{- end }}
@@ -195,7 +196,7 @@ spec:
     kind: DaemonSet
     name: {{ $dsMode }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: control-plane-manager

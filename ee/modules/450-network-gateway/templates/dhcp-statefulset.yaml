@@ -18,7 +18,7 @@ spec:
     kind: StatefulSet
     name: dhcp
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: dhcp
