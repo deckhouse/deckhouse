@@ -1,8 +1,8 @@
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 20fad5afb..6310f15cc 100644
+index 20fad5afb..0c15e1ab2 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -652,7 +652,33 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+@@ -652,7 +652,34 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
  	if err != nil {
  		return err
  	}
@@ -11,8 +11,9 @@ index 20fad5afb..6310f15cc 100644
 +	start := time.Now()
 +
 +	var (
-+		out         []byte
-+		maxRSSBytes float64
++		out            []byte
++		maxRSSBytes    float64
++		configSizeBytes = float64(len(cfg))
 +	)
 +
 +	if nc, ok := n.command.(NginxCommand); ok {
@@ -31,32 +32,33 @@ index 20fad5afb..6310f15cc 100644
 +
 +	elapsed := time.Since(start)
 +	if n.metricCollector != nil {
-+		n.metricCollector.SetConfigTestMetrics(elapsed.Seconds(), maxRSSBytes)
++		n.metricCollector.SetConfigTestMetrics(elapsed.Seconds(), maxRSSBytes, configSizeBytes)
 +	}
 +
  	if err != nil {
  		// this error is different from the rest because it must be clear why nginx is not working
  		oe := fmt.Sprintf(`
 diff --git a/internal/ingress/metric/collectors/controller.go b/internal/ingress/metric/collectors/controller.go
-index 0df04c1d0..35bb8b24c 100644
+index 0df04c1d0..5001a58fb 100644
 --- a/internal/ingress/metric/collectors/controller.go
 +++ b/internal/ingress/metric/collectors/controller.go
-@@ -39,9 +39,11 @@ var (
+@@ -39,9 +39,12 @@ var (
  type Controller struct {
  	prometheus.Collector
  
 -	configHash        prometheus.Gauge
 -	configSuccess     prometheus.Gauge
 -	configSuccessTime prometheus.Gauge
-+	configHash             prometheus.Gauge
-+	configSuccess          prometheus.Gauge
-+	configSuccessTime      prometheus.Gauge
-+	configTestDuration     prometheus.Gauge
-+	configTestMaxRSSMemory prometheus.Gauge
++	configHash                 prometheus.Gauge
++	configSuccess              prometheus.Gauge
++	configSuccessTime          prometheus.Gauge
++	configTestDuration         prometheus.Gauge
++	configTestMaxRSSMemory     prometheus.Gauge
++	configTestConfigSizeMemory prometheus.Gauge
  
  	reloadOperation             *prometheus.CounterVec
  	reloadOperationErrors       *prometheus.CounterVec
-@@ -115,6 +117,20 @@ func NewController(pod, namespace, class string) *Controller {
+@@ -115,6 +118,27 @@ func NewController(pod, namespace, class string) *Controller {
  				Help:        "Timestamp of the last successful configuration reload.",
  				ConstLabels: constLabels,
  			}),
@@ -74,52 +76,63 @@ index 0df04c1d0..35bb8b24c 100644
 +				Help:        "Maximum resident memory in bytes used during the last NGINX configuration test (nginx -t).",
 +				ConstLabels: constLabels,
 +			}),
++		configTestConfigSizeMemory: prometheus.NewGauge(
++			prometheus.GaugeOpts{
++				Namespace:   PrometheusNamespace,
++				Name:        "config_last_test_config_size_bytes",
++				Help:        "Size in bytes of the NGINX configuration used during the last configuration test (nginx -t).",
++				ConstLabels: constLabels,
++			}),
  		reloadOperation: prometheus.NewCounterVec(
  			prometheus.CounterOpts{
  				Namespace: PrometheusNamespace,
-@@ -258,6 +274,9 @@ func (cm *Controller) ConfigSuccess(hash uint64, success bool) {
+@@ -258,6 +282,10 @@ func (cm *Controller) ConfigSuccess(hash uint64, success bool) {
  
  	cm.configSuccess.Set(0)
  	cm.configHash.Set(0)
 +
 +	cm.configTestDuration.Set(0)
 +	cm.configTestMaxRSSMemory.Set(0)
++	cm.configTestConfigSizeMemory.Set(0)
  }
  
  // Describe implements prometheus.Collector
-@@ -265,6 +284,8 @@ func (cm *Controller) Describe(ch chan<- *prometheus.Desc) {
+@@ -265,6 +293,9 @@ func (cm *Controller) Describe(ch chan<- *prometheus.Desc) {
  	cm.configHash.Describe(ch)
  	cm.configSuccess.Describe(ch)
  	cm.configSuccessTime.Describe(ch)
 +	cm.configTestDuration.Describe(ch)
 +	cm.configTestMaxRSSMemory.Describe(ch)
++	cm.configTestConfigSizeMemory.Describe(ch)
  	cm.reloadOperation.Describe(ch)
  	cm.reloadOperationErrors.Describe(ch)
  	cm.checkIngressOperation.Describe(ch)
-@@ -281,6 +302,8 @@ func (cm *Controller) Collect(ch chan<- prometheus.Metric) {
+@@ -281,6 +312,9 @@ func (cm *Controller) Collect(ch chan<- prometheus.Metric) {
  	cm.configHash.Collect(ch)
  	cm.configSuccess.Collect(ch)
  	cm.configSuccessTime.Collect(ch)
 +	cm.configTestDuration.Collect(ch)
 +	cm.configTestMaxRSSMemory.Collect(ch)
++	cm.configTestConfigSizeMemory.Collect(ch)
  	cm.reloadOperation.Collect(ch)
  	cm.reloadOperationErrors.Collect(ch)
  	cm.checkIngressOperation.Collect(ch)
-@@ -351,6 +374,12 @@ func (cm *Controller) RemoveAllSSLMetrics(registry prometheus.Gatherer) {
+@@ -351,6 +385,13 @@ func (cm *Controller) RemoveAllSSLMetrics(registry prometheus.Gatherer) {
  	cm.removeCertificatesMetrics(false, []string{}, registry)
  }
  
 +// SetConfigTestMetrics sets metrics for the last configuration test execution.
-+func (cm *Controller) SetConfigTestMetrics(durationSeconds, maxRSSBytes float64) {
++func (cm *Controller) SetConfigTestMetrics(durationSeconds, maxRSSBytes, configSizeBytes float64) {
 +	cm.configTestDuration.Set(durationSeconds)
 +	cm.configTestMaxRSSMemory.Set(maxRSSBytes)
++	cm.configTestConfigSizeMemory.Set(configSizeBytes)
 +}
 +
  func (cm *Controller) removeCertificatesMetrics(onlyDefinedHosts bool, certificates []string, registry prometheus.Gatherer) {
  	mfs, err := registry.Gather()
  	if err != nil {
 diff --git a/internal/ingress/metric/dummy.go b/internal/ingress/metric/dummy.go
-index 7b1485280..687f91b16 100644
+index 7b1485280..ef5545c98 100644
 --- a/internal/ingress/metric/dummy.go
 +++ b/internal/ingress/metric/dummy.go
 @@ -35,6 +35,9 @@ func (dc DummyCollector) ConfigSuccess(uint64, bool) {}
@@ -127,20 +140,20 @@ index 7b1485280..687f91b16 100644
  func (dc DummyCollector) SetAdmissionMetrics(float64, float64, float64, float64, float64, float64) {}
  
 +// SetConfigTestMetrics dummy implementation
-+func (dc DummyCollector) SetConfigTestMetrics(float64, float64) {}
++func (dc DummyCollector) SetConfigTestMetrics(float64, float64, float64) {}
 +
  // IncReloadCount dummy implementation
  func (dc DummyCollector) IncReloadCount() {}
  
 diff --git a/internal/ingress/metric/main.go b/internal/ingress/metric/main.go
-index 9ed401d19..41d5426cd 100644
+index 9ed401d19..09d07fd8a 100644
 --- a/internal/ingress/metric/main.go
 +++ b/internal/ingress/metric/main.go
 @@ -37,6 +37,7 @@ type Collector interface {
  	IncReloadErrorCount()
  
  	SetAdmissionMetrics(float64, float64, float64, float64, float64, float64)
-+	SetConfigTestMetrics(float64, float64)
++	SetConfigTestMetrics(float64, float64, float64)
  
  	OnStartedLeading(string)
  	OnStoppedLeading(string)
@@ -148,8 +161,8 @@ index 9ed401d19..41d5426cd 100644
  	)
  }
  
-+func (c *collector) SetConfigTestMetrics(durationSeconds, maxRSSBytes float64) {
-+	c.ingressController.SetConfigTestMetrics(durationSeconds, maxRSSBytes)
++func (c *collector) SetConfigTestMetrics(durationSeconds, maxRSSBytes, configSizeBytes float64) {
++	c.ingressController.SetConfigTestMetrics(durationSeconds, maxRSSBytes, configSizeBytes)
 +}
 +
  // OnStartedLeading indicates the pod was elected as the leader
