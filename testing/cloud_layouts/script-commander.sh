@@ -537,7 +537,7 @@ function bootstrap_static() {
 
   if [[ ${PROVIDER} == "Static" ]]; then
     if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
-      DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
+      export DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
     fi
     echo "DECKHOUSE_DOCKERCFG=$(${DECKHOUSE_DOCKERCFG} | base64)" #todo debug
     D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
