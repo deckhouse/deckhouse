@@ -256,9 +256,12 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 Use the same NodeGroup `worker` and the same bootstrap script you used to add the first node.
 For each additional node:
 
-- Prepare a clean virtual machine  
-- On this VM run the command with the same Base64 encoded script:  
-  `echo <BASE64-SCRIPT-CODE> | base64 -d | bash`  
+1. Prepare a clean virtual machine.
+1. On this VM, run the command with the same Base64-encoded script you used to add the first node:
+
+   ```shell
+   echo <BASE64-SCRIPT-CODE> | base64 -d | bash
+   ```
 
 **CAPS**:  
 If you use CAPS and want to add more static nodes in the `worker` NodeGroup:
