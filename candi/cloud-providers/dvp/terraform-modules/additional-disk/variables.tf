@@ -17,6 +17,19 @@ variable "api_version" {
   type    = string
 }
 
+variable "owner_ref_kind" {
+  default = "VirtualMachine"
+  type = string
+}
+
+variable "owner_ref_name" {
+  type = string
+}
+
+variable "owner_ref_uid" {
+  type = string
+}
+
 variable "prefix" {
   type = string
 }
@@ -74,4 +87,3 @@ locals {
     "last_applied_destructive_additional_disk_parameters_hash" = local.disk_destructive_params_json_hash
   }
 }
-
