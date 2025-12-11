@@ -1,0 +1,16 @@
+Subject: [PATCH] replace-gofsutil
+---
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision 9c802b3f6014118e95a18db9755b125aa101087f)
++++ b/go.mod	(revision 8bdea9f2954fc0a9c1a5810eaf3eaf0ace63ac7d)
+@@ -231,4 +231,5 @@
+ 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.27.16
+ 	k8s.io/sample-controller => k8s.io/sample-controller v0.27.16
+ 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.15.3
++	github.com/akutz/gofsutil => ../gofsutil
+ )
