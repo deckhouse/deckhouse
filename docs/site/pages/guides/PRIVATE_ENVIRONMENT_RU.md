@@ -764,3 +764,21 @@ Dec 11 15:08:30.766 INFO  ╚ Pull Modules succeeded in 27m55.883250757s
 ```
 {% endofftopic %}
 
+Проверьте, что образы скачались:
+
+```console
+$ ls -lh
+total 650M
+drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
+```
+
+Теперь запустим команду, которая зальёт скачанные образы в созданный ранее приватный registry:
+
+```bash
+d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/ee' --registry-login='deckhouse' --registry-password='Flant12345678' --tls-skip-verify
+```
+
+> Ключ `--tls-skip-verify` указывает утилите, что мы доверяем сертификату и пропускаем его проверку.
+
+Скачанный архив распакуется и зальётся в registry. Процесс пройдёт чуть быстрее, чем выкачиваение образов на шаге ранее, т.к. мы работаем с локальным репозиторием, в нашем случае она заняла где-то 15 минут.
+
