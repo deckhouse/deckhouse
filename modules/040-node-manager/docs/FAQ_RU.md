@@ -1501,14 +1501,12 @@ metadata:
 - применяет необходимые системные параметры (включая фиксы для NVIDIA Container Toolkit);
 - разворачивает системные компоненты: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
 
+Список поддерживаемых платформ NVIDIA Container Toolkit см. в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+
 {% alert level="info" %}
 Для корректной работы необходимо явно указать режим в `spec.gpu.sharing` (`Exclusive`, `TimeSlicing` или `MIG`).
 
-Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
-{% endalert %}
-
-{% alert level="info" %}
-Список поддерживаемых платформ NVIDIA Container Toolkit см. в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+containerd на GPU-узлах настраивается автоматически. Не изменяйте его вручную (через `NodeGroupConfiguration`, TOML и т. п.) и не совмещайте ручные изменения с автоматической конфигурацией.
 {% endalert %}
 
 Чтобы добавить GPU-узел в кластер, выполните следующие действия:
