@@ -270,6 +270,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	r.resetConfigurationErrorMetric(release)
+
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
 		return r.deleteRelease(ctx, release)
@@ -1766,9 +1768,8 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// reset metrics before deletion
+	// The metric is already reset in the handleRelease function, so we can release the finalizer
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset) {
-		r.resetConfigurationErrorMetric(release)
 		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsReset)
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to remove metrics finalizer from module release", slog.String("release", release.GetName()), log.Err(err))
