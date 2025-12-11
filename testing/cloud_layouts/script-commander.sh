@@ -537,9 +537,13 @@ function bootstrap_static() {
 
   if [[ ${PROVIDER} == "Static" ]]; then
 
+    echo "DECKHOUSE_DOCKERCFG=$(${DECKHOUSE_DOCKERCFG} | base64)" #todo debug
     D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
     D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
     D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+    echo "D8_MIRROR_USER=$(${D8_MIRROR_USER} | base64)" #todo debug
+    echo "D8_MIRROR_PASSWORD=$(${D8_MIRROR_PASSWORD} | base64)" #todo debug
+    echo "D8_MIRROR_HOST=$(${D8_MIRROR_HOST} | base64)" #todo debug
 
     D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
     D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
