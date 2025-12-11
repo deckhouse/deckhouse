@@ -100,6 +100,7 @@
  - **[cloud-provider-aws]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-azure]** fix build image for azure ccm [#16560](https://github.com/deckhouse/deckhouse/pull/16560)
  - **[cloud-provider-azure]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-dvp]** Added functionality to wait for a disk to be attached to a VM [#16965](https://github.com/deckhouse/deckhouse/pull/16965)
  - **[cloud-provider-dvp]** add missing field to Cluster [#16399](https://github.com/deckhouse/deckhouse/pull/16399)
  - **[cloud-provider-dvp]** Correct the calculation of the path to the device [#16212](https://github.com/deckhouse/deckhouse/pull/16212)
  - **[cloud-provider-dvp]** Added sshPublicKey to registration secret. [#15859](https://github.com/deckhouse/deckhouse/pull/15859)
@@ -109,6 +110,7 @@
  - **[cloud-provider-dvp]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-dynamix]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-gcp]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-huaweicloud]** fix CSI unpublishValidation for non exist ECS instance [#16916](https://github.com/deckhouse/deckhouse/pull/16916)
  - **[cloud-provider-huaweicloud]** fix Provider ID [#16705](https://github.com/deckhouse/deckhouse/pull/16705)
  - **[cloud-provider-huaweicloud]** Fixed providerID format and exclude 127.0.0.0/8 in node IP selection. [#15183](https://github.com/deckhouse/deckhouse/pull/15183)
  - **[cloud-provider-huaweicloud]** Added missing volumeTypeMap property for nodeGroups. [#15144](https://github.com/deckhouse/deckhouse/pull/15144)
@@ -239,9 +241,11 @@
  - **[prometheus-metrics-adapter]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[registry]** bump go_lib/registry dependencies [#15985](https://github.com/deckhouse/deckhouse/pull/15985)
  - **[registry-packages-proxy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[registrypackages]** Update integrity patch for containerd (cse only). [#17000](https://github.com/deckhouse/deckhouse/pull/17000)
  - **[registrypackages]** Update containerd to 1.7.29 / 2.1.5 and runc to 1.3.3 [#16335](https://github.com/deckhouse/deckhouse/pull/16335)
  - **[registrypackages]** Fixes CVE in kubernetes-cni [#16343](https://github.com/deckhouse/deckhouse/pull/16343)
  - **[registrypackages]** Update runc to 1.3.1. [#16263](https://github.com/deckhouse/deckhouse/pull/16263)
+ - **[service-with-healthchecks]** Fixed CVEs [#16950](https://github.com/deckhouse/deckhouse/pull/16950)
  - **[service-with-healthchecks]** Improved the module's security [#15358](https://github.com/deckhouse/deckhouse/pull/15358)
  - **[service-with-healthchecks]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[terraform-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
@@ -266,6 +270,7 @@
     Fixed multiple security vulnerabilities that could affect authentication components.
  - **[user-authn]** User now can't create groups with  recursive loops in nested group's hierarchy. [#15139](https://github.com/deckhouse/deckhouse/pull/15139)
  - **[user-authn]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[user-authz]** cache namespace label checks in the user-authz webhook via informer to avoid per-request apiserver GETs [#16920](https://github.com/deckhouse/deckhouse/pull/16920)
  - **[vertical-pod-autoscaler]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
 
 ## Chore
