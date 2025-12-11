@@ -487,3 +487,26 @@ Key data and checks for CONNECT validation:
 - Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
 - The namespace is available in `input.review.namespace`.
+
+## How to limit GPU requests to specific namespaces only?
+
+You can create an OperationPolicy with the policy `D8DisallowedCustomResources`. In the example below, using `resources.requests` and `resources.limits` matching the regex `nvidia.com/.*` in containers is allowed only in namespaces with the label `gpu: enabled`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: allow-nvidia-by-label
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+        - key: gpu
+          operator: NotIn
+          values: ["enabled"]
+  enforcementAction: Deny
+  policies:
+    disallowedCustomResources:
+      - "nvidia.com/.*"
+```
