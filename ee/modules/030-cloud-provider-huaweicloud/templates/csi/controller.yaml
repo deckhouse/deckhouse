@@ -1,3 +1,11 @@
+{{- define "csi_dns_policy" }}
+{{- if .Values.global.clusterIsBootstrapped }}
+{{- printf "ClusterFirstWithHostNet" }}
+{{- else }}
+{{- printf "Default" }}
+{{- end }}
+{{- end }}
+
 {{- define "csi_controller_args" }}
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
@@ -66,7 +74,7 @@
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
-  {{- $_ := set $csiControllerConfig "dnsPolicy" "Default" }}
+  {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "csi_dns_policy" .) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
@@ -78,7 +86,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
-  {{- $_ := set $csiNodeConfig "dnsPolicy" "Default" }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "csi_dns_policy" .) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}
