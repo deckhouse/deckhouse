@@ -16,6 +16,7 @@ spec:
     - d8-{{ $.Chart.Name }}
   podMetricsEndpoints:
   - port: https-metrics
+    path: /metrics
     scheme: https
     bearerTokenSecret:
       name: "prometheus-token"
@@ -38,4 +39,22 @@ spec:
     # https://github.com/vectordotdev/vector/issues/11995
     - regex: file
       action: labeldrop
+  - port: https-metrics
+    path: /reloader-metrics
+    scheme: https
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
 {{- end }}

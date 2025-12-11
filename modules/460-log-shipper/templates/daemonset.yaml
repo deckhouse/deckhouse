@@ -113,26 +113,6 @@ spec:
  {{- end }}
           env:
           {{- include "vectorEnv" . | nindent 10 }}
-          readinessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /reloader-ready
-              port: 9254
-              scheme: HTTPS
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 5
-          livenessProbe:
-            failureThreshold: 10
-            httpGet:
-              path: /reloader-live
-              port: 9254
-              scheme: HTTPS
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 5
           volumeMounts:
           - name: vector-dynamic-config
             mountPath: /opt/vector/
@@ -179,7 +159,7 @@ spec:
                     resource: daemonsets
                     subresource: http
                     name: log-shipper-agent
-              - upstream: http://127.0.0.1:9255/metrics
+              - upstream: http://127.0.0.1:9255/reloader-metrics
                 path: /reloader-metrics
                 authorization:
                   resourceAttributes:
