@@ -1,5 +1,4 @@
 {{- if and (not .Values.prometheus.internal.grafana.enabled) (has "console" .Values.global.enabledModules) .Values.global.modules.publicDomainTemplate }}
-{{- $url := printf "%s://%s/redirect-to/observability/dashboard" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,7 +7,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "%s/$1$is_args$args" $url | quote }}
+    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "%s://%s/redirect-to/observability/dashboard/$1$is_args$args" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
 spec:
