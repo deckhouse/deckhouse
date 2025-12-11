@@ -474,6 +474,15 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables basic authorization for the Kubernetes API server using this LDAP provider.
+
+                        User's LDAP login and password are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd/LDAP type).
+                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+
+                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
               oneOf:
                 - properties:
                     inlet:

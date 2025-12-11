@@ -66,6 +66,13 @@ type Handler struct {
 	OIDCBasicAuthUnsupported bool
 	OIDCGetUserInfo          bool
 
+	LDAPBaseURL              string
+	LDAPClientID             string
+	LDAPClientSecret         string
+	LDAPScopes               []string
+	LDAPBasicAuthUnsupported bool
+	LDAPGetUserInfo          bool
+
 	AuthCacheTTL   time.Duration
 	GroupsCacheTTL time.Duration
 
@@ -86,6 +93,7 @@ func New() *Handler {
 		cache:       c,
 		CrowdGroups: []string{},
 		OIDCScopes:  []string{},
+		LDAPScopes:  []string{},
 		logger:      capnslog.NewPackageLogger("basic-auth-proxy", "proxy")}
 }
 
@@ -95,7 +103,22 @@ func (h *Handler) Run() {
 	h.logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
 	h.logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
 
-	if h.CrowdBaseURL != "" && h.OIDCBaseURL != "" {
+	// if h.CrowdBaseURL != "" && h.OIDCBaseURL != "" {
+	// 	h.logger.Fatal("only one auth provider can be used")
+	// }
+
+	enabledProviders := 0
+	if h.CrowdBaseURL != "" {
+		enabledProviders++
+	}
+	if h.OIDCBaseURL != "" {
+		enabledProviders++
+	}
+	if h.LDAPBaseURL != "" {
+		enabledProviders++
+	}
+
+	if enabledProviders > 1 {
 		h.logger.Fatal("only one auth provider can be used")
 	}
 
@@ -108,6 +131,12 @@ func (h *Handler) Run() {
 		h.provider = provider.NewOIDC(h.OIDCBaseURL, h.OIDCClientID, h.OIDCClientSecret, h.OIDCGetUserInfo,
 			h.OIDCBasicAuthUnsupported, h.OIDCScopes)
 		h.logger.Printf("-- OIDC URL: %s", h.OIDCBaseURL)
+	}
+
+	if h.LDAPBaseURL != "" {
+		h.provider = provider.NewLDAP(h.LDAPBaseURL, h.LDAPClientID, h.LDAPClientSecret, h.LDAPGetUserInfo,
+			h.LDAPBasicAuthUnsupported, h.LDAPScopes)
+		h.logger.Printf("-- LDAP OIDC URL: %s", h.LDAPBaseURL)
 	}
 
 	u, _ := url.Parse(h.KubernetesAPIServerURL)

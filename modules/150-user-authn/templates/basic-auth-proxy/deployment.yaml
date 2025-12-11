@@ -29,6 +29,16 @@ memory: 25Mi
       {{- end }}
     {{- end }}
 
+    {{- if eq $provider.type "LDAP" }}
+      {{- if $provider.ldap.enableBasicAuth }}
+        {{- if $config }}
+          {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+        {{- end }}
+        {{- $config = $provider.ldap }}
+        {{- $type = "LDAP" }}
+      {{- end }}
+    {{- end }}
+
   {{- end }}
 
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -132,6 +142,26 @@ spec:
         - --oidc-scope=federated:id
         {{- end }}
         {{- end }}
+        {{- if eq $type "LDAP" }}
+        - --ldap-base-url={{ $config.issuer }}
+        - --ldap-client-id={{ $config.clientID }}
+        - --ldap-client-secret={{ $config.clientSecret }}
+        - --ldap-get-user-info={{ $config.getUserInfo }}
+        - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
+        {{- if $config.scopes }}
+          {{- range $scope := $config.scopes }}
+        - --ldap-scope={{ $scope }}
+          {{- end }}
+        {{- else }}
+        - --ldap-scope=openid
+        - --ldap-scope=profile
+        - --ldap-scope=email
+        - --ldap-scope=groups
+        - --ldap-scope=offline_access
+        - --ldap-scope=federated:id
+        {{- end }}
+        {{- end }}
+
         ports:
         - containerPort: 7332
         env:

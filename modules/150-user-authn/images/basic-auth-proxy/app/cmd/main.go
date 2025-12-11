@@ -19,9 +19,10 @@ package main
 import (
 	"basic-auth-proxy/pkg/proxy"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -56,6 +57,13 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientID, "oidc-client-id", "", "clientID of OIDC application")
 	rootCmd.PersistentFlags().StringVar(&handler.OIDCClientSecret, "oidc-client-secret", "", "clientSecret of OIDC application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.OIDCScopes, "oidc-scope", nil, "Scopes passed from OIDC provider settings")
+
+	rootCmd.PersistentFlags().BoolVar(&handler.LDAPBasicAuthUnsupported, "ldap-basic-auth-unsupported", false, "basicAuthUnsupported option for LDAP OIDC provider")
+	rootCmd.PersistentFlags().BoolVar(&handler.LDAPGetUserInfo, "ldap-get-user-info", false, "getUserInfo option for LDAP OIDC provider")
+	rootCmd.PersistentFlags().StringVar(&handler.LDAPBaseURL, "ldap-base-url", "", "URL of LDAP OIDC provider (Dex)")
+	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientID, "ldap-client-id", "", "clientID of LDAP OIDC application")
+	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientSecret, "ldap-client-secret", "", "clientSecret of LDAP OIDC application")
+	rootCmd.PersistentFlags().StringArrayVar(&handler.LDAPScopes, "ldap-scope", nil, "Scopes passed from LDAP OIDC provider settings")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Printf("starting basic auth proxy error: %s", err)

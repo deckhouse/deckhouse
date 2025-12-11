@@ -99,6 +99,9 @@ type provider struct {
 	OIDC struct {
 		EnableBasicAuth bool `json:"enableBasicAuth"`
 	} `json:"oidc"`
+	LDAP struct {
+		EnableBasicAuth bool `json:"enableBasicAuth"`
+	} `json:"ldap"`
 }
 
 func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -130,6 +133,12 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 			config = &prov
 		}
 		if prov.Typ == "OIDC" && prov.OIDC.EnableBasicAuth {
+			if config != nil {
+				return errors.New("only one enableBasicAuth must be enabled")
+			}
+			config = &prov
+		}
+		if prov.Typ == "LDAP" && prov.LDAP.EnableBasicAuth {
 			if config != nil {
 				return errors.New("only one enableBasicAuth must be enabled")
 			}
