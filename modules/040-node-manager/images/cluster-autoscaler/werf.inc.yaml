@@ -19,6 +19,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-12-12-13.43"
 final: false
     {{- if $patch }}
 git:
