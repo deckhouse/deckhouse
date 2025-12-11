@@ -15,9 +15,9 @@ import (
 
 type kubeClientProvider struct {
 	sshClientProvider sshclient.SSHProvider
-	sshClient         node.SSHClient
 
-	kubeCl *client.KubernetesClient
+	sshClient node.SSHClient
+	kubeCl    *client.KubernetesClient
 }
 
 func newKubeClientProvider(sshClientProvider sshclient.SSHProvider) *kubeClientProvider {
@@ -27,8 +27,12 @@ func newKubeClientProvider(sshClientProvider sshclient.SSHProvider) *kubeClientP
 }
 
 func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
-	if p.kubeCl != nil {
+	if !govalue.IsNil(p.kubeCl) {
 		return p.kubeCl, nil
+	}
+
+	if govalue.IsNil(p.sshClientProvider) {
+		return nil, fmt.Errorf("sshClientProvider did not pass")
 	}
 
 	sshClient, err := p.sshClientProvider()
