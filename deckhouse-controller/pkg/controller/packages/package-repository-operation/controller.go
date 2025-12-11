@@ -559,7 +559,7 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 		return !operations.Items[i].CreationTimestamp.Before(&operations.Items[j].CreationTimestamp)
 	})
 
-	// delete all operations except the most recent 5
+	// delete all operations except the most recent
 	for _, op := range operations.Items[cleanupOldOperationsCount:] {
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {

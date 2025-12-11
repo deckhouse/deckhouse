@@ -112,10 +112,10 @@ func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string
 		return v.Name == appName
 	})
 
-	if len(newSlice) == 0 {
+	a.Status.Installed[NamespaceName(namespace)] = newSlice
+
+	if len(a.Status.Installed[NamespaceName(namespace)]) == 0 {
 		delete(a.Status.Installed, NamespaceName(namespace))
-	} else {
-		a.Status.Installed[NamespaceName(namespace)] = newSlice
 	}
 
 	if a.Status.InstalledOverall > 0 {
