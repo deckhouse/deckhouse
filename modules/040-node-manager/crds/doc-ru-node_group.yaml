@@ -837,38 +837,18 @@ spec:
 
                             Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
                     memorySwap:
-                      type: object
                       description: |
                         Конфигурация swap-памяти для kubelet.
-                      oneOf:
-                      - properties:
-                          swapBehavior:
-                            enum: ["NoSwap"]
-                        not:
-                          required: ["limitedSwap"]
-                      - properties:
-                          swapBehavior:
-                            enum: ["LimitedSwap"]
-                        required:
-                          - limitedSwap
                       properties:
                         swapBehavior:
-                          type: string
                           description: |
                             Определяет, как обрабатывается swap-память:
                             
                             * `NoSwap` — swap отключен на узле. Это традиционное поведение Kubernetes.
                             * `LimitedSwap` — kubelet может использовать swap-память в пределах, заданных в `limitedSwap.size`.
-
+                            
                             Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/architecture/nodes/#swap-memory).
-                          enum:
-                            - NoSwap
-                            - LimitedSwap
                         swappiness:
-                          type: integer
-                          minimum: 0
-                          maximum: 100
-                          default: 60
                           description: |
                             Определяет склонность ядра использовать swap.
                             
@@ -879,15 +859,10 @@ spec:
                             Значение устанавливается через параметр sysctl `vm.swappiness`.
                           x-doc-default: 60
                         limitedSwap:
-                          type: object
                           description: |
                             Настройки режима ограниченного swap. Требуются при `swapBehavior` со значением `LimitedSwap`.
-                          required:
-                            - size
                           properties:
                             size:
-                              type: string
-                              pattern: '^\d+G$'
                               description: |
                                 Размер создаваемого swap-файла в гигабайтах (например, "2G", "4G").
                               x-doc-example: "1G"
