@@ -134,7 +134,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -459,7 +459,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -784,7 +784,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -1109,7 +1109,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -1434,7 +1434,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -1759,7 +1759,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -2084,7 +2084,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -2409,7 +2409,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -2734,7 +2734,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -3059,7 +3059,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -3384,7 +3384,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -3709,7 +3709,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -4034,7 +4034,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -4359,7 +4359,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
