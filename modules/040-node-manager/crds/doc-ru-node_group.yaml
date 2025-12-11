@@ -857,7 +857,6 @@ spec:
                             * `100` — агрессивное использование swap.
                             
                             Значение устанавливается через параметр sysctl `vm.swappiness`.
-                          x-doc-default: 60
                         limitedSwap:
                           description: |
                             Настройки режима ограниченного swap. Требуются при `swapBehavior` со значением `LimitedSwap`.
@@ -865,7 +864,6 @@ spec:
                             size:
                               description: |
                                 Размер создаваемого swap-файла в гигабайтах (например, "2G", "4G").
-                              x-doc-example: "1G"
                 update:
                   properties:
                     maxConcurrent:
