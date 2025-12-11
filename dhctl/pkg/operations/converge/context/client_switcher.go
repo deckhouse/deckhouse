@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -80,7 +81,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 
 	if convergeState.NodeUserCredentials == nil {
 		s.logger.LogDebugLn("Generate node user")
-		nodeUser, nodeUserCredentials, err := GenerateNodeUser()
+		nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
 		if err != nil {
 			return fmt.Errorf("failed to generate NodeUser: %w", err)
 		}
@@ -96,9 +97,9 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 			return fmt.Errorf("Node interface is not ssh")
 		}
 
-		err = entity.WaitForNodeUserPresentOnNode(ctx, s.ctx.KubeClient())
+		err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
 		if err != nil {
-			return fmt.Errorf("Could not ensure %s is presented on control plane hosts: %w", global.ConvergeNodeUserName, err)
+			return fmt.Errorf("Could not ensure converger user is presented on control plane hosts: %w", err)
 		}
 
 		convergeState.NodeUserCredentials = nodeUserCredentials

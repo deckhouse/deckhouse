@@ -67,7 +67,6 @@ import (
 )
 
 const (
-	ManifestCreatedInClusterCacheKey  = "tf-state-and-manifests-in-cluster"
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
 )
@@ -704,7 +703,12 @@ type InstallDeckhouseResult struct {
 	ManifestResult *deckhouse.ManifestsResult
 }
 
-func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller, beforeDeckhouseTask func() error) (*InstallDeckhouseResult, error) {
+type InstallDeckhouseParams struct {
+	BeforeDeckhouseTask func() error
+	State               *State
+}
+
+func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller, params InstallDeckhouseParams) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 	err := log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
@@ -712,21 +716,20 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, beforeDeckhouseTask)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
 		if err != nil {
-			return fmt.Errorf("deckhouse create manifests: %v", err)
+			return fmt.Errorf("Deckhouse create manifests: %w", err)
 		}
 
 		res.ManifestResult = resManifests
 
-		err = cache.Global().Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
-		if err != nil {
-			return fmt.Errorf("set manifests in cluster flag to cache: %v", err)
+		if err := params.State.SaveManifestsCreated(); err != nil {
+			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
 		err = deckhouse.WaitForReadiness(ctx, kubeCl)
 		if err != nil {
-			return fmt.Errorf("deckhouse install: %v", err)
+			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
 		// Warning! This function must be called at the end of the Deckhouse installation phase.

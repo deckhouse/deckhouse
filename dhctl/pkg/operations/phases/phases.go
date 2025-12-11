@@ -51,6 +51,10 @@ const (
 	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
 	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
 	DeckhouseConfigurationPhase OperationPhase = "DeckhouseConfiguration"
+	// destroy only
+	CreateStaticDestroyerNodeUserPhase OperationPhase = "CreateStaticDestroyerNodeUser"
+	WaitStaticDestroyerNodeUserPhase   OperationPhase = "WaitStaticDestroyerNodeUser"
+	SetDeckhouseResourcesDeletedPhase  OperationPhase = "SetDeckhouseResourcesDelete"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )
