@@ -53,7 +53,10 @@ if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L 
 fi
 
 # Disable any active swap, no need to restart kubelet
-swapoff -a || true
+if ! swapoff -a; then
+  bb-log-error "Failed to disable swap"
+  exit 1
+fi
 
 # Remove swapfile if present
 rm -f "$SWAPFILE"
@@ -139,6 +142,4 @@ SWAPPINESS="{{ $swappiness }}"
 sysctl -w vm.swappiness="$SWAPPINESS"
 mkdir -p /etc/sysctl.d
 echo "vm.swappiness=$SWAPPINESS" > "$SYSCTL_CONF"
-
-exit 0
 {{- end }}
