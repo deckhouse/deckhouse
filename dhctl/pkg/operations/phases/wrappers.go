@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -209,7 +211,7 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[
 
 	err := action(p.phaseSwitcher)
 
-	if err == nil {
+	if govalue.IsNil(err) {
 		return p.phaseContext.CompletePipeline(p.stateCache)
 	}
 
