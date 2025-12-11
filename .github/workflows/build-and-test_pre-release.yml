@@ -341,6 +341,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -361,7 +392,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -378,26 +409,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -427,7 +449,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
@@ -642,6 +664,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -662,7 +715,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -679,26 +732,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -728,7 +772,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
@@ -943,6 +987,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -963,7 +1038,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -980,26 +1055,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1029,7 +1095,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
@@ -1244,6 +1310,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -1264,7 +1361,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -1281,26 +1378,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1330,7 +1418,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
@@ -1545,6 +1633,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -1565,7 +1684,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -1582,26 +1701,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1631,7 +1741,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
@@ -1846,6 +1956,37 @@ jobs:
             fi
           }
 
+          # Determine version of current build
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # We have a release tag, so it is our version
+            CI_BUILD_VERSION="${CI_COMMIT_TAG}"
+          elif [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9])+\.([0-9]+) ]]; then
+            # We have a release branch, so we need to predict the future patch version
+            major_version="${BASH_REMATCH[1]}"
+            minor_version="${BASH_REMATCH[2]}"
+            latest_version="$(git tag | grep -E "v${major_version}.${minor_version}.[0-9]+" | sort -V | tail -n 1)"
+            if [[ "$latest_version" =~ v[0-9]+\.[0-9]+\.([0-9]+) ]]; then
+              patch_version=$(("${BASH_REMATCH[1]}" + 1))
+            else
+              patch_version=0
+            fi
+            CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+          else
+            # We have dev/main build, so we need to predict the future minor version
+            latest_version="$(git branch --all | grep -E 'remotes/origin/release-[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+            if [[ "${latest_version}" =~ remotes/origin/release-([0-9]+)\.([0-9]+) ]]; then
+              major_version="${BASH_REMATCH[1]}"
+              minor_version=$(("${BASH_REMATCH[2]}" + 1))
+              patch_version=0
+              CI_BUILD_VERSION="v${major_version}.${minor_version}.${patch_version}"
+            else
+              # Fallback
+              CI_BUILD_VERSION="dev"
+            fi
+          fi
+
+          echo "Determined build version: ${CI_BUILD_VERSION}"
+
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
@@ -1866,7 +2007,7 @@ jobs:
           export WERF_DISABLE_META_TAGS=true
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          CI_COMMIT_TAG="${CI_BUILD_VERSION}" werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
@@ -1883,26 +2024,17 @@ jobs:
             publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-[0-9]+\.[0-9]+ ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "${CI_BUILD_VERSION}"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${CI_BUILD_VERSION}"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "${CI_BUILD_VERSION}"
             fi
           else
             echo "Branch unset, skipping branch publish."
           fi
 
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
+
 
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1932,7 +2064,7 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: build_report_${{ env.WERF_ENV }}
+          name: build_report_pre-release_${{ env.WERF_ENV }}
           path: |
             ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
 
