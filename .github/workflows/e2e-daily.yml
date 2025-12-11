@@ -1922,7 +1922,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -2734,7 +2734,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -3145,7 +3145,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
@@ -3982,7 +3982,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, e2e-common]
     steps:
 
       # <template: started_at_output>
