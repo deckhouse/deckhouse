@@ -289,8 +289,6 @@ func (r *CNIMigrationReconciler) reconcileMigrate(
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	logger.Info("Starting Pod restart for node")
-
 	// Check if pods have already been restarted
 	for _, cond := range cniNodeMigration.Status.Conditions {
 		if cond.Type == "PodsRestarted" && cond.Status == metav1.ConditionTrue {
@@ -311,6 +309,8 @@ func (r *CNIMigrationReconciler) reconcileMigrate(
 			return ctrl.Result{}, nil
 		}
 	}
+
+	logger.Info("Starting Pod restart for node")
 
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, client.MatchingFields{"spec.nodeName": cniNodeMigration.Name}); err != nil {
@@ -351,15 +351,14 @@ func (r *CNIMigrationReconciler) reconcileMigrate(
 			Reason:             "OldPodsDeleted",
 			Message:            fmt.Sprintf("%d pods with old CNI annotation were deleted.", podsDeleted),
 		})
+		cniNodeMigration.Status.Phase = "Succeeded"
 		return r.Status().Update(ctx, cniNodeMigration)
 	})
 	if err != nil {
 		logger.Error(err, "Failed to update CNINodeMigration status after pod deletion with retry")
 		return ctrl.Result{}, err
 	}
-
-	// Requeue to run the check again, which will then mark the node as Succeeded
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *CNIMigrationReconciler) updateNodeStatusWithError(
