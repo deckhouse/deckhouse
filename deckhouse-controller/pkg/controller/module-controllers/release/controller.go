@@ -409,14 +409,6 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 // This should be called at the beginning of each reconcile to ensure the metric reflects
 // the current state (no errors) before validation checks are performed.
 func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelease) {
-	// TODO(Glitchy-Sheep): Remove this after metric reset is fully implemented
-	r.log.Debug(
-		"[PR16940]: RESET configuration error metrics",
-		slog.String("release", release.GetName()),
-		slog.String("module", release.GetModuleName()),
-		slog.String("version", release.GetVersion().String()),
-	)
-
 	r.metricStorage.Grouped().ExpireGroupMetricByName(
 		metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String()),
 		metrics.ModuleConfigurationError,
@@ -1781,8 +1773,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// TODO(Glitchy-Sheep): Enable this or remove after metrics reset is tested
-	// // The metric is already reset in the handleRelease function, so we can release the finalizer
+	// The metric is already reset in the handleRelease function, so we can release the finalizer
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
 		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
 		if err := r.client.Update(ctx, release); err != nil {
