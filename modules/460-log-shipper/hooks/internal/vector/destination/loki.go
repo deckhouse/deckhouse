@@ -18,15 +18,12 @@ package destination
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
-
-var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
 
 type Loki struct {
 	CommonSettings
@@ -81,7 +78,6 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
 	}
 
-	// var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))
 	for key := range cspec.ExtraLabels {
 		keys = append(keys, key)
