@@ -23,7 +23,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
-      - path: /
+      - path: /(.+|$)
         pathType: ImplementationSpecific
         backend:
           service:
