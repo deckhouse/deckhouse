@@ -1,0 +1,23 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: Added functionality to wait for a disk to be attached to a VM
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16965
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix CSI unpublishValidation for non exist ECS instance
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16916
+registrypackages:
+  fixes:
+    - summary: Update integrity patch for containerd (cse only).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17000
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16950
+user-authz:
+  fixes:
+    - summary: >-
+        cache namespace label checks in the user-authz webhook via informer to avoid per-request
+        apiserver GETs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16920
+
