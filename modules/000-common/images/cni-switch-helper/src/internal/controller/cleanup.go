@@ -49,7 +49,7 @@ func RunCleanup(ctx context.Context, currentCNI string) error {
 func cleanupFlannel(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("flannel-cleanup")
 
-	if err := deleteInterfaces(logger, []string{"cni0"}); err != nil {
+	if err := deleteInterfaces(logger, []string{"cni0", "flannel.1"}); err != nil {
 		logger.Error(err, "Failed to delete interfaces")
 	}
 
