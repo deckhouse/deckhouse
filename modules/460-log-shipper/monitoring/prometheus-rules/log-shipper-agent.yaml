@@ -145,3 +145,26 @@
         ```bash
         d8 k -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
         ```
+
+  - alert: D8LogShipperConfigInvalid
+    for: 1m
+    expr: |
+      vector_config_validation_error > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: vector-reloader
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Vector config is invalid in the cluster.
+      description: |
+        At least one Vector DaemonSet pod has been reporting an invalid configuration.
+        
+        To resolve this, check the container logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector-reloader
+        ```
