@@ -60,8 +60,6 @@ fi
 sysctl -w vm.swappiness=0
 mkdir -p /etc/sysctl.d
 echo "vm.swappiness=0" > "$SYSCTL_CONF"
-
-exit 0
 {{- end }}
 
 
