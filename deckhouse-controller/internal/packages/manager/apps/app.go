@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -58,8 +60,9 @@ type Application struct {
 	digests    map[string]string // Package digests
 	registry   registry.Registry // Application registry
 
-	hooks  *hooks.Storage  // Hook storage with indices
-	values *values.Storage // Values storage with layering
+	hooks         *hooks.Storage  // Hook storage with indices
+	values        *values.Storage // Values storage with layering
+	settingsCheck *kind.SettingsCheck
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.
@@ -75,6 +78,8 @@ type ApplicationConfig struct {
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
 	Hooks []*addonhooks.ModuleHook // Discovered hooks
+
+	SettingsCheck *kind.SettingsCheck
 }
 
 // NewApplication creates a new Application instance with the specified configuration.
@@ -98,6 +103,7 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
 	a.registry = cfg.Registry
+	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -186,6 +192,21 @@ func (a *Application) GetValuesChecksum() string {
 // Used to detect if settings changed.
 func (a *Application) GetSettingsChecksum() string {
 	return a.values.GetConfigChecksum()
+}
+
+// ValidateSettings validate settings against openAPI and call setting check if exists
+func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (*settingscheck.Result, error) {
+	if err := a.values.ValidateConfigValues(settings); err != nil {
+		return &settingscheck.Result{}, err
+	}
+
+	if a.settingsCheck != nil {
+		return a.settingsCheck.Check(ctx, settings)
+	}
+
+	return &settingscheck.Result{
+		Allow: true,
+	}, nil
 }
 
 // GetValues returns values for rendering

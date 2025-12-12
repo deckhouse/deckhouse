@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -117,14 +118,31 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	return app.GetVersion(), nil
 }
 
+// ValidateSettings against openAPI and setting check
+func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (*settingscheck.Result, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app, ok := m.apps[name]
+	if !ok {
+		return &settingscheck.Result{Allow: true}, nil
+	}
+
+	return app.ValidateSettings(ctx, settings)
+}
+
 // ApplySettings validates and apply setting to application
-func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
+func (m *Manager) ApplySettings(ctx context.Context, name string, settings addonutils.Values) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	app := m.apps[name]
 	if app == nil {
 		return nil
+	}
+
+	if _, err := app.ValidateSettings(ctx, settings); err != nil {
+		return newApplySettingsErr(err)
 	}
 
 	if err := app.ApplySettings(settings); err != nil {
