@@ -21,16 +21,6 @@ SWAPFILE="${SWAP_DIR}/swapfile"
 SYSCTL_CONF="/etc/sysctl.d/99-swap.conf"
 
 # Shared helpers
-mem_available_bytes() {
-  awk '/MemAvailable/ {print $2 * 1024}' /proc/meminfo
-}
-
-total_swap_used_bytes() {
-  swapon --show=USED --bytes --noheadings 2>/dev/null | awk '{sum+=$1} END {if (sum=="") print 0; else print sum}'
-}
-
-version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
-
 has_cgroup2() {
   [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]
 }
