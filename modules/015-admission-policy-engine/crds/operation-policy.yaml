@@ -84,6 +84,12 @@ spec:
                       x-doc-examples: ["latest"]
                       items:
                         type: string
+                    disallowedCustomResources:
+                      type: array
+                      description: "Deny containers that request any resources specified in the list. This is useful for managing access to GPUs along with `notIn` operator in the `namespaceSelector`."
+                      x-doc-examples: [ "nvidia.com/*" ]
+                      items:
+                        type: string
                     disallowedTolerations:
                       type: array
                       description: |

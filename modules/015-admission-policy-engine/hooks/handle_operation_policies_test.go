@@ -88,6 +88,8 @@ spec:
         - memory
     disallowedImageTags:
       - latest
+    disallowedCustomResources:
+      - gpu-vendor.example/.*
     requiredLabels:
       labels:
       - allowedRegex: ^P\d{4}$
