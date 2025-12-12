@@ -25,6 +25,45 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
+func TestKubeadmContext_ToMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  KubeadmContext
+		output map[string]any
+	}{
+		{
+			name: "all fields",
+			input: KubeadmContext{
+				Address: "registry.example.com",
+				Path:    "deckhouse/stable",
+			},
+			output: map[string]any{
+				"address": "registry.example.com",
+				"path":    "deckhouse/stable",
+			},
+		},
+		{
+			name: "empty",
+			input: KubeadmContext{
+				Address: "",
+				Path:    "",
+			},
+			output: map[string]any{
+				"address": "",
+				"path":    "",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.ToMap()
+
+			assert.Equal(t, tt.output, result)
+		})
+	}
+}
+
 func TestData_FromRegistrySettings(t *testing.T) {
 	tests := []struct {
 		name   string
