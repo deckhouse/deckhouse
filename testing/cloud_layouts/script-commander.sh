@@ -313,7 +313,7 @@ function prepare_environment() {
     ;;
 
   "OpenStack")
-    ssh_user="redos"
+    ssh_user="astra"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
