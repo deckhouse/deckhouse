@@ -2230,7 +2230,7 @@ spec:
                     memorySwap:
                       type: object
                       description: |
-                        Memory swap configuration for kubelet.
+                        Configuration of swap memory usage for kubelet.
                       oneOf:
                       - properties:
                           swapBehavior:
@@ -2246,12 +2246,12 @@ spec:
                         swapBehavior:
                           type: string
                           description: |
-                            Defines how swap memory is handled:
+                            Defines how swap memory is handled on the node:
                             
-                            * `NoSwap` — swap is disabled on the node. This is the traditional Kubernetes behavior.
-                            * `LimitedSwap` — kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
+                            * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
+                            * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
 
-                            See [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/nodes/#swap-memory) for more details.
+                            For details on swap memory usage on nodes, refer to [Kubernetes documentation](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
                           enum:
                             - NoSwap
                             - LimitedSwap
@@ -2261,18 +2261,18 @@ spec:
                           maximum: 100
                           default: 60
                           description: |
-                            Controls the kernel's tendency to swap memory pages.
+                            Defines the kernel's tendency to use the swap.
                             
-                            * `0` — minimize swapping (only swap when necessary to avoid OOM).
-                            * `60` — default balanced behavior.
-                            * `100` — aggressive swapping.
+                            * `0`: Minimal swap usage (only to avoid OOM).
+                            * `60`: Default balanced behavior.
+                            * `100`: Aggressive swap usage.
                             
                             This value is set via `vm.swappiness` sysctl parameter.
                           x-doc-default: 60
                         limitedSwap:
                           type: object
                           description: |
-                            Configuration for limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
+                            Configuration for the limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
                           required:
                             - size
                           properties:
@@ -2280,7 +2280,7 @@ spec:
                               type: string
                               pattern: '^\d+G$'
                               description: |
-                                Size of the swap file to create in gigabytes (e.g., "2G", "4G").
+                                Size of the swap file to create, specified in GB (for example, "2G", "4G").
                               x-doc-example: "1G"
                 update:
                   type: object

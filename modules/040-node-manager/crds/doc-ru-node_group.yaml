@@ -838,32 +838,32 @@ spec:
                             Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
                     memorySwap:
                       description: |
-                        Конфигурация swap-памяти для kubelet.
+                        Конфигурация использования swap-памяти для kubelet.
                       properties:
                         swapBehavior:
                           description: |
-                            Определяет, как обрабатывается swap-память:
+                            Определяет, как используется swap-память на узле:
                             
-                            * `NoSwap` — swap отключен на узле. Это традиционное поведение Kubernetes.
+                            * `NoSwap` — swap отключен. Это традиционное поведение Kubernetes.
                             * `LimitedSwap` — kubelet может использовать swap-память в пределах, заданных в `limitedSwap.size`.
                             
-                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/architecture/nodes/#swap-memory).
+                            Подробнее об использовании swap-памяти на узлах можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
                         swappiness:
                           description: |
-                            Определяет склонность ядра использовать swap.
+                            Определяет склонность ядра к использованию swap.
                             
-                            * `0` — минимизировать использование swap (только чтобы избежать OOM).
+                            * `0` — минимальное использование (только для предотвращения OOM).
                             * `60` — сбалансированное поведение по умолчанию.
-                            * `100` — агрессивное использование swap.
+                            * `100` — агрессивное использование.
                             
                             Значение устанавливается через параметр sysctl `vm.swappiness`.
                         limitedSwap:
                           description: |
-                            Настройки режима ограниченного swap. Требуются при `swapBehavior` со значением `LimitedSwap`.
+                            Настройки режима ограниченного использования swap. Требуются, если для `swapBehavior` указано значение `LimitedSwap`.
                           properties:
                             size:
                               description: |
-                                Размер создаваемого swap-файла в гигабайтах (например, "2G", "4G").
+                                Размер создаваемого swap-файла в ГБ (например, "2G", "4G").
                 update:
                   properties:
                     maxConcurrent:
