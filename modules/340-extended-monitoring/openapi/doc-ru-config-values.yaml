@@ -17,6 +17,7 @@ properties:
         description: |
           Стандартный registry для проверки доступности образов.
           Используется если в образе не указан registry.
+          
           Если не задан, то используется index.docker.io
       ignoredImages:
         description: |
