@@ -95,3 +95,7 @@ This patch adds a metric that reflects current GeoIP version in use (0 - no geoi
 
 ### 019-skip-tls-verification-maxmind.patch
 Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
+
+### 020-ingress-update-status.patch
+
+This patch adds support for the --status-service-label flag, allowing the controller to aggregate addresses from Services matching the given label selector.

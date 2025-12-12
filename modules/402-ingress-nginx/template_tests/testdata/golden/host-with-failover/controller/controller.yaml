@@ -93,6 +93,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=ingress-nginx/status=solid
         env:
         - name: POD_NAME
           valueFrom:
@@ -410,6 +411,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=ingress-nginx/status=solid
         env:
         - name: POD_NAME
           valueFrom:
