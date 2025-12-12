@@ -90,10 +90,10 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if config.FilterVerb == nil {
-				config.FilterVerb = ptr.To("filter")
+				config.FilterVerb = ptr.To("filter") // for backward compatibility
 			}
 			if config.PrioritizeVerb == nil {
-				config.PrioritizeVerb = ptr.To("prioritize")
+				config.PrioritizeVerb = ptr.To("prioritize") // for backward compatibility
 			}
 			newExtender := extenderConfig{
 				URLPrefix:      urlPrefix,

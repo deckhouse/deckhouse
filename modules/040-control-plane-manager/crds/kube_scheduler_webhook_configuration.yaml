@@ -36,7 +36,7 @@ spec:
                     type: string
                     description: |
                       Verb appended to `URLPrefix` when issuing a `filter` call to the scheduler extender.
-                      If omitted, defaults to `filter`.
+                      If omitted, defaults to `filter`(for backward compatibility, avoid making changes unless necessary).
                       Set to an empty string `""` to disable `filter` calls for this extender.
                   preemptVerb:
                     type: string
@@ -47,7 +47,7 @@ spec:
                     type: string
                     description: |
                       Verb appended to `URLPrefix` when issuing a `prioritize` call to this extender.
-                      If omitted, defaults to `prioritize`.
+                      If omitted, defaults to `prioritize`(for backward compatibility, avoid making changes unless necessary).
                       Set to an empty string `""` to disable `prioritize` calls for this extender.
                   weight:
                     type: integer
