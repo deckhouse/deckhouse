@@ -128,6 +128,40 @@ tls.key: KEYKEYKEY
 		})
 	})
 
+	Context("With LDAP provider with enableBasicAuth option", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
+- id: ldapID
+  displayName: ldapDisplay
+  type: LDAP
+  ldap:
+    enableBasicAuth: true
+    host: ldap.example.com:636
+    userSearch:
+      baseDN: cn=users,dc=example,dc=com
+      username: uid
+      idAttr: uid
+      emailAttr: mail
+    groupSearch:
+      baseDN: cn=groups,dc=example,dc=com
+      userMatchers:
+      - userAttr: uid
+        groupAttr: member
+      nameAttr: name
+`)
+			hec.HelmRender()
+		})
+
+		It("Should deploy basic auth proxy deployment and ingress for LDAP", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+		})
+	})
+
 	Context("With provider with enableBasicAuth option", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
