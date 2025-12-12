@@ -17,6 +17,8 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
+  - cd /src/istio/
+  - git apply --verbose /patches/001-istio-pilot-secrets_restrict.patch
   - rm -rf /src/istio/.git
   - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali.git /src/kiali/
   - cd /src/kiali/
