@@ -85,6 +85,16 @@ func reloadOnce() {
 
 	if compareConfigs(dynamicConfig, sampleConfig) {
 		log.Println("configs are equal, doing nothing")
+		// Important behavior:
+		// - Suppose you had a valid config.
+		// - Then you add an invalid line (so the config becomes invalid),
+		//   and later you remove that invalid line, restoring the original config.
+		//
+		// In that case, when the config reloader runs:
+		// - It compares the current config with the previous one.
+		// - Since they are now identical again, it will NOT run validation.
+		// - It simply sees "no change" and skips validation.
+		errorMetric.Set(0.0)
 		return
 	}
 
