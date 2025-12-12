@@ -56,7 +56,7 @@ installTypes:
         name:
           en: Finishing installation
           ru: Завершение установки
-        template: getting_started/dvp/global/STEP_NODES.md
+        template: getting_started/dvp/global/STEP_FINALIZE.md
       step5:
         name:
           en: What can I do next?
