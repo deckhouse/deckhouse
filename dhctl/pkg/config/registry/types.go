@@ -20,6 +20,7 @@ import (
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
@@ -28,6 +29,9 @@ type (
 	secretData   = map[string][]byte
 	contextData  = map[string]any
 
+	// PKI:
+	PKI         = init_secret.Config
+	PKICertKey  = init_secret.CertKey
 	PKIProvider func() (PKI, error)
 )
 

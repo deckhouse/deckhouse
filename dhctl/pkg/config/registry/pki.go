@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -29,11 +28,6 @@ import (
 
 const (
 	certificateCommonName = "registry-ca"
-)
-
-type (
-	PKI     = init_secret.Config
-	CertKey = init_secret.CertKey
 )
 
 func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
@@ -67,7 +61,7 @@ func GeneratePKI() (PKI, error) {
 		return PKI{}, fmt.Errorf("encode CA cert/key: %w", err)
 	}
 
-	ret.CA = &CertKey{
+	ret.CA = &PKICertKey{
 		Cert: string(cert),
 		Key:  string(key),
 	}
