@@ -9,7 +9,9 @@ properties:
       imageCheckInterval:
         description: |
           Интервал запросов в registry для проверки доступности образа.
+          
           Поддерживаемый формат - Go-style duration ("10s", "10m", "10h").
+          
           Если не задан, то используется значение по умолчанию в 60 секунд.
       defaultRegistry:
         description: |
