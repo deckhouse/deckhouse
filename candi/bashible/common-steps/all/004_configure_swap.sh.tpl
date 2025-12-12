@@ -16,7 +16,8 @@
 {{- $limitedSwapSize := dig "kubelet" "memorySwap" "limitedSwap" "size" "" .nodeGroup }}
 {{- $swappiness := dig "kubelet" "memorySwap" "swappiness" 60 .nodeGroup }}
 
-SWAPFILE="/var/lib/swapfile"
+SWAP_DIR="/var/lib"
+SWAPFILE="${SWAP_DIR}/swapfile"
 SYSCTL_CONF="/etc/sysctl.d/99-swap.conf"
 
 # Shared helpers
@@ -105,6 +106,19 @@ fi
 # Recreate swapfile if size differs or doesn't exist
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
+  
+  # Check available disk space
+  AVAILABLE_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $4}')
+  AVAILABLE_BYTES=$((AVAILABLE_KB * 1024))
+  REQUIRED_BYTES=$((DESIRED_BYTES + DESIRED_BYTES / 20))  # Add 5% margin
+  
+  if [ "$AVAILABLE_BYTES" -lt "$REQUIRED_BYTES" ]; then
+    AVAILABLE_GB=$((AVAILABLE_BYTES / 1024 / 1024 / 1024))
+    REQUIRED_GB=$((REQUIRED_BYTES / 1024 / 1024 / 1024))
+    bb-log-error "Insufficient disk space for swapfile in $SWAP_DIR: available ${AVAILABLE_GB}G, required ~${REQUIRED_GB}G"
+    exit 1
+  fi
+  
   swapoff "$SWAPFILE" 2>/dev/null
   rm -f "$SWAPFILE"
   if command -v fallocate >/dev/null 2>&1 && fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
