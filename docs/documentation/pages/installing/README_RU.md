@@ -600,22 +600,26 @@ echo "$MYRESULTSTRING"
 Используйте функцию [Harbor Proxy Cache](https://github.com/goharbor/harbor).
 
 1. Настройте доступ к registry:
-   * В боковом меню перейдите в раздел «Administration» → «Registries»
-     и нажмите «New Endpoint», чтобы добавить эндпоинт для registry.
-   * В выпадающем списке «Provider» выберите «Docker Registry».
-   * В поле «Name» укажите имя эндпоинта на свое усмотрение.
-   * В поле «Endpoint URL» укажите `https://registry.deckhouse.ru`.
-   * В поле «Access ID» укажите `license-token`.
-   * В поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform.
+   * в боковом меню перейдите в раздел «Administration» → «Registries»
+     и нажмите «New Endpoint», чтобы добавить эндпоинт для registry;
+   * в выпадающем списке «Provider» выберите «Docker Registry»;
+   * в поле «Name» укажите имя эндпоинта на свое усмотрение;
+   * в поле «Endpoint URL» укажите `https://registry.deckhouse.ru`;
+   * в поле «Access ID» укажите `license-token`;
+   * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform;
+   * задайте остальные параметры по своему усмотрению;
+   * нажмите «ОК», чтобы подтвердить создание эндпоинта для registry.
 
    ![Настройка доступа к registry](../images/registry/harbor/harbor1.png)
 
 1. Создайте новый проект:
-   * В боковом меню перейдите в раздел «Projects» и нажмите «New Project», чтобы добавить проект.
-   * В поле «Project Name» укажите любое имя проекта на свое усмотрение (например, `d8s`).
-     Указанное имя будет частью URL-адреса.
-   * В поле «Access Level» выберите «Public».
-   * Включите «Proxy Cache» и в выпадающем списке выберите registry, созданный ранее.
+   * в боковом меню перейдите в раздел «Projects» и нажмите «New Project», чтобы добавить проект;
+   * в поле «Project Name» укажите любое имя проекта на свое усмотрение (например, `d8s`).
+     Указанное имя будет частью URL-адреса;
+   * в поле «Access Level» выберите «Public»;
+   * включите «Proxy Cache» и в выпадающем списке выберите registry, созданный ранее;
+   * задайте остальные параметры по своему усмотрению;
+   * нажмите «ОК», чтобы подтвердить создание проекта.
 
    ![Создание нового проекта](../images/registry/harbor/harbor2.png)
 

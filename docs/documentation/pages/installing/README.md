@@ -594,6 +594,8 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
    * In the "Endpoint URL" field, enter `https://registry.deckhouse.io`.
    * In the "Access ID" field, enter `license-token`.
    * In the "Access Secret" field, enter your Deckhouse Kubernetes Platform license key.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new endpoint for the registry.
 
    ![Configuring registry access](../images/registry/harbor/harbor1.png)
 
@@ -603,6 +605,8 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
      This name will be a part of the URL.
    * In the "Access Level" field, select "Public".
    * Enable "Proxy Cache" and in the dropdown list, select the registry created earlier.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new project.
 
    ![Creating a new project](../images/registry/harbor/harbor2.png)
 
