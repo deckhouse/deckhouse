@@ -782,9 +782,9 @@ entries:
                     ru: Управление сертификатами
                   url: /admin/configuration/security/certificates.html
                 - title:
-                    en: Integration with KUMA and antivirus software
-                    ru: Интеграция с KUMA и антивирусным ПО
-                  url: /admin/configuration/security/kuma-and-av-software.html
+                    en: Integration with software and security solutions
+                    ru: Интеграция с ПО и решениями для безопасности
+                  url: /admin/configuration/security/integration.html
                 - title:
                     en: Distribution of secrets across namespaces
                     ru: Распространение секретов по пространствам имён
