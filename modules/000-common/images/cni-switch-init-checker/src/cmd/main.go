@@ -65,10 +65,7 @@ func run() error {
 		}
 	}
 
-	slog.Info("Kubernetes connection details",
-		"Host", config.Host,
-		"KUBERNETES_SERVICE_HOST", os.Getenv("KUBERNETES_SERVICE_HOST"),
-		"KUBERNETES_SERVICE_PORT", os.Getenv("KUBERNETES_SERVICE_PORT"))
+	slog.Info("Kubernetes connection details", "host", config.Host)
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -133,7 +130,7 @@ func run() error {
 			// Check if we are one of the current CNIs
 			currentCNI, found, _ := unstructured.NestedString(status, "currentCNI")
 			if found && allowedCNIs[currentCNI] {
-				slog.Info("Current CNI matches one of the allowed CNIs. Starting agent.", "currentCNI", currentCNI)
+				slog.Info("Current CNI matches one of the allowed CNIs. Starting agent.", "current_cni", currentCNI)
 				return nil
 			}
 

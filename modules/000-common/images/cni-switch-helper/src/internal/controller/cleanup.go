@@ -49,9 +49,7 @@ func RunCleanup(ctx context.Context, currentCNI string) error {
 func cleanupFlannel(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("flannel-cleanup")
 
-	if err := deleteInterfaces(logger, []string{"cni0", "flannel.1"}); err != nil {
-		logger.Error(err, "Failed to delete interfaces")
-	}
+	deleteInterfaces(logger, []string{"cni0", "flannel.1"})
 
 	if err := deleteConfigFiles(logger, "flannel"); err != nil {
 		logger.Error(err, "Failed to delete config files")
@@ -116,9 +114,7 @@ func cleanupCilium(ctx context.Context) error {
 func cleanupSimpleBridge(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("simple-bridge-cleanup")
 
-	if err := deleteInterfaces(logger, []string{"cni0"}); err != nil {
-		logger.Error(err, "Failed to delete interfaces")
-	}
+	deleteInterfaces(logger, []string{"cni0"})
 
 	if err := deleteConfigFiles(logger, "simple-bridge"); err != nil {
 		logger.Error(err, "Failed to delete config files")
@@ -207,7 +203,7 @@ func cleanIptablesByPatterns(logger logr.Logger, patterns []string) error {
 	return nil
 }
 
-func deleteInterfaces(logger logr.Logger, interfaces []string) error {
+func deleteInterfaces(logger logr.Logger, interfaces []string) {
 	for _, iface := range interfaces {
 		if err := runCommand(logger, "/sbin/ip", "link", "delete", iface); err != nil {
 			// It is fine if interface does not exist
@@ -216,7 +212,6 @@ func deleteInterfaces(logger logr.Logger, interfaces []string) error {
 			logger.Info("Successfully deleted interface", "interface", iface)
 		}
 	}
-	return nil
 }
 
 func deleteConfigFiles(logger logr.Logger, nameContains string) error {

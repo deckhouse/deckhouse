@@ -23,14 +23,14 @@ import (
 	"net/http"
 	"strings"
 
-	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
 )
 
 const (
@@ -135,14 +135,12 @@ func createPatch(pod *corev1.Pod, currentCNI string) ([]byte, error) {
 			Path:  "/metadata/annotations",
 			Value: map[string]string{EffectiveCNIAnnotation: currentCNI},
 		})
-	} else {
-		if annotations[EffectiveCNIAnnotation] == "" {
-			patches = append(patches, patchOperation{
-				Op:    "add",
-				Path:  fmt.Sprintf("/metadata/annotations/%s", escapeJSONPointer(EffectiveCNIAnnotation)),
-				Value: currentCNI,
-			})
-		}
+	} else if annotations[EffectiveCNIAnnotation] == "" {
+		patches = append(patches, patchOperation{
+			Op:    "add",
+			Path:  fmt.Sprintf("/metadata/annotations/%s", escapeJSONPointer(EffectiveCNIAnnotation)),
+			Value: currentCNI,
+		})
 	}
 
 	if len(patches) == 0 {
