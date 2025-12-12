@@ -25,11 +25,12 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestParseConfigFromData(t *testing.T) {
@@ -204,52 +205,52 @@ spec:
 			t.Run("Without CRI (module disable)", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.LegacyMode, true)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
-				require.Equal(t, registry.ImagesRepo, "test")
-				require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
 			})
 			t.Run("With CRI (module enable)", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.LegacyMode, true)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
-				require.Equal(t, registry.ImagesRepo, "test")
-				require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
 			})
 		})
 		t.Run("Default -> CE edition registry", func(t *testing.T) {
 			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.LegacyMode, true)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
-				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-				require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
 			})
 			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.LegacyMode, false)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, registry_const.ModeDirect)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeDirect, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
-				require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-				require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-				require.Equal(t, registry.Username, "")
-				require.Equal(t, registry.Password, "")
-				require.Equal(t, registry.CA, "")
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
 			})
 		})
 		t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
@@ -279,14 +280,14 @@ spec:
 			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
 				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider())
 				require.NoError(t, err)
-				require.Equal(t, metaConfig.Registry.LegacyMode, false)
-				require.Equal(t, metaConfig.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
 				registry := metaConfig.Registry.Settings.RemoteData
-				require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-				require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-				require.Equal(t, registry.Username, "test-user")
-				require.Equal(t, registry.Password, "test-password")
-				require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
+				require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "test-user", registry.Username)
+				require.Equal(t, "test-password", registry.Password)
+				require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 			})
 		})
 	})
@@ -441,11 +442,11 @@ func TestParseConfigFromFiles(t *testing.T) {
 
 		t.Run("Registry CE edition config", func(t *testing.T) {
 			registry := metaConfig.Registry.Settings.RemoteData
-			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-			require.Equal(t, registry.Username, "")
-			require.Equal(t, registry.Password, "")
-			require.Equal(t, registry.CA, "")
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "", registry.Username)
+			require.Equal(t, "", registry.Password)
+			require.Equal(t, "", registry.CA)
 		})
 
 		require.Len(t, metaConfig.ModuleConfigs, 3)

@@ -243,25 +243,25 @@ func TestPrepareRegistry(t *testing.T) {
 					"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
 				},
 			})
-			require.Equal(t, cfg.Registry.LegacyMode, true)
-			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+			require.Equal(t, true, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
-			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-			require.Equal(t, registry.Username, "a")
-			require.Equal(t, registry.Password, "b")
-			require.Equal(t, registry.CA, "")
+			require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "a", registry.Username)
+			require.Equal(t, "b", registry.Password)
+			require.Equal(t, "", registry.CA)
 		})
 		t.Run("Default -> CE edition registry && direct && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
-			require.Equal(t, cfg.Registry.LegacyMode, false)
-			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeDirect)
+			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeDirect, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
-			require.Equal(t, registry.ImagesRepo, "registry.deckhouse.io/deckhouse/ce")
-			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-			require.Equal(t, registry.Password, "")
-			require.Equal(t, registry.Username, "")
-			require.Equal(t, registry.CA, "")
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "", registry.Password)
+			require.Equal(t, "", registry.Username)
+			require.Equal(t, "", registry.CA)
 		})
 		t.Run("ModuleConfig Deckhouse -> from moduleConfig && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
@@ -285,14 +285,14 @@ spec:
 `,
 				},
 			})
-			require.Equal(t, cfg.Registry.LegacyMode, false)
-			require.Equal(t, cfg.Registry.Settings.Mode, registry_const.ModeUnmanaged)
+			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
 			registry := cfg.Registry.Settings.RemoteData
-			require.Equal(t, registry.ImagesRepo, "r.example.com/test")
-			require.Equal(t, registry.Scheme, registry_const.SchemeHTTPS)
-			require.Equal(t, registry.Username, "test-user")
-			require.Equal(t, registry.Password, "test-password")
-			require.Equal(t, registry.CA, "-----BEGIN CERTIFICATE-----")
+			require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "test-user", registry.Username)
+			require.Equal(t, "test-password", registry.Password)
+			require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 		})
 	})
 }
