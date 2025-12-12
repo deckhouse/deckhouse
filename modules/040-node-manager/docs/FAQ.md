@@ -1505,7 +1505,7 @@ For the list of platforms supported by NVIDIA Container Toolkit, see [the offici
 {% alert level="info" %}
 Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
 
-containerd on GPU nodes is configured automatically. Do not change it manually (via `NodeGroupConfiguration`, TOML, etc.) and do not combine manual changes with automatic configuration.
+containerd on GPU nodes is configured automatically. Do not change its configuration manually (e.g. via `NodeGroupConfiguration` or TOML config).
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:
