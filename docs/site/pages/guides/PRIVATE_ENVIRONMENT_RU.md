@@ -798,6 +798,12 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 ```
 {% endofftopic %}
 
+Можно проверить, что все образы залиты в registry, открыв проект `deckhouse` в веб-интерфейсе Harbor:
+
+<div style="text-align: center;">
+<img src="/images/guides/install_to_private_environment/harbor_state_with_images.png" alt="Главная страница Harbor...">
+</div>
+
 Образы закачаны и готовы к использованию! 🎉
 
 ## Подготовка и настройка прокси-серверв
@@ -832,4 +838,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
 ```
 
 В списке запущенных контейнеров должен быть контейнер с соответствующем именем.
+
+Теперь нужно залогиниться в 
 
