@@ -93,7 +93,11 @@ on:
       test_config:
         description: 'JSON string of parameters of current test'
         required: false
+{!{- if eq $ctx.providerName "OpenStack" }!}
+        default: '{"cri":"ContainerdV2","ver":"1.32","edition":"FE"}'
+{!{- else }!}
         default: '{"cri":"Containerd","ver":"1.32","edition":"FE"}'
+{!{- end }!}
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
