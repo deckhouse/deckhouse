@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: bashible-apiserver
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "bashible-apiserver"

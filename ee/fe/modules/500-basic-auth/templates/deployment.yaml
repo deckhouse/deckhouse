@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: nginx
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: nginx

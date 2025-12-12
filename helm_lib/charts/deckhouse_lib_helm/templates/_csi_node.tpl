@@ -55,7 +55,7 @@ spec:
     kind: DaemonSet
     name: {{ $fullname }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     {{- if $additionalNodeVPA }}

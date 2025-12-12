@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: l2lb-controller
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: l2lb-controller

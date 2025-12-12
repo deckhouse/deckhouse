@@ -19,7 +19,7 @@ spec:
     kind: Deployment
     name: kiali
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: kiali

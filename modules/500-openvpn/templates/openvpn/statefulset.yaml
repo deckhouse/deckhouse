@@ -37,7 +37,7 @@ spec:
     kind: StatefulSet
     name: {{ .Chart.Name }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
   {{- if .Values.openvpn.udpEnabled }}

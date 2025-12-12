@@ -17,7 +17,7 @@ spec:
     kind: DaemonSet
     name: control-plane-proxy
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: kube-rbac-proxy

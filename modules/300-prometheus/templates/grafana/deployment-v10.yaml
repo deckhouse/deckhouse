@@ -22,7 +22,7 @@ spec:
     kind: Deployment
     name: grafana-v10
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: grafana

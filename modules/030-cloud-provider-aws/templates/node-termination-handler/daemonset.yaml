@@ -17,7 +17,7 @@ spec:
     kind: DaemonSet
     name: node-termination-handler
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "node-termination-handler"

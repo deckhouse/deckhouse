@@ -18,7 +18,7 @@ spec:
     kind: DaemonSet
     name: user-authz-webhook
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: webhook

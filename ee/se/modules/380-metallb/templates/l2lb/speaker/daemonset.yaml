@@ -18,7 +18,7 @@ spec:
     kind: DaemonSet
     name: l2lb-speaker
   updatePolicy:
-    updateMode: "Initial"
+    reupdateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: l2lb-speaker

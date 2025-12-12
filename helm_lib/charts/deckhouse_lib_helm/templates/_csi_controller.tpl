@@ -146,7 +146,7 @@ spec:
     kind: Deployment
     name: {{ $fullname }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "provisioner"

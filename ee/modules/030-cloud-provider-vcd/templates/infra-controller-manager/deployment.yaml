@@ -24,7 +24,7 @@ spec:
     kind: Deployment
     name: infra-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "infra-controller-manager"

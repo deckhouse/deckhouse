@@ -19,7 +19,7 @@ spec:
     kind: Deployment
     name: machine-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "controller"

@@ -23,7 +23,7 @@ spec:
     kind: Deployment
     name: aggregating-proxy
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
       - containerName: mimir
