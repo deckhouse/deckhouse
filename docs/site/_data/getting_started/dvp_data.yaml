@@ -54,20 +54,10 @@ installTypes:
         template: getting_started/dvp/global/STEP_INSTALL.md
       step4:
         name:
-          en: Adding nodes
-          ru: Добавление узлов
+          en: Finishing installation
+          ru: Завершение установки
         template: getting_started/dvp/global/STEP_NODES.md
       step5:
-        name:
-          en: Storage configuration
-          ru: Настройка хранилища
-        template: getting_started/dvp/global/STEP_STORAGE.md
-      step6:
-        name:
-          en: Virtualization configuration
-          ru: Настройка виртуализации
-        template: getting_started/dvp/global/STEP_VIRTUALIZATION.md
-      step7:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
