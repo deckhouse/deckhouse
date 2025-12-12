@@ -3,8 +3,8 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
-{{- if semverCompare "<= 1.32" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "InPlacePodVerticalScaling=true" | join "," }}
+{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
