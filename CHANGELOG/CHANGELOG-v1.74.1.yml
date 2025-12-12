@@ -1,0 +1,24 @@
+docs:
+  fixes:
+    - summary: Added link to NVIDIA Container Toolkit docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16875
+    - summary: Fixed typo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16704
+    - summary: Fixed the logic of generating the revision table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16681
+multitenancy-manager:
+  fixes:
+    - summary: Add validation to restrict Project name length to 53 characters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16926
+      impact: >-
+        Prevents creation of Projects with too-long names that would lead to invalid generated
+        Kubernetes resource names.
+user-authn:
+  fixes:
+    - summary: Quote service names to prevent digit-only names from breaking yaml parser
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17020
+user-authz:
+  fixes:
+    - summary: Allow project-scoped roles to access Cluster-wide objects
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16896
+
