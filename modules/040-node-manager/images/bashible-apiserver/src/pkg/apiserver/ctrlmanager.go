@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -37,10 +38,16 @@ func NewCtrlManager() (ctrl.Manager, error) {
 		return nil, fmt.Errorf("unable to create cluster config: %w", err)
 	}
 
+	cacheOpts := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{
+			CtrlManagerNamespace: {},
+		},
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		LeaderElection:         CtrlManagerLeaderElection,
 		HealthProbeBindAddress: CtrlManagerHealthAddr,
-		Namespace:              CtrlManagerNamespace,
+		Cache:                  cacheOpts,
 		Logger:                 klog.NewKlogr(),
 	})
 
