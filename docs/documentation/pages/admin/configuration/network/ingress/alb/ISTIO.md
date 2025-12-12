@@ -4,7 +4,7 @@ permalink: en/admin/configuration/network/ingress/alb/istio.html
 description: "Configure Application Load Balancer with Istio in Deckhouse Kubernetes Platform. Istio Ingress Gateway setup, traffic management, and service mesh integration."
 ---
 
-ALB with Istio is implemented via Istio Ingress Gateway or NGINX Ingress.
+ALB with Istio is implemented via Istio Ingress Gateway or Ingress NGINX.
 The [`istio`](/modules/istio/) module is used for this purpose.
 
 ## Ingress to publish applications
@@ -100,9 +100,9 @@ spec:
             host: app-svc
 ```
 
-### NGINX Ingress
+### Ingress NGINX
 
-To use NGINX Ingress, you need to:
+To use Ingress NGINX, you need to:
 
 * Configure the Ingress controller by adding Istio sidecar to it.
   Enable the `enableIstioSidecar` parameter in the [`ingress-nginx`](/modules/ingress-nginx/) module's [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.

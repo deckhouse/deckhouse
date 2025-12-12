@@ -21,5 +21,5 @@ lang: ru
 
 Для балансировки трафика на уровне приложений в DKP доступны два решения:
 
-- [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)),
+- [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)),
 - [Istio](https://istio.io/) (модуль [`istio`](/modules/istio/)).

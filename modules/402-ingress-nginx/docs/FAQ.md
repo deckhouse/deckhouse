@@ -170,8 +170,8 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 ## How do I configure an external load balancer to check if IngressNginxController is available?
 
-In case an `IngressNginxController` is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
-the availability of the IngressNginxController's endpoints via a health check mechanism, periodically sending either HTTP-requests or TCP-packets.
+In case an Ingress controller is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
+the availability of the Ingress controller's endpoints via a health check mechanism, periodically sending either HTTP-requests or TCP-packets.
 While it is possible to test the endpoints simply by checking if a relevant TCP port is open, we recommend implementing HTTP checks with the following parameters:
 
 - Protocol: `HTTP`
