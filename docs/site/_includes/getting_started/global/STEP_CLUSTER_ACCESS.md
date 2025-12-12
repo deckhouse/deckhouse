@@ -29,8 +29,8 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 
 {%- if page.platform_type == "cloud" %}
 
-{% alert level="info" title="Adding additional nodes in the cloud" %}
-If you need to add more nodes to your cloud cluster (for example, increase the number of worker nodes), use the [cluster scaling documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% alert level="info" %}
+To increase the number of worker nodes, modify the parameter [maxPerZone](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) in the `worker` NodeGroup using CLI (`d8 k edit ng worker`) or the admin web interface. To add additional nodes, refer to the [cluster scaling guide](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
 {% endalert %}
 
 {%- endif %}
