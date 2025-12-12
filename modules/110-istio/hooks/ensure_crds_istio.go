@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -66,5 +67,18 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
 
 	prefix := "/deckhouse/"
-	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/_crds/istio/"+CRDversionToInstall+"/*.yaml")(ctx, input, dc)
+	crdsGlob := prefix + "modules/110-istio/_crds/istio/" + CRDversionToInstall + "/*.yaml"
+
+	// Check if CRD files exist before attempting to install
+	crds, err := filepath.Glob(crdsGlob)
+	if err != nil {
+		return fmt.Errorf("failed to glob CRD files at %q: %w", crdsGlob, err)
+	}
+	if len(crds) == 0 {
+		return fmt.Errorf("no CRD files found at %q for version %s. Please ensure CRD files exist for this Istio version", crdsGlob, CRDversionToInstall)
+	}
+
+	input.Logger.Info("Found CRD files", "path", crdsGlob, "version", CRDversionToInstall, "count", len(crds))
+
+	return ensure_crds.EnsureCRDsHandler(crdsGlob)(ctx, input, dc)
 }
