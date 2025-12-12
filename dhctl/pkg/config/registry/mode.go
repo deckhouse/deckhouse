@@ -104,7 +104,7 @@ func (m ModeModel) InClusterData(pkiProvider PKIProvider) (Data, error) {
 	}
 }
 
-func (m ModeModel) BashibleConfig() (bashible.Config, error) {
+func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
 	var mirrors map[string]bashible.ConfigHosts
 
 	switch m.Mode {
@@ -115,10 +115,10 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 		mirrors = m.toUnmanagedBashibleHosts()
 
 	default:
-		return bashible.Config{}, ErrUnknownMode
+		return BashibleConfig{}, ErrUnknownMode
 	}
 
-	cfg := bashible.Config{
+	cfg := BashibleConfig{
 		Mode:       string(m.Mode),
 		ImagesBase: m.InClusterImagesRepo,
 		Hosts:      mirrors,
@@ -126,7 +126,7 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 
 	version, err := pki.ComputeHash(&cfg)
 	if err != nil {
-		return bashible.Config{}, fmt.Errorf("compute version: %w", err)
+		return BashibleConfig{}, fmt.Errorf("compute version: %w", err)
 	}
 
 	cfg.Version = version

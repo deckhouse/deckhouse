@@ -89,10 +89,10 @@ func (b *ManifestBuilder) KubeadmTplCtx() contextData {
 	}
 }
 
-func (b *ManifestBuilder) BashibleTplCtx(pkiProvider PKIProvider) (contextData, error) {
+func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleContext, error) {
 	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
-		return nil, fmt.Errorf("get bashible config: %w", err)
+		return BashibleContext{}, fmt.Errorf("get bashible config: %w", err)
 	}
 
 	ctx := cfg.ToContext()
@@ -104,9 +104,9 @@ func (b *ManifestBuilder) BashibleTplCtx(pkiProvider PKIProvider) (contextData, 
 
 	init, err := pkiProvider()
 	if err != nil {
-		return nil, fmt.Errorf("get PKI: %w", err)
+		return BashibleContext{}, fmt.Errorf("get PKI: %w", err)
 	}
 	ctx.Init = init
 
-	return ctx.ToMap(), nil
+	return ctx, nil
 }

@@ -20,6 +20,7 @@ import (
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
@@ -28,6 +29,10 @@ type (
 	settingsData = map[string]any
 	secretData   = map[string][]byte
 	contextData  = map[string]any
+
+	// Bashible
+	BashibleContext = bashible.Context
+	BashibleConfig  = bashible.Config
 
 	// PKI:
 	PKI         = init_secret.Config

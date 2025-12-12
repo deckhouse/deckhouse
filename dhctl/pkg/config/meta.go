@@ -415,13 +415,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.
-		Manifest().
-		BashibleTplCtx(registry_config.GeneratePKI)
-	if err != nil {
-		return nil, fmt.Errorf("create registry bashible context: %s", err)
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -447,7 +440,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
-	configForBashibleBundleTemplate["registry"] = registryData
+
+	// Registry
+	registryContext, err := m.Registry.
+		Manifest().
+		BashibleContext(registry_config.GeneratePKI)
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible context: %s", err)
+	}
+	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()

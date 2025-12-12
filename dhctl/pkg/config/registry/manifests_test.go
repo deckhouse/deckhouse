@@ -72,7 +72,7 @@ func TestManifestsNoError(t *testing.T) {
 			t.Run("BashibleTplCtx", func(t *testing.T) {
 				_, err := tt.input.
 					Manifest().
-					BashibleTplCtx(GeneratePKI)
+					BashibleContext(GeneratePKI)
 
 				require.NoError(t, err)
 			})
@@ -115,14 +115,12 @@ func TestManifestsLegacyMode(t *testing.T) {
 			t.Run("BashibleTplCtx -> registry module enabled when not in legacy mode", func(t *testing.T) {
 				ctx, err := tt.input.
 					Manifest().
-					BashibleTplCtx(GeneratePKI)
+					BashibleContext(GeneratePKI)
 
 				require.NoError(t, err)
 
-				isModuleEnabled := ctx["registryModuleEnable"].(bool)
 				expectedModuleEnabled := !tt.legacyMode
-
-				require.Equal(t, expectedModuleEnabled, isModuleEnabled)
+				require.Equal(t, expectedModuleEnabled, ctx.RegistryModuleEnable)
 			})
 
 			t.Run("RegistryBashibleConfigSecretData -> exists when not in legacy mode", func(t *testing.T) {
