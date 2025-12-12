@@ -844,7 +844,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
 Теперь нужно залогиниться в наш registry, чтобы docker смог выкачать из него образ установщика [dhctl](../documentation/v1/installing/):
 
 ```bash
-docker login harbor.local`
+docker login harbor.local
 ```
 
 {% offtopic title="Пример успешного выполнения команды..." %}
@@ -861,3 +861,6 @@ Login Succeeded
 ```
 {% endofftopic %}
 
+## Подготовка ВМ для будущих узлов
+
+### Требования к ВМ
