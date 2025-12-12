@@ -49,7 +49,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1005"
+  resourceVersion: "1004"
 spec:
   changelog:
     features:

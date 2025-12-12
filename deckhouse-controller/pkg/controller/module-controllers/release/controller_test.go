@@ -65,7 +65,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
 )
 
@@ -161,84 +160,46 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("simple", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("with annotation", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("with-annotation.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("deckhouse suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("kubernetes suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("kVersion-unsuitable.yaml"))
-
-		repeatTest(func() {
-			mr := suite.getModuleRelease(suite.testMRName)
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), suite.testMRName)
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
 		suite.updateModuleReleasesStatuses()
-
-		repeatTest(func() {
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), "echo-v0.4.54")
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
 		suite.updateModuleReleasesStatuses()
-
-		repeatTest(func() {
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(context.TODO(), "echo-v0.4.54")
 	})
 
 	suite.Run("loop until deploy: canary", func() {
@@ -258,28 +219,20 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		testData := suite.fetchTestFileData("loop-canary.yaml")
 		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
-		repeatTest(func() {
-			suite.loopUntilDeploy(dc, suite.testMRName)
-		})
+		suite.loopUntilDeploy(dc, suite.testMRName)
 	})
 
 	suite.Run("AutoPatch", func() {
 		suite.Run("install new module in manual mode with module release approval annotation", func() {
 			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-approved.yaml"))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileUntilStable(ctx, suite.testMRName)
 		})
 
 		suite.Run("install new module in manual mode with module release without approval annotation", func() {
 			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileUntilStable(ctx, suite.testMRName)
 		})
 	})
 
@@ -296,12 +249,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.26.3"})
 		})
 
 		suite.Run("minor update don't respect window", func() {
@@ -316,12 +264,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.27.0"})
 		})
 
 		suite.Run("Postponed release", func() {
@@ -336,12 +279,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.27.0"})
 		})
 
 		suite.Run("Postponed patch release", func() {
@@ -351,12 +289,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.26.3"})
 		})
 
 		suite.Run("Postponed minor release", func() {
@@ -366,12 +299,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.27.0"})
 		})
 
 		suite.Run("Approved minor release", func() {
@@ -381,12 +309,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.27.0"})
 		})
 	})
 
@@ -397,12 +320,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		testData := suite.fetchTestFileData("patch-awaits-update-window.yaml")
 		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-		repeatTest(func() {
-			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-1.26.3"})
 	})
 
 	suite.Run("Reinstall", func() {
@@ -417,25 +335,13 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		testData := suite.fetchTestFileData("reinstall-annotation.yaml")
 		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-		repeatTest(func() {
-			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
-			require.NoError(suite.T(), err)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileUntilStable(ctx, "parca-1.26.2")
 	})
 
 	suite.Run("Process force release", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
 
-		repeatTest(func() {
-			mr := suite.getModuleRelease("parca-1.2.1")
-			_, err := suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-
-			mr = suite.getModuleRelease("parca-1.5.2")
-			_, err = suite.ctr.handleRelease(context.TODO(), mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileMultiple(context.TODO(), []string{"parca-1.2.1", "parca-1.5.2"})
 	})
 
 	suite.Run("Sequential processing", func() {
@@ -443,73 +349,44 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"upmeter-v1.70.0", "upmeter-v1.70.1"})
 		})
 
 		suite.Run("sequential processing with minor release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"upmeter-v1.70.0", "upmeter-v1.71.0"})
 		})
 
 		suite.Run("sequential processing with minor pending release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 		})
 
 		suite.Run("sequential processing with minor auto release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 		})
 
 		suite.Run("sequential processing with minor notready release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
 			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 		})
 
 		suite.Run("sequential processing with pending releases", func() {
 			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
 			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
 
-			repeatTest(func() {
+			// Process all 3 releases in a loop, changing module phase after the first release
+			// on each iteration
+			for i := 0; i < 5; i++ {
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 				require.NoError(suite.T(), err)
 				suite.setModulePhase(addonmodules.Ready)
@@ -517,7 +394,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
 				require.NoError(suite.T(), err)
-			})
+			}
 		})
 	})
 
@@ -525,17 +402,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
 
-		repeatTest(func() {
-			// Test updating Parca module
-			mr := suite.getModuleRelease("parca-1.2.2")
-			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-
-			// Test updating Commander module
-			mr = suite.getModuleRelease("commander-1.0.3")
-			_, err = suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-		})
+		suite.reconcileMultiple(ctx, []string{"parca-1.2.2", "commander-1.0.3"})
 	})
 
 	suite.Run("Process major releases", func() {
@@ -543,32 +410,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
 
-			repeatTest(func() {
-				mr := suite.getModuleRelease("parca-0.26.2")
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				// Test updating Parca module
-				mr = suite.getModuleRelease("parca-1.0.0")
-				_, err = suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-0.26.2", "parca-1.0.0"})
 		})
 
 		suite.Run("major release from 1 to 2 must be not allowed", func() {
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-1-2.yaml"))
 
-			repeatTest(func() {
-				mr := suite.getModuleRelease("parca-1.26.2")
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				// Test updating Parca module
-				mr = suite.getModuleRelease("parca-2.0.0")
-				_, err = suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(ctx, []string{"parca-1.26.2", "parca-2.0.0"})
 		})
 	})
 
@@ -579,13 +428,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("lts-channel-minor-jump.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				// deployed is 0.5.0, pending is 0.25.0 - should allow large minor jump in LTS channel
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.5.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.25.0"))
-				require.NoError(suite.T(), err)
-			})
+			// deployed is 0.5.0, pending is 0.25.0 - should allow large minor jump in LTS channel
+			suite.reconcileMultiple(context.TODO(), []string{"testmodule-0.5.0", "testmodule-0.25.0"})
 		})
 
 		// 2) LTS channel major version jump (+1)
@@ -593,13 +437,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("lts-channel-major-jump.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				// deployed is 0.8.0, pending is 1.0.0 - should allow major jump in LTS channel
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.8.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-1.0.0"))
-				require.NoError(suite.T(), err)
-			})
+			// deployed is 0.8.0, pending is 1.0.0 - should allow major jump in LTS channel
+			suite.reconcileMultiple(context.TODO(), []string{"testmodule-0.8.0", "testmodule-1.0.0"})
 		})
 
 		// 3) LTS channel multiple intermediate versions - should process only latest
@@ -607,14 +446,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("lts-channel-multiple-versions.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.3.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.5.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.7.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"testmodule-0.3.0", "testmodule-0.5.0", "testmodule-0.7.0"})
 		})
 	})
 
@@ -626,16 +458,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-sequential.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.0", "demo-1.68.0", "demo-1.69.0", "demo-1.70.0"})
 		})
 
 		// 2) Jump through n versions
@@ -643,18 +466,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-jump.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.75.2
-				// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-				require.NoError(suite.T(), err)
-			})
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.75.2
+			// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.5", "demo-1.68.4", "demo-1.69.10", "demo-1.75.2"})
 		})
 
 		// 2.1) Jump through n versions, but approved not latest
@@ -662,18 +476,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-jump-approved-not-latest.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				// deployed is 1.67.5, pendings: 1.75.1, 1.75.2 (approved), 1.75.3
-				// release will not deployed and stuck on 1.75.3
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.1"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.3"))
-				require.NoError(suite.T(), err)
-			})
+			// deployed is 1.67.5, pendings: 1.75.1, 1.75.2 (approved), 1.75.3
+			// release will not deployed and stuck on 1.75.3
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.5", "demo-1.75.1", "demo-1.75.2", "demo-1.75.3"})
 		})
 
 		// 3) Jump when deployed is above 'from'
@@ -682,16 +487,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData)
 
 			// deployed 1.68.0, pendings: 1.69.0, 1.70.0, 1.71.0 (with constraint from 1.67 to 1.71)
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.71.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.68.0", "demo-1.69.0", "demo-1.70.0", "demo-1.71.0"})
 		})
 
 		// 4) No jump when deployed is below 'from'
@@ -699,17 +495,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-below-from.yaml")
 			suite.setupReleaseController(testData)
 
-			repeatTest(func() {
-				// deployed is 1.66.0 which is below 'from'; no jumping allowed
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.66.25"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-				require.NoError(suite.T(), err)
-			})
+			// deployed is 1.66.0 which is below 'from'; no jumping allowed
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.66.25", "demo-1.67.0", "demo-1.68.4", "demo-1.75.2"})
 		})
 
 		// 5) No backward jump if 'to' is less than deployed
@@ -718,16 +505,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData)
 
 			// deployed is 1.76.0, constraints endpoint is lower than deployed, ensure we do not deploy any lower pending
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.66.23"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.3"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.66.23", "demo-1.67.5", "demo-1.68.3", "demo-1.75.2"})
 		})
 
 		// 6) Several update specs (approved version in second constraint)
@@ -737,16 +515,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
 			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, constrainted release must be chosen
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.3"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.0", "demo-1.68.0", "demo-1.69.3", "demo-1.70.0"})
 		})
 
 		// 7) Several update specs (different from maximum leap release is approved and matches constraint)
@@ -756,16 +525,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
 			// constraints allow jump from 1.67.x -> 1.70.x no release can be processed
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.0", "demo-1.68.0", "demo-1.69.0", "demo-1.70.0"})
 		})
 
 		// 8) Update specis not for constrainted release
@@ -775,16 +535,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
 			// constraints allow jump from 1.67.x -> 1.69.x no release can be processed
-			repeatTest(func() {
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
-				require.NoError(suite.T(), err)
-			})
+			suite.reconcileMultiple(context.TODO(), []string{"demo-1.67.0", "demo-1.68.0", "demo-1.69.0", "demo-1.70.0"})
 		})
 	})
 }
@@ -1040,6 +791,138 @@ func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1
 	require.NoError(suite.T(), err)
 
 	return release
+}
+
+// Reconciliation test helpers -----------------------------------------------------------------------------------------
+
+const (
+	// defaultMaxReconcileIterations - maximum number of reconcile cycles until stable state
+	defaultMaxReconcileIterations = 10
+
+	// defaultReconcileTimeout - maximum time to wait for stable state
+	defaultReconcileTimeout = 30 * time.Second
+
+	// conditionCheckInterval - interval for checking conditions in waitForCondition
+	conditionCheckInterval = 10 * time.Millisecond
+)
+
+// reconcileUntilStable runs reconciliation for the specified release until
+// a stable state is reached (when controller doesn't require immediate requeue).
+//
+// A state is considered stable when:
+// - Requeue: false AND RequeueAfter == 0 (controller doesn't require retry)
+// - OR RequeueAfter > 1 second (long deferred check, for example for Deployed releases)
+func (suite *ReleaseControllerTestSuite) reconcileUntilStable(
+	ctx context.Context,
+	releaseName string,
+) {
+	deadline := time.Now().Add(defaultReconcileTimeout)
+
+	for i := 0; i < defaultMaxReconcileIterations; i++ {
+		if time.Now().After(deadline) {
+			suite.T().Fatalf("reconciliation timeout after %d iterations for release %s", i, releaseName)
+		}
+
+		// Get fresh object from client on each iteration,
+		// as the previous reconcile may have changed the status/specs
+		release := suite.getModuleRelease(releaseName)
+		result, err := suite.ctr.handleRelease(ctx, release)
+
+		require.NoError(suite.T(), err, "reconcile iteration %d failed for release %s", i+1, releaseName)
+
+		// Consider stable if:
+		// 1. No immediate requeue
+		// 2. OR RequeueAfter > 1 second (periodic check for stable states)
+		isStable := (!result.Requeue && result.RequeueAfter == 0) || result.RequeueAfter > time.Second
+
+		if isStable {
+			suite.T().Logf("Reconciliation for %s stable after %d iteration(s) (phase: %s)", releaseName, i+1, release.Status.Phase)
+
+			// For Deployed releases, we need 2 more reconcile iterations.
+			// First iteration: handleDeployedRelease adds finalizers/labels and returns Requeue: true
+			// Second iteration: handleDeployedRelease calls deleteOutdatedModuleReleases and updates the Module.status.conditions
+			if release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+				// First extra iteration
+				firstRelease := suite.getModuleRelease(releaseName)
+				_, firstErr := suite.ctr.handleRelease(ctx, firstRelease)
+				require.NoError(suite.T(), firstErr, "first extra reconcile iteration for Deployed release %s", releaseName)
+				suite.T().Logf("First extra iteration for Deployed release %s (adding finalizers/labels)", releaseName)
+
+				// Second extra iteration
+				secondRelease := suite.getModuleRelease(releaseName)
+				_, secondErr := suite.ctr.handleRelease(ctx, secondRelease)
+				require.NoError(suite.T(), secondErr, "second extra reconcile iteration for Deployed release %s", releaseName)
+				suite.T().Logf("Second extra iteration for Deployed release %s (cleanup outdated, update status)", releaseName)
+			}
+
+			return
+		}
+
+		// Simulate short RequeueAfter if the controller requested a deferred retry
+		if result.RequeueAfter > 0 && result.RequeueAfter <= time.Second {
+			suite.T().Logf("Waiting %v before next reconcile (iteration %d)", result.RequeueAfter, i+1)
+			time.Sleep(result.RequeueAfter)
+		}
+	}
+
+	release := suite.getModuleRelease(releaseName)
+	suite.T().Fatalf("Reconciliation did not stabilize after %d iterations for release %s (current phase: %s)",
+		defaultMaxReconcileIterations, releaseName, release.Status.Phase)
+}
+
+// reconcileMultiple processes multiple releases iteratively.
+// On each iteration, reconcile is called for ALL releases in sequence.
+// Does a fixed number of iterations (5) without checking for stability,
+// as some releases may remain in Pending/Postponed and requeue indefinitely
+// (e.g. waiting for update window).
+func (suite *ReleaseControllerTestSuite) reconcileMultiple(
+	ctx context.Context,
+	releaseNames []string,
+) {
+	const iterations = 5 // Fixed 5 iterations for all releases
+
+	// Do fixed number of iterations for all releases
+	for i := 0; i < iterations; i++ {
+		// On each iteration reconcile all releases
+		for _, releaseName := range releaseNames {
+			release := suite.getModuleRelease(releaseName)
+			result, err := suite.ctr.handleRelease(ctx, release)
+
+			require.NoError(suite.T(), err, "reconcile iteration %d failed for release %s", i+1, releaseName)
+
+			// Simulate short RequeueAfter
+			if result.RequeueAfter > 0 && result.RequeueAfter <= time.Second {
+				time.Sleep(result.RequeueAfter)
+			}
+		}
+	}
+
+	suite.T().Logf("Completed %d iterations for %d releases", iterations, len(releaseNames))
+}
+
+// waitForCondition waits until the condition becomes true, checking it at intervals.
+// Provides an explicit waiting mechanism instead of manual polling loops.
+func (suite *ReleaseControllerTestSuite) waitForCondition(
+	timeout time.Duration,
+	condition func() bool,
+	message string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(conditionCheckInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			suite.T().Fatal(message)
+		case <-ticker.C:
+			if condition() {
+				return
+			}
+		}
+	}
 }
 
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
@@ -1341,17 +1224,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		go suite.ctr.restartLoop(ctx)
 
 		// Wait for restart
-		timeout := time.NewTimer(2 * time.Second)
-		defer timeout.Stop()
-
-		for i := 0; i < 50; i++ {
-			if restartCalled.Load() {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		require.True(suite.T(), restartCalled.Load(), "restart should be called when conditions are met")
+		suite.waitForCondition(2*time.Second,
+			func() bool { return restartCalled.Load() },
+			"restart should be called when conditions are met")
 	})
 
 	suite.Run("no restart when modules are active", func() {
@@ -1414,24 +1289,14 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		suite.ctr.activeApplyCount.Store(0)
 
 		// Wait for readyForRestart to be set
-		for i := 0; i < 50; i++ {
-			if suite.ctr.readyForRestart.Load() {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		require.True(suite.T(), suite.ctr.readyForRestart.Load(), "readyForRestart should be true after modules finish")
+		suite.waitForCondition(2*time.Second,
+			func() bool { return suite.ctr.readyForRestart.Load() },
+			"readyForRestart should be true after modules finish")
 
 		// Wait for restart
-		for i := 0; i < 50; i++ {
-			if restartCalled.Load() {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		require.True(suite.T(), restartCalled.Load(), "restart should be called after readyForRestart is set")
+		suite.waitForCondition(2*time.Second,
+			func() bool { return restartCalled.Load() },
+			"restart should be called after readyForRestart is set")
 	})
 
 	suite.Run("context cancellation stops restart loop", func() {
@@ -1566,15 +1431,11 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		wg.Wait()
 
 		// Wait for restart to be triggered
-		for i := 0; i < 50; i++ {
-			if restartCalled.Load() {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
+		suite.waitForCondition(2*time.Second,
+			func() bool { return restartCalled.Load() },
+			"restart should be called after all modules finish")
 
 		require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "all modules should be finished")
-		require.True(suite.T(), restartCalled.Load(), "restart should be called after all modules finish")
 	})
 }
 
@@ -1810,15 +1671,11 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 		wg.Wait()
 
 		// Wait for restart trigger with timeout
-		for range 50 {
-			if restartCalled.Load() {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
+		suite.waitForCondition(2*time.Second,
+			func() bool { return restartCalled.Load() },
+			"restart should be triggered after graceful delay")
 
 		// Verify final state
-		require.True(suite.T(), restartCalled.Load(), "restart should be triggered after graceful delay")
 		require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "no modules should be active")
 	})
 
@@ -1839,28 +1696,24 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 		}
 	})
 
+	// TODO(Glitchy-Sheep): Rewrite using golden files
 	suite.Run("mixed concurrent and sequential", func() {
 		suite.setupReleaseController(mixedProcessingTestData)
 
-		// First process some releases sequentially
-		mr1 := suite.getModuleRelease("parca-1.26.2")
-		_, err := suite.ctr.handleRelease(ctx, mr1)
-		require.NoError(suite.T(), err)
+		concurrentReleases := []string{"commander-1.0.3", "upmeter-v1.70.0"}
+
+		// First process sequential release until stable
+		suite.reconcileUntilStable(ctx, "parca-1.26.2")
 
 		// Then simulate concurrent processing
 		var wg sync.WaitGroup
-		concurrentReleases := []string{"commander-1.0.3", "upmeter-v1.70.0"}
-
 		for _, releaseName := range concurrentReleases {
 			wg.Add(1)
 			go func(name string) {
 				defer wg.Done()
-				mr := suite.getModuleRelease(name)
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
+				suite.reconcileUntilStable(ctx, name)
 			}(releaseName)
 		}
-
 		wg.Wait()
 
 		// Verify all releases processed successfully
@@ -1872,35 +1725,18 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 	})
 }
 
-const repeatCount = 3
-
-func repeatTest(fn func()) {
-	for range repeatCount {
-		fn()
-	}
-}
-
 func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 	// Disable golden file checking for these tests
 	suite.testDataFileName = ""
 
 	const moduleName = "test-module"
 
-	suite.Run("metric is reset to 0 with correct labels", func() {
-
+	suite.Run("metric is expired from group", func() {
 		// Setup metric storage with new registry to isolate metrics
 		metricStorage := metricstorage.NewMetricStorage(
 			metricstorage.WithNewRegistry(),
 			metricstorage.WithLogger(log.NewNop()),
 		)
-
-		// Register the metric first
-		_, err := metricStorage.RegisterGauge(
-			metrics.ModuleConfigurationError,
-			[]string{"module", "version"},
-			options.WithHelp("Gauge indicating module configuration errors"),
-		)
-		require.NoError(suite.T(), err)
 
 		release := &v1alpha1.ModuleRelease{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1917,50 +1753,38 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 			log:           log.NewNop(),
 		}
 
-		// Call the function
-		r.resetConfigurationErrorMetric(release)
+		// First, set metric using Grouped to simulate an existing error
+		groupName := metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String())
+		metricStorage.Grouped().GaugeSet(
+			groupName,
+			metrics.ModuleConfigurationError,
+			1,
+			metrics.ModuleConfigurationErrorLabels(release.GetModuleName(), release.GetVersion().String(), "some error"),
+		)
 
-		// Gather metrics and verify
+		// Verify metric exists with value 1
 		metricFamilies, err := metricStorage.Gather()
 		require.NoError(suite.T(), err)
+		initialValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), 1.0, initialValue, "%s metric should be 1 before reset", metrics.ModuleConfigurationError)
 
-		// Find the ModuleConfigurationError metric family
-		var found bool
-		for _, family := range metricFamilies {
-			if family.GetName() == metrics.ModuleConfigurationError {
-				found = true
-				require.Len(suite.T(), family.GetMetric(), 1, "%s should have exactly one metric", metrics.ModuleConfigurationError)
+		// Call the reset function - this should expire the metric from the group
+		r.resetConfigurationErrorMetric(release)
 
-				metric := family.GetMetric()[0]
-
-				// Verify value is 0
-				require.NotNil(suite.T(), metric.GetGauge())
-				assert.Equal(suite.T(), 0.0, metric.GetGauge().GetValue(), "%s metric value should be 0", metrics.ModuleConfigurationError)
-
-				// Verify labels
-				labels := make(map[string]string)
-				for _, labelPair := range metric.GetLabel() {
-					labels[labelPair.GetName()] = labelPair.GetValue()
-				}
-
-				assert.Equal(suite.T(), moduleName, labels["module"], "module label should match")
-				assert.Equal(suite.T(), "1.2.3", labels["version"], "version label should match")
-			}
-		}
-		require.True(suite.T(), found, "%s metric should be found", metrics.ModuleConfigurationError)
+		// Verify metric is expired (not found or returns -1)
+		metricFamilies, err = metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		resetValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		// After ExpireGroupMetricByName, the metric should be removed from the group
+		// getMetricValue returns -1 if metric is not found
+		assert.Equal(suite.T(), -1.0, resetValue, "%s metric should be expired (not found) after calling reset function", metrics.ModuleConfigurationError)
 	})
 
-	suite.Run("metric is reset when function is called directly", func() {
+	suite.Run("metric expiration is idempotent", func() {
 		metricStorage := metricstorage.NewMetricStorage(
 			metricstorage.WithNewRegistry(),
 			metricstorage.WithLogger(log.NewNop()),
 		)
-
-		_, err := metricStorage.RegisterGauge(
-			metrics.ModuleConfigurationError,
-			[]string{"module", "version"},
-		)
-		require.NoError(suite.T(), err)
 
 		release := &v1alpha1.ModuleRelease{
 			ObjectMeta: metav1.ObjectMeta{Name: "test-module-v1.0.0"},
@@ -1975,30 +1799,23 @@ func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
 			log:           log.NewNop(),
 		}
 
-		// First, set metric to 1 to simulate previous error state
-		metricStorage.GaugeSet(
-			metrics.ModuleConfigurationError,
-			1,
-			map[string]string{
-				"module":  release.GetModuleName(),
-				"version": release.GetVersion().String(),
-			},
-		)
-
-		// Verify metric is set to 1
-		metricFamilies, err := metricStorage.Gather()
-		require.NoError(suite.T(), err)
-		initialValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
-		assert.Equal(suite.T(), 1.0, initialValue, "%s metric should be 1 before reset", metrics.ModuleConfigurationError)
-
-		// Call the reset function
+		// Call the reset function without setting any metric first
+		// This should not panic or error - it's a no-op if metric doesn't exist
 		r.resetConfigurationErrorMetric(release)
 
-		// Verify metric is reset to 0
+		// Verify metric is not found (expected behavior)
+		metricFamilies, err := metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		value := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), -1.0, value, "%s metric should not be found when it was never set", metrics.ModuleConfigurationError)
+
+		// Call again to verify idempotency
+		r.resetConfigurationErrorMetric(release)
+
 		metricFamilies, err = metricStorage.Gather()
 		require.NoError(suite.T(), err)
-		resetValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
-		assert.Equal(suite.T(), 0.0, resetValue, "%s metric should be reset to 0 after calling reset function", metrics.ModuleConfigurationError)
+		value = suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), -1.0, value, "%s metric should still not be found after second reset", metrics.ModuleConfigurationError)
 	})
 }
 
@@ -2024,26 +1841,4 @@ func (suite *ReleaseControllerTestSuite) getMetricValue(metricFamilies []*promdt
 	}
 
 	return -1 // Not found
-}
-
-// Helper function to get metric labels from gathered metrics
-func (suite *ReleaseControllerTestSuite) getMetricLabels(metricFamilies []*promdto.MetricFamily, metricName string, release *v1alpha1.ModuleRelease) map[string]string {
-	for _, family := range metricFamilies {
-		if family.GetName() != metricName {
-			continue
-		}
-
-		for _, metric := range family.GetMetric() {
-			labels := make(map[string]string)
-			for _, labelPair := range metric.GetLabel() {
-				labels[labelPair.GetName()] = labelPair.GetValue()
-			}
-
-			if labels["module"] == release.GetModuleName() && labels["version"] == release.GetVersion().String() {
-				return labels
-			}
-		}
-	}
-
-	return nil
 }

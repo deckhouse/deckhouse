@@ -39,7 +39,7 @@ metadata:
     source: test
     status: deployed
   name: echo-v0.4.69
-  resourceVersion: "1006"
+  resourceVersion: "1005"
 spec:
   moduleName: echo
   version: 0.4.69

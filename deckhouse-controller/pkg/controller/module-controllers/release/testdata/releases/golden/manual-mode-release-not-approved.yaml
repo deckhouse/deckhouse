@@ -36,7 +36,7 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: echo-v0.4.69
-  resourceVersion: "1006"
+  resourceVersion: "1003"
 spec:
   moduleName: echo
   version: 0.4.69
