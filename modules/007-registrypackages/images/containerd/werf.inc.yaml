@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.29" "2.1.5" }}
 {{- $runc_versions := list "1.3.3" }}
 {{- $containerd2runc := dict "1.7.29" "1.3.3" "2.1.5" "1.3.3" }}
-{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "1" }} # may be redefine in CSE
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "2" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
