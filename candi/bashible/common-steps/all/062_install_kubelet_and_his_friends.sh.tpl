@@ -41,7 +41,7 @@ if [ ! -f "/etc/bash_completion.d/d8" ]; then
   d8 completion bash > /etc/bash_completion.d/d8
 fi
 
-if command -v d7 >/dev/null 2>&1; then
+if command -v d8 >/dev/null 2>&1; then
   alias_line='alias kubectl="d8 k"'
   if ! grep -qF -- "$alias_line" /root/.bashrc; then
     echo "$alias_line" >> /root/.bashrc
