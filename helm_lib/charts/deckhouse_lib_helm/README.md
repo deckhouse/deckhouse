@@ -11,6 +11,8 @@
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
+| **Dns Policy** |
+| [helm_lib_dns_policy_bootstraping_state](#helm_lib_dns_policy_bootstraping_state) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -181,6 +183,17 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Container raw name 
 -  Kubernetes semantic version 
+
+## Dns Policy
+
+### helm_lib_dns_policy_bootstraping_state
+
+ returns the proper dnsPolicy value depending on the cluster bootstrap phase 
+
+#### Usage
+
+`{{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }} `
+
 
 ## Enable Ds Eviction
 
