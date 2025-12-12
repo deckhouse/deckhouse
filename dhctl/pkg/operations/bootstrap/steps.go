@@ -429,6 +429,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 
+	if err := checkShell(ctx, nodeInterface); err != nil {
+		return err
+	}
+
 	if err := CheckDHCTLDependencies(ctx, nodeInterface); err != nil {
 		return err
 	}
@@ -857,5 +861,37 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
 		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+	})
+}
+
+func checkShell(ctx context.Context, nodeInterface node.Interface) error {
+	return log.Process("bootstrap", "Check user's shell", func() error {
+		breakPredicate := func(err error) bool {
+			// Retry only for transient SSH connection issues
+			if err == nil {
+				return true
+			}
+			var ee *exec.ExitError
+			if errors.As(err, &ee) && ee.ExitCode() == 255 {
+				log.WarnLn("SSH connection failed (exit 255), retrying in 5 seconds...\n")
+				return false
+			}
+			return true
+		}
+		err := retry.NewSilentLoop("check shell", 10, 5*time.Second).BreakIf(breakPredicate).RunContext(ctx, func() error {
+			cmd := nodeInterface.Command("echo $SHELL")
+			out, stderr, err := cmd.Output(ctx)
+			if err != nil {
+				return fmt.Errorf("error checking shell: %s: %v", stderr, err)
+			}
+
+			if !strings.Contains(string(out), "bash") {
+				return fmt.Errorf("Error: Bashible requires /bin/bash as the user's login shell. Current shell: %s. Please change the user's shell.", strings.TrimSpace(string(out)))
+			}
+
+			return nil
+		})
+
+		return err
 	})
 }
