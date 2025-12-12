@@ -71,10 +71,10 @@ func (e Engine) initFunMap(t *template.Template) {
 	// Add the `required` function here so we can use lintMode
 	funcMap["required"] = func(warn string, val interface{}) (interface{}, error) {
 		if val == nil {
-			return val, errors.Errorf(warnWrap(warn))
+			return val, errors.New(warnWrap(warn))
 		} else if _, ok := val.(string); ok {
 			if val == "" {
-				return val, errors.Errorf(warnWrap(warn))
+				return val, errors.New(warnWrap(warn))
 			}
 		}
 		return val, nil

@@ -18,6 +18,7 @@ package constant
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -28,15 +29,13 @@ const (
 	Scheme     = "https"
 )
 
-const (
-	UnknownVersion = "unknown"
-)
-
 var (
-	Host      = fmt.Sprintf("registry.d8-system.svc:%d", Port)
-	ProxyHost = fmt.Sprintf("127.0.0.1:%d", Port)
-
+	Host         = fmt.Sprintf("registry.d8-system.svc:%d", Port)
+	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
+
+	SupportedCRI         = []CRIType{CRIContainerdV1, CRIContainerdV2}
+	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
 
 func NodeRegistryAddr(addr string) string {
@@ -49,4 +48,12 @@ func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", ip, Port))
 	}
 	return proxyEndpoints
+}
+
+func IsCRISupported(cri CRIType) bool {
+	return slices.Contains(SupportedCRI, cri)
+}
+
+func ModuleRequired(mode ModeType) bool {
+	return slices.Contains(ModesRequiringModule, mode)
 }

@@ -99,7 +99,6 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 		Registry:         "registry.example.com/deckhouse:master",
 		LogLevel:         "debug",
 		Bundle:           "default",
-		IsSecureRegistry: true,
 		DeployTime:       time.Now(),
 	}
 
@@ -130,7 +129,6 @@ func Test_DeployTime(t *testing.T) {
 			Registry:         "registry.example.com/deckhouse:master",
 			LogLevel:         "debug",
 			Bundle:           "default",
-			IsSecureRegistry: true,
 		}
 	}
 
@@ -178,15 +176,6 @@ func Test_DoNotMutateDeployment(t *testing.T) {
 		params DeckhouseDeploymentParams
 	}{
 		{
-			name: "Secure registry",
-			params: DeckhouseDeploymentParams{
-				Registry:         "registry.example.com/deckhouse:master",
-				LogLevel:         "debug",
-				Bundle:           "default",
-				IsSecureRegistry: true,
-			},
-		},
-		{
 			name: "Kube Service",
 			params: DeckhouseDeploymentParams{
 				Registry:         "registry.example.com/deckhouse:master",
@@ -210,7 +199,6 @@ func Test_DoNotMutateDeployment(t *testing.T) {
 				Registry:           "registry.example.com/deckhouse:master",
 				LogLevel:           "debug",
 				Bundle:             "default",
-				IsSecureRegistry:   true,
 				KubeadmBootstrap:   true,
 				MasterNodeSelector: true,
 			},
@@ -222,7 +210,6 @@ func Test_DoNotMutateDeployment(t *testing.T) {
 				LogLevel:           "debug",
 				Bundle:             "default",
 				DeployTime:         time.Now(),
-				IsSecureRegistry:   true,
 				KubeadmBootstrap:   true,
 				MasterNodeSelector: true,
 			},
