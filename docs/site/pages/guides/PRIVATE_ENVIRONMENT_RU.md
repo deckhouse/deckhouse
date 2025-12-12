@@ -930,17 +930,17 @@ Login Succeeded
 
 > Не забудьте заменить в команде `<INTERNAL-IP-ADDRESS>` на реальный внутренний адрес бастион-машины.
 
-### Создание пользователя
+### Создание пользователя для master-узла
 
-Для выполнения установки DKP нужно создать на машинах пользователя, под которым будет выполняться подключение и установка платформы.
+Для выполнения установки DKP нужно создать на будущем master-узле пользователя, под которым будет выполняться подключение и установка платформы.
 
-Выполните команды на каждоый из ВМ (выполнять команды нужно от root-пользователя:
+Выполните команды от root-пользователя:
 
 ```console
 useradd deckhouse -m -s /bin/bash -G sudo
 echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/deckhouse/.ssh
-export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCs1N5nn7gcGKps2OLeTCH6HN2p3TIpHcy1C9CQBu2yh7k+pn0i03SMadFEPoe0so4G3ZwmwGpV9GKcmrnITX/18ZC1STLGJimHBGXimev37qI6/D5OabJ86Eq/p0ixqCdfBErJ7/H/ozLy3X1CKThn/5iotibP3vw+jzFWnmeLfybgZ3003q9T4A1U4Z9kUtLkUMyxz3a0ZxRVrV0/iASdow2Lckc6B92BMAdvII0JRT8eFnpC9tQirSUAUbtlXKGM29xAaQlYQfOm+8RuXkca07BJ1d39Yhrhj6A21gHdcUKYMT0iRs6R83URz36vc5FW0FU1e+DIvXUQ/1QZRQ6l39FsHTOAbNfCCGMJu2MIanrjgJAI0Wew00t+kPwHK/GgtzYG8Bx7YLJaDgfAH1ZBKsl9KxPD2kddt5S0xeYDo2l5/j7P3wmZ/x4yOhvmlCWsuuOIr3wpVXzdwZKU9gUQQRg3mUMxAxVazDrBDvhdUqoVubyqRUTfFWHyOlCw6hc= zhbert@MacBook-Pro-Konstantin.local'
+export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCs1N5nn7gcGKps2OLeTCH6HN2p3TIpHcy1C9CQBu2yh7k+pn0i03SMadFEPoe0so4G3ZwmwGpV9GKcmrnITX/18ZC1STLGJimHBGXimev37qI6/D5OabJ86Eq/p0ixqCdfBErJ7/H/ozLy3X1CKThn/1QZRQ6l39FsHTOAbNfCCGMJu2MIanrjgJAI0Wew00t+kPwHK/GgtzYG8Bx7YLJaDgfAH1ZBKsl9KxPD2kddt5S0xeYDo2l5/j7P3wmZ/x4yOhvmlCWsuuOIr3wpVXzdwZKU9gUQQRg3mUMxAxVazDrBDvhdUqoVubyqRUTfFWHyOlCw6hc= zhbert@MacBook-Pro-Konstantin.local'
 echo $KEY >> /home/deckhouse/.ssh/authorized_keys
 chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
@@ -952,8 +952,16 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 * создаем новый пользтватель `deckhouse`, пользователь добавляется в группу `sudo`;
 * ему настраиваются права на повышение привилегий без ввода пароля;
 * копируется публичная часть ключа, по которому можно  будет войти на машину под этим пользвателем
-  {% offtopic title="Как узнать публичную часть ключа..." %}
-  Узнать публичкую часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
-  {% endofftopic %}
 
+{% offtopic title="Как узнать публичную часть ключа..." %}
+Узнать публичкую часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
+{% endofftopic %}
+
+Проверьте, что подключение с новым пользователем работает:
+
+```bash
+ssh -J ubuntu@<BASTION_IP> deckhouse@<VM_IP>
+```
+
+Если получилось войти, значит пользователь создан правильно.
 
