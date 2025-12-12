@@ -806,7 +806,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 Образы закачаны и готовы к использованию! 🎉
 
-## Подготовка и настройка прокси-серверв
+## Установка прокси-сервера
 
 Для того, чтобы находящиеся в закрытом окружении ВМ будущих узлов кластера могли достучаться до внешних репозиториев пакетов (чтобы установить необходимые для работы DKP пакеты), нужно поднять на машине-бастионе прокси-сервер, через который будет осуществляться этот доступ.
 
@@ -839,5 +839,25 @@ Status: Downloaded newer image for ubuntu/squid:latest
 
 В списке запущенных контейнеров должен быть контейнер с соответствующем именем.
 
-Теперь нужно залогиниться в 
+## Вход в registry для запуска установщика
+
+Теперь нужно залогиниться в наш registry, чтобы docker смог выкачать из него образ установщика [dhctl](../documentation/v1/installing/):
+
+```bash
+docker login harbor.local`
+```
+
+{% offtopic title="Пример успешного выполнения команды..." %}
+```text
+$ docker login harbor.local
+Username: deckhouse
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/home/ubuntu/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+```
+{% endofftopic %}
 
