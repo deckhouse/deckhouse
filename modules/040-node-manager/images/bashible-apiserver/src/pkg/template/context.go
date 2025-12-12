@@ -57,6 +57,7 @@ const (
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
 	GetBootstrapContext(ng string) (map[string]interface{}, error)
+	GetConfigurationChecksum(ng string) (string, bool)
 }
 
 type UpdateHandler interface {
@@ -97,6 +98,8 @@ type BashibleContext struct {
 	moduleSourcesConfigurationChanged chan struct{}
 
 	updateLocked bool
+
+	configurationChecksums map[string]string
 }
 
 type queueAction struct {
@@ -122,6 +125,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
 		moduleSourcesQueue:                make(chan queueAction, 100),
 		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
+		configurationChecksums:            make(map[string]string),
 	}
 
 	c.runFilesParser()
@@ -377,6 +381,11 @@ func (c *BashibleContext) update(src string) {
 
 	_ = os.Remove("/tmp/context.error")
 
+	c.configurationChecksums = make(map[string]string, len(ngmap))
+	for ng, sum := range ngmap {
+		c.configurationChecksums[ng] = string(sum)
+	}
+
 	var res map[string]interface{}
 
 	err = yaml.Unmarshal(rawData, &res)
@@ -450,6 +459,18 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 	return copied, nil
 }
 
+// GetConfigurationChecksum returns previously calculated configuration checksum for nodegroup.
+func (c *BashibleContext) GetConfigurationChecksum(ng string) (string, bool) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	sum, ok := c.configurationChecksums[ng]
+	if !ok || sum == "" {
+		return "", false
+	}
+	return sum, true
+}
+
 // secretMapFilter returns filtering function for single secret
 func secretMapFilter(name string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
@@ -466,7 +487,7 @@ type secretEventHandler struct {
 	bashibleContext *BashibleContext
 }
 
-func (x *secretEventHandler) OnAdd(obj interface{}, _ bool) {
+func (x *secretEventHandler) OnAdd(obj interface{}) {
 	secret := obj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {

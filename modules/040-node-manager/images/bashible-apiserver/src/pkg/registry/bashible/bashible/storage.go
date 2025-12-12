@@ -76,6 +76,13 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 	obj.Data = map[string]string{}
 	obj.Data[r.FileName] = r.Content.String()
 
+	if checksum, ok := s.bashibleContext.GetConfigurationChecksum(ngName); ok {
+		if obj.Annotations == nil {
+			obj.Annotations = map[string]string{}
+		}
+		obj.Annotations["bashible.deckhouse.io/configuration-checksum"] = checksum
+	}
+
 	return &obj, nil
 }
 
