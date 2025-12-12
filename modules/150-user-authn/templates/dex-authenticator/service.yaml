@@ -25,5 +25,5 @@ spec:
     targetPort: dex-https
   selector:
     app: dex-authenticator
-    name: {{ $crd.name }}
+    name: {{ $crd.name | quote }}
   {{- end }}
