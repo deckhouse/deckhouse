@@ -6,7 +6,7 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
   annotations:
-    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "%s://%s/monitoring/monitoring/pods" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) | quote }}
+    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "%s://%s/redirect-to/observability/prometheus-status" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) | quote }}
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
