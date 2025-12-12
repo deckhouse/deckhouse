@@ -36,7 +36,7 @@ webhooks:
     failurePolicy: Fail
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc | quote }}
       service:
         name: cert-manager-webhook
         namespace: d8-cert-manager

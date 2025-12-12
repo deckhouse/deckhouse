@@ -184,11 +184,19 @@ func updStatusFilterCapiMD(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, err
 	}
 
-	return statusCapiMachineDeployment{
-		Name:      md.Name,
-		Replicas:  *md.Spec.Replicas,
-		NodeGroup: md.Labels["node-group"],
-	}, nil
+	res := statusCapiMachineDeployment{
+		Name: md.Name,
+	}
+
+	if md.Spec.Replicas != nil {
+		res.Replicas = *md.Spec.Replicas
+	}
+
+	if md.Labels != nil {
+		res.NodeGroup = md.Labels["node-group"]
+	}
+
+	return res, nil
 }
 
 func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
