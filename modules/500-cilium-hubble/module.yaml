@@ -3,8 +3,6 @@ stage: "General Availability"
 subsystems:
   - networking
 namespace: d8-cni-cilium
-description: |
-  The cilium-hubble module
 descriptions:
   en: The cilium-hubble module
 requirements:
