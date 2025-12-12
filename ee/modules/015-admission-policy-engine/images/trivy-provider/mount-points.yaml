@@ -1,6 +1,0 @@
-dirs:
-- /certs
-- /client-cert
-- /.docker
-- /home/javadb
-- /tmp

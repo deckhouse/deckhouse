@@ -60,7 +60,7 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {
 			"name": "foo"
@@ -211,16 +211,12 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	}
 
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/modules/015-admission-policy-engine/templates/trivy-provider", "/deckhouse/modules/015-admission-policy-engine/templates/trivy-provider")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		err := os.Symlink("/deckhouse/ee/se-plus/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/trivy-provider")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		err := os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/ratify")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -269,64 +265,6 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		It("Renders ValidatingWebhookConfiguration with deny-exec-heritage webhook only", func() {
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
 			checkVWC(f, 1, denyExecHeritageRules)
-		})
-	})
-
-	Context("Cluster with deckhouse on master node and trivy-provider", func() {
-		trackedResourcesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups": ["constraints.gatekeeper.sh"],"apiVersions":["*"],"resources": ["*"],"operations": ["CREATE","UPDATE","DELETE"],"scope": "*"},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`
-		trivyProviderRules := `[{"apiGroups":["apps"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["deployments","daemonsets","statefulsets"]},{"apiGroups":["apps.kruise.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["daemonsets"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","DELETE"],"resources":["pods"]},{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["ingresses"]},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups": ["constraints.gatekeeper.sh"],"apiVersions":["*"],"resources": ["*"],"operations": ["CREATE","UPDATE","DELETE"],"scope": "*"},{"apiGroups": [""],"apiVersions":["*"],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`
-		denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
-
-		BeforeEach(func() {
-			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
-			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
-		})
-
-		Context("disabled operator-trivy module", func() {
-			BeforeEach(func() {
-				f.HelmRender()
-			})
-
-			It("Everything must render properly", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-			})
-
-			It("Doesn't create trivy-provider service", func() {
-				tpSvc := f.KubernetesResource("Service", nsName, "trivy-provider")
-				Expect(tpSvc.Exists()).To(BeFalse())
-			})
-
-			It("Creates ValidatingWebhookConfiguration after bootstrap", func() {
-				checkVWC(f, 3, trackedResourcesRules, denyExecHeritageRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 2, trackedResourcesRules, denyExecHeritageRules)' after full migration to securityPolicyExtensions in all modules
-			})
-		})
-
-		Context("enabled operator-trivy module", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "operator-trivy"]`)
-				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.webhook", `{"ca": "ca", "crt": "crt", "key": "key"}`)
-				f.ValuesSetFromYaml("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", `{"auths": {"registry.test.com": {"auth": "dXNlcjpwYXNzd29yZAo="}}}`)
-				f.HelmRender()
-			})
-
-			It("Everything must render properly", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-			})
-
-			It("Creates trivy-provider service", func() {
-				tpSvc := f.KubernetesResource("Service", nsName, "trivy-provider")
-				Expect(tpSvc.Exists()).To(BeTrue())
-			})
-
-			It("Registry secret stores data from values", func() {
-				tpRegSecret := f.KubernetesResource("Secret", nsName, "trivy-provider-registry-secret")
-				Expect(tpRegSecret.Exists()).To(BeTrue())
-				Expect(tpRegSecret.Field(`data.config\.json`).String()).To(Equal("eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LmNvbSI6eyJhdXRoIjoiZFhObGNqcHdZWE56ZDI5eVpBbz0ifX19"))
-			})
-
-			It("Creates ValidatingWebhookConfiguration after bootstrap with trivy provider config", func() {
-				checkVWC(f, 4, trivyProviderRules, trackedResourcesRules, denyExecHeritageRules, trackedResourcesRules) // TODO change to 'checkVWC(f, 3, trivyProviderRules, trackedResourcesRules, denyExecHeritageRules)' after full migration to securityPolicyExtensions in all modules
-			})
 		})
 	})
 
