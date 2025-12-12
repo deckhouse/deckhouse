@@ -3,11 +3,12 @@
 
 // console.log(pageLang);
 
+import { getDocument, GlobalWorkerOptions } from './pdf.min.mjs';
+
+GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.mjs';
+
 document.addEventListener('DOMContentLoaded', () => {
   const wrappers = document.querySelectorAll('[data-presentation]');
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdf.worker.min.js';
 
   class PdfDocClass {
     constructor(container) {
@@ -154,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Asynchronously downloads PDF.
      */
     const url = `${pdfFiles[idx].container.dataset.presentation}`
-    pdfjsLib.getDocument(url).promise.then(function (pdfDoc_) {
+    getDocument(url).promise.then(function (pdfDoc_) {
       pdfFiles[idx].pdfDoc = pdfDoc_;
       pdfFiles[idx].renderPage(1);
     });
