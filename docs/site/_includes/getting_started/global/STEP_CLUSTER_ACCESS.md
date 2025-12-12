@@ -27,6 +27,14 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" %}
+To increase the number of worker nodes, modify the parameter [maxPerZone](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) in the `worker` NodeGroup using CLI (`d8 k edit ng worker`) or the admin web UI. To add additional nodes, refer to the [cluster scaling guide](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 It may take some time to start the Ingress controller after installing Deckhouse. Make sure that the Ingress controller has started before continuing:
 
 ```shell
