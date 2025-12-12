@@ -32,20 +32,20 @@
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "transform/destination/test-socket2-dest/00_del_parsed_data": {
+    "transform/destination/test-socket2-dest/00_gelf_host": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "source": "if !exists(.host) {\n  .host = .node\n};\n\nif exists(.timestamp_end) {\n  del(.timestamp_end)\n};\n\n.timestamp = parse_timestamp!(.\"timestamp\", format: \"%+\");\n\n. = flatten(.);\n\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
       "type": "remap"
     },
-    "transform/destination/test-socket2-dest/01_gelf_host": {
+    "transform/destination/test-socket2-dest/01_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-socket2-dest/00_del_parsed_data"
+        "transform/destination/test-socket2-dest/00_gelf_host"
       ],
-      "source": "if !exists(.host) {\n  .host = .node\n};\n\nif exists(.timestamp_end) {\n  del(.timestamp_end)\n};\n\n.timestamp = parse_timestamp!(.\"timestamp\", format: \"%+\");\n\n. = flatten(.);\n\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_local_timezone": {
@@ -110,7 +110,7 @@
     "destination/cluster/test-socket2-dest": {
       "type": "socket",
       "inputs": [
-        "transform/destination/test-socket2-dest/01_gelf_host"
+        "transform/destination/test-socket2-dest/01_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false

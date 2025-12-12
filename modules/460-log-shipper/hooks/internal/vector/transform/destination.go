@@ -23,67 +23,56 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
+// CreateLogDestinationTransforms creates a list of transforms for a log destination
 func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination) ([]apis.LogTransform, error) {
-	var err error
-	transforms := make([]apis.LogTransform, 0)
-	if len(dest.Spec.Transformations) > 0 {
-		if transforms, err = BuildModes(dest.Spec.Transformations); err != nil {
-			return nil, err
+	var transforms []apis.LogTransform
+	if dest.Spec.RateLimit.LinesPerMinute != nil {
+		throttleTransform, err := ThrottleTransform(dest.Spec.RateLimit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build throttle transform: %w", err)
 		}
+		transforms = append(transforms, throttleTransform)
+	}
+	if len(dest.Spec.Transformations) > 0 {
+		customTransforms, err := BuildModes(dest.Spec.Transformations)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build custom transformations: %w", err)
+		}
+		transforms = append(transforms, customTransforms...)
+	}
+	if len(dest.Spec.ExtraLabels) > 0 {
+		transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 	}
 	switch dest.Spec.Type {
-	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
+	case v1alpha1.DestElasticsearch:
 		transforms = append(transforms, DeDotTransform())
-		fallthrough
-	case v1alpha1.DestSocket, v1alpha1.DestVector, v1alpha1.DestKafka:
-		if len(dest.Spec.ExtraLabels) > 0 {
-			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
+		if dest.Spec.Elasticsearch.DataStreamEnabled {
+			transforms = append(transforms, DataStreamTransform())
 		}
-
-		switch v1alpha1.EncodingCodecCEF {
-		case dest.Spec.Kafka.Encoding.Codec, dest.Spec.Socket.Encoding.Codec:
+	case v1alpha1.DestLogstash:
+		transforms = append(transforms, DeDotTransform())
+	case v1alpha1.DestSocket:
+		switch dest.Spec.Socket.Encoding.Codec {
+		case v1alpha1.EncodingCodecSyslog:
+			transforms = append(transforms, SyslogEncoding())
+		case v1alpha1.EncodingCodecGELF:
+			transforms = append(transforms, GELFCodecRelabeling())
+		case v1alpha1.EncodingCodecCEF:
 			transforms = append(transforms, CEFNameAndSeverity())
 		}
-	}
-
-	if dest.Spec.Type == v1alpha1.DestSplunk {
+	case v1alpha1.DestKafka:
+		if dest.Spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+			transforms = append(transforms, CEFNameAndSeverity())
+		}
+	case v1alpha1.DestSplunk:
 		transforms = append(transforms, DateTime())
-	}
-
-	if dest.Spec.Type == v1alpha1.DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
-		transforms = append(transforms, DataStreamTransform())
-	}
-
-	if dest.Spec.RateLimit.LinesPerMinute != nil {
-		transform, err := ThrottleTransform(dest.Spec.RateLimit)
-		if err != nil {
-			return nil, err
-		}
-		transforms = append(transforms, transform)
-	}
-
-	switch dest.Spec.Type {
-	case v1alpha1.DestSocket, v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector, v1alpha1.DestKafka:
-		transforms = append(transforms, CleanUpParsedDataTransform())
+	case v1alpha1.DestVector:
 	case v1alpha1.DestLoki:
-		if len(dest.Spec.ExtraLabels) > 0 {
-			transforms = append(transforms, CreateParseDataTransforms())
-		}
 	}
-
-	/// encoding transforms go last to prevent mutating fields that have to be deleted
-	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
-		transforms = append(transforms, SyslogEncoding())
-	}
-
-	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecGELF {
-		transforms = append(transforms, GELFCodecRelabeling())
-	}
-
+	transforms = append(transforms, CleanUpParsedDataTransform())
 	dTransforms, err := BuildFromMapSlice("destination", name, transforms)
 	if err != nil {
-		return nil, fmt.Errorf("add source transforms: %v", err)
+		return nil, fmt.Errorf("failed to build destination transforms: %w", err)
 	}
-
 	return dTransforms, nil
 }

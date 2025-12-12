@@ -32,7 +32,7 @@ func CreateParseDataTransforms() *DynamicTransform {
 			Type:   "remap",
 			Inputs: set.New(),
 		},
-		DynamicArgsMap: map[string]interface{}{
+		DynamicArgsMap: map[string]any{
 			"source":        vrl.ParseJSONRule.String(),
 			"drop_on_abort": false,
 		},
@@ -88,7 +88,7 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 				Type:   "filter",
 				Inputs: set.New(),
 			},
-			DynamicArgsMap: map[string]interface{}{
+			DynamicArgsMap: map[string]any{
 				"condition": condition,
 			},
 		})
@@ -128,7 +128,7 @@ func getRuleOutOfFilter(filter *v1alpha1.Filter) vrl.Rule {
 
 // make regexps to match full strings
 // "d8-.*" -> "^d8-$"
-func matchFullRegexp(regexes []interface{}) []interface{} {
+func matchFullRegexp(regexes []any) []any {
 	for index, raw := range regexes {
 		regex, ok := raw.(string)
 		if !ok {
