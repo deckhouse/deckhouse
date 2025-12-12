@@ -1745,6 +1745,15 @@ ul .resources__prop_name.deprecated {
       height: 100%;
       fill: #3C4043;
     }
+
+    &-download {
+      margin-left: auto;
+      
+      & svg {
+        fill: none;
+        stroke: #3C4043;
+      }
+    }
   }
 
   &__nav--page-num {
