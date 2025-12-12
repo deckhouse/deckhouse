@@ -51,7 +51,6 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 | GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/openapi.yaml) |
 | KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
