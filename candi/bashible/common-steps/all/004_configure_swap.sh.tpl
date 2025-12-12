@@ -94,10 +94,6 @@ fi
 SIZE="{{ $limitedSwapSize }}"
 bb-log-info "Configuring LimitedSwap with size: $SIZE"
 
-# Debug: show the exact command/line on failure.
-# bashible runs steps with -eE, so ERR trap will fire on any failing command.
-trap 'bb-log-error "DEBUG: LimitedSwap failed at line ${LINENO}: ${BASH_COMMAND}"' ERR
-
 # Extract number from size (e.g., "2G" -> "2")
 SIZE_NUM=$(echo "$SIZE" | sed 's/[^0-9]//g')
 DESIRED_BYTES=$((SIZE_NUM * 1024 * 1024 * 1024))
@@ -123,23 +119,19 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
     exit 1
   fi
 
-  bb-log-info "DEBUG: Checking if swapfile is active"
   if swapon --show=NAME --noheadings 2>/dev/null | grep -Fxq "$SWAPFILE"; then
-    bb-log-info "DEBUG: Disabling swapfile: $SWAPFILE"
     swapoff "$SWAPFILE"
   fi
-  bb-log-info "DEBUG: Removing swapfile: $SWAPFILE"
+
   rm -f "$SWAPFILE"
-  bb-log-info "DEBUG: Creating swapfile via fallocate (or dd fallback)"
   if command -v fallocate >/dev/null 2>&1 && fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
     bb-log-info "Swapfile created with fallocate"
   else
     bb-log-info "fallocate unavailable or failed, using dd (may take time)"
     dd if=/dev/zero of="$SWAPFILE" bs=64M count=$((SIZE_NUM * 16)) status=progress
   fi
-  bb-log-info "DEBUG: Setting swapfile permissions"
+
   chmod 600 "$SWAPFILE"
-  bb-log-info "DEBUG: Formatting swapfile with mkswap"
   mkswap "$SWAPFILE"
   bb-log-info "Swapfile formatted successfully"
 else
@@ -155,7 +147,6 @@ fi
 if swapon --show | grep -q "$SWAPFILE"; then
   bb-log-info "Swap already active"
 else
-  bb-log-info "DEBUG: Enabling swapfile: $SWAPFILE"
   if swapon "$SWAPFILE"; then
     bb-log-info "Swap enabled successfully"
   else
