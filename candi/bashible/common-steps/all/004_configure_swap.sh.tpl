@@ -107,15 +107,16 @@ fi
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
   
-  # Check available disk space
-  AVAILABLE_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $4}')
-  AVAILABLE_BYTES=$((AVAILABLE_KB * 1024))
-  REQUIRED_BYTES=$((DESIRED_BYTES + DESIRED_BYTES / 20))  # Add 5% margin
-  
-  if [ "$AVAILABLE_BYTES" -lt "$REQUIRED_BYTES" ]; then
-    AVAILABLE_GB=$((AVAILABLE_BYTES / 1024 / 1024 / 1024))
-    REQUIRED_GB=$((REQUIRED_BYTES / 1024 / 1024 / 1024))
-    bb-log-error "Insufficient disk space for swapfile in $SWAP_DIR: available ${AVAILABLE_GB}G, required ~${REQUIRED_GB}G"
+  # Do not allow filling the filesystem above 99%
+  TOTAL_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $2}')
+  USED_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $3}')
+  DESIRED_KB=$((DESIRED_BYTES / 1024))
+  MAX_USED_KB=$((TOTAL_KB * 99 / 100))
+  if [ $((USED_KB + DESIRED_KB)) -gt "$MAX_USED_KB" ]; then
+    USED_GB=$((USED_KB / 1024 / 1024))
+    MAX_USED_GB=$((MAX_USED_KB / 1024 / 1024))
+    DESIRED_GB=$((DESIRED_KB / 1024 / 1024))
+    bb-log-error "Cannot create swapfile: would fill $SWAP_DIR to >=99% (used ${USED_GB}G + ${DESIRED_GB}G swap > ${MAX_USED_GB}G max allowed)"
     exit 1
   fi
 
