@@ -41,12 +41,12 @@ if [ ! -f "/etc/bash_completion.d/d8" ]; then
   d8 completion bash > /etc/bash_completion.d/d8
 fi
 
-if [ ! -f kubectl ]; then
-  cat <<'EOF' > kubectl
+if ! type kubectl >/dev/null 2>&1; then
+  cat <<'EOF' > /opt/deckhouse/bin/kubectl
 #!/bin/bash
 exec /opt/deckhouse/bin/d8 k "$@"
 EOF
-  chmod +x kubectl
+  chmod +x /opt/deckhouse/bin/kubectl
 fi
 
 if command -v d8 >/dev/null 2>&1; then
