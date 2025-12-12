@@ -23,10 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
-type (
-	getPKI = func() (PKI, error)
-)
-
 type ModeSettings struct {
 	Mode       constant.ModeType
 	RemoteData Data
@@ -36,7 +32,7 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 	switch {
 	case settings.Direct != nil:
 		var remote Data
-		remote.FromRegistrySettings(*settings.Direct)
+		remote.fromRegistrySettings(*settings.Direct)
 
 		return ModeSettings{
 			Mode:       constant.ModeDirect,
@@ -45,7 +41,7 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 
 	case settings.Unmanaged != nil:
 		var remote Data
-		remote.FromRegistrySettings(*settings.Unmanaged)
+		remote.fromRegistrySettings(*settings.Unmanaged)
 
 		return ModeSettings{
 			Mode:       constant.ModeUnmanaged,
@@ -95,10 +91,10 @@ type ModeModel struct {
 	RemoteData          Data
 }
 
-func (m ModeModel) InClusterData(getPKI getPKI) (Data, error) {
+func (m ModeModel) InClusterData(pkiProvider PKIProvider) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
-		return m.toDirectInClusterData(getPKI)
+		return m.toDirectInClusterData(pkiProvider)
 
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
@@ -137,8 +133,8 @@ func (m ModeModel) BashibleConfig() (bashible.Config, error) {
 	return cfg, cfg.Validate()
 }
 
-func (m ModeModel) toDirectInClusterData(getPKI getPKI) (Data, error) {
-	pki, err := getPKI()
+func (m ModeModel) toDirectInClusterData(pkiProvider PKIProvider) (Data, error) {
+	pki, err := pkiProvider()
 	if err != nil {
 		return Data{}, fmt.Errorf("get PKI: %w", err)
 	}

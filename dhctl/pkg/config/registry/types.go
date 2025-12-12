@@ -23,6 +23,14 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 )
 
+type (
+	settingsData = map[string]any
+	secretData   = map[string][]byte
+	contextData  = map[string]any
+
+	PKIProvider func() (PKI, error)
+)
+
 type Data struct {
 	ImagesRepo string              `json:"imagesRepo" yaml:"imagesRepo"`
 	Scheme     constant.SchemeType `json:"scheme" yaml:"scheme"`
@@ -31,7 +39,7 @@ type Data struct {
 	Password   string              `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
-func (d *Data) FromRegistrySettings(settings module_config.RegistrySettings) {
+func (d *Data) fromRegistrySettings(settings module_config.RegistrySettings) {
 	*d = Data{
 		ImagesRepo: settings.ImagesRepo,
 		Scheme:     settings.Scheme,

@@ -24,11 +24,6 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
-type (
-	secretData  = map[string][]byte
-	contextData = map[string]any
-)
-
 func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 	return &ManifestBuilder{
 		modeModel:  modeModel,
@@ -41,8 +36,8 @@ type ManifestBuilder struct {
 	legacyMode bool
 }
 
-func (b *ManifestBuilder) DeckhouseRegistrySecretData(getPKI getPKI) (secretData, error) {
-	inClusterData, err := b.modeModel.InClusterData(getPKI)
+func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (secretData, error) {
+	inClusterData, err := b.modeModel.InClusterData(pkiProvider)
 	if err != nil {
 		return nil, fmt.Errorf("get incluster data: %w", err)
 	}
@@ -94,7 +89,7 @@ func (b *ManifestBuilder) KubeadmTplCtx() contextData {
 	}
 }
 
-func (b *ManifestBuilder) BashibleTplCtx(getPKI getPKI) (contextData, error) {
+func (b *ManifestBuilder) BashibleTplCtx(pkiProvider PKIProvider) (contextData, error) {
 	bashibleCfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return nil, fmt.Errorf("get bashible config: %w", err)
@@ -112,7 +107,7 @@ func (b *ManifestBuilder) BashibleTplCtx(getPKI getPKI) (contextData, error) {
 		return nil, fmt.Errorf("map bashible context: %w", err)
 	}
 
-	initCfg, err := getPKI()
+	initCfg, err := pkiProvider()
 	if err != nil {
 		return nil, fmt.Errorf("get PKI: %w", err)
 	}
