@@ -118,8 +118,10 @@ if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
     bb-log-error "Insufficient disk space for swapfile in $SWAP_DIR: available ${AVAILABLE_GB}G, required ~${REQUIRED_GB}G"
     exit 1
   fi
-  
-  swapoff "$SWAPFILE" 2>/dev/null
+
+  if swapon --show=NAME --noheadings 2>/dev/null | grep -Fxq "$SWAPFILE"; then
+    swapoff "$SWAPFILE"
+  fi
   rm -f "$SWAPFILE"
   if command -v fallocate >/dev/null 2>&1 && fallocate -l "$DESIRED_BYTES" "$SWAPFILE"; then
     bb-log-info "Swapfile created with fallocate"
