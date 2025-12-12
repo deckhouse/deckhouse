@@ -1,5 +1,4 @@
 {{- define "control_plane_manager_resources" }}
-{{- define "control_plane_manager_resources" }}
 cpu: 25m
 memory: 40Mi
 {{- end }}
