@@ -784,7 +784,17 @@ d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/ee' --registry-login='d
 
 {% offtopic title="Пример успешного завершения процесса заливки образов..." %}
 ```text
-
+Dec 11 18:25:32.350 INFO  ║ Pushing harbor.local:443/deckhouse/ee/modules/virtualization/release
+Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:alpha
+Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:beta
+Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:early-access
+Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:rock-solid
+Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:stable
+Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:v1.1.3
+Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:v1.2.2
+Dec 11 18:25:33.414 INFO  ║ Pushing module tag for virtualization
+Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801312s
+Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres, payload-registry, pod-reloader, prompp, runtime-audit-engine, sdn, sds-local-volume, sds-node-configurator, sds-replicated-volume, secrets-store-integration, snapshot-controller, state-snapshotter, static-routing-manager, storage-volume-data-manager, stronghold, virtualization
 ```
 {% endofftopic %}
 
@@ -792,6 +802,34 @@ d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/ee' --registry-login='d
 
 ## Подготовка и настройка прокси-серверв
 
-Для успешной установки DKP необходимо подготовить возможность установить на машины будущих узлов определённые пакеты приложений. Сделать это можно двумя путями: развернуть внутри закрытого окружения зеркало репозитория и настроить ОС на работу с ним, или настроить прокси-сервер, через который дать доступ ОС к разрешённым репозиториям.
+Для того, чтобы находящиеся в закрытом окружении ВМ будущих узлов кластера могли достучаться до внешних репозиториев пакетов (чтобы установить необходимые для работы DKP пакеты), нужно поднять на машине-бастионе прокси-сервер, через который будет осуществляться этот доступ.
 
-В этом разделе мы настроить на бастион-машине такой прокси-сервер.
+Можно использовать любой прокси-сервер, подходящий под ваши требования или пристрастия. Мы для примера воспользуемся [Squid](https://www.squid-cache.org/).
+
+Развернуть его на машине можно также в контейнере, выполнив команду:
+
+```bash
+docker run -d --name squid -p 3128:3128 ubuntu/squid
+```
+{% offtopic title="Пример успешного выполнения команды..." %}
+```text
+$ docker run -d --name squid -p 3128:3128 ubuntu/squid
+Unable to find image 'ubuntu/squid:latest' locally
+latest: Pulling from ubuntu/squid
+1678e6c91c57: Pull complete 
+040467b888ae: Pull complete 
+18b9e99f4452: Pull complete 
+Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+Status: Downloaded newer image for ubuntu/squid:latest
+059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
+```
+{% endofftopic %}
+
+Убедимся, что Squid запустился:
+
+```console
+059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
+```
+
+В списке запущенных контейнеров должен быть контейнер с соответствующем именем.
+
