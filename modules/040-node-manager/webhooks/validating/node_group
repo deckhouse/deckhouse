@@ -331,6 +331,26 @@ EOF
     fi
   fi
 
+  # Check memorySwap configuration requires cgroup v2 on update
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior // ""')"
+    if [[ "${swapBehavior}" == "LimitedSwap" ]]; then
+      # Block if NodeGroup contains nodes without cgroup v2 support
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
+      unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
+        .snapshots.nodes_without_containerd_support[]
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | .filterResult.nodeName
+      ')"
+      if [[ -n "${unsupportedNodes}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes where cgroup v2 is not supported."}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}

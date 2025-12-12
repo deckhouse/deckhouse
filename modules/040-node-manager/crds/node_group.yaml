@@ -2236,6 +2236,61 @@ spec:
                             - BestEffort
                             - Restricted
                             - SingleNumaNode
+                    memorySwap:
+                      type: object
+                      description: |
+                        Configuration of swap memory usage for kubelet.
+                      oneOf:
+                      - properties:
+                          swapBehavior:
+                            enum: ["NoSwap"]
+                        not:
+                          required: ["limitedSwap"]
+                      - properties:
+                          swapBehavior:
+                            enum: ["LimitedSwap"]
+                        required:
+                          - limitedSwap
+                      properties:
+                        swapBehavior:
+                          type: string
+                          description: |
+                            Defines how swap memory is handled on the node:
+                            
+                            * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
+                            * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
+
+                            For details on swap memory usage on nodes, refer to [Kubernetes documentation](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
+                          enum:
+                            - NoSwap
+                            - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Defines the kernel's tendency to use the swap.
+                            
+                            * `0`: Minimal swap usage (only to avoid OOM).
+                            * `60`: Default balanced behavior.
+                            * `100`: Aggressive swap usage.
+                            
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
+                        limitedSwap:
+                          type: object
+                          description: |
+                            Configuration for the limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
+                          required:
+                            - size
+                          properties:
+                            size:
+                              type: string
+                              pattern: '^\d+G$'
+                              description: |
+                                Size of the swap file to create, specified in GB (for example, "2G", "4G").
+                              x-doc-example: "1G"
                 update:
                   type: object
                   properties:
