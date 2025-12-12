@@ -396,6 +396,17 @@ import:
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
   before: setup
+- image: tools/procps
+  add: /
+  to: /
+  includePaths:
+  - bin/pkill
+  - bin/pgrep
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
