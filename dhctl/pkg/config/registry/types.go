@@ -28,7 +28,6 @@ import (
 type (
 	settingsData = map[string]any
 	secretData   = map[string][]byte
-	contextData  = map[string]any
 
 	// Bashible
 	BashibleContext = bashible.Context
@@ -39,6 +38,18 @@ type (
 	PKICertKey  = init_secret.CertKey
 	PKIProvider func() (PKI, error)
 )
+
+type KubeadmContext struct {
+	Address string `json:"address" yaml:"address"`
+	Path    string `json:"path" yaml:"path"`
+}
+
+func (ctx KubeadmContext) ToMap() map[string]any {
+	return map[string]any{
+		"address": ctx.Address,
+		"path":    ctx.Path,
+	}
+}
 
 type Data struct {
 	ImagesRepo string              `json:"imagesRepo" yaml:"imagesRepo"`

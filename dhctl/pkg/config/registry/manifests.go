@@ -81,11 +81,11 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, secretData, 
 	return true, secretData{"config": cfgYaml}, nil
 }
 
-func (b *ManifestBuilder) KubeadmTplCtx() contextData {
+func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
-	return contextData{
-		"address": address,
-		"path":    path,
+	return KubeadmContext{
+		Address: address,
+		Path:    path,
 	}
 }
 

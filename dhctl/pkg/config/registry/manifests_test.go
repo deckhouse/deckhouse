@@ -63,13 +63,13 @@ func TestManifestsNoError(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("KubeadmTplCtx", func(t *testing.T) {
+			t.Run("KubeadmContext", func(t *testing.T) {
 				_ = tt.input.
 					Manifest().
-					KubeadmTplCtx()
+					KubeadmContext()
 			})
 
-			t.Run("BashibleTplCtx", func(t *testing.T) {
+			t.Run("BashibleContext", func(t *testing.T) {
 				_, err := tt.input.
 					Manifest().
 					BashibleContext(GeneratePKI)
@@ -112,7 +112,7 @@ func TestManifestsLegacyMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Run("BashibleTplCtx -> registry module enabled when not in legacy mode", func(t *testing.T) {
+			t.Run("BashibleContext -> registry module enabled when not in legacy mode", func(t *testing.T) {
 				ctx, err := tt.input.
 					Manifest().
 					BashibleContext(GeneratePKI)

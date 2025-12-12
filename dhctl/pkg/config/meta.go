@@ -363,11 +363,11 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData := m.Registry.
+	// Registry
+	result["registry"] = m.Registry.
 		Manifest().
-		KubeadmTplCtx()
-
-	result["registry"] = registryData
+		KubeadmContext().
+		ToMap()
 
 	images := m.Images
 
