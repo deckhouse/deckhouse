@@ -36,7 +36,7 @@ type ManifestBuilder struct {
 	legacyMode bool
 }
 
-func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (secretData, error) {
+func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
 	inClusterData, err := b.modeModel.InClusterData(pkiProvider)
 	if err != nil {
 		return nil, fmt.Errorf("get incluster data: %w", err)
@@ -49,14 +49,14 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 		return nil, fmt.Errorf("get docker config: %w", err)
 	}
 
-	ret := deckhouse_registry.Config{
+	cfg := deckhouse_registry.Config{
 		Address:      address,
 		Path:         path,
 		Scheme:       strings.ToLower(string(inClusterData.Scheme)),
 		CA:           inClusterData.CA,
 		DockerConfig: dockerCfg,
 	}
-	return ret.ToMap(), nil
+	return cfg.ToSecretData(), nil
 }
 
 // RegistryBashibleConfigSecretData creates bashible config secret data.
@@ -64,7 +64,7 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 //   - bool: true if secret exist
 //   - secretData: map bytes of secret data
 //   - error
-func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, secretData, error) {
+func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, SecretData, error) {
 	if b.legacyMode {
 		return false, nil, nil
 	}
@@ -78,7 +78,7 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, secretData, 
 	if err != nil {
 		return true, nil, fmt.Errorf("marshal bashible config: %w", err)
 	}
-	return true, secretData{"config": cfgYaml}, nil
+	return true, SecretData{"config": cfgYaml}, nil
 }
 
 func (b *ManifestBuilder) KubeadmContext() KubeadmContext {

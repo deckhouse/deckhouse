@@ -107,17 +107,3 @@ func (c *Config) Process(userSettings module_config.DeckhouseSettings, legacyMod
 func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
-
-// DeckhouseSettingsToMap converts registry settings to a map.
-// Returns:
-//   - bool: true if settings exist
-//   - settingsData: map of registry settings
-//   - error
-func (c *Config) DeckhouseSettingsToMap() (bool, settingsData, error) {
-	if c.LegacyMode {
-		return false, nil, nil
-	}
-
-	ret, err := c.DeckhouseSettings.ToMap()
-	return true, ret, err
-}

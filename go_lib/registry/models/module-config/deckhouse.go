@@ -17,7 +17,6 @@ limitations under the License.
 package moduleconfig
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -32,17 +31,20 @@ type DeckhouseSettings struct {
 	Unmanaged *RegistrySettings `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
 }
 
-func (settings DeckhouseSettings) ToMap() (map[string]any, error) {
-	data, err := json.Marshal(settings)
-	if err != nil {
-		return nil, fmt.Errorf("marshal deckhouse registry settings: %w", err)
+func (settings DeckhouseSettings) ToMap() map[string]any {
+	result := map[string]any{
+		"mode": string(settings.Mode),
 	}
 
-	var ret map[string]any
-	if err := json.Unmarshal(data, &ret); err != nil {
-		return nil, fmt.Errorf("unmarshal deckhouse registry settings: %w", err)
+	if settings.Direct != nil {
+		result["direct"] = settings.Direct.ToMap()
 	}
-	return ret, nil
+
+	if settings.Unmanaged != nil {
+		result["unmanaged"] = settings.Unmanaged.ToMap()
+	}
+
+	return result
 }
 
 func (settings *DeckhouseSettings) ApplySettings(userSettings DeckhouseSettings) {
@@ -100,6 +102,35 @@ type RegistrySettings struct {
 	Password   string                 `json:"password,omitempty" yaml:"password,omitempty"`
 	License    string                 `json:"license,omitempty" yaml:"license,omitempty"`
 	CheckMode  constant.CheckModeType `json:"checkMode,omitempty" yaml:"checkMode,omitempty"`
+}
+
+func (settings RegistrySettings) ToMap() map[string]any {
+	result := map[string]any{
+		"imagesRepo": settings.ImagesRepo,
+		"scheme":     string(settings.Scheme),
+	}
+
+	if settings.CA != "" {
+		result["ca"] = settings.CA
+	}
+
+	if settings.Username != "" {
+		result["username"] = settings.Username
+	}
+
+	if settings.Password != "" {
+		result["password"] = settings.Password
+	}
+
+	if settings.License != "" {
+		result["license"] = settings.License
+	}
+
+	if settings.CheckMode != "" {
+		result["checkMode"] = string(settings.CheckMode)
+	}
+
+	return result
 }
 
 func (settings *RegistrySettings) ApplySettings(userSettings *RegistrySettings) {

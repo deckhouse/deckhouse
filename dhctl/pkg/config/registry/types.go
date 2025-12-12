@@ -26,8 +26,7 @@ import (
 )
 
 type (
-	settingsData = map[string]any
-	secretData   = map[string][]byte
+	SecretData map[string][]byte
 
 	// Bashible
 	BashibleContext = bashible.Context

@@ -85,9 +85,7 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.input.ToMap()
-			require.NoError(t, err)
-			require.EqualValues(t, tt.output, result)
+			require.EqualValues(t, tt.output, tt.input.ToMap())
 		})
 	}
 }
@@ -331,6 +329,48 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestRegistrySettings_ToMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  RegistrySettings
+		output map[string]any
+	}{
+		{
+			name:  "all fields",
+			input: *registrySettingsBuilder(),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+				"username":   "test-user",
+				"password":   "test-password",
+				"ca":         "-----BEGIN CERTIFICATE-----",
+				"checkMode":  "Default",
+			},
+		},
+		{
+			name:   "optional fields",
+			input: *registrySettingsBuilder(
+				func(rs *RegistrySettings) {
+					rs.Username = ""
+					rs.Password = ""
+					rs.CA = ""
+					rs.CheckMode = ""
+				},
+			),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualValues(t, tt.output, tt.input.ToMap())
 		})
 	}
 }
