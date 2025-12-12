@@ -20,6 +20,8 @@ import (
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
 )
 
 var (
@@ -29,6 +31,7 @@ var (
 )
 
 type Context struct {
+	Init                 init_secret.Config      `json:"init,omitempty" yaml:"init,omitempty"`
 	RegistryModuleEnable bool                    `json:"registryModuleEnable" yaml:"registryModuleEnable"`
 	Mode                 string                  `json:"mode" yaml:"mode"`
 	Version              string                  `json:"version" yaml:"version"`
@@ -105,7 +108,7 @@ func (m ContextMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }
 
-func (c Context) ToMap() (map[string]any, error) {
+func (c Context) ToMap() map[string]any {
 	proxies := make([]any, 0, len(c.ProxyEndpoints))
 	for _, ep := range c.ProxyEndpoints {
 		proxies = append(proxies, ep)
@@ -150,5 +153,10 @@ func (c Context) ToMap() (map[string]any, error) {
 		"proxyEndpoints":       proxies,
 		"hosts":                hosts,
 	}
-	return ret, nil
+
+	init := c.Init.ToMap()
+	if len(init) > 0 {
+		ret["init"] = init
+	}
+	return ret
 }

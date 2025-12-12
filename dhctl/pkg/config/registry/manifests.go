@@ -90,28 +90,23 @@ func (b *ManifestBuilder) KubeadmTplCtx() contextData {
 }
 
 func (b *ManifestBuilder) BashibleTplCtx(pkiProvider PKIProvider) (contextData, error) {
-	bashibleCfg, err := b.modeModel.BashibleConfig()
+	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {
 		return nil, fmt.Errorf("get bashible config: %w", err)
 	}
 
-	bashibleCtx := bashibleCfg.ToContext()
+	ctx := cfg.ToContext()
 
-	bashibleCtx.RegistryModuleEnable = true
+	ctx.RegistryModuleEnable = true
 	if b.legacyMode {
-		bashibleCtx.RegistryModuleEnable = false
+		ctx.RegistryModuleEnable = false
 	}
 
-	ret, err := bashibleCtx.ToMap()
-	if err != nil {
-		return nil, fmt.Errorf("map bashible context: %w", err)
-	}
-
-	initCfg, err := pkiProvider()
+	init, err := pkiProvider()
 	if err != nil {
 		return nil, fmt.Errorf("get PKI: %w", err)
 	}
+	ctx.Init = init
 
-	ret["init"] = initCfg.ToMap()
-	return ret, nil
+	return ctx.ToMap(), nil
 }
