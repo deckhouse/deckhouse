@@ -592,7 +592,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
    * In the "Provider" dropdown list, select "Docker Registry".
    * In the "Name" field, enter an endpoint name of your choice.
    * In the "Endpoint URL" field, enter `https://registry.deckhouse.io`.
-   * In the "Access ID" field, enter the value of your license token (`license-token`).
+   * In the "Access ID" field, enter `license-token`.
    * In the "Access Secret" field, enter your Deckhouse Kubernetes Platform license key.
 
    ![Configuring registry access](../images/registry/harbor/harbor1.png)

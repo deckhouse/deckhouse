@@ -605,7 +605,7 @@ echo "$MYRESULTSTRING"
    * В выпадающем списке «Provider» выберите «Docker Registry».
    * В поле «Name» укажите имя эндпоинта на свое усмотрение.
    * В поле «Endpoint URL» укажите `https://registry.deckhouse.ru`.
-   * В поле «Access ID» укажите значение своего лицензионного токена (`license-token`).
+   * В поле «Access ID» укажите `license-token`.
    * В поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform.
 
    ![Настройка доступа к registry](../images/registry/harbor/harbor1.png)
