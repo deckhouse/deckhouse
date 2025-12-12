@@ -1,14 +1,14 @@
 ---
-title: "ALB средствами NGINX Ingress controller"
+title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/ingress/alb/nginx.html
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
+Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
-Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью кастомных ресурсов.
+Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов кластеров.
 
 Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
@@ -30,7 +30,7 @@ lang: ru
 
 ## Терминация HTTPS
 
-Для каждого экземпляра NGINX Ingress Controller можно настраивать политики безопасности HTTPS, включая:
+Для каждого экземпляра Ingress NGINX Controller Controller можно настраивать политики безопасности HTTPS, включая:
 
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.

@@ -22,5 +22,5 @@ NLB-based load balancing can be implemented in two ways:
 
 For application-level traffic balancing, DKP provides two solutions:
 
-- [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
+- [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
 - [Istio](https://istio.io/) (via the [`istio`](/modules/istio/) module).

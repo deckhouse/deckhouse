@@ -1,14 +1,14 @@
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
-  # [<en>] The name of the Ingress class to use with the NGINX Ingress controller.
-  # [<ru>] Имя Ingress-класса для обслуживания NGINX Ingress controller.
+  # [<en>] The name of the Ingress class to use with the Ingress NGINX Controller.
+  # [<ru>] Имя Ingress-класса для обслуживания Ingress NGINX Controller.
   ingressClass: nginx
   # [<en>] The way traffic goes to cluster from the outer network.
   # [<ru>] Способ поступления трафика из внешнего мира.

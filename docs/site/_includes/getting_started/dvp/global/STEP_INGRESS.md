@@ -14,7 +14,7 @@ Set up the Ingress controller and DNS.
 <div markdown="1">
 ```shell
 sudo d8 k apply -f - <<EOF
-# The parameters of the NGINX Ingress controller.
+# The parameters of the Ingress NGINX Controller.
 # https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

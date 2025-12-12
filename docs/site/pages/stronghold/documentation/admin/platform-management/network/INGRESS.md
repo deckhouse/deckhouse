@@ -10,14 +10,14 @@ These created `Ingress` resources use Nginx as a reverse proxy and load balancer
 If the cluster includes multiple nodes for hosting the Ingress controller, it will be deployed in failover mode,
 enhancing access reliability and resilience to failures.
 
-Multiple instances of the NGINX Ingress controller can run with separate configurations:
+Multiple instances of the Ingress NGINX controller can run with separate configurations:
 one primary controller and any number of additional controllers.
 This approach lets you separate handling of `Ingress` resources for external and internal (intranet) applications,
 ensuring their isolation and more flexible access control.
 
 ## Create a controller
 
-To create a NGINX Ingress controller, apply the following `IngressNginxController` resource:
+To create a Ingress NGINX controller, apply the following `IngressNginxController` resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -41,7 +41,7 @@ For configuration details on the `IngressNginxController` resource, refer to the
 
 ### HTTPS termination
 
-The ingress-nginx module lets you configure HTTPS security policies for each NGINX Ingress controller, including:
+The ingress-nginx module lets you configure HTTPS security policies for each Ingress NGINX controller, including:
 
 - Managing HTTP Strict Transport Security (HSTS) parameters
 - Configuring supported versions of SSL/TLS and encryption protocols

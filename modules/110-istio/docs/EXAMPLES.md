@@ -280,9 +280,10 @@ spec:
             host: app-svc
 ```
 
-### NGINX Ingress
+### Ingress NGINX
 
 To use Ingress, you need to:
+
 * Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/ingress-nginx/) module's [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.

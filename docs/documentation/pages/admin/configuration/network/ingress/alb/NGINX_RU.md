@@ -1,15 +1,15 @@
 ---
-title: "ALB средствами NGINX Ingress controller"
+title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
-description: "Настройка балансировщика нагрузки приложения с помощью контроллера NGINX Ingress в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
+description: "Настройка балансировщика нагрузки приложения с помощью контроллера Ingress NGINX в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
+Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
-Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью кастомных ресурсов.
+Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
 
 Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
@@ -31,7 +31,7 @@ lang: ru
 
 ## Терминация HTTPS
 
-Для каждого экземпляра NGINX Ingress Controller можно настраивать политики безопасности HTTPS, включая:
+Для каждого экземпляра Ingress NGINX Controller можно настраивать политики безопасности HTTPS, включая:
 
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.
