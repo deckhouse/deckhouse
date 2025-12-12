@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -138,53 +137,33 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 }
 
 func (m *MetaConfig) prepareRegistry() error {
-	var (
-		defaultCRI        registry_const.CRIType
-		deckhouseSettings *registry_moduleconfig.DeckhouseSettings
-		initConfig        *registry_initconfig.Config
-	)
-
-	// Extract defaultCRI
+	var defaultCRI registry_const.CRIType
 	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
 		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
 			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
 		}
 	}
-	criSupported := registry_const.IsCRISupported(defaultCRI)
 
-	// Extract configuration from initConfig
-	if m.DeckhouseConfig.ImagesRepo != "" ||
-		m.DeckhouseConfig.RegistryDockerCfg != "" ||
-		m.DeckhouseConfig.RegistryCA != "" {
-		initConfig = &registry_initconfig.Config{
-			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
-			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
-			RegistryCA:        m.DeckhouseConfig.RegistryCA,
-			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
-		}
+	criSupported := registry_const.IsCRISupported(defaultCRI)
+	initConfig := m.DeckhouseConfig.registryInitConfig()
+
+	deckhouseSettings, err := m.registryDeckhouseSettings()
+	if err != nil {
+		return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 	}
 
-	// Extract configuration from moduleConfig/deckhouse
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() != "deckhouse" {
-			continue
-		}
+	switch {
 
-		settings, ok := mc.Spec.Settings["registry"]
-		if !ok {
-			break
-		}
+	// Check configuration conflict
+	case initConfig != nil && deckhouseSettings != nil:
+		return fmt.Errorf(
+			"duplicate registry configuration detected: " +
+				"registry is configured in both 'initConfiguration.deckhouse' " +
+				"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+				"Please specify registry settings in only one location.",
+		)
 
-		// Check configuration conflict
-		if initConfig != nil {
-			return fmt.Errorf(
-				"duplicate registry configuration detected: " +
-					"registry is configured in both 'initConfiguration.deckhouse' " +
-					"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
-					"Please specify registry settings in only one location.",
-			)
-		}
-
+	case deckhouseSettings != nil:
 		// Check CRI
 		if !criSupported {
 			return fmt.Errorf(
@@ -197,35 +176,49 @@ func (m *MetaConfig) prepareRegistry() error {
 			)
 		}
 
-		raw, err := json.Marshal(settings)
-		if err != nil {
-			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
-		}
-		var decoded registry_moduleconfig.DeckhouseSettings
-		if err := json.Unmarshal(raw, &decoded); err != nil {
-			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
-		}
-		deckhouseSettings = &decoded
-		break
-	}
-
-	switch {
-	case deckhouseSettings != nil:
 		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
 			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 		return nil
+
 	case initConfig != nil:
 		if err := m.Registry.UseInitConfig(*initConfig); err != nil {
 			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
 		return nil
+
 	default:
 		if err := m.Registry.UseDefault(criSupported); err != nil {
 			return fmt.Errorf("get default registry settings: %w", err)
 		}
 		return nil
 	}
+}
+
+func (m *MetaConfig) registryDeckhouseSettings() (*registry_moduleconfig.DeckhouseSettings, error) {
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() != "deckhouse" {
+			continue
+		}
+
+		settings, ok := mc.Spec.Settings["registry"]
+		if !ok {
+			break
+		}
+
+		raw, err := json.Marshal(settings)
+		if err != nil {
+			return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
+		}
+
+		var ret registry_moduleconfig.DeckhouseSettings
+		if err := json.Unmarshal(raw, &ret); err != nil {
+			return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
+		}
+		return &ret, nil
+	}
+
+	return nil, nil
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {

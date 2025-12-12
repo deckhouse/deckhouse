@@ -51,7 +51,12 @@ func (c *Config) UseDefault(criSupported bool) error {
 
 // UseInitConfig configures registry using legacy initConfiguration.
 // Note: This method maintains backward compatibility and only supports Unmanaged legacy mode.
-func (c *Config) UseInitConfig(initConfig init_config.Config) error {
+func (c *Config) UseInitConfig(userInitConfig init_config.Config) error {
+	// Prepare config
+	var initConfig init_config.Config
+	initConfig.ApplyConfig(userInitConfig)
+
+	// Convert to registry settings
 	registrySettings, err := initConfig.ToRegistrySettings()
 	if err != nil {
 		return fmt.Errorf("get registry settings: %w", err)

@@ -142,7 +142,7 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 	}
 }
 
-func TestRegistrySettings_CorrectWithDefault(t *testing.T) {
+func TestRegistrySettings_ApplySettings(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *RegistrySettings
@@ -352,7 +352,7 @@ func TestRegistrySettings_ToMap(t *testing.T) {
 			},
 		},
 		{
-			name:   "optional fields",
+			name: "optional fields",
 			input: *registrySettingsBuilder(
 				func(rs *RegistrySettings) {
 					rs.Username = ""

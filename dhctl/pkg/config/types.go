@@ -17,6 +17,8 @@ package config
 import (
 	"context"
 	"fmt"
+
+	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
 )
 
 const (
@@ -72,6 +74,21 @@ type DeckhouseClusterConfig struct {
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+}
+
+func (config DeckhouseClusterConfig) registryInitConfig() *registry_initconfig.Config {
+	if config.ImagesRepo != "" ||
+		config.RegistryScheme != "" ||
+		config.RegistryDockerCfg != "" ||
+		config.RegistryCA != "" {
+		return &registry_initconfig.Config{
+			ImagesRepo:        config.ImagesRepo,
+			RegistryDockerCfg: config.RegistryDockerCfg,
+			RegistryCA:        config.RegistryCA,
+			RegistryScheme:    config.RegistryScheme,
+		}
+	}
+	return nil
 }
 
 type ByClusterType[T any] interface {

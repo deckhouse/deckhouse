@@ -65,6 +65,80 @@ func generateOldDockerCfg(host, username, password string) string {
 	return string(data)
 }
 
+func TestConfig_ApplySettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    Config
+		expected Config
+	}{
+		{
+			name: "default ImagesRepo",
+			input: Config{
+				ImagesRepo:     "",
+				RegistryScheme: "HTTPS",
+			},
+			expected: Config{
+				ImagesRepo:     constant.CEImagesRepo,
+				RegistryScheme: "HTTPS",
+			},
+		},
+		{
+			name: "default Scheme",
+			input: Config{
+				ImagesRepo:     "registry.example.com",
+				RegistryScheme: "",
+			},
+			expected: Config{
+				ImagesRepo:     "registry.example.com",
+				RegistryScheme: string(constant.CEScheme),
+			},
+		},
+		{
+			name:  "default ImagesRepo and Scheme",
+			input: Config{},
+			expected: Config{
+				ImagesRepo:     constant.CEImagesRepo,
+				RegistryScheme: string(constant.CEScheme),
+			},
+		},
+		{
+			name: "trim ImagesRepo",
+			input: Config{
+				ImagesRepo:     "registry.example.com/",
+				RegistryScheme: "HTTPS",
+			},
+			expected: Config{
+				ImagesRepo:     "registry.example.com",
+				RegistryScheme: "HTTPS",
+			},
+		},
+		{
+			name: "full",
+			input: Config{
+				ImagesRepo:        "registry.example.com",
+				RegistryScheme:    "HTTP",
+				RegistryDockerCfg: "<dockerCfg>",
+				RegistryCA:        "<ca>",
+			},
+			expected: Config{
+				ImagesRepo:        "registry.example.com",
+				RegistryScheme:    "HTTP",
+				RegistryDockerCfg: "<dockerCfg>",
+				RegistryCA:        "<ca>",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var config Config
+			config.ApplyConfig(tt.input)
+
+			require.Equal(t, tt.expected, config)
+		})
+	}
+}
+
 func TestConfig_ToRegistrySettings(t *testing.T) {
 	type output struct {
 		err  bool

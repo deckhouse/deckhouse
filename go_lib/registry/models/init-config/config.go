@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
@@ -32,6 +33,31 @@ type Config struct {
 	RegistryScheme    string `json:"registryScheme" yaml:"registryScheme"`
 	RegistryDockerCfg string `json:"registryDockerCfg,omitempty" yaml:"registryDockerCfg,omitempty"`
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
+}
+
+func (config *Config) ApplyConfig(userConfig Config) {
+	*config = Config{
+		ImagesRepo:     constant.CEImagesRepo,
+		RegistryScheme: string(constant.CEScheme),
+	}
+
+	// Set user config
+	userConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(userConfig.ImagesRepo), "/")
+	if userConfig.ImagesRepo != "" {
+		config.ImagesRepo = userConfig.ImagesRepo
+	}
+
+	if userConfig.RegistryScheme != "" {
+		config.RegistryScheme = userConfig.RegistryScheme
+	}
+
+	if userConfig.RegistryDockerCfg != "" {
+		config.RegistryDockerCfg = userConfig.RegistryDockerCfg
+	}
+
+	if userConfig.RegistryCA != "" {
+		config.RegistryCA = userConfig.RegistryCA
+	}
 }
 
 func (config Config) ToRegistrySettings() (module_config.RegistrySettings, error) {
