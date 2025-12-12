@@ -129,6 +129,7 @@ metadata:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
@@ -143,7 +144,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: echo
   version: 0.4.54

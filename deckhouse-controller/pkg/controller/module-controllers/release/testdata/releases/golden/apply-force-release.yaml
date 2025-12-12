@@ -26,6 +26,7 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
@@ -34,7 +35,7 @@ metadata:
     source: test
     status: superseded
   name: parca-1.2.1
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.2.1
@@ -55,6 +56,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
@@ -63,7 +65,7 @@ metadata:
     source: test
     status: deployed
   name: parca-1.5.2
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: parca
   version: 1.5.2

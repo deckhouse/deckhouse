@@ -28,6 +28,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
@@ -41,7 +43,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   changelog:
     features:
@@ -62,6 +64,7 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: upmeter
@@ -76,7 +79,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   changelog:
     features:
@@ -100,6 +103,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: upmeter
@@ -114,7 +118,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   changelog:
     features:

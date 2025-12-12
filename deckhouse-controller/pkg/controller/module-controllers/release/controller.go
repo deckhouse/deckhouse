@@ -270,6 +270,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	r.resetConfigurationErrorMetric(release)
+
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
 		return r.deleteRelease(ctx, release)
@@ -303,6 +305,16 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 
 	if !res.IsZero() {
 		return res, nil
+	}
+
+	// add finalizer for metrics reset on deletion (so the release resource will be deleted only after metrics are reset)
+	if !controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	switch release.GetPhase() {
@@ -391,6 +403,16 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// resetConfigurationErrorMetric resets the ModuleConfigurationError metric to 0 for the given release.
+// This should be called at the beginning of each reconcile to ensure the metric reflects
+// the current state (no errors) before validation checks are performed.
+func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelease) {
+	r.metricStorage.Grouped().ExpireGroupMetricByName(
+		metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String()),
+		metrics.ModuleConfigurationError,
+	)
 }
 
 // patchManualRelease modify deckhouse release with approved status
@@ -1353,12 +1375,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 	}
 
-	configConfigurationErrorMetricsLabels := map[string]string{
-		"version": release.GetVersion().String(),
-		"module":  release.GetModuleName(),
-		"error":   "",
-	}
-
 	if err = def.Validate(values, logger); err != nil {
 		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
@@ -1367,10 +1383,18 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 		if strings.Contains(err.Error(), "is required") ||
 			strings.Contains(err.Error(), "is a forbidden property") {
-			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
 				1,
-				configConfigurationErrorMetricsLabels,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -1390,11 +1414,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
-
-	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
-		0,
-		configConfigurationErrorMetricsLabels,
-	)
 
 	if err = r.installer.Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
 		r.log.Error("failed to install module", slog.String("module", modulePath), log.Err(err))
@@ -1433,12 +1452,18 @@ func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Def
 		}
 
 		if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
-			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError, 1,
-				map[string]string{
-					"version": release.GetVersion().String(),
-					"module":  release.GetModuleName(),
-					"error":   err.Error(),
-				},
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
+				1,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -1746,6 +1771,15 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		}
 
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// The metric is already reset in the handleRelease function, so we can release the finalizer
+	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to remove metrics finalizer from module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{}, err
+		}
 	}
 
 	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed) {

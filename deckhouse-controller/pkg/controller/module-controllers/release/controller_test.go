@@ -34,6 +34,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	promdto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -49,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -1839,26 +1841,29 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 	suite.Run("mixed concurrent and sequential", func() {
 		suite.setupReleaseController(mixedProcessingTestData)
 
-		// First process some releases sequentially
-		mr1 := suite.getModuleRelease("parca-1.26.2")
-		_, err := suite.ctr.handleRelease(ctx, mr1)
-		require.NoError(suite.T(), err)
-
-		// Then simulate concurrent processing
-		var wg sync.WaitGroup
 		concurrentReleases := []string{"commander-1.0.3", "upmeter-v1.70.0"}
 
-		for _, releaseName := range concurrentReleases {
-			wg.Add(1)
-			go func(name string) {
-				defer wg.Done()
-				mr := suite.getModuleRelease(name)
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-			}(releaseName)
-		}
+		repeatTest(func() {
+			// First process some releases sequentially
+			mr1 := suite.getModuleRelease("parca-1.26.2")
+			_, err := suite.ctr.handleRelease(ctx, mr1)
+			require.NoError(suite.T(), err)
 
-		wg.Wait()
+			// Then simulate concurrent processing
+			var wg sync.WaitGroup
+
+			for _, releaseName := range concurrentReleases {
+				wg.Add(1)
+				go func(name string) {
+					defer wg.Done()
+					mr := suite.getModuleRelease(name)
+					_, err := suite.ctr.handleRelease(ctx, mr)
+					require.NoError(suite.T(), err)
+				}(releaseName)
+			}
+
+			wg.Wait()
+		})
 
 		// Verify all releases processed successfully
 		for _, releaseName := range append([]string{"parca-1.26.2"}, concurrentReleases...) {
@@ -1869,10 +1874,128 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 	})
 }
 
-const repeatCount = 3
+const repeatCount = 5
 
 func repeatTest(fn func()) {
 	for range repeatCount {
 		fn()
 	}
+}
+
+func (suite *ReleaseControllerTestSuite) TestResetConfigurationErrorMetric() {
+	// Disable golden file checking for these tests
+	suite.testDataFileName = ""
+
+	const moduleName = "test-module"
+
+	suite.Run("metric is expired from group", func() {
+		// Setup metric storage with new registry to isolate metrics
+		metricStorage := metricstorage.NewMetricStorage(
+			metricstorage.WithNewRegistry(),
+			metricstorage.WithLogger(log.NewNop()),
+		)
+
+		release := &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-module-v1.2.3",
+			},
+			Spec: v1alpha1.ModuleReleaseSpec{
+				ModuleName: moduleName,
+				Version:    "1.2.3",
+			},
+		}
+
+		r := &reconciler{
+			metricStorage: metricStorage,
+			log:           log.NewNop(),
+		}
+
+		// First, set metric using Grouped to simulate an existing error
+		groupName := metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String())
+		metricStorage.Grouped().GaugeSet(
+			groupName,
+			metrics.ModuleConfigurationError,
+			1,
+			metrics.ModuleConfigurationErrorLabels(release.GetModuleName(), release.GetVersion().String(), "some error"),
+		)
+
+		// Verify metric exists with value 1
+		metricFamilies, err := metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		initialValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), 1.0, initialValue, "%s metric should be 1 before reset", metrics.ModuleConfigurationError)
+
+		// Call the reset function - this should expire the metric from the group
+		r.resetConfigurationErrorMetric(release)
+
+		// Verify metric is expired (not found or returns -1)
+		metricFamilies, err = metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		resetValue := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		// After ExpireGroupMetricByName, the metric should be removed from the group
+		// getMetricValue returns -1 if metric is not found
+		assert.Equal(suite.T(), -1.0, resetValue, "%s metric should be expired (not found) after calling reset function", metrics.ModuleConfigurationError)
+	})
+
+	suite.Run("metric expiration is idempotent", func() {
+		metricStorage := metricstorage.NewMetricStorage(
+			metricstorage.WithNewRegistry(),
+			metricstorage.WithLogger(log.NewNop()),
+		)
+
+		release := &v1alpha1.ModuleRelease{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-module-v1.0.0"},
+			Spec: v1alpha1.ModuleReleaseSpec{
+				ModuleName: moduleName,
+				Version:    "1.0.0",
+			},
+		}
+
+		r := &reconciler{
+			metricStorage: metricStorage,
+			log:           log.NewNop(),
+		}
+
+		// Call the reset function without setting any metric first
+		// This should not panic or error - it's a no-op if metric doesn't exist
+		r.resetConfigurationErrorMetric(release)
+
+		// Verify metric is not found (expected behavior)
+		metricFamilies, err := metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		value := suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), -1.0, value, "%s metric should not be found when it was never set", metrics.ModuleConfigurationError)
+
+		// Call again to verify idempotency
+		r.resetConfigurationErrorMetric(release)
+
+		metricFamilies, err = metricStorage.Gather()
+		require.NoError(suite.T(), err)
+		value = suite.getMetricValue(metricFamilies, metrics.ModuleConfigurationError, release)
+		assert.Equal(suite.T(), -1.0, value, "%s metric should still not be found after second reset", metrics.ModuleConfigurationError)
+	})
+}
+
+// Helper function to get metric value from gathered metrics
+func (suite *ReleaseControllerTestSuite) getMetricValue(metricFamilies []*promdto.MetricFamily, metricName string, release *v1alpha1.ModuleRelease) float64 {
+	for _, family := range metricFamilies {
+		if family.GetName() != metricName {
+			continue
+		}
+
+		for _, metric := range family.GetMetric() {
+			labels := make(map[string]string)
+			for _, labelPair := range metric.GetLabel() {
+				labels[labelPair.GetName()] = labelPair.GetValue()
+			}
+
+			if labels["module"] == release.GetModuleName() && labels["version"] == release.GetVersion().String() {
+				if metric.GetGauge() != nil {
+					return metric.GetGauge().GetValue()
+				}
+			}
+		}
+	}
+
+	return -1 // Not found
 }

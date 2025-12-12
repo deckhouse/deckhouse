@@ -30,6 +30,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: parca-kube-unsuitable
     modules.deckhouse.io/update-policy: foxtrot-alpha-kube-unsuitable
@@ -42,7 +44,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-kube-unsuitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   changelog:
     features:
