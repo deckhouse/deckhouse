@@ -17,6 +17,19 @@ variable "api_version" {
   type    = string
 }
 
+variable "owner_ref_kind" {
+  default = "VirtualMachine"
+  type = string
+}
+
+variable "owner_ref_name" {
+  type = string
+}
+
+variable "owner_ref_uid" {
+  type = string
+}
+
 variable "namespace" {
   type = string
 }

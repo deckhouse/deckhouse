@@ -20,6 +20,14 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
       "name"        = local.data_disk_name
       "namespace"   = var.namespace
       "annotations" = local.data_disk_annotations
+      "ownerReferences" = [
+        {
+          "apiVersion" = var.api_version
+          "kind"       = var.owner_ref_kind
+          "name"       = var.owner_ref_name
+          "uid"        = var.owner_ref_uid
+        }
+      ]
     }
     "spec" = {
       "persistentVolumeClaim" = merge({
