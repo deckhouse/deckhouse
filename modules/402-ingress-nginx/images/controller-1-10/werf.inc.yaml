@@ -304,7 +304,7 @@ import:
   add: /chroot
   to: /chroot
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact 
   add: /usr/bin/mount
   to: /usr/bin/mount
   before: setup
@@ -326,6 +326,10 @@ import:
   includePaths:
   - bin/pkill
   - bin/pgrep
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
