@@ -1,3 +1,14 @@
+{{- $collectorsMap := dict
+      "DNS" "dns"
+      "Drop" "drop"
+      "Flow" "flow"
+      "FlowsToWorld" "flows-to-world"
+      "HTTP" "http"
+      "HTTPv2" "httpV2"
+      "ICMP" "icmp"
+      "Kafka" "kafka"
+      "TCP" "tcp"
+-}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -153,6 +164,31 @@ data:
   # Local hubble sever section
   {{- if has "cilium-hubble" .Values.global.enabledModules }}
   enable-hubble: "true"
+    {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
+  hubble-metrics-server: "127.0.0.1:9091"
+  enable-hubble-open-metrics: "true"
+      {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.collectors }}
+  hubble-metrics: |
+         {{- range .Values.cniCilium.internal.hubble.settings.extendedMetrics.collectors }}
+           {{- $mapped := default .name (index $collectorsMap .name) }}
+           {{- $mapped | nindent 4 }}{{ if .contextOptions }}:{{ .contextOptions }}{{ end }}
+         {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
+  hubble-export-file-path: /var/run/cilium/hubble/events.log
+  hubble-export-file-max-backups: "0"
+  hubble-export-file-max-size-mb: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fileMaxSizeMb | quote }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.allowList }}
+  hubble-export-allowlist: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.allowList | join " " | quote }}
+      {{- end }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.denyList }}
+  hubble-export-denylist: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.denyList | join " " | quote }}
+      {{- end }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.denyList }}
+  hubble-export-fieldmask: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fieldMaskList | join " " | quote }}
+      {{- end }}
+    {{- end }}
   {{- else }}
   enable-hubble: "false"
   {{- end }}
