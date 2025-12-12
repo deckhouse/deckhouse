@@ -41,6 +41,14 @@ if [ ! -f "/etc/bash_completion.d/d8" ]; then
   d8 completion bash > /etc/bash_completion.d/d8
 fi
 
+if [ ! -f kubectl ]; then
+  cat <<'EOF' > kubectl
+#!/bin/bash
+exec /opt/deckhouse/bin/d8 k "$@"
+EOF
+  chmod +x kubectl
+fi
+
 if command -v d8 >/dev/null 2>&1; then
   alias_line='alias kubectl="/opt/deckhouse/bin/d8 k"'
   if ! grep -qF -- "$alias_line" /root/.bashrc; then
