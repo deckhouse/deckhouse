@@ -45,12 +45,11 @@ const (
 	dynamicConfigPath = "/etc/vector/dynamic/vector.json"
 )
 
-var vectorErrorCounter = prometheus.NewCounterVec(
-	prometheus.CounterOpts{
-		Name: "vector_config_reloader_errors_total",
-		Help: "Total number of errors in vector config reloader",
-	},
-	[]string{"type"},
+var errorMetric = prometheus.NewGauge(
+    prometheus.GaugeOpts{
+        Name: "vector_config_validation_error",
+        Help: "Vector config validation error flag (1=invalid, 0=valid)",
+    },
 )
 
 // pkill -P vector SIGHUP
@@ -90,10 +89,11 @@ func reloadOnce() {
 	}
 
 	if err := sampleConfig.Validate(); err != nil {
-		vectorErrorCounter.WithLabelValues("validate").Inc()
+		errorMetric.Set(1.0)
 		log.Println("invalid config, skip running")
 		return
 	}
+	errorMetric.Set(0.0)
 
 	if err := sampleConfig.SaveTo(dynamicConfigPath); err != nil {
 		log.Println(err)
@@ -190,7 +190,7 @@ func compareConfigs(c1, c2 *Config) bool {
 }
 
 func main() {
-	prometheus.MustRegister(vectorErrorCounter)
+	prometheus.MustRegister(errorMetric)
 
 	go func() {
 		mux := http.NewServeMux()
