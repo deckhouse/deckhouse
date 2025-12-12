@@ -17,7 +17,6 @@ package infrastructure
 import (
 	"context"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -273,7 +272,7 @@ func TestConcurrentExec(t *testing.T) {
 		})
 	}()
 
-	runtime.Gosched()
+	time.Sleep(500 * time.Millisecond)
 	_, err := runner.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		return exec.Plan(ctx, PlanOpts{})
 	})
