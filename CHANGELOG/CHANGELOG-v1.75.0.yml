@@ -1,0 +1,120 @@
+admission-policy-engine:
+  features:
+    - summary: add policy to deny exec/attach to pods with heritage deckhouse label
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16749
+candi:
+  features:
+    - summary: Add annotation for node by creating converger user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16734
+  fixes:
+    - summary: Ensure etcd dir has permissions 700 on all masters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16967
+    - summary: bashible events generateName
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16768
+ci:
+  features:
+    - summary: Add k8s 1.34 to CI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15453
+    - summary: Make e2e removal automation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13173
+  fixes:
+    - summary: Fix the mechanism for sending reports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13440
+    - summary: Fix k8s autoupdate report, lock the creation of multiple pr.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13381
+cloud-provider-dvp:
+  features:
+    - summary: clarify CSI errors
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16434
+control-plane-manager:
+  features:
+    - summary: >-
+        Implement etcd-arbiter mode for HA capability with less resources. This will allow to
+        bootstrap only etcd node without control-plane components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16716
+      impact: Will restart all d8 pods on dkp release with this changes.
+deckhouse:
+  fixes:
+    - summary: Add module name and path to loading error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16913
+    - summary: validate deckhouse-registry secret for spaces or newlines.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16101
+deckhouse-controller:
+  features:
+    - summary: Cleanup package repository operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16981
+    - summary: add field manager to kube client and helm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16830
+    - summary: add Application statistics logic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16809
+    - summary: Adds isolated shell executions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11192
+  fixes:
+    - summary: Rollback nelm version
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16770
+    - summary: Remove track-termination-mode notation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16612
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+descheduler:
+  features:
+    - summary: >-
+        update descheduler to the 1.34 version. 
+
+        Descheduler evicts pods with a larger restart count first it should make workload balancing
+        in the cluster more stable.
+
+        Descheduler respects DRA resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16846
+dhctl:
+  features:
+    - summary: Wait for converger user will be presented on all master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16734
+    - summary: Add debug output from ssh lib.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16717
+  fixes:
+    - summary: Fix dhctl bootstrap-phase abort running after dhctl bootstrap-phasebase-infra.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16829
+    - summary: fix kube token handling
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16735
+    - summary: save new master IPs and remove them when they are deleted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15334
+docs:
+  fixes:
+    - summary: Add the items to the list of platforms supported by the GUI installer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16874
+    - summary: Small fixes on the GUI install page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16817
+    - summary: Fix registry-modules-watcher deleting all documentation when registry returns an error
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16771
+    - summary: Fixed typo on the GUI installer page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16719
+go_lib:
+  fixes:
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+node-manager:
+  fixes:
+    - summary: CAPS logs noise reduction
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16805
+prometheus:
+  fixes:
+    - summary: Fix promql query for the queue variable in the dashboard for rabbitmq
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12388
+tools:
+  features:
+    - summary: Add d8_telemetry metric to track modules with critical flag
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16774
+    - summary: add pagination to registry client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16627
+  fixes:
+    - summary: update dmt version to 0.1.55
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16715
+vertical-pod-autoscaler:
+  features:
+    - summary: update vpa module to 1.5.1
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16814
+      impact: >-
+        mode auto is deprecated and will be removed in a future API version. Use explicit modes like
+        "Recreate", "Initial", or "InPlaceOrRecreate" instead.
+
