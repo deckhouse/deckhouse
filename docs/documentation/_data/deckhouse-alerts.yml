@@ -1887,6 +1887,23 @@ alerts:
         The log-shipper-agent pods can't collect logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
       severity: "4"
       markupFormat: markdown
+    - name: D8LogShipperConfigInvalid
+      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
+      moduleUrl: 460-log-shipper
+      module: log-shipper
+      edition: ce
+      description: |
+        At least one Vector DaemonSet pod has been reporting an invalid configuration.
+
+        To resolve this, check the container logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector-reloader
+        ```
+      summary: |
+        Vector config is invalid in the cluster.
+      severity: "4"
+      markupFormat: markdown
     - name: D8LogShipperDestinationErrors
       sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
       moduleUrl: 460-log-shipper
