@@ -298,12 +298,13 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-12-12"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
   to: /chroot
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact 
   add: /usr/bin/mount
   to: /usr/bin/mount
   before: setup
@@ -318,6 +319,17 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
+  before: setup
+- image: tools/procps
+  add: /
+  to: /
+  includePaths:
+  - bin/pkill
+  - bin/pgrep
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
