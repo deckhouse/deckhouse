@@ -487,7 +487,7 @@ type secretEventHandler struct {
 	bashibleContext *BashibleContext
 }
 
-func (x *secretEventHandler) OnAdd(obj interface{}) {
+func (x *secretEventHandler) OnAdd(obj interface{}, _ bool) {
 	secret := obj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {
