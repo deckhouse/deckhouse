@@ -59,7 +59,7 @@ func normalizeKey(key string) string {
 	return b.String()
 }
 
-func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
+func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Kafka {
 	spec := cspec.Kafka
 
 	tls := CommonTLS{
@@ -156,7 +156,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 
 	return &Kafka{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "kafka",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
