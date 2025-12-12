@@ -1,0 +1,63 @@
+title-en: Kubernetes service discovery
+title-ru: Обнаружение сервисов Kubernetes
+description-en: |
+  CoreDNS integration with Kubernetes API for automatic service discovery.
+  Resolves Kubernetes service names, pod names, and cluster domain names.
+  Supports both forward and reverse DNS lookups (in-addr.arpa, ip6.arpa).
+description-ru: |
+  Интеграция CoreDNS с Kubernetes API для автоматического обнаружения сервисов.
+  Разрешает имена сервисов Kubernetes, имена подов и доменные имена кластера.
+  Поддерживает как прямые, так и обратные DNS запросы (in-addr.arpa, ip6.arpa).
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Автоматически обнаруживает все сервисы и поды в кластере через Kubernetes API
+  - Поддерживает короткие имена сервисов (my-service) и FQDN (my-service.namespace.svc.cluster.local)
+  - TTL для Kubernetes записей: 30 секунд
+  - Поддерживает reverse DNS lookup для IP адресов подов
+  - Работает для всех namespace в кластере
+  - Не требует дополнительной настройки - работает "из коробки"
+user-notes-en: |
+  **Important for users:**
+  - Automatically discovers all services and pods in cluster via Kubernetes API
+  - Supports short service names (my-service) and FQDN (my-service.namespace.svc.cluster.local)
+  - TTL for Kubernetes records: 30 seconds
+  - Supports reverse DNS lookup for pod IP addresses
+  - Works for all namespaces in cluster
+  - No additional configuration required - works out of the box
+configuration-example: |
+  No configuration needed - works automatically. Examples from a test pod:
+  ```bash
+  # Create test pod
+  kubectl run -it --rm debug --image=busybox --restart=Never -- sh
+  
+  # Resolve service in same namespace
+  nslookup my-service
+  
+  # Resolve service in different namespace
+  nslookup my-service.other-namespace.svc.cluster.local
+  
+  # Resolve StatefulSet pod
+  nslookup my-statefulset-0.my-statefulset.default.svc.cluster.local
+  ```
+related-features: []
+troubleshooting-ru: |
+  - **Проблема:** Сервис не разрешается
+    - **Решение:** Проверьте, что сервис существует: `kubectl get svc -n <namespace> <service-name>`
+  - **Проблема:** Короткое имя не работает
+    - **Решение:** Используйте FQDN или проверьте search domains в /etc/resolv.conf пода
+troubleshooting-en: |
+  - **Issue:** Service not resolving
+    - **Solution:** Check that service exists: `kubectl get svc -n <namespace> <service-name>`
+  - **Issue:** Short name not working
+    - **Solution:** Use FQDN or check search domains in pod's /etc/resolv.conf
+user-stories:
+  - en: Hardcoding service IPs in my application config breaks when services are recreated. Using DNS names like my-service.default.svc.cluster.local means my app automatically connects to the correct service endpoint, even after IPs change during deployments or scaling.
+    ru: Хардкод IP адресов сервисов в конфигурации приложения ломается при пересоздании сервисов. Использование DNS имен типа my-service.default.svc.cluster.local означает, что мое приложение автоматически подключается к правильному endpoint сервиса, даже после изменения IP при деплойментах или масштабировании.
+    scope: Payload
+  - en: In my StatefulSet, each pod needs to connect to specific peers by name (e.g., db-0, db-1). DNS resolution lets me use stable pod FQDNs instead of tracking IP addresses, making my application configuration simpler and more resilient to pod restarts.
+    ru: В моем StatefulSet каждый под должен подключаться к конкретным пирам по имени (например, db-0, db-1). DNS разрешение позволяет мне использовать стабильные FQDN подов вместо отслеживания IP адресов, делая конфигурацию приложения проще и устойчивее к перезапускам подов.
+    scope: Payload
+  - en: When developers create new services, they expect DNS to work immediately. CoreDNS watches the Kubernetes API and automatically updates its records, so new services are resolvable as soon as they're created, without any manual DNS configuration or waiting periods.
+    ru: Когда разработчики создают новые сервисы, они ожидают, что DNS будет работать немедленно. CoreDNS следит за Kubernetes API и автоматически обновляет свои записи, поэтому новые сервисы разрешаются сразу после создания, без ручной настройки DNS или периодов ожидания.
+    scope: System
+

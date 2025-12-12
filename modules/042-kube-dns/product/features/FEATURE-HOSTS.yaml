@@ -1,0 +1,55 @@
+title-en: Static hosts mapping
+title-ru: Статическое маппирование хостов
+description-en: |
+  Ability to configure a static list of hosts similar to `/etc/hosts` file.
+  Allows mapping domain names to specific IP addresses for all workloads in the cluster.
+description-ru: |
+  Возможность настроить статический список хостов, аналогичный файлу `/etc/hosts`.
+  Позволяет маппить доменные имена на конкретные IP адреса для всей нагрузки в кластере.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Статические хосты имеют приоритет над DNS запросами
+  - Полезно для разработки и тестирования, когда нужно перенаправить домены на тестовые серверы
+  - Можно использовать для обхода проблем с DNS разрешением
+  - Все поды в кластере будут использовать эти маппинги
+  - Формат: domain (например, one.example.com) и ip (например, 192.168.0.1)
+user-notes-en: |
+  **Important for users:**
+  - Static hosts have priority over DNS queries
+  - Useful for development and testing when you need to redirect domains to test servers
+  - Can be used to bypass DNS resolution issues
+  - All pods in the cluster will use these mappings
+  - Format: domain (e.g., one.example.com) and ip (e.g., 192.168.0.1)
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      hosts:
+      - domain: one.example.com
+        ip: 192.168.0.1
+      - domain: two.another.example.com
+        ip: 10.10.0.128
+  ```
+related-features: []
+troubleshooting-ru: |
+  - **Проблема:** Статический хост не работает
+    - **Решение:** Проверьте формат: domain должен быть валидным доменным именем, ip - валидным IPv4 адресом
+  - **Проблема:** Нужно обновить маппинг
+    - **Решение:** Измените конфигурацию и дождитесь перезапуска подов CoreDNS (обычно автоматически)
+troubleshooting-en: |
+  - **Issue:** Static host not working
+    - **Solution:** Check format: domain must be valid domain name, ip must be valid IPv4 address
+  - **Issue:** Need to update mapping
+    - **Solution:** Change configuration and wait for CoreDNS pods restart (usually automatic)
+user-stories:
+  - en: During development, our team uses friendly domain names like api.dev.internal, but these don't exist in DNS. I configure static host mappings to point these domains to test server IPs, allowing developers to use consistent naming across environments without modifying application code.
+    ru: Во время разработки наша команда использует понятные доменные имена типа api.dev.internal, но они не существуют в DNS. Я настраиваю статические маппинги хостов, чтобы направлять эти домены на IP адреса тестовых серверов, позволяя разработчикам использовать согласованные имена в разных окружениях без изменения кода приложения.
+    scope: System
+  - en: Instead of hardcoding IP addresses in my application config, I prefer using domain names like test-db.company.local. Static host mappings let me point these domains to test infrastructure IPs, making my code more portable and easier to maintain.
+    ru: Вместо хардкода IP адресов в конфигурации приложения я предпочитаю использовать доменные имена типа test-db.company.local. Статические маппинги хостов позволяют мне направлять эти домены на IP адреса тестовой инфраструктуры, делая мой код более переносимым и легким в поддержке.
+    scope: Payload
+

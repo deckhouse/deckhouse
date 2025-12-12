@@ -1,0 +1,60 @@
+title-en: DNS response caching
+title-ru: Кэширование DNS ответов
+description-en: |
+  Built-in DNS response caching in CoreDNS to reduce load on upstream DNS servers and improve response times.
+  Default cache TTL is 30 seconds. Can be configured per stub zone.
+description-ru: |
+  Встроенное кэширование DNS ответов в CoreDNS для снижения нагрузки на upstream DNS серверы и улучшения времени отклика.
+  Дефолтный TTL кэша - 30 секунд. Может быть настроен для каждой stub зоны.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Кэш отключен автоматически при использовании модуля node-local-dns
+  - Дефолтный TTL: 30 секунд для основного домена
+  - Для stub зон можно настроить cacheTTLSeconds от 1 до 3600 секунд
+  - Кэш значительно снижает нагрузку на upstream DNS серверы
+  - Улучшает время отклика для повторяющихся DNS запросов
+  - Кэшируются только успешные ответы (NOERROR)
+user-notes-en: |
+  **Important for users:**
+  - Cache is automatically disabled when using node-local-dns module
+  - Default TTL: 30 seconds for main domain
+  - For stub zones, cacheTTLSeconds can be configured from 1 to 3600 seconds
+  - Cache significantly reduces load on upstream DNS servers
+  - Improves response time for repeated DNS queries
+  - Only successful responses (NOERROR) are cached
+configuration-example: |
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      stubZones:
+      - zone: internal.local
+        upstreamNameservers: ['192.168.1.10']
+        cacheTTLSeconds: 3600  # Cache for 1 hour
+  ```
+related-features:
+  - FEATURE-STUB-ZONES
+troubleshooting-ru: |
+  - **Проблема:** DNS изменения не применяются сразу
+    - **Решение:** Это нормально - кэш обновляется по TTL. Для немедленного обновления уменьшите cacheTTLSeconds
+  - **Проблема:** Высокая нагрузка на DNS серверы
+    - **Решение:** Увеличьте cacheTTLSeconds для stub зон с редко изменяющимися записями
+troubleshooting-en: |
+  - **Issue:** DNS changes not applied immediately
+    - **Solution:** This is normal - cache updates by TTL. For immediate update, decrease cacheTTLSeconds
+  - **Issue:** High load on DNS servers
+    - **Solution:** Increase cacheTTLSeconds for stub zones with rarely changing records
+user-stories:
+  - en: With hundreds of pods making DNS queries, our upstream DNS servers were getting overwhelmed. Built-in caching reduces redundant queries by serving cached responses for 30 seconds, significantly lowering DNS server load while maintaining acceptable freshness.
+    ru: Сотни подов делают DNS запросы, наши upstream DNS серверы перегружаются. Встроенное кэширование снижает избыточные запросы, отдавая кэшированные ответы на 30 секунд, значительно снижая нагрузку на DNS серверы при сохранении приемлемой актуальности.
+    scope: System
+  - en: My application makes frequent DNS lookups to the same domains, and each lookup adds latency. DNS caching means subsequent requests for cached records return instantly, improving overall application response time and user experience.
+    ru: Мое приложение делает частые DNS lookup к одним и тем же доменам, и каждый lookup добавляет задержку. DNS кэширование означает, что последующие запросы для кэшированных записей возвращаются мгновенно, улучшая общее время отклика приложения и пользовательский опыт.
+    scope: Payload
+  - en: Internal corporate DNS records rarely change, so I set longer cache TTLs (up to 3600 seconds) for stub zones pointing to internal DNS. This minimizes query volume to our internal DNS infrastructure while external domains still use shorter TTLs for faster updates.
+    ru: Внутренние корпоративные DNS записи меняются редко, поэтому я устанавливаю более длинные TTL кэша (до 3600 секунд) для stub зон, указывающих на внутренний DNS. Это минимизирует объем запросов к нашей внутренней DNS инфраструктуре, в то время как внешние домены все еще используют более короткие TTL для быстрых обновлений.
+    scope: System
+
