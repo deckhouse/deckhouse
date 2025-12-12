@@ -36,6 +36,15 @@ const (
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
 )
 
+// WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
+// After successful initialization, the initSecret will be removed.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//   - config: configuration with registry settings
+//
+// Returns:
+//   - err: error from the operation
 func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	return retry.
 		NewLoop("Waiting for Registry to become Ready", 100, 20*time.Second).
@@ -44,6 +53,15 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 		})
 }
 
+// checkRegistryInitialization performs checks for registry initialization status.
+// After successful initialization, the initSecret will be removed.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//   - config: configuration with registry settings
+//
+// Returns:
+//   - err: error from the operation
 func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	if !config.LegacyMode {
 		if err := checkInit(ctx, kubeClient); err != nil {
@@ -72,6 +90,13 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 	return nil
 }
 
+// checkInit verifies if the registry initialization process has started.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//
+// Returns:
+//   - err: error from the operation
 func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
 	exists, applied, err := getInitSecretStatus(ctx, kubeClient)
 	if err != nil {
@@ -84,6 +109,14 @@ func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
 	return nil
 }
 
+// checkReady verifies if the registry is ready.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//
+// Returns:
+//   - string: readiness status messages
+//   - err: error from the operation
 func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
 	conditions, err := getStateSecret(ctx, kubeClient)
 	if err != nil {
@@ -124,6 +157,14 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 	return msg.String(), ErrIsNotReady
 }
 
+// getStateSecret retrieves and parses the registry state conditions.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//
+// Returns:
+//   - []metav1.Condition: registry state conditions
+//   - err: error from the operation
 func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
 	secret, err := kubeClient.
 		CoreV1().
@@ -149,10 +190,14 @@ func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1
 }
 
 // getInitSecretStatus checks the status of the init secret.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//
 // Returns:
-//   - bool: true if secret exist
-//   - bool: true if secret is applied
-//   - error
+//   - secretExists: boolean indicating secret presence
+//   - secretApplied: boolean indicating secret application status
+//   - err: error from the operation
 func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (bool, bool, error) {
 	secret, err := kubeClient.
 		CoreV1().
@@ -170,6 +215,13 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 	return true, applied, nil
 }
 
+// removeInitSecret removes the initialization secret.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - kubeClient: Kubernetes client for API operations
+//
+// Returns:
+//   - err: error from the operation
 func removeInitSecret(ctx context.Context, kubeClient client.KubeClient) error {
 	err := kubeClient.
 		CoreV1().

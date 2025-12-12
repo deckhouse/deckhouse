@@ -24,6 +24,7 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
+// newManifestBuilder creates a new ManifestBuilder instance.
 func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 	return &ManifestBuilder{
 		modeModel:  modeModel,
@@ -31,11 +32,19 @@ func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
 	}
 }
 
+// ManifestBuilder is responsible for building various configuration manifests.
 type ManifestBuilder struct {
 	modeModel  ModeModel
 	legacyMode bool
 }
 
+// DeckhouseRegistrySecretData generates secret data for Deckhouse registry configuration.
+// Parameters:
+//   - pkiProvider: function that provides PKI data
+//
+// Returns:
+//   - secretData: byte map containing secret data
+//   - err: error from the operation
 func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
 	inClusterData, err := b.modeModel.InClusterData(pkiProvider)
 	if err != nil {
@@ -61,9 +70,9 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 
 // RegistryBashibleConfigSecretData creates bashible config secret data.
 // Returns:
-//   - bool: true if secret exist
-//   - secretData: map bytes of secret data
-//   - error
+//   - secretExists: boolean indicating secret presence
+//   - secretData: byte map containing secret data
+//   - err: error from the operation
 func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, SecretData, error) {
 	if b.legacyMode {
 		return false, nil, nil
@@ -81,6 +90,9 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, SecretData, 
 	return true, SecretData{"config": cfgYaml}, nil
 }
 
+// KubeadmContext builds kubeadm context struct.
+// Returns:
+//   - KubeadmContext: context structure
 func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
 	return KubeadmContext{
@@ -89,6 +101,13 @@ func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
 	}
 }
 
+// BashibleContext builds bashible context struct.
+// Parameters:
+//   - pkiProvider: function that provides PKI data
+//
+// Returns:
+//   - BashibleContext: context structure
+//   - err: error from the operation
 func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleContext, error) {
 	cfg, err := b.modeModel.BashibleConfig()
 	if err != nil {

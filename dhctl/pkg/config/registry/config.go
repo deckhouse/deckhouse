@@ -104,6 +104,7 @@ func (c *Config) Process(userSettings module_config.DeckhouseSettings, legacyMod
 	return nil
 }
 
+// Manifest creates a ManifestBuilder instance for generating configuration manifests.
 func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
