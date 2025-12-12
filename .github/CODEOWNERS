@@ -1,6 +1,6 @@
 .github/                        @Nikolay1224 @himax1991
 000-common/                     @name212 @sprait
-002-deckhouse/                  @yalosev @ldmonster
+002-deckhouse/                  @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
 015-admission-policy-engine/    @nabokihms
 021-cni-cilium/                 @AndreyPavlovFlant @apolovov
@@ -58,13 +58,13 @@ candi/cloud-providers/          @aleksey-su
 candi/terraform_versions.yml    @aleksey-su
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin @duckhawk
-deckhouse-controller/           @yalosev @ldmonster
+deckhouse-controller/           @ldmonster
 dhctl/                          @name212
 docs/                           @z9r5
 helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
-/pkg/                           @yalosev @ldmonster
+/pkg/                           @ldmonster
 testing/cloud_layouts/          @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/   @sudoroot-null
 /release.yaml                   @yalosev @nabokihms
