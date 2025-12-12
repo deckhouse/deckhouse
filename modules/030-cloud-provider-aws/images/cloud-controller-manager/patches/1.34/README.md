@@ -20,3 +20,7 @@ Update dependencies
 ## 005-fix-list-routes-method.patch
 
 Modify `ListRoutes` method to handle errors gracefully without blocking reconcile loop.
+
+## 006-publicNetworkAllowList-for-NLB.patch
+
+Adds support for PublicNetworkAllowList to restrict incoming traffic to NLBs

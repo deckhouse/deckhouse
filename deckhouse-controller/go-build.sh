@@ -21,6 +21,7 @@ defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
 defaultReleaseChannel=${DEFAULT_RELEASE_CHANNEL}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
+nelmVer=$(go list -m all | grep nelm | cut -d' ' -f 2-)
 
 # Validate required variables
 if [ -z "${defaultKubernetesVer}" ]; then
@@ -33,6 +34,7 @@ LDFLAGS="-s -w"
 LDFLAGS="${LDFLAGS} -X 'main.DeckhouseVersion=${deckhouseVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.AddonOperatorVersion=${addonOpVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.ShellOperatorVersion=${shellOpVer}'"
+LDFLAGS="${LDFLAGS} -X 'main.NelmVersion=${nelmVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.DefaultReleaseChannel=${defaultReleaseChannel}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=${defaultKubernetesVer}'"
 
