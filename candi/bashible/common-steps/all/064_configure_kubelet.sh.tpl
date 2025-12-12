@@ -96,6 +96,10 @@ fi
 {{- if not (eq .cri "NotManaged") }}
 # Get CRI directory for eviction thresholds calculation
 criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+# fallback
+if [ -z "$criDir" ] || [ "$criDir" = "null" ]; then
+  criDir="/var/lib/containerd"
+fi
 imagefsSize=$(df --output=size "$criDir" | tail -n1)
 imagefsInodes=$(df --output=itotal "$criDir" | tail -n1)
 
