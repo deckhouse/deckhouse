@@ -31,13 +31,22 @@ type KubeTerraStateLoader struct {
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 	stateCache   state.Cache
 	logger       log.Logger
+
+	forceFromCache bool
 }
 
 func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeProvider: kubeProvider,
 		stateCache:   stateCache,
+		logger:       logger,
+
+		forceFromCache: false,
 	}
+}
+func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader {
+	s.forceFromCache = f
+	return s
 }
 
 func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
@@ -53,7 +62,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		if err := s.stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
@@ -116,7 +125,7 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		if err := s.stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 			return nil, err
 		}
@@ -151,7 +160,7 @@ func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, err
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		clusterState, err = s.stateCache.Load("cluster-state")
 		if err != nil || len(clusterState) == 0 {
 			return nil, fmt.Errorf("can't load cluster state from cache")

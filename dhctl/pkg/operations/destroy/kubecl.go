@@ -49,7 +49,7 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 		return nil, fmt.Errorf("sshClientProvider did not pass")
 	}
 
-	sshClient, err := p.sshClientProvider()
+	sshClient, err := p.sshClientProvider.Client()
 	if err != nil {
 		return nil, err
 	}

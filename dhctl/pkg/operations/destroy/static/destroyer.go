@@ -25,13 +25,14 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
+	"github.com/name212/govalue"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -45,7 +46,8 @@ type DestroyerParams struct {
 	LoggerProvider       log.LoggerProvider
 	PhasedActionProvider phases.DefaultActionProvider
 
-	TmpDir string
+	TmpDir             string
+	NodeUserWaitParams retry.Params
 }
 
 type NodesWithCredentials struct {
@@ -87,14 +89,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creating")
 	}
 
-	if d.params.State.IsNodeUserExists() {
-		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
-	}
-
-	err = entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
-		WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials)
-
-	return err
+	return d.waitNodeUserExists(ctx)
 }
 
 func (d *Destroyer) AfterResourcesDelete(context.Context) error {
@@ -107,6 +102,10 @@ func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
 }
 
 func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	if govalue.IsNil(d.params.SSHClientProvider) {
+		return errors.New("Internal error. SSH provider did not pass")
+	}
+
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
@@ -115,7 +114,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 
 	logger := d.logger()
 
-	sshClient, err := d.params.SSHClientProvider()
+	sshClient, err := d.params.SSHClientProvider.Client()
 	if err != nil {
 		return err
 	}
@@ -304,7 +303,10 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		BecomePass:     d.nodesWithCredentials.Password,
 	})
 
-	newSSHClient := sshclient.NewClient(ctx, sess, []session.AgentPrivateKey{privateKey})
+	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, []session.AgentPrivateKey{privateKey})
+	if err != nil {
+		return nil, err
+	}
 
 	logger.LogDebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()
@@ -312,15 +314,11 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		return nil, fmt.Errorf("Failed to start SSH client: %w", err)
 	}
 
-	// adding keys to agent is actual only in legacy mode
-	if sshclient.IsLegacyMode() {
-		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
-		if err != nil {
-			return nil, fmt.Errorf("Failed to add keys to ssh agent: %w", err)
-		}
-
-		logger.LogDebugLn("Private keys added for replacing kube client")
+	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+		return nil, fmt.Errorf("Failed to refresh private keys: %w", err)
 	}
+
+	logger.LogDebugLn("Private keys refreshed for replacing kube client")
 
 	return newSSHClient, nil
 }
@@ -334,10 +332,16 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you try to destroy when need abort")
 	}
 
+	if d.params.State.IsNodeUserExists() {
+		d.logger().LogDebugLn("NodeUser for static destroyer exists getting from cache")
+	}
+
 	return d.params.PhasedActionProvider().Run(phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
-		err := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
-			WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials)
-		if err != nil {
+		// waiter checks if nil params
+		waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
+			WithParams(d.params.NodeUserWaitParams)
+
+		if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials); err != nil {
 			return nil, err
 		}
 
@@ -353,6 +357,10 @@ func (d *Destroyer) createNodeUser(ctx context.Context, logger log.Logger) (*Nod
 	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(nodeIPs) == 0 {
+		return nil, fmt.Errorf("Failed to get master nodes IPs: got empty nodes")
 	}
 
 	logger.LogDebugF("Found master node IPs: %+v\n", nodeIPs)

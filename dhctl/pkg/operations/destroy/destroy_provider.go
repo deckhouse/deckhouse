@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type infraDestroyerProvider struct {
@@ -41,8 +42,9 @@ type infraDestroyerProvider struct {
 	skipResources      bool
 	cloudStateProvider func() (controller.StateLoader, *controller.ClusterInfra, error)
 
-	sshClientProvider sshclient.SSHProvider
-	tmpDir            string
+	sshClientProvider  sshclient.SSHProvider
+	tmpDir             string
+	nodeUserWaitParams retry.Params
 }
 
 func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (infraDestroyer, error) {
@@ -96,7 +98,8 @@ func (f *infraDestroyerProvider) Static(context.Context, *config.MetaConfig) (in
 		LoggerProvider:       f.loggerProvider,
 		PhasedActionProvider: f.phasesActionProvider,
 
-		TmpDir: f.tmpDir,
+		TmpDir:             f.tmpDir,
+		NodeUserWaitParams: f.nodeUserWaitParams,
 	}), nil
 }
 
@@ -120,6 +123,8 @@ func (f *infraDestroyerProvider) checkGeneralParams() error {
 	if f.tmpDir == "" {
 		return fmt.Errorf("Temp directory should provided to infraDestroyerProvider")
 	}
+
+	// wait params can be nil
 
 	return nil
 }

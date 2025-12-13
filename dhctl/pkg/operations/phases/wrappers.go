@@ -96,6 +96,17 @@ func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase Opera
 	return nil
 }
 
+type dummyPhaseAction[OperationPhaseDataT any] struct{}
+
+func (a *dummyPhaseAction[OperationPhaseDataT]) Run(_ OperationPhase, _ bool, action ActionFunc[OperationPhaseDataT]) error {
+	_, err := action()
+	return err
+}
+
+func (a *dummyPhaseAction[OperationPhaseDataT]) CompleteSub(OperationSubPhase) error {
+	return nil
+}
+
 type phaseActionWithError[OperationPhaseDataT any] struct {
 	err error
 }
@@ -185,6 +196,10 @@ func NewPipelineWithStateCache[OperationPhaseDataT any](context PhasedExecutionC
 	}
 }
 
+func newDummyPipeline[OperationPhaseDataT any](opts ...PipelineOptsFunc) Pipeline[OperationPhaseDataT] {
+	return NewPipelineWithStateCache[OperationPhaseDataT](nil, nil, opts...)
+}
+
 func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[OperationPhaseDataT]) error {
 	if p.isFinished() {
 		return p.wrapError(ErrPipelineAlreadyFinished)
@@ -194,29 +209,25 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[
 		return p.wrapError(ErrPipelineAlreadyStarted)
 	}
 
-	if err := p.phaseContext.InitPipeline(p.stateCache); err != nil {
-		return p.wrapError(fmt.Errorf("cannot init pipline: %w", err))
+	if err := p.initPipeline(); err != nil {
+		return err
 	}
 
 	p.setStarted()
 	defer p.setFinished()
 
-	logger := log.SafeProvideLogger(p.opts.LoggerProvider)
-
 	defer func() {
-		if err := p.phaseContext.Finalize(p.stateCache); err != nil {
-			logger.LogWarnF("Cannot finalize pipeline '%s': %v\n", p.opts.PipelineName, err)
-		}
+		p.finalize()
 	}()
 
 	err := action(p.phaseSwitcher)
 
 	if govalue.IsNil(err) {
-		return p.phaseContext.CompletePipeline(p.stateCache)
+		return p.complete()
 	}
 
 	if errors.Is(err, ErrShouldStop) {
-		logger.LogDebugF(
+		log.SafeProvideLogger(p.opts.LoggerProvider).LogDebugF(
 			"Pipeline '%s' with phase execution context: got should stop. Returns without complete\n",
 			p.opts.PipelineName,
 		)
@@ -227,6 +238,10 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[
 }
 
 func (p *PipelineWithStateCache[OperationPhaseDataT]) GetLastState() DhctlState {
+	if govalue.IsNil(p.phaseContext) {
+		return DhctlState(nil)
+	}
+
 	return p.phaseContext.GetLastState()
 }
 
@@ -235,14 +250,52 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) ActionInPipeline() PhaseAc
 		return newPhaseActionWithError[OperationPhaseDataT](ErrPipelineDidNotStart)
 	}
 
+	if govalue.IsNil(p.phaseContext) {
+		return &dummyPhaseAction[OperationPhaseDataT]{}
+	}
+
 	return NewPhaseActionWithStateCache(p.phaseContext, p.stateCache)
 }
 
 func (p *PipelineWithStateCache[OperationPhaseDataT]) phaseSwitcher(phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error {
+	if govalue.IsNil(p.phaseContext) {
+		return nil
+	}
+
 	if shouldStop, err := p.phaseContext.SwitchPhase(phase, isCritical, p.stateCache, completedPhaseData); err != nil {
 		return err
 	} else if shouldStop {
 		return ErrShouldStop
+	}
+
+	return nil
+}
+
+func (p *PipelineWithStateCache[OperationPhaseDataT]) complete() error {
+	if govalue.IsNil(p.phaseContext) {
+		return nil
+	}
+
+	return p.phaseContext.CompletePipeline(p.stateCache)
+}
+
+func (p *PipelineWithStateCache[OperationPhaseDataT]) finalize() {
+	if govalue.IsNil(p.phaseContext) {
+		return
+	}
+
+	if err := p.phaseContext.Finalize(p.stateCache); err != nil {
+		log.SafeProvideLogger(p.opts.LoggerProvider).LogWarnF("Cannot finalize pipeline '%s': %v\n", p.opts.PipelineName, err)
+	}
+}
+
+func (p *PipelineWithStateCache[OperationPhaseDataT]) initPipeline() error {
+	if govalue.IsNil(p.phaseContext) {
+		return nil
+	}
+
+	if err := p.phaseContext.InitPipeline(p.stateCache); err != nil {
+		return p.wrapError(fmt.Errorf("cannot init pipline: %w", err))
 	}
 
 	return nil
@@ -305,5 +358,11 @@ func NewDefaultPhaseActionProviderFromPipeline(pipeline Pipeline[DefaultContextT
 func NewPhaseActionProviderFromPipeline[OperationPhaseDataT any](pipeline Pipeline[OperationPhaseDataT]) ActionProvider[OperationPhaseDataT] {
 	return func() PhaseAction[OperationPhaseDataT] {
 		return pipeline.ActionInPipeline()
+	}
+}
+
+func NewDummyDefaultPipelineProviderOpts(opts ...PipelineOptsFunc) PreparedDefaultPipelineProvider {
+	return func() Pipeline[DefaultContextType] {
+		return newDummyPipeline[DefaultContextType](opts...)
 	}
 }

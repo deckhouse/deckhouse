@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -437,17 +438,28 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 }
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx) ([]NodeIP, error) {
-	var nodeIPs []NodeIP
+	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
+	if err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{LabelSelector: selector}
 
 	var nodes *corev1.NodeList
-	err := retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
+
+	loopParams := retry.NewParams(
+		"Get control plane nodes from Kubernetes cluster",
+		5,
+		5*time.Second,
+	)
+	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		var err error
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
 		}
 
-		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, listOpts)
 		if err != nil {
 			log.DebugF("Cannot get nodes. Got error: %v", err)
 			return err
@@ -457,8 +469,10 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 
 	if err != nil {
 		log.DebugF("Cannot get nodes after 5 attemts")
-		return []NodeIP{}, err
+		return nil, err
 	}
+
+	var nodeIPs []NodeIP
 
 	for _, node := range nodes.Items {
 		var ip NodeIP

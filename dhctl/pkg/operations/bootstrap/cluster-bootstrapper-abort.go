@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -181,7 +182,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				InfrastructureContext:  b.InfrastructureContext,
 				PhasedExecutionContext: b.PhasedExecutionContext,
 
-				SSHClientProvider: staticSSHClientProvider,
+				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider),
 				LoggerProvider:    loggerProvider,
 
 				TmpDir:        b.TmpDir,

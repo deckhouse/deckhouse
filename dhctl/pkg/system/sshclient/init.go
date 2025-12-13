@@ -25,7 +25,43 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
-type SSHProvider func() (node.SSHClient, error)
+type SSHProviderFunc func() (node.SSHClient, error)
+
+type SSHProvider interface {
+	Client() (node.SSHClient, error)
+	SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error)
+}
+
+type DefaultSSHProviderWithFunc struct {
+	provider SSHProviderFunc
+	opts     *ClientOptions
+}
+
+func NewDefaultSSHProviderWithFunc(provider SSHProviderFunc) *DefaultSSHProviderWithFunc {
+	return &DefaultSSHProviderWithFunc{
+		provider: provider,
+		opts:     nil,
+	}
+}
+
+func (p *DefaultSSHProviderWithFunc) WithOptions(opts *ClientOptions) *DefaultSSHProviderWithFunc {
+	p.opts = opts
+	return p
+}
+
+func (p *DefaultSSHProviderWithFunc) Client() (node.SSHClient, error) {
+	if p.provider != nil {
+		return p.provider()
+	}
+
+	return nil, fmt.Errorf("SSH provider not passed")
+}
+func (p *DefaultSSHProviderWithFunc) SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error) {
+	if p.opts != nil {
+		return NewClientWithOptions(ctx, sess, privateKeys, *p.opts), nil
+	}
+	return NewClient(ctx, sess, privateKeys), nil
+}
 
 type ClientOptions struct {
 	InitializeNewAgent bool
