@@ -495,6 +495,11 @@ func (s *Client) PrivateKeys() []session.AgentPrivateKey {
 	return s.privateKeys
 }
 
+func (s *Client) RefreshPrivateKeys() error {
+	// new go ssh client already have all keys
+	return nil
+}
+
 // Loop Looping all available hosts
 func (s *Client) Loop(fn node.SSHLoopHandler) error {
 	var err error

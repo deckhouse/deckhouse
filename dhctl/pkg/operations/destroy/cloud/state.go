@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package destroy
+package cloud
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
 
 const (
-	resourcesDestroyedKey = "resources-were-deleted"
-	convergeLocked        = "converge-locked"
+	convergeLocked = "converge-locked"
 )
 
 type State struct {
@@ -31,26 +32,10 @@ func NewDestroyState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) IsResourcesDestroyed() (bool, error) {
-	return s.cache.InCache(resourcesDestroyedKey)
-}
-
-func (s *State) SetResourcesDestroyed() error {
-	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
-}
-
 func (s *State) IsConvergeLocked() (bool, error) {
 	return s.cache.InCache(convergeLocked)
 }
 
 func (s *State) SetConvergeLocked() error {
 	return s.cache.Save(convergeLocked, []byte("yes"))
-}
-
-func (s *State) StateDir() string {
-	return s.cache.Dir()
-}
-
-func (s *State) Clean() {
-	s.cache.Clean()
 }

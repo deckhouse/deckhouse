@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package global
+package deckhouse
+
+import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 
 const (
-	ShowDeckhouseLogs = true
-	HideDeckhouseLogs = false
-
-	MasterNodeGroupName = "master"
-
-	ConvergeNodeUserName = "d8-dhctl-converger"
-	ConvergeNodeUserUID  = 64536
-
-	ConvergerNodeUserAnnotation = "node.deckhouse.io/has-converger-nodeuser"
-	NodeGroupLabel              = "node.deckhouse.io/group"
-
-	D8SystemNamespace = "d8-system"
-
-	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
-
-	ConfigsNS = "kube-system"
+	resourcesDestroyedKey = "resources-were-deleted"
 )
+
+type State struct {
+	cache state.Cache
+}
+
+func NewState(stateCache state.Cache) *State {
+	return &State{
+		cache: stateCache,
+	}
+}
+
+func (s *State) IsResourcesDestroyed() (bool, error) {
+	return s.cache.InCache(resourcesDestroyedKey)
+}
+
+func (s *State) SetResourcesDestroyed() error {
+	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
+}

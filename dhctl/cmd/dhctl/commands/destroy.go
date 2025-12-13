@@ -80,12 +80,12 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
-			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
-			StateCache:    cache.Global(),
-			SkipResources: app.SkipResources,
-			Logger:        logger,
-			IsDebug:       app.IsDebug,
-			TmpDir:        app.TmpDirName,
+			NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
+			StateCache:     cache.Global(),
+			SkipResources:  app.SkipResources,
+			LoggerProvider: log.SimpleLoggerProvider(logger),
+			IsDebug:        app.IsDebug,
+			TmpDir:         app.TmpDirName,
 		})
 		if err != nil {
 			return err
