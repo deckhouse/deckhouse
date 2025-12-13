@@ -281,9 +281,24 @@ func (d *TestCache) Load(n string) ([]byte, error) {
 	return d.Store[n], nil
 }
 
-func (d *TestCache) LoadStruct(n string, v interface{}) error { panic("not implemented") }
+func (d *TestCache) LoadStruct(n string, v interface{}) error {
+	data, err := d.Load(n)
+	if err != nil {
+		return fmt.Errorf("can't load struct for key %s: %v", n, err)
+	}
 
-func (d *TestCache) SaveStruct(n string, v interface{}) error { panic("not implemented") }
+	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
+}
+
+func (d *TestCache) SaveStruct(n string, v interface{}) error {
+	b := new(bytes.Buffer)
+	err := gob.NewEncoder(b).Encode(v)
+	if err != nil {
+		return err
+	}
+
+	return d.Save(n, b.Bytes())
+}
 
 func (d *TestCache) GetPath(n string) string {
 	return n

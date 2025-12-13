@@ -33,11 +33,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
-var NodeUserGVK = schema.GroupVersionResource{
+var NodeUserGVR = schema.GroupVersionResource{
 	Group:    "deckhouse.io",
 	Version:  "v1",
 	Resource: "nodeusers",
 }
+
+const NodeUserList = "NodeUserList"
 
 // NodeUser is an system user on nodes.
 type NodeUser struct {

@@ -24,10 +24,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -44,10 +44,10 @@ func CreateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 			return err
 		}
 
-		_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Create(ctx, nodeUserResource, metav1.CreateOptions{})
+		_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Create(ctx, nodeUserResource, metav1.CreateOptions{})
 		if err != nil {
 			if k8errors.IsAlreadyExists(err) {
-				_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
+				_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
 				return err
 			}
 
@@ -64,7 +64,7 @@ func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 		if err != nil {
 			return err
 		}
-		err = kubeCl.Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
+		err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
@@ -80,29 +80,32 @@ func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 type NodeUserPresentsChecker func(node corev1.Node) bool
 
 type NodeUserPresentsWaiter struct {
-	attempts int
-	sleep    time.Duration
-	checker  NodeUserPresentsChecker
+	params  retry.Params
+	checker NodeUserPresentsChecker
 
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 }
 
 func NewNodeUserExistsWaiter(checker NodeUserPresentsChecker, kubeProvider kubernetes.KubeClientProviderWithCtx) *NodeUserPresentsWaiter {
+	params := retry.NewEmptyParams().
+		WithAttempts(30).
+		WithWait(5 * time.Second)
+
 	return &NodeUserPresentsWaiter{
-		attempts:     30,
-		sleep:        5 * time.Second,
+		params:       params,
 		checker:      checker,
 		kubeProvider: kubeProvider,
 	}
 }
 
 func NewConvergerNodeUserExistsWaiter(kubeProvider kubernetes.KubeClientProviderWithCtx) *NodeUserPresentsWaiter {
-	return &NodeUserPresentsWaiter{
-		attempts:     30,
-		sleep:        5 * time.Second,
-		checker:      v1.ConvergerNodeUserExistsChecker,
-		kubeProvider: kubeProvider,
-	}
+	return NewNodeUserExistsWaiter(v1.ConvergerNodeUserExistsChecker, kubeProvider)
+}
+
+func (w *NodeUserPresentsWaiter) WithParams(params retry.Params) *NodeUserPresentsWaiter {
+	// params check if filled params nil or invalid
+	w.params.Fill(params)
+	return w
 }
 
 func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUser *v1.NodeUserCredentials) error {
@@ -110,16 +113,14 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 	listOpts := metav1.ListOptions{}
 
 	if len(nodeUser.NodeGroups) > 0 {
-		selector := labels.NewSelector()
-		r, err := labels.NewRequirement("node.deckhouse.io/group", selection.In, nodeUser.NodeGroups)
+		selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.In, nodeUser.NodeGroups)
 		if err != nil {
 			return err
 		}
-		selector = selector.Add(*r)
-		listOpts.LabelSelector = selector.String()
+		listOpts.LabelSelector = selector
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser '%s' present on hosts", nodeUserName), w.attempts, w.sleep).
+	return retry.NewLoopWithParams(w.loopParams(nodeUserName)).
 		RunContext(ctx, func() error {
 			kubeCl, err := w.kubeProvider.KubeClientCtx(ctx)
 			if err != nil {
@@ -157,4 +158,9 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 
 			return nil
 		})
+}
+
+func (w *NodeUserPresentsWaiter) loopParams(userName string) retry.Params {
+	return w.params.Clone().
+		WithName(fmt.Sprintf("Waiting for NodeUser '%s' present on hosts", userName))
 }

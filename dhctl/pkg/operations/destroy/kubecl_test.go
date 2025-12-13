@@ -22,12 +22,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	sshProvider := func() (node.SSHClient, error) {
+	sshProvider := sshclient.NewDefaultSSHProviderWithFunc(func() (node.SSHClient, error) {
 		return gossh.NewClientFromFlags(context.Background())
-	}
+	})
 
 	provider := newKubeClientProvider(sshProvider)
 

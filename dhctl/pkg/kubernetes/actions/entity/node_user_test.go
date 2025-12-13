@@ -24,10 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func TestWaitNodeUserPresentOnNode(t *testing.T) {
@@ -270,6 +271,62 @@ func TestWaitNodeUserPresentOnNode(t *testing.T) {
 	}
 }
 
+func TestWaitNodeUserPresentOnNodeWithParams(t *testing.T) {
+	getWaiter := func() *NodeUserPresentsWaiter {
+		return NewNodeUserExistsWaiter(testNodeUserExistsOnLabel, kubernetes.NewSimpleKubeClientGetter(nil))
+	}
+
+	assertParams := func(t *testing.T, w *NodeUserPresentsWaiter, attempts int, wait time.Duration) {
+		require.NotNil(t, w)
+		require.NotNil(t, w.params)
+
+		params := w.loopParams("user")
+		require.NotNil(t, params)
+
+		require.Equal(t, params.Name(), "Waiting for NodeUser 'user' present on hosts")
+		require.Equal(t, params.Attempts(), attempts)
+		require.Equal(t, params.Wait(), wait)
+	}
+
+	assertDefaultParams := func(t *testing.T, w *NodeUserPresentsWaiter) {
+		assertParams(t, w, 30, 5*time.Second)
+	}
+
+	t.Run("nil params", func(t *testing.T) {
+		assertDefaultParams(t, getWaiter().WithParams(nil))
+
+		nilInterface := func() retry.Params {
+			return nil
+		}
+
+		var params retry.Params
+		params = nilInterface()
+
+		assertDefaultParams(t, getWaiter().WithParams(params))
+	})
+
+	t.Run("empty params", func(t *testing.T) {
+		waiter := getWaiter().WithParams(retry.NewEmptyParams())
+
+		assertParams(t, waiter, 1, 1*time.Second)
+	})
+
+	t.Run("rewrite attempts and wait and not set name", func(t *testing.T) {
+		const (
+			expectedAttempts = 3
+			expectedWait     = 15 * time.Second
+		)
+
+		waiter := getWaiter().WithParams(retry.NewEmptyParams(
+			retry.WithAttempts(expectedAttempts),
+			retry.WithName("My name"),
+			retry.WithWait(expectedWait),
+		))
+
+		assertParams(t, waiter, expectedAttempts, expectedWait)
+	})
+}
+
 type testNode struct {
 	name        string
 	annotations map[string]string
@@ -323,9 +380,11 @@ func testCreateWaiterTest(t *testing.T, test testNodeUserWaiterParams) testNodeU
 
 	kubeProvider := kubernetes.NewSimpleKubeClientGetter(kubeCl)
 
-	waiter := NewNodeUserExistsWaiter(test.nodeUser.checker, kubeProvider)
-	waiter.attempts = 1
-	waiter.sleep = 1 * time.Second
+	waiter := NewNodeUserExistsWaiter(test.nodeUser.checker, kubeProvider).
+		WithParams(retry.NewEmptyParams(
+			retry.WithAttempts(1),
+			retry.WithWait(1*time.Second),
+		))
 
 	return testNodeUserWaiterTest{
 		params: test,
@@ -351,7 +410,7 @@ func testCreateTestControlPlaneNode(name string, annotations map[string]string) 
 		name:        name,
 		annotations: annotations,
 		labels: map[string]string{
-			"node.deckhouse.io/group": "master",
+			global.NodeGroupLabel: global.MasterNodeGroupName,
 		},
 	}
 }
@@ -369,7 +428,7 @@ func testCreateTestWorkerNode(name string, annotations map[string]string) testNo
 		name:        name,
 		annotations: annotations,
 		labels: map[string]string{
-			"node.deckhouse.io/group": "worker",
+			global.NodeGroupLabel: "worker",
 		},
 	}
 }

@@ -341,4 +341,60 @@ func TestPipelineWrapper(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("dummy pipeline follow interface", func(t *testing.T) {
+		state := cache.NewTestCache()
+		pipelineProvider := NewDummyDefaultPipelineProviderOpts(loggerProviderOpt, WithPipelineName("dummy pipeline does not panic"))
+		pipeline := pipelineProvider()
+
+		errorAction := pipeline.ActionInPipeline()
+
+		notChanged := true
+		err := errorAction.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			logger.LogInfoLn("Does not print")
+
+			notChanged = false
+			err := state.Save("not saved", []byte("yes"))
+			require.NoError(t, err)
+
+			return nil, nil
+		})
+
+		require.True(t, errors.Is(err, ErrPipelineDidNotStart), "dummy pipeline should follow interface")
+		require.True(t, notChanged)
+		require.Equal(t, DhctlState(nil), pipeline.GetLastState())
+		notSaved, err := state.InCache("not saved")
+		require.NoError(t, err)
+		require.False(t, notSaved)
+
+		err = pipeline.Run(func(switcher switcherType) error {
+			logger.LogInfoLn("Start dummy pipeline action")
+			actionWithState := pipeline.ActionInPipeline()
+
+			err := actionWithState.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+				logger.LogInfoLn("Start actionWithState")
+				return nil, writeTestState(state)
+			})
+			require.NoError(t, err)
+			require.Equal(t, DhctlState(nil), pipeline.GetLastState())
+			inCacheState, err := ExtractDhctlState(state)
+			require.NoError(t, err)
+			require.Equal(t, getDhctlStateWithTest(), inCacheState)
+
+			err = switcher(DeleteResourcesPhase, false, nil)
+			require.NoError(t, err, "dummy switcher does not panic")
+
+			return nil
+		})
+
+		notChanged = true
+		err = pipeline.Run(func(switcher switcherType) error {
+			logger.LogInfoLn("Should not printed")
+			notChanged = false
+			return nil
+		})
+
+		require.True(t, errors.Is(err, ErrPipelineAlreadyFinished), "dummy pipeline should follow interface")
+		require.True(t, notChanged)
+	})
 }

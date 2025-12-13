@@ -35,6 +35,7 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type Destroyer interface {
@@ -85,6 +86,55 @@ func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
 	)
 }
 
+func (p *Params) getStateLoaderParams() *stateLoaderParams {
+	return &stateLoaderParams{
+		commanderMode:   p.CommanderMode,
+		commanderParams: p.CommanderModeParams,
+
+		stateCache: p.StateCache,
+		logger:     log.SafeProvideLogger(p.LoggerProvider),
+
+		skipResources: p.SkipResources,
+		// from passed params always ask about load
+		forceFromCache: false,
+	}
+}
+
+type stateLoaderParams struct {
+	commanderMode   bool
+	commanderParams *commander.CommanderModeParams
+
+	stateCache dhctlstate.Cache
+	logger     log.Logger
+
+	skipResources  bool
+	forceFromCache bool
+}
+
+func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, error) {
+	if params.commanderMode {
+		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+		// if params.CommanderUUID == uuid.Nil {
+		//	panic("CommanderUUID required for destroy operation in commander mode!")
+		// }
+
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, params.logger)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
+		}
+		return infrastructurestate.NewFileTerraStateLoader(params.stateCache, metaConfig), nil
+	}
+
+	stateLoaderKubeProvider := kubeProvider
+	if params.skipResources {
+		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
+	}
+
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger).
+		WithForceFromCache(params.forceFromCache)
+	return infrastructurestate.NewLazyTerraStateLoader(cached), nil
+}
+
 type ClusterDestroyer struct {
 	stateCache       dhctlstate.Cache
 	configPreparator metaConfigPopulator
@@ -108,7 +158,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return nil, fmt.Errorf("Cluster destruction requires usage of ssh node interface")
 	}
 
-	sshClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+	sshClientProviderOnceFunc := sync.OnceValues(func() (node.SSHClient, error) {
 		sshClient := wrapper.Client()
 		if err := sshClient.Start(); err != nil {
 			return nil, err
@@ -116,6 +166,8 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		return sshClient, nil
 	})
+
+	sshClientProvider := sshclient.NewDefaultSSHProviderWithFunc(sshClientProviderOnceFunc)
 
 	logger := log.SafeProvideLogger(params.LoggerProvider)
 
@@ -148,28 +200,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		PhasedActionProvider: phaseActionProvider,
 	})
 
-	var terraStateLoader controller.StateLoader
-
-	if params.CommanderMode {
-		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-		// if params.CommanderUUID == uuid.Nil {
-		//	panic("CommanderUUID required for destroy operation in commander mode!")
-		// }
-
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.StateCache, params.CommanderModeParams, logger)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
-		}
-		terraStateLoader = infrastructurestate.NewFileTerraStateLoader(params.StateCache, metaConfig)
-	} else {
-		stateLoaderKubeProvider := kubeProvider
-		if params.SkipResources {
-			stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
-		}
-
-		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(
-			infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.StateCache, logger),
-		)
+	terraStateLoader, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
+	if err != nil {
+		return nil, err
 	}
 
 	infraProvider := &infraDestroyerProvider{
