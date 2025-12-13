@@ -81,7 +81,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 			return fmt.Errorf("Error while getting node user from cache: %w", err)
 		}
 
-		d.nodesWithCredentials, err = d.createNodeUser(ctx, logger)
+		d.nodesWithCredentials, err = d.createAndSaveCredentials(ctx, logger)
 		if err != nil {
 			return err
 		}
@@ -332,24 +332,55 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you try to destroy when need abort")
 	}
 
+	if len(d.nodesWithCredentials.IPs) == 0 {
+		return fmt.Errorf("Internal error. nodesWithCredentials ips is empty")
+	}
+
+	logger := d.logger()
+
 	if d.params.State.IsNodeUserExists() {
-		d.logger().LogDebugLn("NodeUser for static destroyer exists getting from cache")
+		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
 	}
 
 	return d.params.PhasedActionProvider().Run(phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
-		// waiter checks if nil params
-		waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
-			WithParams(d.params.NodeUserWaitParams)
+		if !isSingleMaster(d.nodesWithCredentials.IPs) {
+			// waiter checks if nil params
+			waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
+				WithParams(d.params.NodeUserWaitParams)
 
-		if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials); err != nil {
-			return nil, err
+			if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials); err != nil {
+				return nil, err
+			}
+		} else {
+			logger.LogDebugLn("No wait NodeUser for single-master cluster")
 		}
 
 		return nil, d.params.State.SetNodeUserExists()
 	})
 }
 
-func (d *Destroyer) createNodeUser(ctx context.Context, logger log.Logger) (*NodesWithCredentials, error) {
+func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.NodeIP, logger log.Logger) (*v1.NodeUserCredentials, error) {
+	if isSingleMaster(ips) {
+		logger.LogDebugLn("Has single master. Skip creating node user and returns empty credentials for save")
+		return &v1.NodeUserCredentials{}, nil
+	}
+
+	nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
+	}
+
+	err = entity.CreateNodeUser(ctx, d.params.KubeProvider, nodeUser)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.LogDebugF("Node user created via API %s\n", nodeUserCredentials.Name)
+
+	return nodeUserCredentials, nil
+}
+
+func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Logger) (*NodesWithCredentials, error) {
 	if d.params.PhasedActionProvider == nil {
 		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
 	}
@@ -365,21 +396,14 @@ func (d *Destroyer) createNodeUser(ctx context.Context, logger log.Logger) (*Nod
 
 	logger.LogDebugF("Found master node IPs: %+v\n", nodeIPs)
 
-	// always create node user
+	// always create node user creds so we have only master
 	var nodesWithCredentials *NodesWithCredentials
 
 	err = d.params.PhasedActionProvider().Run(phases.CreateStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
-		nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate NodeUser: %w", err)
-		}
-
-		err = entity.CreateNodeUser(ctx, d.params.KubeProvider, nodeUser)
+		nodeUserCredentials, err := d.createNodeUserCredentials(ctx, nodeIPs, logger)
 		if err != nil {
 			return nil, err
 		}
-
-		logger.LogDebugF("Node user created %s\n", nodeUserCredentials.Name)
 
 		nodesWithCredentials = &NodesWithCredentials{
 			NodeUserCredentials: nodeUserCredentials,
@@ -390,7 +414,7 @@ func (d *Destroyer) createNodeUser(ctx context.Context, logger log.Logger) (*Nod
 			return nil, err
 		}
 
-		logger.LogDebugF("Node user saved to cache and to destroyer %s\n", nodeUserCredentials.Name)
+		logger.LogDebugF("Node user '%s' saved to cache and to destroyer. Empty is correct for single master \n", nodeUserCredentials.Name)
 
 		return nil, nil
 	})
@@ -404,4 +428,8 @@ func (d *Destroyer) createNodeUser(ctx context.Context, logger log.Logger) (*Nod
 
 func (d *Destroyer) logger() log.Logger {
 	return log.SafeProvideLogger(d.params.LoggerProvider)
+}
+
+func isSingleMaster(ips []entity.NodeIP) bool {
+	return len(ips) == 1
 }

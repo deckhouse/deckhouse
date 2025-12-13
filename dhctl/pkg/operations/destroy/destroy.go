@@ -138,7 +138,6 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 type ClusterDestroyer struct {
 	stateCache       dhctlstate.Cache
 	configPreparator metaConfigPopulator
-	loggerProvider   log.LoggerProvider
 
 	pipeline phases.DefaultPipeline
 
@@ -234,7 +233,6 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	return &ClusterDestroyer{
 		stateCache:       params.StateCache,
 		configPreparator: terraStateLoader,
-		loggerProvider:   params.LoggerProvider,
 
 		pipeline: pipeline,
 
@@ -283,8 +281,6 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	if err := d.d8Destroyer.Finalize(ctx); err != nil {
 		return err
 	}
-
-	log.SafeProvideLogger(d.loggerProvider).LogDebugF("Resources were destroyed set\n")
 
 	// Stop proxy because we have already got all info from kubernetes-api
 	// also stop ssh client for cloud clusters

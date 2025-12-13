@@ -89,9 +89,16 @@ func (g *Destroyer) Finalize(context.Context) error {
 		return nil
 	}
 
-	return g.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
+	err := g.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
 		return nil, g.State.SetResourcesDestroyed()
 	})
+
+	if err != nil {
+		return err
+	}
+
+	g.logger().LogDebugF("Resources were destroyed set\n")
+	return nil
 }
 
 func (g *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {

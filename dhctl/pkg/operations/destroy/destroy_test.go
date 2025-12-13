@@ -92,15 +92,8 @@ func TestStaticDestroy(t *testing.T) {
 
 		ctx := context.TODO()
 
-		waiter := newTestWaiter()
-		go testAddNodeUserCreated(ctx, tst.kubeCl, hosts, waiter)
-
 		err := tst.destroyer.DestroyCluster(ctx, true)
 		require.Error(t, err)
-
-		waiter.wg.Wait()
-
-		require.NoError(t, waiter.getErr())
 	})
 }
 
@@ -276,7 +269,6 @@ podSubnetNodeCIDRPrefix: "24"
 	destroyer := &ClusterDestroyer{
 		stateCache:       stateCache,
 		configPreparator: loader,
-		loggerProvider:   loggerProvider,
 
 		pipeline: pipeline,
 
