@@ -145,6 +145,7 @@ func (a *Application) GetRuntimeValues() addonutils.Values {
 	return addonutils.Values{
 		"Name":      a.instance,
 		"Namespace": a.namespace,
+		"Package":   a.definition.Name,
 		"Digests":   a.digests,
 		"Registry":  a.registry,
 	}
