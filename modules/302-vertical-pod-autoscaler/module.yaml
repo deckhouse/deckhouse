@@ -6,7 +6,7 @@ requirements:
   modules:
     prometheus: ">= 0.0.0"
     prometheus-metrics-adapter: ">= 0.0.0"
-stage: Preview
+stage: General Availability
 descriptions:
   en: Automatically calculates and sets resource request parameters for pods based on actual consumption. Can recommend resource values or automatically adjust CPU and memory reservations.
   ru: Автоматически рассчитывает и устанавливает параметры resource requests для подов на основе фактического потребления. Может рекомендовать значения ресурсов или автоматически корректировать резервирование CPU и памяти.

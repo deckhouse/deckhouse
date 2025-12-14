@@ -87,8 +87,6 @@ shell:
       echo "Got ${MODULES_COUNT} DKP embedded modules."
       echo
     fi
-
-
 import:
 - image: tools/jq
   add: /usr/bin/jq
