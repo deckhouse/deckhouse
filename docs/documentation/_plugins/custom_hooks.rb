@@ -65,7 +65,7 @@ def insert_module_stage_block(page)
     return if not moduleStage.is_a?(String) or moduleStage.empty?
     return if not moduleStage in modulesAllowedStages
 
-    additional_content = "\n{% include warning-version.liquid stage=\"#{moduleStage}\" %}\n\n"
+    additional_content = "\n{% include module-stage-badge.liquid stage=\"#{moduleStage}\" %}\n\n"
     page.content.prepend(additional_content)
 end
 

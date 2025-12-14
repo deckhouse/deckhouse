@@ -76,20 +76,30 @@
   {{- range sort $channelsInfo "stability" "desc" }}
     {{/* Skip rock-solid channel */}}
     {{- if eq .code "rock-solid"  }}{{ continue }}{{ end }}
+
+    {{/* The condition to select the data from the available stablest module channel */}}
     {{- if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
-    {{- $code := .code }}
-    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
+
+    {{- $channel := .code }}
+    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $channel ) }}
       {{- if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
       {{- else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
       {{- end }}
-      {{- if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+      {{- if not $moduleChannel }}{{ $moduleChannel = $channel }}{{ end }}
       {{- if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
     {{- end}}
   {{- end}}
 
+  {{- $moduleData := index (index $ctx.Site.Data.modules $module) $moduleChannel }}
+  {{- $moduleMetadata := index $moduleData "module" }}
+  {{- $moduleOss := index $moduleData "oss" }}
+  {{- if and $moduleMetadata $moduleOss }}
+    {{- $moduleMetadata = merge $moduleMetadata (dict "oss" $moduleOss) }}
+  {{- end }}
+
   {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
   {{- if (not $moduleChannel ) }}{{ continue }}{{ end }}
-  {{- $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
+  {{- $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "metadata" $moduleMetadata "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
 {{- end}}
 
 {{- warnf "Found %d modules from sources." ($modulesList | len) }}
@@ -113,23 +123,26 @@
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
         <h2 class="button-tile__title">{{ .module }}</h2>
-        {{- $moduleDescription := "" }}
-        {{- if and (index . $lang) (index (index . $lang) "description") }}
-          {{ $moduleDescription = (index (index . $lang) "description") }}
-        {{- else }}
-          {{- $moduleDescription = .description }}
-        {{- end }}
         {{- $moduleStage := "" }}
-        {{- if isset $embeddedModulesMetadata .module }}
-          {{- $moduleStage = index (index $embeddedModulesMetadata .module) "stage" }}
-        {{- end }}
-          {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-            <span>
-              <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-                {{- $moduleStage }}
-              </span>
-            </span>
+        {{- $moduleDescription := default "" .description }}
+
+        {{- if .metadata }}
+          {{- $moduleStage = .metadata.stage }}
+
+          {{/* Try to get description from module metadata (module.yaml) */}}
+          {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
+          {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
+            {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
           {{- end }}
+        {{- end }}
+
+        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+          <span>
+            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
+              {{- $moduleStage }}
+            </span>
+          </span>
+        {{- end }}
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>

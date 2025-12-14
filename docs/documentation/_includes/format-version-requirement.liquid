@@ -1,0 +1,24 @@
+{%- comment -%}
+  Formats a version requirement string.
+  If the version starts with ">=", formats it as "version and above".
+  If the version starts with ">", formats it as "above version".
+  Otherwise, returns the version as-is.
+
+  Usage: {% include format-version-requirement.liquid version=">= 1.27" %}
+         {% include format-version-requirement.liquid version="> 1.27" %}
+{%- endcomment -%}
+{%- assign version = include.version | strip -%}
+{%- assign partsGE = version | split: ">=" -%}
+{%- if partsGE.size > 1 and partsGE[0] == "" -%}
+  {%- assign versionNum = partsGE[1] | strip -%}
+  {{- versionNum }} {{ site.data.i18n.common.requirements_version_and_above[page.lang] }}
+{%- else -%}
+  {%- assign partsGT = version | split: ">" -%}
+  {%- if partsGT.size > 1 and partsGT[0] == "" -%}
+    {%- assign versionNum = partsGT[1] | strip -%}
+    {{- site.data.i18n.common.requirements_version_above[page.lang] }} {{ versionNum }}
+  {%- else -%}
+    {{- version }}
+  {%- endif -%}
+{%- endif -%}
+
