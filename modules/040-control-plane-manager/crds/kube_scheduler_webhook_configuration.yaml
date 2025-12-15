@@ -32,11 +32,35 @@ spec:
                 type: object
                 required: ['weight', 'clientConfig']
                 properties:
+                  filterVerb:
+                    type: string
+                    description: |
+                      Verb appended to `URLPrefix` when issuing a `filter` call to the scheduler extender.
+                      If omitted, defaults to `filter`(for backward compatibility, avoid making changes unless necessary).
+                      Set to an empty string `""` to disable `filter` calls for this extender.
+                  preemptVerb:
+                    type: string
+                    description: |
+                      Verb appended to `URLPrefix` when issuing a `preempt` call to this extender.
+                      Leave empty (`""`) to disable `preempt` calls for this extender.
+                  prioritizeVerb:
+                    type: string
+                    description: |
+                      Verb appended to `URLPrefix` when issuing a `prioritize` call to this extender.
+                      If omitted, defaults to `prioritize`(for backward compatibility, avoid making changes unless necessary).
+                      Set to an empty string `""` to disable `prioritize` calls for this extender.
                   weight:
                     type: integer
                     description: |
                       The numeric multiplier for the node scores that the prioritize call generates.
                     minimum: 1
+                  timeoutSeconds:
+                    type: integer
+                    description: |
+                      Webhook timeout in seconds.
+                    default: 10
+                    minimum: 1
+                    maximum: 60
                   failurePolicy:
                     type: string
                     enum: ['Fail', 'Ignore']
@@ -61,43 +85,33 @@ spec:
                               Service name.
                             pattern: '^[0-9a-z\-]+$'
                             minLength: 1
-                            maxlength: 255
+                            maxLength: 255
                           namespace:
                             type: string
                             description: |
                               Service namespace.
                             pattern: '^[0-9a-z\-]+$'
                             minLength: 1
-                            maxlength: 255
+                            maxLength: 255
                           port:
                             type: integer
                             description: |
                               Service port.
-                            minimal: 1
-                            maximal: 65535
+                            minimum: 1
+                            maximum: 65535
                           path:
                             type: string
                             description: |
                               URI path.
                             pattern: '^[0-9a-zA-Z._\/-]+$'
                             minLength: 1
-                            maxlength: 255
-                            x-kubernetes-validations:
-                            - message: check uri format
-                              rule: 'isURL(self)'
+                            maxLength: 255
                       caBundle:
                         type: string
                         description: |
                           caBundle is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
                         pattern: '^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}={2})$'
                         minLength: 4
-                  timeoutSeconds:
-                    type: integer
-                    description: |
-                      Webhook timeout in seconds.
-                    default: 10
-                    minimal: 1
-                    maximal: 60
       additionalPrinterColumns:
         - jsonPath: .webhooks[0].clientConfig.service.name
           name: Name

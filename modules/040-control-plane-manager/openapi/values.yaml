@@ -76,6 +76,12 @@ properties:
           properties:
             urlPrefix:
               type: string
+            filterVerb:
+              type: string
+            preemptVerb:
+              type: string
+            prioritizeVerb:
+              type: string
             weight:
               type: integer
             timeout:
