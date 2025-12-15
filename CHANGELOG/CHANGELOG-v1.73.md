@@ -139,6 +139,7 @@
  - **[control-plane-manager]** Add vex for CVE-2025-31133, CVE-2025-52881 . [#16337](https://github.com/deckhouse/deckhouse/pull/16337)
  - **[control-plane-manager]** Append audit policies for virtualization before appending custom policies from Secret. [#15603](https://github.com/deckhouse/deckhouse/pull/15603)
  - **[control-plane-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[dashboard]** Fixed CVE-2025-30204 by updating dashboard components [#16927](https://github.com/deckhouse/deckhouse/pull/16927)
  - **[dashboard]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[deckhouse]** Fix validation logic for a disabled module [#16385](https://github.com/deckhouse/deckhouse/pull/16385)
  - **[deckhouse]** Automatically set node ip to deckhouse pod during bootstrap phase to no_proxy env. [#15978](https://github.com/deckhouse/deckhouse/pull/15978)
@@ -241,6 +242,7 @@
  - **[prometheus-metrics-adapter]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[registry]** bump go_lib/registry dependencies [#15985](https://github.com/deckhouse/deckhouse/pull/15985)
  - **[registry-packages-proxy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[registrypackages]** Update integrity patch for containerd (cse only). [#17028](https://github.com/deckhouse/deckhouse/pull/17028)
  - **[registrypackages]** Update integrity patch for containerd (cse only). [#17000](https://github.com/deckhouse/deckhouse/pull/17000)
  - **[registrypackages]** Update containerd to 1.7.29 / 2.1.5 and runc to 1.3.3 [#16335](https://github.com/deckhouse/deckhouse/pull/16335)
  - **[registrypackages]** Fixes CVE in kubernetes-cni [#16343](https://github.com/deckhouse/deckhouse/pull/16343)
@@ -252,6 +254,7 @@
  - **[upmeter]** fix securityxontext for statefulset [#16534](https://github.com/deckhouse/deckhouse/pull/16534)
     upmeter check
  - **[upmeter]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[user-authn]** skipApproval no longer bypasses TOTP. When 2FA is enabled, users are sent to /totp before approval, so “auth request does not have an identity for approval” no longer occurs [#16946](https://github.com/deckhouse/deckhouse/pull/16946)
  - **[user-authn]** Fix BadRequest after the change password redirect when password policy is enabled [#16744](https://github.com/deckhouse/deckhouse/pull/16744)
  - **[user-authn]** Fix login error 500 with password policy enabled. [#16703](https://github.com/deckhouse/deckhouse/pull/16703)
  - **[user-authn]** Rollback patch for handling insecureSkipEmailVerified condition [#16347](https://github.com/deckhouse/deckhouse/pull/16347)
