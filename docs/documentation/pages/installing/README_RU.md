@@ -599,24 +599,31 @@ echo "$MYRESULTSTRING"
 
 Используйте функцию [Harbor Proxy Cache](https://github.com/goharbor/harbor).
 
-* Настройте registry:
-  * «Administration» → «Registries» → «New Endpoint».
-  * «Provider: Docker Registry».
-  * «Name» — укажите любое, на ваше усмотрение.
-  * «Endpoint URL: `https://registry.deckhouse.ru`».
-  * Укажите «Access ID» и «Access Secret» (лицензионный ключ для Deckhouse Kubernetes Platform).
+1. Настройте доступ к registry:
+   * в боковом меню перейдите в раздел «Administration» → «Registries»
+     и нажмите «New Endpoint», чтобы добавить эндпоинт для registry;
+   * в выпадающем списке «Provider» выберите «Docker Registry»;
+   * в поле «Name» укажите имя эндпоинта на свое усмотрение;
+   * в поле «Endpoint URL» укажите `https://registry.deckhouse.ru`;
+   * в поле «Access ID» укажите `license-token`;
+   * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform;
+   * задайте остальные параметры по своему усмотрению;
+   * нажмите «ОК», чтобы подтвердить создание эндпоинта для registry.
 
-    ![Настройка Registry](../images/registry/harbor/harbor1.png)
+   ![Настройка доступа к registry](../images/registry/harbor/harbor1.png)
 
-* Создайте новый проект:
-  * «Projects → New Project».
-  * «Project Name» будет частью URL. Используйте любой, например, `d8s`.
-  * «Access Level: `Public`».
-  * «Proxy Cache» — включите и выберите в списке registry, созданный на предыдущем шаге.
+1. Создайте новый проект:
+   * в боковом меню перейдите в раздел «Projects» и нажмите «New Project», чтобы добавить проект;
+   * в поле «Project Name» укажите любое имя проекта на свое усмотрение (например, `d8s`).
+     Указанное имя будет частью URL-адреса;
+   * в поле «Access Level» выберите «Public»;
+   * включите «Proxy Cache» и в выпадающем списке выберите registry, созданный ранее;
+   * задайте остальные параметры по своему усмотрению;
+   * нажмите «ОК», чтобы подтвердить создание проекта.
 
-    ![Создание нового проекта](../images/registry/harbor/harbor2.png)
+   ![Создание нового проекта](../images/registry/harbor/harbor2.png)
 
-В результате настройки, образы DKP станут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
+После настройки Harbor образы DKP станут доступны по адресу следующего вида: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Ручная загрузка образов Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей DKP в приватный registry
 
