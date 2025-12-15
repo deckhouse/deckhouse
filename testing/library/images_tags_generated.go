@@ -4,12 +4,10 @@ package library
 
 var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
-		"constraintExporter":       "imageHash-admissionPolicyEngine-constraintExporter",
-		"gatekeeper":               "imageHash-admissionPolicyEngine-gatekeeper",
-		"gatekeeperVexArtifact":    "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
-		"ratify":                   "imageHash-admissionPolicyEngine-ratify",
-		"trivyProvider":            "imageHash-admissionPolicyEngine-trivyProvider",
-		"trivyProviderVexArtifact": "imageHash-admissionPolicyEngine-trivyProviderVexArtifact",
+		"constraintExporter":    "imageHash-admissionPolicyEngine-constraintExporter",
+		"gatekeeper":            "imageHash-admissionPolicyEngine-gatekeeper",
+		"gatekeeperVexArtifact": "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
+		"ratify":                "imageHash-admissionPolicyEngine-ratify",
 	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
@@ -431,14 +429,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
 		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
-	},
-	"operatorTrivy": map[string]interface{}{
-		"nodeCollector":       "imageHash-operatorTrivy-nodeCollector",
-		"operator":            "imageHash-operatorTrivy-operator",
-		"operatorVexArtifact": "imageHash-operatorTrivy-operatorVexArtifact",
-		"reportUpdater":       "imageHash-operatorTrivy-reportUpdater",
-		"trivy":               "imageHash-operatorTrivy-trivy",
-		"trivyVexArtifact":    "imageHash-operatorTrivy-trivyVexArtifact",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
