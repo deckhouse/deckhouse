@@ -28,8 +28,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// LDAPProvider использует тот же OIDC password-flow, что и OpenIDConnect,
-// но в Dex настроен passwordConnector: ldap, поэтому логин/пароль проверяются через LDAP.
 type LDAPProvider struct {
 	httpClient  *http.Client
 	oidc        *oidc.Provider

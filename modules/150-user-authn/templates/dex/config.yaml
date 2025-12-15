@@ -54,8 +54,21 @@
   logger:
     level: info
     format: json
+  {{- $passwordConnector := "" }}
+  {{- range $provider := $context.Values.userAuthn.internal.providers }}
+    {{- if and (eq $provider.type "LDAP") ($provider.ldap.enableBasicAuth) }}
+      {{- if ne $passwordConnector "" }}
+        {{- fail "enableBasicAuth option must be enabled ONLY in one provider" }}
+      {{- end }}
+      {{- $passwordConnector = $provider.id }}
+    {{- end }}
+  {{- end }}
+
   oauth2:
     responseTypes: ["code", "token", "id_token"]
+    {{- if ne $passwordConnector "" }}
+    passwordConnector: {{ $passwordConnector | quote }}
+    {{- end }}
   {{- with $context.Values.userAuthn.staticUsers2FA }}
     {{/* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */}}
     {{ if .enabled }}

@@ -127,8 +127,8 @@ spec:
         - --oidc-base-url={{ $config.issuer }}
         - --oidc-client-id={{ $config.clientID }}
         - --oidc-client-secret={{ $config.clientSecret }}
-        - --oidc-get-user-info={{ $config.getUserInfo }}
-        - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
+        - --oidc-get-user-info={{ $config.getUserInfo | default false }}
+        - --oidc-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
         - --oidc-scope={{ $scope }}
@@ -143,11 +143,11 @@ spec:
         {{- end }}
         {{- end }}
         {{- if eq $type "LDAP" }}
-        - --ldap-base-url={{ $config.issuer }}
-        - --ldap-client-id={{ $config.clientID }}
-        - --ldap-client-secret={{ $config.clientSecret }}
-        - --ldap-get-user-info={{ $config.getUserInfo }}
-        - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported }}
+        - --ldap-base-url=https://dex.d8-user-authn
+        - --ldap-client-id=kubernetes
+        - --ldap-client-secret={{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+        - --ldap-get-user-info=true
+        - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
         - --ldap-scope={{ $scope }}
