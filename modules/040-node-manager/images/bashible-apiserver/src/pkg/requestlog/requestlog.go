@@ -33,6 +33,12 @@ func WithRequestLogging(next http.Handler) http.Handler {
 		r = r.WithContext(ctx)
 
 		info, _ := apirequest.RequestInfoFrom(ctx)
+		resource := resourceName(info)
+		if len(resource) == 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		klog.Infof(
 			"bashible-request id=%s remote=%s method=%s uri=%s resource=%s name=%s verb=%s query=%s ua=%s",
 			reqID,
