@@ -43,7 +43,13 @@ const (
 	DeckhouseNetworkLoadBalancerClassType = "network.deckhouse.io/load-balancer-class"
 	LBCreationPollInterval                = 5 * time.Second
 	LBCreationPollTimeout                 = 5 * time.Minute
+	MetalLBAddressPoolAnnotation          = "metallb.universe.tf/address-pool"
 )
+
+var dvpLBClassToAddressPool = map[string]string{
+	"dvp-public": "bgp-default",
+	"dvp-system": "bgp-test",
+}
 
 type LoadBalancerService struct {
 	*Service
@@ -58,6 +64,33 @@ type LoadBalancer struct {
 
 func NewLoadBalancerService(service *Service) *LoadBalancerService {
 	return &LoadBalancerService{service}
+}
+
+func (lb *LoadBalancerService) EnsureServiceLoadBalancerClass(
+	ctx context.Context,
+	service *corev1.Service,
+	defaultClass string,
+) (string, error) {
+	if service.Spec.LoadBalancerClass != nil && *service.Spec.LoadBalancerClass != "" {
+		return *service.Spec.LoadBalancerClass, nil
+	}
+
+	def := strings.TrimSpace(defaultClass)
+	if def == "" {
+		return "", fmt.Errorf("default loadBalancerClass is empty")
+	}
+
+	patch := []byte(`{"spec":{"loadBalancerClass":"` + def + `"}}`)
+	if err := lb.client.Patch(ctx, service, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		if k8serrors.IsConflict(err) {
+			service.Spec.LoadBalancerClass = ptr.To(def)
+			return def, nil
+		}
+		return "", err
+	}
+
+	service.Spec.LoadBalancerClass = ptr.To(def)
+	return def, nil
 }
 
 func (lb *LoadBalancerService) GetLoadBalancerByName(ctx context.Context, name string) (*corev1.Service, error) {
@@ -158,6 +191,8 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
 	}
 
+	applyMetalLBAddressPoolAnnotation(svc, service)
+
 	err := lb.client.Update(ctx, svc)
 	if err != nil {
 		return nil, err
@@ -212,6 +247,9 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Selector:              map[string]string{lbKey: "loadbalancer"},
 		},
 	}
+
+	applyMetalLBAddressPoolAnnotation(svc, service)
+
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
 	}
@@ -399,4 +437,23 @@ func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *core
 		}
 	}
 	return healthy, nil
+}
+
+func applyMetalLBAddressPoolAnnotation(dst *corev1.Service, src *corev1.Service) {
+	if dst.Annotations == nil {
+		dst.Annotations = map[string]string{}
+	}
+
+	lbClass := ""
+	if src.Spec.LoadBalancerClass != nil {
+		lbClass = *src.Spec.LoadBalancerClass
+	}
+
+	pool, ok := dvpLBClassToAddressPool[lbClass]
+	if ok {
+		dst.Annotations[MetalLBAddressPoolAnnotation] = pool
+		return
+	}
+
+	delete(dst.Annotations, MetalLBAddressPoolAnnotation)
 }
