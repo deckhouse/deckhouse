@@ -25,7 +25,8 @@
         "namespace": "d8-admission-policy-engine",
         "description": "Admission policy engine module\n",
         "descriptions": {
-          "en": "Admission policy engine module"
+          "en": "Enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.",
+          "ru": "Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes с использованием решения Gatekeeper."
         },
         "oss": [
           {
@@ -60,9 +61,9 @@
           "security"
         ],
         "namespace": "d8-cert-manager",
-        "description": "This module installs the reliable and highly available cert-manager\nhttps://github.com/jetstack/cert-manager\n",
         "descriptions": {
-          "en": "This module installs the reliable and highly available cert-manager\nhttps://github.com/jetstack/cert-manager\n"
+          "en": "Manages TLS certificates in the cluster. Supports automatic certificate provisioning from various CAs, certificate renewal, and monitoring of certificate validity.",
+          "ru": "Управляет TLS-сертификатами в кластере. Поддерживает автоматическое получение сертификатов из различных CA, обновление сертификатов и мониторинг их действительности."
         },
         "oss": [
           {
@@ -99,6 +100,10 @@
         ],
         "namespace": "d8-chrony",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Provides time synchronization on all cluster nodes using chrony. Ensures consistent time across all nodes for proper cluster operation.",
+          "ru": "Обеспечивает синхронизацию времени на всех узлах кластера с помощью chrony. Гарантирует единое время на всех узлах для корректной работы кластера."
+        },
         "oss": [
           {
             "name": "Chrony",
@@ -144,9 +149,9 @@
           "networking"
         ],
         "namespace": "d8-cni-cilium",
-        "description": "The cilium-hubble module\n",
         "descriptions": {
-          "en": "The cilium-hubble module"
+          "en": "Provides visualization of the cluster network stack when Cilium CNI is enabled. Requires Linux kernel version 5.8 or higher with eBPF support.",
+          "ru": "Обеспечивает визуализацию сетевого стека кластера при включенном CNI Cilium. Требует версию ядра Linux 5.8 или выше с поддержкой eBPF."
         },
         "requirements": {
           "modules": {
@@ -188,6 +193,10 @@
         ],
         "namespace": "d8-cloud-provider-aws",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages interaction with AWS cloud resources. Allows to use AWS resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами AWS. Позволяет использовать ресурсы AWS при создании узлов."
+        },
         "oss": []
       }
     },
@@ -215,6 +224,10 @@
         ],
         "namespace": "d8-cloud-provider-azure",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages interaction with Azure cloud resources. Allows to use Azure resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами Azure. Позволяет использовать ресурсы Azure при создании узлов."
+        },
         "oss": []
       }
     },
@@ -243,6 +256,10 @@
         ],
         "namespace": "d8-cloud-provider-dvp",
         "stage": "Experimental",
+        "descriptions": {
+          "en": "Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов."
+        },
         "oss": []
       }
     },
@@ -252,8 +269,8 @@
       "module": "cloud-provider-dynamix",
       "embedded": "true",
       "tags": [
-        "cloud",
         "bare-metal",
+        "cloud",
         "embedded"
       ],
       "editionMinimumAvailable": "ee",
@@ -271,6 +288,10 @@
         ],
         "namespace": "d8-cloud-provider-dynamix",
         "stage": "Experimental",
+        "descriptions": {
+          "en": "Manages interaction with Dynamix resources. Allows to use Dynamix resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов."
+        },
         "oss": []
       }
     },
@@ -298,6 +319,10 @@
         ],
         "namespace": "d8-cloud-provider-gcp",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages interaction with Google cloud resources. Allows to use GCP resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами Google Cloud. Позволяет использовать ресурсы GCP при создании узлов."
+        },
         "oss": []
       }
     },
@@ -325,6 +350,10 @@
         ],
         "namespace": "d8-cloud-provider-huaweicloud",
         "stage": "Experimental",
+        "descriptions": {
+          "en": "Manages interaction with Huawei Cloud resources. Allows to use Huawei Cloud resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов."
+        },
         "oss": []
       }
     },
@@ -352,6 +381,10 @@
         ],
         "namespace": "d8-cloud-provider-openstack",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages interaction with OpenStack-based cloud resources. Allows to use OpenStack resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами OpenStack. Позволяет использовать ресурсы OpenStack при создании узлов."
+        },
         "oss": []
       }
     },
@@ -379,6 +412,10 @@
         ],
         "namespace": "d8-cloud-provider-vcd",
         "stage": "Experimental",
+        "descriptions": {
+          "en": "Manages interaction with VMware Cloud Director resources. Allows to use VMware Cloud Director resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами VMware Cloud Director. Позволяет использовать ресурсы VMware Cloud Director при создании узлов."
+        },
         "oss": []
       }
     },
@@ -401,7 +438,8 @@
       "metadata": {
         "name": "cloud-provider-vsphere",
         "descriptions": {
-          "en": "Cloud provider Vsphere"
+          "en": "Manages interaction with VMware vSphere-based cloud resources. Allows to use vSphere resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами VMware vSphere. Позволяет использовать ресурсы vSphere при создании узлов."
         },
         "critical": true,
         "weight": 30,
@@ -437,6 +475,10 @@
         ],
         "namespace": "d8-cloud-provider-yandex",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages interaction with Yandex Cloud resources. Allows to use Yandex Cloud resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами Yandex Cloud. Позволяет использовать ресурсы Yandex Cloud при создании узлов."
+        },
         "oss": []
       }
     },
@@ -465,6 +507,10 @@
         ],
         "namespace": "d8-cloud-provider-zvirt",
         "stage": "Experimental",
+        "descriptions": {
+          "en": "Manages interaction with zVirt resources. Allows to use zVirt resources for provisioning nodes.",
+          "ru": "Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов."
+        },
         "oss": []
       }
     },
@@ -493,6 +539,10 @@
           "networking"
         ],
         "namespace": "d8-cni-cilium",
+        "descriptions": {
+          "en": "Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.",
+          "ru": "Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF."
+        },
         "oss": [
           {
             "name": "Cilium",
@@ -528,6 +578,10 @@
           "networking"
         ],
         "namespace": "d8-cni-flannel",
+        "descriptions": {
+          "en": "Provides a network between multiple nodes in a cluster using the flannel module.",
+          "ru": "Обеспечивает работу сети в кластере с помощью модуля flannel."
+        },
         "oss": [
           {
             "name": "Flannel",
@@ -563,6 +617,10 @@
           "networking"
         ],
         "namespace": "d8-cni-simple-bridge",
+        "descriptions": {
+          "en": "Provides networking with limited functionality in Kubernetes clusters.",
+          "ru": "Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes."
+        },
         "oss": []
       }
     },
@@ -590,6 +648,10 @@
         ],
         "namespace": "kube-system",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Manages the cluster's control plane components including certificates, configurations, and versions.",
+          "ru": "Управляет компонентами control plane кластера, включая сертификаты, конфигурации и версии."
+        },
         "oss": [
           {
             "name": "Kubernetes",
@@ -644,6 +706,10 @@
         "requirements": {
           "user-authz": ">= 0.0.0"
         },
+        "descriptions": {
+          "en": "Installs Kubernetes Dashboard Web UI for managing applications in the cluster. Integrated with user authentication and authorization modules.",
+          "ru": "Устанавливает Web UI Kubernetes Dashboard для управления приложениями в кластере. Интегрирован с модулями аутентификации и авторизации пользователей."
+        },
         "oss": [
           {
             "name": "Kubernetes Dashboard",
@@ -682,6 +748,10 @@
         "disable": {
           "confirmation": true,
           "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        },
+        "descriptions": {
+          "en": "Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.",
+          "ru": "Настраивает основные параметры Deckhouse: уровень логирования, набор модулей, включенных по умолчанию, и канал обновлений."
         },
         "oss": [
           {
@@ -752,6 +822,10 @@
         "name": "deckhouse-tools",
         "namespace": "d8-system",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Creates a web UI with links to download Deckhouse CLI tool for various operating systems.",
+          "ru": "Создает веб-интерфейс для скачивания из кластера утилиты Deckhouse CLI под различные операционные системы."
+        },
         "oss": []
       }
     },
@@ -776,9 +850,9 @@
           "infrastructure"
         ],
         "namespace": "d8-descheduler",
-        "description": "The module runs a descheduler with strategies defined in a `Descheduler` custom resource.\n",
         "descriptions": {
-          "en": "The module runs a descheduler with strategies defined in a `Descheduler` custom resource."
+          "en": "Analyzes the cluster state every 15 minutes and performs pod eviction according to conditions described in active strategies. Evicted pods are rescheduled considering the current cluster state.",
+          "ru": "Анализирует состояние кластера каждые 15 минут и выполняет вытеснение подов согласно условиям, описанным в активных стратегиях. Позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией."
         },
         "stage": "General Availability",
         "oss": [
@@ -820,9 +894,9 @@
       "metadata": {
         "name": "documentation",
         "stage": "General Availability",
-        "description": "Documentation module\n",
         "descriptions": {
-          "en": "Documentation module"
+          "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
+          "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform."
         },
         "namespace": "d8-system",
         "oss": []
@@ -855,6 +929,10 @@
             "prometheus": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
+          "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
+        },
         "oss": []
       }
     },
@@ -882,8 +960,8 @@
         ],
         "namespace": "d8-ingress-nginx",
         "descriptions": {
-          "ru": "Оператор для обслуживания входящего трафика на основе Nginx Ingress Controller.\n",
-          "en": "Ingress controller for nginx\nhttps://kubernetes.github.io/ingress-nginx\n"
+          "en": "Installs and manages Ingress NGINX Controller using Custom Resources. Supports multiple controllers and high availability mode for traffic routing and load balancing.",
+          "ru": "Устанавливает и управляет Ingress NGINX Controller с помощью Custom Resources. Поддерживает несколько контроллеров и режим высокой доступности для маршрутизации трафика и балансировки нагрузки."
         },
         "oss": [
           {
@@ -938,9 +1016,9 @@
           "networking"
         ],
         "namespace": "d8-istio",
-        "description": "Service Mesh\n",
         "descriptions": {
-          "en": "Service Mesh"
+          "en": "Implements Service Mesh for centralized management of network traffic in the cluster. Provides mutual TLS, authorization, traffic routing, load balancing, and observability.",
+          "ru": "Реализует Service Mesh для централизованного управления сетевым трафиком в кластере. Обеспечивает mutual TLS, авторизацию, маршрутизацию трафика, балансировку нагрузки и наблюдаемость."
         },
         "oss": [
           {
@@ -984,6 +1062,10 @@
           "infrastructure"
         ],
         "namespace": "d8-keepalived",
+        "descriptions": {
+          "en": "Configures keepalived clusters on nodes via custom resources. Does not work with the cilium module.",
+          "ru": "Настраивает keepalived-кластеры на узлах через custom resources. Не работает с модулем cilium."
+        },
         "oss": [
           {
             "name": "keepalived",
@@ -1020,6 +1102,10 @@
           "networking"
         ],
         "namespace": "kube-system",
+        "descriptions": {
+          "en": "Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.",
+          "ru": "Устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes. Удаляет ранее установленные kubeadm'ом Deployment, ConfigMap и RBAC для CoreDNS."
+        },
         "oss": [
           {
             "name": "CoreDNS",
@@ -1056,6 +1142,10 @@
           "networking"
         ],
         "namespace": "kube-system",
+        "descriptions": {
+          "en": "Manages kube-proxy components for service networking and load balancing in the cluster. Replaces kubeadm's kube-proxy with a custom implementation.",
+          "ru": "Управляет компонентами kube-proxy для сетевого взаимодействия сервисов и балансировки нагрузки в кластере. Заменяет kube-proxy от kubeadm на собственную реализацию."
+        },
         "oss": []
       }
     },
@@ -1083,6 +1173,10 @@
           "infrastructure"
         ],
         "namespace": "d8-local-path-provisioner",
+        "descriptions": {
+          "en": "Provides local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources for managing local storage provisioning.",
+          "ru": "Предоставляет локальное хранилище на узлах Kubernetes с использованием томов HostPath. Создает ресурсы StorageClass для управления выделением локального хранилища."
+        },
         "oss": [
           {
             "name": "Local-path-provisioner",
@@ -1117,9 +1211,9 @@
           "observability"
         ],
         "namespace": "d8-log-shipper",
-        "description": "Collecting logs in the Kubernetes cluster\n",
         "descriptions": {
-          "en": "Collecting logs in the Kubernetes cluster\n"
+          "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
+          "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
         },
         "oss": [
           {
@@ -1155,6 +1249,10 @@
           "infrastructure"
         ],
         "namespace": "d8-monitoring",
+        "descriptions": {
+          "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
+          "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
+        },
         "oss": [
           {
             "name": "Loki",
@@ -1190,6 +1288,10 @@
           "networking"
         ],
         "namespace": "d8-metallb",
+        "descriptions": {
+          "en": "Implements LoadBalancer mechanism for services in bare metal clusters. Supports Layer 2 mode with improved load balancing and BGP mode based on MetalLB solution.",
+          "ru": "Реализует механизм LoadBalancer для сервисов в кластерах bare metal. Поддерживает режим Layer 2 с улучшенной балансировкой нагрузки и режим BGP на базе решения MetalLB."
+        },
         "oss": [
           {
             "name": "MetalLB",
@@ -1236,6 +1338,10 @@
             "prometheus": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.",
+          "ru": "Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus."
+        },
         "oss": []
       }
     },
@@ -1265,6 +1371,10 @@
           "modules": {
             "prometheus": ">= 0.0.0"
           }
+        },
+        "descriptions": {
+          "en": "Provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.",
+          "ru": "Обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов."
         },
         "oss": [
           {
@@ -1312,6 +1422,10 @@
             "control-plane-manager": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Monitors the Kubernetes control plane components. Safely scrapes metrics and provides basic monitoring rules for kube-apiserver, kube-controller-manager, kube-scheduler, and etcd.",
+          "ru": "Мониторит компоненты control plane Kubernetes. Организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга для kube-apiserver, kube-controller-manager, kube-scheduler и etcd."
+        },
         "oss": []
       }
     },
@@ -1343,6 +1457,10 @@
             "monitoring-kubernetes": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Monitors network connectivity between all cluster nodes using ICMP ping. Exports metrics and provides monitoring dashboards.",
+          "ru": "Мониторит сетевую связность между всеми узлами кластера с помощью ICMP ping. Экспортирует метрики и предоставляет дашборды в системе мониторинга."
+        },
         "oss": []
       }
     },
@@ -1371,6 +1489,10 @@
           "deckhouse"
         ],
         "namespace": "d8-multitenancy-manager",
+        "descriptions": {
+          "en": "Enables creation of isolated projects in a cluster. Projects provide resource quotas, network isolation, and security features beyond standard namespaces.",
+          "ru": "Позволяет создавать изолированные проекты в кластере. Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён."
+        },
         "oss": []
       }
     },
@@ -1393,6 +1515,10 @@
         "name": "namespace-configurator",
         "stage": "General Availability",
         "namespace": "d8-system",
+        "descriptions": {
+          "en": "Automatically assigns annotations and labels to namespaces based on configuration patterns. Monitors namespaces and applies labels and annotations from configuration to matching namespaces.",
+          "ru": "Автоматически назначает аннотации и лейблы пространствам имён на основе шаблонов конфигурации. Отслеживает пространства имён и применяет лейблы и аннотации из конфигурации к соответствующим пространствам имён."
+        },
         "oss": []
       }
     },
@@ -1420,6 +1546,10 @@
           "networking"
         ],
         "namespace": "d8-network-gateway",
+        "descriptions": {
+          "en": "Creates a network gateway using Kubernetes nodes. It contains a DHCP server and a SNAT manager.",
+          "ru": "Создает сетевой шлюз из Kubernetes-узлов. Содержит в себе DHCP-сервер и настройщик SNAT."
+        },
         "oss": []
       }
     },
@@ -1446,6 +1576,10 @@
           "networking"
         ],
         "namespace": "d8-system",
+        "descriptions": {
+          "en": "Manages network policies in the cluster. Do not use if the cilium module is enabled because it already has network policy management.",
+          "ru": "Управляет сетевыми политиками в кластере. Не используйте модуль, если включен модуль cilium, так как в нем уже есть функционал управления сетевыми политиками."
+        },
         "oss": [
           {
             "name": "Kube-router",
@@ -1484,6 +1618,10 @@
             "kube-dns": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.",
+          "ru": "Разворачивает кэширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа."
+        },
         "oss": []
       }
     },
@@ -1511,9 +1649,9 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-instance-manager",
-        "description": "Managing nodes\n",
         "descriptions": {
-          "en": "Managing nodes"
+          "en": "Manages nodes in the Kubernetes cluster as a related group. Configures and updates cluster nodes, manages cluster scaling in the cloud, and manages local users on nodes.",
+          "ru": "Управляет узлами кластера Kubernetes как связанной группой. Настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет локальными пользователями на узлах."
         },
         "stage": "General Availability",
         "oss": [
@@ -1550,6 +1688,10 @@
           "observability"
         ],
         "namespace": "d8-okmeter",
+        "descriptions": {
+          "en": "Installs the Okmeter agent in the cluster.",
+          "ru": "Устанавливает агент Okmeter в кластере."
+        },
         "oss": []
       }
     },
@@ -1586,6 +1728,10 @@
           "networking"
         ],
         "namespace": "d8-openvpn",
+        "descriptions": {
+          "en": "Provides access to cluster resources via OpenVPN with certificate-based authentication. Includes a web interface for managing certificates and generating configuration files.",
+          "ru": "Предоставляет доступ к ресурсам кластера через OpenVPN с аутентификацией по сертификатам. Включает веб-интерфейс для управления сертификатами и генерации конфигурационных файлов."
+        },
         "oss": [
           {
             "name": "OpenVPN",
@@ -1619,9 +1765,9 @@
           "observability"
         ],
         "namespace": "d8-operator-prometheus",
-        "description": "This module installs the prometheus operator for creating Prometheus installations\n",
         "descriptions": {
-          "en": "This module installs the prometheus operator for creating Prometheus installations\n"
+          "en": "Installs the Prometheus Operator, which automates the deployment and management of Prometheus installations.",
+          "ru": "Устанавливает Prometheus Operator, который автоматизирует развёртывание и управление инсталляциями Prometheus."
         },
         "oss": [
           {
@@ -1656,6 +1802,10 @@
           "security"
         ],
         "namespace": "d8-operator-trivy",
+        "descriptions": {
+          "en": "Allows you to run a regular vulnerability scans of user images in runtime on known CVEs.",
+          "ru": "Позволяет запускать регулярную проверку пользовательских образов в runtime на известные CVE, включая уязвимости Astra Linux, Redos и ALT Linux. Для сканирования используются публичные базы уязвимостей, обогащаемые базами Astra Linux, ALT Linux и РЕД ОС."
+        },
         "oss": [
           {
             "name": "Trivy Operator",
@@ -1707,9 +1857,9 @@
           "observability"
         ],
         "namespace": "d8-monitoring",
-        "description": "The Prometheus monitoring module\n",
         "descriptions": {
-          "en": "The Prometheus monitoring module\n"
+          "en": "Deploys monitoring stack with preset configuration for platform and applications. Includes ready-made alerts and dashboards.",
+          "ru": "Разворачивает стек мониторинга с предустановленной конфигурацией для платформы и приложений. Включает готовые алерты и дашборды."
         },
         "requirements": {
           "modules": {
@@ -1791,6 +1941,10 @@
             "prometheus": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
+          "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
+        },
         "oss": [
           {
             "name": "Kubernetes Metrics Server",
@@ -1829,6 +1983,10 @@
             "prometheus": ">= 0.0.0"
           }
         },
+        "descriptions": {
+          "en": "Installs Prometheus Pushgateway into the cluster, designed to receive metrics from an application and pushes them to Prometheus.",
+          "ru": "Устанавливает в кластер Prometheus Pushgateway, предназначенный для приема метрик от приложения и отдачи их Prometheus."
+        },
         "oss": [
           {
             "name": "Prometheus Pushgateway",
@@ -1847,7 +2005,8 @@
       "embedded": "true",
       "tags": [
         "core",
-        "embedded"
+        "embedded",
+        "registry"
       ],
       "editionMinimumAvailable": "ce",
       "url": "registry/",
@@ -1869,6 +2028,10 @@
         "disable": {
           "confirmation": true,
           "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+        },
+        "descriptions": {
+          "en": "Manages the configuration of the registry of Deckhouse components and provides an internal container registry.",
+          "ru": "Отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров."
         },
         "oss": [
           {
@@ -1909,6 +2072,10 @@
         "subsystems": [
           "security"
         ],
+        "descriptions": {
+          "en": "Automatically copies Secrets to all namespaces in the cluster. Simplifies distribution of shared secrets.",
+          "ru": "Автоматически копирует секреты во все пространства имён кластера. Упрощает распространение общих секретов."
+        },
         "oss": []
       }
     },
@@ -1932,7 +2099,10 @@
         "name": "service-with-healthchecks",
         "stage": "General Availability",
         "namespace": "d8-service-with-healthchecks",
-        "description": "Internal LoadBalancer with per-port healthchecks.\n",
+        "descriptions": {
+          "en": "Provides an internal LoadBalancer with per-port healthchecks. Allows independent health checks for different ports, unlike the standard Kubernetes Service load balancer.",
+          "ru": "Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes."
+        },
         "oss": []
       }
     },
@@ -1962,6 +2132,10 @@
         ],
         "namespace": "d8-system",
         "stage": "General Availability",
+        "descriptions": {
+          "en": "Provides tools for working with Terraform state in the Kubernetes cluster. Consists of two parts that check Terraform state and apply non-destructive changes or export cluster metrics.",
+          "ru": "Предоставляет инструменты для работы с состоянием Terraform в кластере Kubernetes. Состоит из двух частей, которые проверяют состояние Terraform и применяют недеструктивные изменения или экспортируют метрики кластера."
+        },
         "oss": [
           {
             "name": "Terraform",
@@ -2011,6 +2185,10 @@
           "observability"
         ],
         "namespace": "d8-upmeter",
+        "descriptions": {
+          "en": "Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.",
+          "ru": "Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов."
+        },
         "oss": []
       }
     },
@@ -2052,6 +2230,10 @@
         ],
         "namespace": "d8-user-authn",
         "weight": 150,
+        "descriptions": {
+          "en": "Provides unified authentication system integrated with Kubernetes and web interfaces. Supports static users and external identity providers.",
+          "ru": "Предоставляет единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами. Поддерживает статических пользователей и внешние провайдеры идентификации."
+        },
         "oss": [
           {
             "name": "Dex",
@@ -2092,9 +2274,9 @@
         "subsystems": [
           "security"
         ],
-        "description": "The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.\n",
         "descriptions": {
-          "en": "The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.\n"
+          "en": "Implements role-based access control. Creates cluster roles for managing user and group access to cluster resources.",
+          "ru": "Реализует ролевую модель доступа. Создает кластерные роли для управления доступом пользователей и групп к ресурсам кластера."
         },
         "oss": []
       }
@@ -2130,8 +2312,8 @@
         },
         "stage": "General Availability",
         "descriptions": {
-          "ru": "Инструмент Kubernetes, который автоматически настраивает CPU и RAM для контейнеров.",
-          "en": "This is a Kubernetes tool that automatically adjusts CPU and RAM for containers."
+          "en": "Automatically calculates and sets resource request parameters for pods based on actual consumption. Can recommend resource values or automatically adjust CPU and memory reservations.",
+          "ru": "Автоматически рассчитывает и устанавливает параметры resource requests для подов на основе фактического потребления. Может рекомендовать значения ресурсов или автоматически корректировать резервирование CPU и памяти."
         },
         "oss": [
           {

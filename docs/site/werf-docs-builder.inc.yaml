@@ -14,10 +14,6 @@ import:
   add: /export/embedded_modules.json
   to: /app/hugo-init/data/dkp/embedded_modules.json
   before: setup
-- image: d8-docs-artifacts
-  add: /export/embedded_modules_metadata.json
-  to: /app/hugo-init/data/dkp/embedded_modules_metadata.json
-  before: setup
 imageSpec:
   config:
     workingDir: "/app"
