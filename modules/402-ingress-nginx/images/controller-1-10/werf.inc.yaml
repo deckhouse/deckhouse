@@ -326,10 +326,6 @@ import:
   - bin/pkill
   - bin/pgrep
   before: setup
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
