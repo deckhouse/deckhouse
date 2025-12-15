@@ -134,7 +134,7 @@ func (m *Manager) ValidateSettings(ctx context.Context, name string, settings ad
 	return app.ValidateSettings(ctx, settings)
 }
 
-// ApplySettings validates and apply setting to application
+// ApplySettings validates and applies settings to application
 func (m *Manager) ApplySettings(ctx context.Context, name string, settings addonutils.Values) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ApplySettings")
 	defer span.End()
@@ -149,11 +149,16 @@ func (m *Manager) ApplySettings(ctx context.Context, name string, settings addon
 
 	m.logger.Debug("apply settings", slog.String("name", name))
 
-	if _, err := app.ValidateSettings(ctx, settings); err != nil {
+	res, err := app.ValidateSettings(ctx, settings)
+	if err != nil {
 		return newApplySettingsErr(err)
 	}
 
-	if err := app.ApplySettings(settings); err != nil {
+	if !res.Allow {
+		return newApplySettingsErr(errors.New(res.Warning))
+	}
+
+	if err = app.ApplySettings(settings); err != nil {
 		return newApplySettingsErr(err)
 	}
 
