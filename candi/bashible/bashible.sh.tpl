@@ -225,13 +225,22 @@ function get_secret() {
   fi
 }
 
+log_configuration_checksum() {
+  local kind="$1"
+  local objName="$2"
+  local payload="$3"
+  local checksum
+  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
+  bb-log-info "Got $kind/$objName configuration checksum: $checksum"
+}
+
 function get_bundle() {
   resource="$1"
   name="$2"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until bb-kubectl-exec get "$resource" "$name" -o json; do
+    until json=$(bb-kubectl-exec get "$resource" "$name" -o json); do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -240,15 +249,20 @@ function get_bundle() {
       >&2 echo "failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
+    log_configuration_checksum "$resource" "$name" "$json"
+    echo "$json"
+    return 0
 {{ if eq .runType "Normal" }}
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if json=$(d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt")
         then
-         return 0
+          log_configuration_checksum "$resource" "$name" "$json"
+          echo "$json"
+          return 0
         else
           >&2 echo "failed to get $resource $name with curl https://$server..."
         fi
