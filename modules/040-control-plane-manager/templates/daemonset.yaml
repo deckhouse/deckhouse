@@ -195,7 +195,7 @@ spec:
     kind: DaemonSet
     name: {{ $dsMode }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: control-plane-manager

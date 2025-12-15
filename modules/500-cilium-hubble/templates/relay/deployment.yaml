@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: hubble-relay
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: hubble-relay

@@ -22,7 +22,7 @@ spec:
     kind: StatefulSet
     name: geoproxy
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
       - containerName: geoproxy

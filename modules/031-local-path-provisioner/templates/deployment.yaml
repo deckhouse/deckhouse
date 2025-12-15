@@ -19,7 +19,7 @@ spec:
     kind: Deployment
     name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "local-path-provisioner"

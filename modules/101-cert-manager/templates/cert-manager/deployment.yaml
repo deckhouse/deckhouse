@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: cert-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "cert-manager"

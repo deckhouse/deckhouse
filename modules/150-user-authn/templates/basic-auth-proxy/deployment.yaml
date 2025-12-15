@@ -45,7 +45,7 @@ spec:
     kind: Deployment
     name: basic-auth-proxy
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "proxy"

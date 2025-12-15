@@ -48,7 +48,7 @@ spec:
     kind: Deployment
     name: cluster-autoscaler
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "cluster-autoscaler"

@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: caphc-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "caphc-controller-manager"

@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: capdvp-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "capdvp-controller-manager"

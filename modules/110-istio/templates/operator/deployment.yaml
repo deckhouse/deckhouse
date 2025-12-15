@@ -27,7 +27,7 @@ spec:
     kind: Deployment
     name: operator-{{ $revision }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: operator
