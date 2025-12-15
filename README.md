@@ -1,3 +1,5 @@
+test
+
 <p align="center">
   <img alt="Deckhouse Kubernetes Platform" src="docs/documentation/images/logos/DKP_dark_mode.svg#gh-dark-mode-only" alt="Deckhouse Kubernetes Platform" />
   <img alt="Deckhouse Kubernetes Platform" src="docs/documentation/images/logos/DKP_light_mode.svg#gh-light-mode-only" alt="Deckhouse Kubernetes Platform" />
