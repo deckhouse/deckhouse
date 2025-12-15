@@ -461,7 +461,6 @@ func contextNotFoundError(contextKey string) error {
 	return &ContextNotFoundError{Key: contextKey}
 }
 
-// GetConfigurationChecksum returns previously calculated configuration checksum for nodegroup.
 func (c *BashibleContext) GetConfigurationChecksum(ng string) (string, bool) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
