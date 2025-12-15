@@ -95,16 +95,17 @@ fi
 if [ "$CURRENT_BYTES" -ne "$DESIRED_BYTES" ]; then
   bb-log-info "Creating swapfile: current=${CURRENT_BYTES} bytes, desired=${DESIRED_BYTES} bytes (${SIZE_NUM}G)"
   
-  # Do not allow filling the filesystem above 99%
+  # Do not allow filling the filesystem above 90%
+  # See evictionSoftThresholdNodefsAvailable in 064_configure_kubelet.sh.tpl
   TOTAL_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $2}')
   USED_KB=$(df -Pk "$SWAP_DIR" | awk 'NR==2 {print $3}')
   DESIRED_KB=$((DESIRED_BYTES / 1024))
-  MAX_USED_KB=$((TOTAL_KB * 99 / 100))
+  MAX_USED_KB=$((TOTAL_KB * 90 / 100))
   if [ $((USED_KB + DESIRED_KB)) -gt "$MAX_USED_KB" ]; then
     USED_GB=$((USED_KB / 1024 / 1024))
     MAX_USED_GB=$((MAX_USED_KB / 1024 / 1024))
     DESIRED_GB=$((DESIRED_KB / 1024 / 1024))
-    bb-log-error "Cannot create swapfile: would fill $SWAP_DIR to >=99% (used ${USED_GB}G + ${DESIRED_GB}G swap > ${MAX_USED_GB}G max allowed)"
+    bb-log-error "Cannot create swapfile: would fill $SWAP_DIR to >=90% (used ${USED_GB}G + ${DESIRED_GB}G swap > ${MAX_USED_GB}G max allowed)"
     exit 1
   fi
 
