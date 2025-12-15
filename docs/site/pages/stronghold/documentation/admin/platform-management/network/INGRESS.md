@@ -41,7 +41,7 @@ For configuration details on the `IngressNginxController` resource, refer to the
 
 ### HTTPS termination
 
-The `ingress-nginx` module lets you configure HTTPS security policies for each Ingress NGINX Сontroller, including:
+The `ingress-nginx` module lets you configure HTTPS security policies for each Ingress NGINX Controller, including:
 
 - Managing HTTP Strict Transport Security (HSTS) parameters
 - Configuring supported versions of SSL/TLS and encryption protocols
