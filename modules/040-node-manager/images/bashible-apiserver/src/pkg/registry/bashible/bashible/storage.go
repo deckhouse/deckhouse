@@ -27,6 +27,7 @@ import (
 
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 const templateName = "bashible.sh.tpl"
@@ -76,12 +77,7 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 	obj.Data = map[string]string{}
 	obj.Data[r.FileName] = r.Content.String()
 
-	if checksum, ok := s.bashibleContext.GetConfigurationChecksum(ngName); ok {
-		if obj.Annotations == nil {
-			obj.Annotations = map[string]string{}
-		}
-		obj.Annotations["bashible.deckhouse.io/configuration-checksum"] = checksum
-	}
+	util.SetConfigurationChecksumAnnotation(s.bashibleContext, ngName, &obj.ObjectMeta)
 
 	return &obj, nil
 }

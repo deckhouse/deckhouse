@@ -24,6 +24,7 @@ import (
 
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
@@ -53,12 +54,7 @@ func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = ngBundleData
 
-	if checksum, ok := s.bashibleContext.GetConfigurationChecksum(ng); ok {
-		if obj.Annotations == nil {
-			obj.Annotations = map[string]string{}
-		}
-		obj.Annotations["bashible.deckhouse.io/configuration-checksum"] = checksum
-	}
+	util.SetConfigurationChecksumAnnotation(s.bashibleContext, ng, &obj.ObjectMeta)
 
 	return &obj, nil
 }

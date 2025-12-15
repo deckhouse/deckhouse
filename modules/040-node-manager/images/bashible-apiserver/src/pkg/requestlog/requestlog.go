@@ -20,7 +20,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"strings"
 
 	"bashible-apiserver/pkg/apis/bashible"
 
@@ -29,28 +28,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/klog/v2"
+
+	"bashible-apiserver/pkg/util"
 )
 
 type contextKey string
 
 const requestIDKey contextKey = "bashible-request-id"
-const checksumAnnotation = "bashible.deckhouse.io/configuration-checksum"
-const bashibles_uri = "/apis/bashible.deckhouse.io"
+const bashibleAPIGroup = "bashible.deckhouse.io"
 
 func WithRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasPrefix(r.RequestURI, bashibles_uri) {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		reqID := uuid.NewString()
 		ctx := context.WithValue(r.Context(), requestIDKey, reqID)
 		r = r.WithContext(ctx)
 
 		info, _ := apirequest.RequestInfoFrom(ctx)
-		resource := resourceName(info)
-		if len(resource) == 0 {
+		if !isBashibleRequest(info) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -139,7 +133,7 @@ func bashibleChecksum(obj runtime.Object) (string, bool) {
 		return "", false
 	}
 
-	val := ann[checksumAnnotation]
+	val := ann[util.ConfigurationChecksumAnnotation]
 	if val == "" {
 		return "", false
 	}
@@ -166,4 +160,11 @@ func infoVerb(info *apirequest.RequestInfo) string {
 		return ""
 	}
 	return info.Verb
+}
+
+func isBashibleRequest(info *apirequest.RequestInfo) bool {
+	if info == nil {
+		return false
+	}
+	return info.APIGroup == bashibleAPIGroup && info.Resource != ""
 }
