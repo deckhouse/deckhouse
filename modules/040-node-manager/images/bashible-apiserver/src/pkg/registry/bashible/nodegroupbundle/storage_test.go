@@ -54,6 +54,7 @@ func setupTestStorage(p *testStorageParams) *testStorageFixture {
 type testTemplateContext struct {
 	returnedVal map[string]interface{}
 	errVal      error
+	checksum    string
 }
 
 func (c *testTemplateContext) Get(_ string) (map[string]interface{}, error) {
@@ -62,4 +63,11 @@ func (c *testTemplateContext) Get(_ string) (map[string]interface{}, error) {
 
 func (c *testTemplateContext) GetBootstrapContext(string) (map[string]interface{}, error) {
 	return c.returnedVal, c.errVal
+}
+
+func (c *testTemplateContext) GetConfigurationChecksum(string) (string, bool) {
+	if c.checksum == "" {
+		return "", false
+	}
+	return c.checksum, true
 }

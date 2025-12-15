@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -34,6 +35,7 @@ import (
 	"bashible-apiserver/pkg/apiserver"
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
+	"bashible-apiserver/pkg/requestlog"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -108,8 +110,11 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+	serverConfig.BuildHandlerChainFunc = func(apiHandler http.Handler, c *genericapiserver.Config) http.Handler {
+		return genericapiserver.DefaultBuildHandlerChain(requestlog.WithRequestLogging(apiHandler), c)
+	}
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"

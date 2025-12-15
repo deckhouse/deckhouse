@@ -24,6 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
+
+	"bashible-apiserver/pkg/requestlog"
 )
 
 type TemplateStorage interface {
@@ -85,28 +87,36 @@ func NewRESTBootstrap(storage TemplateStorage, cache cache.ThreadSafeStore) *RES
 
 func (r *REST) GetSingularName() string { return "" }
 
-func (r *REST) Get(_ context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	obj, exists := r.cache.Get(name)
 	if !exists {
 		var err error
 		obj, err = r.storage.Render(name)
 
 		if err != nil {
+			requestlog.LogRenderResult(ctx, nil, exists, err)
 			return nil, err // TODO form status error
 		}
 		r.cache.Add(name, obj)
 	}
 
-	return obj.(runtime.Object), nil
+	runtimeObj := obj.(runtime.Object)
+	requestlog.LogRenderResult(ctx, runtimeObj, exists, nil)
+
+	return runtimeObj, nil
 }
 
-func (r *RESTBootstrap) Get(_ context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (r *RESTBootstrap) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	obj, err := r.storage.Render(name)
 	if err != nil {
+		requestlog.LogRenderResult(ctx, nil, false, err)
 		return nil, err // TODO form status error
 	}
 
-	return obj.(runtime.Object), nil
+	runtimeObj := obj.(runtime.Object)
+	requestlog.LogRenderResult(ctx, runtimeObj, false, nil)
+
+	return runtimeObj, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {

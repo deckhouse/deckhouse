@@ -53,6 +53,13 @@ func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = ngBundleData
 
+	if checksum, ok := s.bashibleContext.GetConfigurationChecksum(ng); ok {
+		if obj.Annotations == nil {
+			obj.Annotations = map[string]string{}
+		}
+		obj.Annotations["bashible.deckhouse.io/configuration-checksum"] = checksum
+	}
+
 	return &obj, nil
 }
 
