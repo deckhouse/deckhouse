@@ -100,7 +100,9 @@ const unsupportedVersionsYAML = `
   "flowcontrol.apiserver.k8s.io/v1beta3": ["FlowSchema", "PriorityLevelConfiguration"]
 
 "1.34":
-  "admissionregistration.k8s.io/v1alpha1": ["MutatingAdmissionPolicy", "MutatingAdmissionPolicyBinding", "ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+  "admissionregistration.k8s.io/v1alpha1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+  "admissionregistration.k8s.io/v1beta1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+
 `
 
 const (
