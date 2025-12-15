@@ -319,6 +319,15 @@ import:
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
   before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /usr/bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /usr/bin/pgrep
+  to: /usr/bin/pgrep
+  before: setup
 - image: tools/procps
   add: /
   to: /
