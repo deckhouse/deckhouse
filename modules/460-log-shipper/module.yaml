@@ -1,10 +1,8 @@
 name: log-shipper
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-log-shipper
-description: |
-  Collecting logs in the Kubernetes cluster
 descriptions:
-  en: |
-    Collecting logs in the Kubernetes cluster
+  en: Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.
+  ru: Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие).

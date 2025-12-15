@@ -1,8 +1,11 @@
 name: kube-proxy
-stage: "General Availability"
+stage: General Availability
 critical: true
 weight: 36
 subsystems:
   - kubernetes
   - networking
 namespace: kube-system
+descriptions:
+  en: Manages kube-proxy components for service networking and load balancing in the cluster. Replaces kubeadm's kube-proxy with a custom implementation.
+  ru: Управляет компонентами kube-proxy для сетевого взаимодействия сервисов и балансировки нагрузки в кластере. Заменяет kube-proxy от kubeadm на собственную реализацию.

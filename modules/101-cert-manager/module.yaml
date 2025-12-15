@@ -1,12 +1,8 @@
 name: cert-manager
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - security
 namespace: d8-cert-manager
-description: |
-  This module installs the reliable and highly available cert-manager
-  https://github.com/jetstack/cert-manager
 descriptions:
-  en: |
-    This module installs the reliable and highly available cert-manager
-    https://github.com/jetstack/cert-manager
+  en: Manages TLS certificates in the cluster. Supports automatic certificate provisioning from various CAs, certificate renewal, and monitoring of certificate validity.
+  ru: Управляет TLS-сертификатами в кластере. Поддерживает автоматическое получение сертификатов из различных CA, обновление сертификатов и мониторинг их действительности.

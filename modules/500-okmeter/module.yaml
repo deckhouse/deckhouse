@@ -1,5 +1,8 @@
 name: okmeter
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-okmeter
+descriptions:
+  en: Installs the Okmeter agent in the cluster.
+  ru: Устанавливает агент Okmeter в кластере.

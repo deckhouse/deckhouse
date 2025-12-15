@@ -5,3 +5,6 @@ subsystems:
   - kubernetes
 namespace: kube-system
 stage: General Availability
+descriptions:
+  en: Manages the cluster's control plane components including certificates, configurations, and versions.
+  ru: Управляет компонентами control plane кластера, включая сертификаты, конфигурации и версии.

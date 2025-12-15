@@ -4,8 +4,7 @@ weight: 39
 subsystems:
   - infrastructure
 namespace: d8-cloud-instance-manager
-description: |
-  Internal registry packages proxy
 descriptions:
-  en: Internal registry packages proxy
+  en: Internal registry packages proxy.
+  ru: Внутренний прокси-сервер пакетов registry.
 stage: General Availability

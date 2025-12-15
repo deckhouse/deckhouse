@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-dvp
 stage: Experimental
+descriptions:
+  en: Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.
+  ru: Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов.
