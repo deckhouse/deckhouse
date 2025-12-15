@@ -321,11 +321,11 @@ import:
   before: setup
 # required by the wait-shutdown utility
 - image: tools/procps
-  add: /usr/bin/pkill
+  add: /bin/pkill
   to: /usr/bin/pkill
   before: setup
 - image: tools/procps
-  add: /usr/bin/pgrep
+  add: /bin/pgrep
   to: /usr/bin/pgrep
   before: setup
 - image: tools/procps
