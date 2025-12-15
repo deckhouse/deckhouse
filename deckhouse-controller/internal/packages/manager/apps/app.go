@@ -194,7 +194,7 @@ func (a *Application) GetSettingsChecksum() string {
 	return a.values.GetConfigChecksum()
 }
 
-// ValidateSettings validate settings against openAPI and call setting check if exists
+// ValidateSettings validates settings against openAPI and call setting check if exists
 func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (*settingscheck.Result, error) {
 	if err := a.values.ValidateConfigValues(settings); err != nil {
 		return &settingscheck.Result{}, err
