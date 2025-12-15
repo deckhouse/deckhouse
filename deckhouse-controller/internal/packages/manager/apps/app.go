@@ -200,6 +200,11 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 		return &settingscheck.Result{}, err
 	}
 
+	// no need to call the settings check if nothing changed
+	if a.values.GetConfigChecksum() == settings.Checksum() {
+		return &settingscheck.Result{Allow: true}, nil
+	}
+
 	if a.settingsCheck != nil {
 		return a.settingsCheck.Check(ctx, settings)
 	}
