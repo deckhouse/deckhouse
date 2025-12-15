@@ -10,7 +10,7 @@ If there is more than one node available for hosting the Ingress controller,
 it is deployed in the HA mode, taking into account the infrastructure specifics of both cloud and bare-metal environments,
 as well as various cluster types.
 
-The module supports running and configuring several Ingress NGINX controllers simultaneously
+The module supports running and configuring several Ingress NGINX Controllers simultaneously
 (one of the controllers is the **primary** one; you can create as many **additional** controllers as you want).
 This approach allows you to separate extranet and intranet Ingress resources of applications.
 
@@ -30,13 +30,13 @@ Traffic to `ingress-nginx` can be routed in several ways:
 
 ## HTTPS termination
 
-The module allows you to manage HTTPS security policies for each of the Ingress NGINX controllers, including:
+The module allows you to manage HTTPS security policies for each of the Ingress NGINX Controllers, including:
 
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
 The module is integrated with the [`cert-manager`](/modules/cert-manager/) module.
-Thus, it can get SSL certificates automatically and pass them to Ingress NGINX controllers for further use.
+Thus, it can get SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 
 ## Monitoring and statistics
 

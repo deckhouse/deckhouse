@@ -11,7 +11,7 @@ lang: ru
 
 ## Создание контроллера
 
-Чтобы создать контроллер Ingress NGINX, примените следующий ресурс `IngressNginxController`:
+Чтобы создать контроллер Ingress NGINX, примените следующий ресурс IngressNginxController:
 
 ```yaml
 d8 k apply -f - <<EOF

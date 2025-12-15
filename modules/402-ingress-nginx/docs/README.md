@@ -3,7 +3,7 @@ title: "The ingress-nginx module"
 description: "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller."
 ---
 
-Installs and manages the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) using Custom Resources. The module installs the Ingress controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud / bare metal infrastructure and various types of Kubernetes clusters.
+Installs and manages the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) using custom resources. The module installs the Ingress NGINX Controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud and bare-metal infrastructure and various types of Kubernetes clusters.
 
 The module supports running and configuring several Ingress NGINX Controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
@@ -28,7 +28,7 @@ The module allows you to manage HTTPS security policies for each Ingress NGINX C
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
-The module integrates with the [cert-manager](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
+The module integrates with the [`cert-manager`](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 
 ## Monitoring and statistics
 

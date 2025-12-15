@@ -98,7 +98,7 @@
     annotations:
       summary: Too many Ingress NGINX restarts detected.
       description: |-
-        {{ $value }} Ingress NGINX controller restarts detected in the last hour.
+        {{ $value }} Ingress NGINX Controller restarts detected in the last hour.
 
         Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
       plk_labels_as_annotations: "pod"

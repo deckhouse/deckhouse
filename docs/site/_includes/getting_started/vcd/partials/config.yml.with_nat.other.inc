@@ -188,9 +188,9 @@ spec:
     minPerZone: 1
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of Ingress NGINX controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры Ingress NGINX controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

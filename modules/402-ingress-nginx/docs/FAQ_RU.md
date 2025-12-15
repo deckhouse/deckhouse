@@ -177,7 +177,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 - протокол: `HTTP`;
 - путь: `/healthz`;
-- порт: `80` (в случае использования инлета `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport)).
+- порт: `80` (в случае использования инлета `HostPort` нужно указать номер порта, соответствующий параметру [`httpPort`](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport)).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
