@@ -5446,7 +5446,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        {{ $value }} Ingress NGINX controller restarts detected in the last hour.
+        {{ $value }} Ingress NGINX Controller restarts detected in the last hour.
 
         Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
       summary: |
