@@ -45,10 +45,12 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           general_violation[{"msg": msg, "field": "containers"}]
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           general_violation[{"msg": msg, "field": "initContainers"}]
         }
 

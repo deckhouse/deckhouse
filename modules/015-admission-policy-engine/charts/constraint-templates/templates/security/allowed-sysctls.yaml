@@ -52,6 +52,7 @@ spec:
 
               # Block if forbidden, unless allowed by exception
               violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
                   sysctl := input.review.object.spec.securityContext.sysctls[_].name
                   not allowed_by_exception(sysctl)  
                   forbidden_sysctl(sysctl)
@@ -60,6 +61,7 @@ spec:
 
               # Block if not explicitly allowed
               violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
                   sysctl := input.review.object.spec.securityContext.sysctls[_].name
                   not allowed_by_any(sysctl)
                   msg := sprintf("The sysctl %v is not explicitly allowed, pod: %v. Allowed sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.allowedSysctls])

@@ -47,6 +47,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 container := input_containers[_]
                 not allowed_by_any(container)
                 msg := sprintf(
@@ -85,6 +86,7 @@ spec:
 
 
               violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
                   container := input_containers[_]
                   not drops_required_capabilities_by_any(container)
                   msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", 

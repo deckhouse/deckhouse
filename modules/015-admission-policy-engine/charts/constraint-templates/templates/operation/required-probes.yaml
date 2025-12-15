@@ -30,6 +30,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           container := input.review.object.spec.containers[_]
           probe := input.parameters.probes[_]
           probe_is_missing(container, probe)

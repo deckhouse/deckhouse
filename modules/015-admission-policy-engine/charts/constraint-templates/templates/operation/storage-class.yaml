@@ -29,6 +29,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           storageClass := input.review.object.spec.storageClassName
           not contains(input.parameters.storageClassNames, storageClass)
           msg := sprintf("PersistentVolumeClaim <%v> has invalid storage class: %v, allowed: %v", [input.review.object.metadata.name, storageClass, input.parameters.storageClassNames])

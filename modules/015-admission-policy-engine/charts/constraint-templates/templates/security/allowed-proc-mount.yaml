@@ -49,6 +49,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any_procMount(c)
                 msg := sprintf("ProcMount type is not allowed, container: %v. Allowed procMount types: %v", [c.name, get_allowed_proc_mount(input)])
