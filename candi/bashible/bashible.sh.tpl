@@ -225,22 +225,13 @@ function get_secret() {
   fi
 }
 
-log_configuration_checksum() {
-  local kind="$1"
-  local objName="$2"
-  local payload="$3"
-  local checksum
-  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
-  bb-log-info "Got $kind/$objName configuration checksum: $checksum"
-}
-
 function get_bundle() {
   resource="$1"
   name="$2"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until json=$(bb-kubectl-exec get "$resource" "$name" -o json); do
+    until bb-kubectl-exec get "$resource" "$name" -o json; do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -249,20 +240,15 @@ function get_bundle() {
       >&2 echo "failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
       sleep 10
     done
-    log_configuration_checksum "$resource" "$name" "$json"
-    echo "$json"
-    return 0
 {{ if eq .runType "Normal" }}
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if json=$(d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt")
+        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
-          log_configuration_checksum "$resource" "$name" "$json"
-          echo "$json"
-          return 0
+         return 0
         else
           >&2 echo "failed to get $resource $name with curl https://$server..."
         fi
@@ -274,6 +260,15 @@ function get_bundle() {
     >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
     exit 1
   fi
+}
+
+log_configuration_checksum() {
+  local kind="$1"
+  local objName="$2"
+  local payload="$3"
+  local checksum
+  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
+  echo "Got $kind/$objName configuration checksum: $checksum" >&2
 }
 
 function current_uptime() {
@@ -319,7 +314,9 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
+    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -366,7 +363,9 @@ function main() {
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(get_bundle nodegroupbundle "${NODE_GROUP}" | jq -rc '.data')"
+    nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
+    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
