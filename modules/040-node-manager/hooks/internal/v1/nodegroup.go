@@ -348,6 +348,8 @@ type Kubelet struct {
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 
 	TopologyManager KubeletTopologyManager `json:"topologyManager"`
+
+	MemorySwap *KubeletMemorySwap `json:"memorySwap,omitempty"`
 }
 
 type KubeletTopologyManager struct {
@@ -399,9 +401,22 @@ const (
 	KubeletResourceReservationModeStatic KubeletResourceReservationMode = "Static"
 )
 
+type KubeletMemorySwap struct {
+	SwapBehavior string `json:"swapBehavior"`
+
+	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
+
+	Swappiness *int `json:"swappiness,omitempty"`
+}
+
+type KubeletLimitedSwap struct {
+	// Size of the swap file (e.g., "1G", "2G")
+	Size string `json:"size"`
+}
+
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
-		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil && k.MemorySwap == nil && k.MemorySwap.Swappiness == nil
 }
 
 type Fencing struct {
