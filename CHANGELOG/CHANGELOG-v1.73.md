@@ -141,6 +141,7 @@
  - **[control-plane-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[dashboard]** Fixed CVE-2025-30204 by updating dashboard components [#16927](https://github.com/deckhouse/deckhouse/pull/16927)
  - **[dashboard]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[deckhouse]** Fix module enabling. [#17043](https://github.com/deckhouse/deckhouse/pull/17043)
  - **[deckhouse]** Fix validation logic for a disabled module [#16385](https://github.com/deckhouse/deckhouse/pull/16385)
  - **[deckhouse]** Automatically set node ip to deckhouse pod during bootstrap phase to no_proxy env. [#15978](https://github.com/deckhouse/deckhouse/pull/15978)
  - **[deckhouse]** Added fixes for resources to nelm usage in DKP. [#15915](https://github.com/deckhouse/deckhouse/pull/15915)
