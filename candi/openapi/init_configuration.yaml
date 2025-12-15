@@ -40,7 +40,6 @@ apiVersions:
 
               The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
             minLength: 1
-            x-doc-default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
             description: |
@@ -58,7 +57,6 @@ apiVersions:
             type: string
             description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
-            x-doc-default: HTTPS
           devBranch:
             type: string
             deprecated: true
