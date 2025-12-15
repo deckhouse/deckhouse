@@ -17,7 +17,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: CertificateSecretExpired
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/propagated-certificate.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -44,7 +44,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: CertificateSecretExpiredSoon
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/propagated-certificate.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -71,7 +71,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: CertmanagerCertificateExpired
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -88,7 +88,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -105,7 +105,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateOrderErrors
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -263,7 +263,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CronJobAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -280,7 +280,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -297,7 +297,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -314,7 +314,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobFailed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -345,7 +345,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: CronJobImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -362,7 +362,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobPodsNotCreated
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -393,7 +393,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -410,7 +410,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobSchedulingError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -425,7 +425,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CronJobUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3488,7 +3488,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DaemonSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3505,7 +3505,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3522,7 +3522,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3539,7 +3539,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3556,7 +3556,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3573,7 +3573,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3868,7 +3868,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeploymentAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3885,7 +3885,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3902,7 +3902,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3919,7 +3919,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentGenerationMismatch
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/propagated-kube-state-metrics.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3930,7 +3930,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: DeploymentImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3947,7 +3947,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3964,7 +3964,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4253,7 +4253,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: IngressResponses5xx
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-ingress.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4266,7 +4266,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: IngressResponses5xx
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-ingress.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4279,7 +4279,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: IstioIrrelevantExternalServiceFound
-      sourceFile: modules/110-istio/monitoring/prometheus-rules/services.yaml
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/propagated-services.yaml
       moduleUrl: 110-istio
       module: istio
       edition: ce
@@ -4749,7 +4749,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetNotUpToDate
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4782,7 +4782,7 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4805,7 +4805,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4831,7 +4831,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4848,7 +4848,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4893,7 +4893,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4910,7 +4910,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5005,7 +5005,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: LoadBalancerServiceWithoutExternalIP
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/loadbalancer.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-loadbalancer.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5481,7 +5481,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: NginxIngressSslExpired
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
       module: ingress-nginx
       edition: ce
@@ -5500,7 +5500,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressSslWillExpire
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
       module: ingress-nginx
       edition: ce
@@ -6291,7 +6291,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: OperationPolicyViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6317,7 +6317,7 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6336,7 +6336,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6355,7 +6355,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6374,7 +6374,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6393,7 +6393,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6421,7 +6421,7 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-pod-status.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -6521,7 +6521,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6534,7 +6534,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: PrometheusServiceMonitorDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6564,7 +6564,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: SecurityPolicyViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6603,7 +6603,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6620,7 +6620,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6637,7 +6637,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6654,7 +6654,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6671,7 +6671,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6688,7 +6688,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6736,7 +6736,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6746,7 +6746,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6756,7 +6756,7 @@ alerts:
       severity: "6"
       markupFormat: default
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6766,7 +6766,7 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6777,7 +6777,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
