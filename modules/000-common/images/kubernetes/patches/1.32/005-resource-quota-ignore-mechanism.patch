@@ -1,0 +1,30 @@
+diff --git a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
+index a4da87b496b..a10468c312d 100644
+--- a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
++++ b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
+@@ -147,6 +147,11 @@ func (p *pvcEvaluator) Usage(item runtime.Object) (corev1.ResourceList, error) {
+ 		return result, err
+ 	}
+ 
++	// Check for ignore label
++	if pvc.Labels != nil && pvc.Labels[corev1.LabelResourceQuotaIgnore] == "true" {
++		return corev1.ResourceList{}, nil
++	}
++
+ 	// charge for claim
+ 	result[corev1.ResourcePersistentVolumeClaims] = *(resource.NewQuantity(1, resource.DecimalSI))
+ 	result[pvcObjectCountName] = *(resource.NewQuantity(1, resource.DecimalSI))
+diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
+index 8c3cb87b82a..a45b1d8a181 100644
+--- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
++++ b/staging/src/k8s.io/api/core/v1/well_known_labels.go
+@@ -71,4 +71,9 @@ const (
+ 	LabelNodeExcludeBalancers = "node.kubernetes.io/exclude-from-external-load-balancers"
+ 	// LabelMetadataName is the label name which, in-tree, is used to automatically label namespaces, so they can be selected easily by tools which require definitive labels
+ 	LabelMetadataName = "kubernetes.io/metadata.name"
++
++	// Resource quota control labels
++	LabelResourceQuotaIgnore          = "resources.k8s.io/ignore"
++	LabelResourceQuotaDiscountStorage = "resources.k8s.io/discount-storage"
++	LabelResourceQuotaCapStorage      = "resources.k8s.io/cap-storage"
+ )
