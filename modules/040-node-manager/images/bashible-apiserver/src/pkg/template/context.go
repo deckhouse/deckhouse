@@ -102,6 +102,14 @@ type BashibleContext struct {
 	configurationChecksums map[string]string
 }
 
+type ContextNotFoundError struct {
+	Key string
+}
+
+func (e *ContextNotFoundError) Error() string {
+	return fmt.Sprintf("context %q not found", e.Key)
+}
+
 type queueAction struct {
 	action    string
 	newObject *unstructured.Unstructured
@@ -410,12 +418,7 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -438,12 +441,7 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -457,6 +455,10 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 	}
 
 	return copied, nil
+}
+
+func contextNotFoundError(contextKey string) error {
+	return &ContextNotFoundError{Key: contextKey}
 }
 
 // GetConfigurationChecksum returns previously calculated configuration checksum for nodegroup.

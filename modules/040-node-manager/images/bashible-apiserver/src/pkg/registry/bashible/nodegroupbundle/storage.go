@@ -17,6 +17,8 @@ limitations under the License.
 package nodegroupbundle
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +48,11 @@ type StorageWithK8sBundles struct {
 func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	ngBundleData, err := s.ngRenderer.Render(ng)
 	if err != nil {
-		return nil, err
+		var cnf *template.ContextNotFoundError
+		if errors.As(err, &cnf) {
+			return nil, fmt.Errorf("cannot get nodegroupbundles for nodeGroup %q: nodegroup not found", ng)
+		}
+		return nil, fmt.Errorf("cannot render bundle: %w", err)
 	}
 
 	obj := bashible.NodeGroupBundle{}

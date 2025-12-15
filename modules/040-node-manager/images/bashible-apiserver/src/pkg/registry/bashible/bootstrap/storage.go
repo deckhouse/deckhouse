@@ -17,6 +17,7 @@ limitations under the License.
 package bootstrap
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,7 +52,7 @@ type Storage struct {
 func (s Storage) Render(ng string) (runtime.Object, error) {
 	data, err := s.getContext(ng)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get context: %v", err)
+		return nil, err
 	}
 	tplContent, err := os.ReadFile(s.templatePath)
 	if err != nil {
@@ -80,7 +81,11 @@ func (s Storage) getContext(ng string) (map[string]interface{}, error) {
 
 	context, err := s.bashibleContext.GetBootstrapContext(contextKey)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get context data: %v", err)
+		var cnf *template.ContextNotFoundError
+		if errors.As(err, &cnf) {
+			return nil, fmt.Errorf("cannot get bootstrap.bashible.deckhouse.io for nodeGroup %q: nodegroup not found", ng)
+		}
+		return nil, fmt.Errorf("cannot get context data: %w", err)
 	}
 
 	return context, nil

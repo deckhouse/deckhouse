@@ -17,6 +17,7 @@ limitations under the License.
 package bashible
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -90,7 +91,11 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 
 	context, err := s.bashibleContext.Get(contextKey)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get context data: %v", err)
+		var cnf *template.ContextNotFoundError
+		if errors.As(err, &cnf) {
+			return nil, fmt.Errorf("cannot get bashibles.bashible.deckhouse.io for nodeGroup %q: nodegroup not found", name)
+		}
+		return nil, fmt.Errorf("cannot get context data: %w", err)
 	}
 
 	return context, nil
