@@ -1,0 +1,159 @@
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index 7410ce6e0..aca7d3391 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -377,6 +377,12 @@ func configForLua(input interface{}) string {
+ 		return "{}"
+ 	}
+ 
++	proxyRealIPCIDRs, err := convertGoSliceIntoLuaTable(all.Cfg.ProxyRealIPCIDR, false)
++	if err != nil {
++		klog.Errorf("failed to convert %v into Lua table: %q", all.Cfg.ProxyRealIPCIDR, err)
++		proxyRealIPCIDRs = "{}"
++	}
++
+ 	return fmt.Sprintf(`{
+ 		use_forwarded_headers = %t,
+ 		use_proxy_protocol = %t,
+@@ -389,6 +395,8 @@ func configForLua(input interface{}) string {
+ 		hsts_include_subdomains = %t,
+ 		hsts_preload = %t,
+ 
++		proxy_real_ip_cidr = %v,
++
+ 		global_throttle = {
+ 			memcached = {
+ 				host = "%v", port = %d, connect_timeout = %d, max_idle_timeout = %d, pool_size = %d,
+@@ -408,6 +416,8 @@ func configForLua(input interface{}) string {
+ 		all.Cfg.HSTSIncludeSubdomains,
+ 		all.Cfg.HSTSPreload,
+ 
++		proxyRealIPCIDRs,
++
+ 		all.Cfg.GlobalRateLimitMemcachedHost,
+ 		all.Cfg.GlobalRateLimitMemcachedPort,
+ 		all.Cfg.GlobalRateLimitMemcachedConnectTimeout,
+diff --git a/rootfs/etc/nginx/lua/lua_ingress.lua b/rootfs/etc/nginx/lua/lua_ingress.lua
+index 49e0f5b05..f7c8f894d 100644
+--- a/rootfs/etc/nginx/lua/lua_ingress.lua
++++ b/rootfs/etc/nginx/lua/lua_ingress.lua
+@@ -62,6 +62,61 @@ local function randomseed()
+   math.randomseed(seed)
+ end
+ 
++local function ipv4_to_long(ip)
++  if not ip then
++    return nil
++  end
++
++  local o1, o2, o3, o4 = ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
++  o1, o2, o3, o4 = tonumber(o1), tonumber(o2), tonumber(o3), tonumber(o4)
++  if not o1 or not o2 or not o3 or not o4 then
++    return nil
++  end
++  if o1 > 255 or o2 > 255 or o3 > 255 or o4 > 255 then
++    return nil
++  end
++
++  return (((o1 * 256) + o2) * 256 + o3) * 256 + o4
++end
++
++local function parse_cidr(cidr)
++  if not cidr then
++    return nil
++  end
++
++  local ip, mask = cidr:match("^([^/]+)/(%d+)$")
++  if not ip or not mask then
++    return nil
++  end
++
++  mask = tonumber(mask)
++  if not mask or mask < 0 or mask > 32 then
++    return nil
++  end
++
++  local ipnum = ipv4_to_long(ip)
++  if not ipnum then
++    return nil
++  end
++
++  local host_bits = 32 - mask
++  local size = 1
++  if host_bits > 0 then
++    size = 2 ^ host_bits
++  end
++
++  local network_start
++  if host_bits == 0 then
++    network_start = ipnum
++  else
++    network_start = ipnum - (ipnum % size)
++  end
++
++  local network_end = network_start + size - 1
++
++  return network_start, network_end
++end
++
+ local function redirect_to_https(location_config)
+   if location_config.force_no_ssl_redirect then
+     return false
+@@ -103,9 +158,48 @@ function _M.init_worker()
+ end
+ 
+ function _M.set_config(new_config)
++ new_config._trusted_cidrs = trusted
++
++  if new_config.use_forwarded_headers or new_config.use_proxy_protocol then
++    local iputils = require("resty.iputils")
++    iputils.enable_lrucache()
++    new_config.set_real_ip_from = iputils.parse_cidrs(new_config.proxy_real_ip_cidr)
++  end
++
+   config = new_config
+ end
+ 
++local function trusted_forward_headers()
++  if not config.use_forwarded_headers then
++    return false
++  end
++
++  local cidrs = config.proxy_real_ip_cidr
++  if not cidrs or #cidrs == 0 then
++    return false
++  end
++
++  local trusted = config._trusted_cidrs
++  if not trusted or #trusted == 0 then
++    return false
++  end
++
++  local proxy_ip = ngx.var.realip_remote_addr or ngx.var.remote_addr
++  local ipnum = ipv4_to_long(proxy_ip)
++  if not ipnum then
++    return false
++  end
++
++  for i = 1, #trusted do
++    local entry = trusted[i]
++    if ipnum >= entry.start and ipnum <= entry["end"] then
++      return true
++    end
++  end
++
++  return false
++end
++
+ -- rewrite gets called in every location context.
+ -- This is where we do variable assignments to be used in subsequent
+ -- phases or redirection
+@@ -114,7 +208,7 @@ function _M.rewrite(location_config)
+ 
+   ngx.var.best_http_host = ngx.var.http_host or ngx.var.host
+ 
+-  if config.use_forwarded_headers then
++  if trusted_forward_headers() then
+     -- trust http_x_forwarded_proto headers correctly indicate ssl offloading
+     if ngx.var.http_x_forwarded_proto then
+       ngx.var.pass_access_scheme = ngx.var.http_x_forwarded_proto

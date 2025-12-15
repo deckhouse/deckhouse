@@ -139,6 +139,10 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
+                    trustedCIDRs:
+                      type: array
+                      items:
+                        type: string
                 loadBalancerWithProxyProtocol:
                   type: object
                   default: {}
@@ -177,6 +181,10 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
+                    trustedCIDRs:
+                      type: array
+                      items:
+                        type: string
                 hostPortWithProxyProtocol:
                   type: object
                   default: {}

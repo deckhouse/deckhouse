@@ -110,6 +110,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает только при включении `behindL7Proxy`.
+                    trustedCIDRs:
+                      description: |
+                        Список доверенных подсетей в формате CIDR, из которых к Ingress‑контроллеру приходят запросы через L7‑прокси. Используется для заполнения параметра NGINX proxy-real-ip-cidr и определения доверенных источников заголовков X-Forwarded-*.                    
                 loadBalancerWithProxyProtocol:
                   description: |
                     Секция настроек для инлета `LoadBalancerWithProxyProtocol`.
@@ -159,6 +162,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает **только** при включении `behindL7Proxy`.
+                    trustedCIDRs:
+                      description: |
+                        Список доверенных подсетей в формате CIDR, из которых к Ingress‑контроллеру приходят запросы через L7‑прокси. Используется для заполнения параметра NGINX proxy-real-ip-cidr и определения доверенных источников заголовков X-Forwarded-*.
                 hostPortWithProxyProtocol:
                   description: |
                     Секция настроек для инлета `HostPortWithProxyProtocol`.

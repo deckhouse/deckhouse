@@ -118,3 +118,7 @@ Adds a flag to disable TLS verification when downloading from the MaxMind mirror
 ### 021-ingress-update-status.patch
 
 This patch adds the --status-service-label flag, allowing the controller to define a label selector that is used to match related k8s services. Then, the ip addresses/hostnames from the services' statuses are used to fill in Ingress objects statuses with correct values.
+
+### 022-ingress-fix-trust-cidr.patch
+
+This patch makes the `use-forwarded-headers` logic respect the `proxy-real-ip-cidr` setting, using it as a trust filter for forwarded headers.

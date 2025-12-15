@@ -795,6 +795,15 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       x-doc-examples: ['CF-Connecting-IP']
                       default: 'X-Forwarded-For'
+                    trustedCIDRs:
+                      type: array
+                      description: |
+                        CIDR ranges of trusted L7 proxies used to populate the `proxy-real-ip-cidr` setting.
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                        x-doc-sample:
+                          - "192.168.0.0/24"
                 loadBalancerWithProxyProtocol:
                   type: object
                   x-doc-required: false
@@ -908,6 +917,15 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       default: 'X-Forwarded-For'
                       x-doc-examples: ['CF-Connecting-IP']
+                    trustedCIDRs:
+                      type: array
+                      description: |
+                        CIDR ranges of trusted L7 proxies used to populate the `proxy-real-ip-cidr` setting.
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                        x-doc-sample:
+                          - "192.168.0.0/24"
                 hostPortWithProxyProtocol:
                   type: object
                   description: |

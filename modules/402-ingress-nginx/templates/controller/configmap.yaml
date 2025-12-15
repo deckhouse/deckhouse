@@ -96,18 +96,13 @@ data:
   {{- end }}
   server-tokens: "false"
 
-  # IMPORTANT!!! There is a substantial nuance in ingress-nginx behavior:
-  #   * It ignores proxy-real-ip-cidr config param, unless c is set to true;
-  #   * If you set use-forwarded-headers to true, it starts respecting proxy-real-ip-cidr (and setups realip module
-  #     to read client IP from the header), but at the same time, in LUA, it copies some of the incoming X-Forwarded-*
-  #     headers to the proxied request. And it does it not checking source IP.
-  #
-  # So, this all leads us to only two possible behaviors of nginx-ingress:
-  #   *   Either it fully ignores X-Forwarded-* header
-  #   *   EIther it respects all X-Forwarded-* header from ANY IP address
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
     {{- if $loadBalancer.behindL7Proxy }}
-  proxy-real-ip-cidr: "0.0.0.0/0"
+      {{- if $loadBalancer.trustedCIDRs }}
+  proxy-real-ip-cidr: "{{ join "," $loadBalancer.trustedCIDRs }}"
+      {{- else if $crd.spec.acceptRequestsFrom }}
+  proxy-real-ip-cidr: "{{ join "," $crd.spec.acceptRequestsFrom }}"
+      {{- end }}
   use-forwarded-headers: "true"
       {{- if $loadBalancer.realIPHeader }}
   forwarded-for-header: {{ $loadBalancer.realIPHeader }}
@@ -117,7 +112,11 @@ data:
 
   {{- if eq $crd.spec.inlet "HostPort" }}
     {{- if $hostPort.behindL7Proxy }}
-  proxy-real-ip-cidr: "0.0.0.0/0"
+      {{- if $hostPort.trustedCIDRs }}
+  proxy-real-ip-cidr: "{{ join "," $hostPort.trustedCIDRs }}"
+      {{- else if $crd.spec.acceptRequestsFrom }}
+  proxy-real-ip-cidr: "{{ join "," $crd.spec.acceptRequestsFrom }}"
+      {{- end }}
   use-forwarded-headers: "true"
       {{- if $hostPort.realIPHeader }}
   forwarded-for-header: {{ $hostPort.realIPHeader }}
