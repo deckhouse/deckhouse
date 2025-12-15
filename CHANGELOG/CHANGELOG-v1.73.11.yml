@@ -2,6 +2,10 @@ dashboard:
   fixes:
     - summary: Fixed CVE-2025-30204 by updating dashboard components
       pull_request: https://github.com/deckhouse/deckhouse/pull/16927
+deckhouse:
+  fixes:
+    - summary: Fix module enabling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17043
 registrypackages:
   fixes:
     - summary: Update integrity patch for containerd (cse only).
