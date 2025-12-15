@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -52,6 +54,10 @@ func NewSSHProvider(initSession *session.Session, once bool) *SSHProvider {
 		initPrivateKeys: make([]session.AgentPrivateKey, 0),
 		once:            once,
 	}
+}
+
+func (p *SSHProvider) CommandProvider() CommandProvider {
+	return p.commandProvider
 }
 
 func (p *SSHProvider) WithScriptProvider(f UploadScriptProvider) *SSHProvider {
@@ -174,7 +180,15 @@ func (s *Client) Command(name string, arg ...string) node.Command {
 	if s.commandProvider == nil {
 		return NewCommand(nil).WithErr(fmt.Errorf("Command provider not passed: '%s'", name))
 	}
-	return s.commandProvider(s.Settings.Host(), name, arg...)
+
+	host := s.Settings.Host()
+
+	cmd := s.commandProvider(host, name, arg...)
+	if govalue.IsNil(cmd) {
+		return NewCommand(nil).WithErr(fmt.Errorf("Provider returns nil command for '%s' for host '%s'", name, host))
+	}
+
+	return cmd
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port

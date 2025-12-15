@@ -16,9 +16,12 @@ package destroy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,22 +29,34 @@ import (
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis"
 	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -51,8 +66,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+var (
+	rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
+)
+
 func TestStaticDestroy(t *testing.T) {
-	app.IsDebug = true
+	defer func() {
+		logger := log.GetDefaultLogger()
+		if err := os.RemoveAll(rootTmpDirStatic); err != nil {
+			logger.LogErrorF("Couldn't remove temp dir '%s': %v\n", rootTmpDirStatic, err)
+			return
+		}
+		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirStatic)
+	}()
 
 	t.Run("skip resources returns errors because metaconfig not in cache", func(t *testing.T) {
 		hosts := []session.Host{
@@ -63,38 +89,178 @@ func TestStaticDestroy(t *testing.T) {
 			commanderMode:   false,
 			commanderParams: nil,
 			destroyOverHost: hosts[0],
+			hosts:           hosts,
 		}
 
 		tst := createTestStaticDestroyTest(t, params)
 		defer tst.clean(t)
 
 		testCreateNodes(t, tst.kubeCl, hosts)
+		resources := testCreateResourcesForStatic(t, tst.kubeCl)
 
 		err := tst.destroyer.DestroyCluster(context.TODO(), true)
 		require.Error(t, err)
+		tst.assertStateCacheIsEmpty(t)
+		// skip deleting
+		assertResourceExists(t, tst.kubeCl, resources)
 	})
 
-	t.Run("one master host", func(t *testing.T) {
-		hosts := []session.Host{
-			{Host: "127.0.0.2", Name: "master-1"},
+	assertStateHasMetaconfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
+		destroyed, err := tst.d8State.IsResourcesDestroyed()
+		require.NoError(t, err)
+		require.True(t, destroyed)
+
+		tst.assertHasMetaConfigInCache(t)
+	}
+
+	t.Run("one node", func(t *testing.T) {
+		noStaticOneBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest) {}
+
+		oneNodeTests := []struct {
+			name string
+
+			sshOut string
+			sshErr error
+
+			stateCacheEmpty       bool
+			skipResources         bool
+			skipResourcesCreating bool
+
+			before func(t *testing.T, tst *testStaticDestroyTest)
+			assert func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource)
+		}{
+			{
+				name: "happy case",
+
+				sshOut: "ok",
+				sshErr: nil,
+
+				stateCacheEmpty: true,
+
+				before: noStaticOneBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+					require.NoError(t, err)
+					assertResourceDeleted(t, tst.kubeCl, resources)
+					tst.assertKubeProviderCleaned(t)
+				},
+			},
+
+			{
+				name: "resources already deleted",
+
+				sshOut: "ok",
+				sshErr: nil,
+
+				stateCacheEmpty: true,
+
+				before: func(t *testing.T, tst *testStaticDestroyTest) {
+					tst.setResourcesDestroyed(t)
+				},
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+					require.NoError(t, err)
+					// skip deleting
+					assertResourceExists(t, tst.kubeCl, resources)
+					tst.assertKubeProviderCleaned(t)
+				},
+			},
+
+			{
+				name: "metaconfig in cache and skip resources but ips not in cache",
+
+				sshOut: "ok",
+				sshErr: nil,
+
+				stateCacheEmpty:       false,
+				skipResources:         true,
+				skipResourcesCreating: true,
+
+				before: func(t *testing.T, tst *testStaticDestroyTest) {
+					tst.setResourcesDestroyed(t)
+					tst.saveMetaConfigToCache(t)
+				},
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+					require.Error(t, err)
+					assertStateHasMetaconfigAndResourcesDestroyed(t, tst)
+					tst.assertKubeProviderIsErrorProvider(t)
+				},
+			},
+
+			{
+				name: "metaconfig in cache and skip resources and ips in cache",
+
+				sshOut: "ok",
+				sshErr: nil,
+
+				stateCacheEmpty:       true,
+				skipResources:         true,
+				skipResourcesCreating: true,
+
+				before: func(t *testing.T, tst *testStaticDestroyTest) {
+					tst.saveNodeUser(t, tst.params.hosts, nil)
+					tst.setResourcesDestroyed(t)
+					tst.saveMetaConfigToCache(t)
+				},
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+					require.NoError(t, err)
+					tst.assertKubeProviderIsErrorProvider(t)
+				},
+			},
+
+			{
+				name: "clean script returns error",
+
+				sshOut: "error!",
+				sshErr: errors.New("error"),
+
+				stateCacheEmpty: false,
+
+				before: noStaticOneBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+					require.Error(t, err)
+					assertStateHasMetaconfigAndResourcesDestroyed(t, tst)
+					assertResourceDeleted(t, tst.kubeCl, resources)
+					tst.assertKubeProviderCleaned(t)
+				},
+			},
 		}
-		params := testStaticDestroyTestParams{
-			skipResources:   false,
-			commanderMode:   false,
-			commanderParams: nil,
-			destroyOverHost: hosts[0],
+
+		for _, tt := range oneNodeTests {
+			t.Run(tt.name, func(t *testing.T) {
+				hosts := []session.Host{
+					{Host: "127.0.0.2", Name: "master-1"},
+				}
+				params := testStaticDestroyTestParams{
+					skipResources:   tt.skipResources,
+					commanderMode:   false,
+					commanderParams: nil,
+					destroyOverHost: hosts[0],
+					hosts:           hosts,
+				}
+
+				tst := createTestStaticDestroyTest(t, params)
+				defer tst.clean(t)
+
+				testCreateNodes(t, tst.kubeCl, hosts)
+
+				var resources []testCreatedResource
+				if !tt.skipResourcesCreating {
+					resources = testCreateResourcesForStatic(t, tst.kubeCl)
+				}
+
+				tt.before(t, tst)
+
+				testAddCleanCommand(tst.sshProvider, hosts[0], tt.sshOut, tt.sshErr, tst.logger)
+
+				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+
+				tst.assertNodeUserDidNotCreate(t)
+				tst.assertStateCache(t, tt.stateCacheEmpty)
+
+				tt.assert(t, tst, err, resources)
+			})
 		}
-
-		tst := createTestStaticDestroyTest(t, params)
-		defer tst.clean(t)
-
-		testCreateNodes(t, tst.kubeCl, hosts)
-
-		ctx := context.TODO()
-
-		err := tst.destroyer.DestroyCluster(ctx, true)
-		require.Error(t, err)
 	})
+
 }
 
 type testStaticDestroyTestParams struct {
@@ -104,6 +270,8 @@ type testStaticDestroyTestParams struct {
 	commanderParams *commander.CommanderModeParams
 
 	destroyOverHost session.Host
+
+	hosts []session.Host
 }
 
 type testWaiter struct {
@@ -138,11 +306,14 @@ type testStaticDestroyTest struct {
 	destroyer *ClusterDestroyer
 	logger    *log.InMemoryLogger
 
-	kubeCl      *client.KubernetesClient
-	sshProvider *testssh.SSHProvider
+	kubeCl *client.KubernetesClient
+
+	sshProvider  *testssh.SSHProvider
+	kubeProvider kube.ClientProviderWithCleanup
 
 	stateCache dhctlstate.Cache
 	d8State    *deckhouse.State
+	metaConfig *config.MetaConfig
 
 	tmpDir string
 }
@@ -160,7 +331,110 @@ func (ts *testStaticDestroyTest) clean(t *testing.T) {
 	ts.logger.LogInfoF("tmp dir '%s' removed\n", ts.tmpDir)
 }
 
-func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParams) testStaticDestroyTest {
+func (ts *testStaticDestroyTest) stateCacheKeys(t *testing.T) []string {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	keys := make([]string, 0)
+
+	err := ts.stateCache.Iterate(func(k string, _ []byte) error {
+		keys = append(keys, k)
+		return nil
+	})
+	require.NoError(t, err)
+
+	return keys
+}
+
+func (ts *testStaticDestroyTest) setResourcesDestroyed(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	err := ts.d8State.SetResourcesDestroyed()
+	require.NoError(t, err)
+}
+
+func (ts *testStaticDestroyTest) saveNodeUser(t *testing.T, hosts []session.Host, credentials *v1.NodeUserCredentials) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	ips := make([]entity.NodeIP, 0, len(hosts))
+	for _, h := range hosts {
+		ips = append(ips, entity.NodeIP{
+			InternalIP: h.Host,
+		})
+	}
+
+	credsToSave := credentials
+	if credsToSave == nil {
+		credsToSave = &v1.NodeUserCredentials{}
+	}
+
+	err := static.NewDestroyState(ts.stateCache).SaveNodeUser(&static.NodesWithCredentials{
+		IPs:                 ips,
+		NodeUserCredentials: credsToSave,
+	})
+
+	require.NoError(t, err)
+}
+
+const metaConfigKey = "cluster-config"
+
+func (ts *testStaticDestroyTest) saveMetaConfigToCache(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+	require.False(t, govalue.IsNil(ts.metaConfig))
+
+	err := ts.stateCache.SaveStruct(metaConfigKey, ts.metaConfig)
+	require.NoError(t, err)
+}
+
+func (ts *testStaticDestroyTest) assertHasMetaConfigInCache(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	inCache, err := ts.stateCache.InCache(metaConfigKey)
+	require.NoError(t, err)
+	require.True(t, inCache)
+}
+
+func (ts *testStaticDestroyTest) assertStateCache(t *testing.T, empty bool) {
+	if empty {
+		ts.assertStateCacheIsEmpty(t)
+		return
+	}
+
+	ts.assertStateCacheNotEmpty(t)
+}
+
+func (ts *testStaticDestroyTest) assertStateCacheIsEmpty(t *testing.T) {
+	keys := ts.stateCacheKeys(t)
+	require.Empty(t, keys, fmt.Sprintf("has keys %v", keys))
+}
+
+func (ts *testStaticDestroyTest) assertStateCacheNotEmpty(t *testing.T) {
+	keys := ts.stateCacheKeys(t)
+	require.NotEmpty(t, keys, "has not keys")
+}
+
+func (ts *testStaticDestroyTest) assertNodeUserDidNotCreate(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.kubeCl))
+
+	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), global.ConvergeNodeUserName, metav1.GetOptions{})
+	require.Error(t, err)
+	require.True(t, k8errors.IsNotFound(err))
+}
+
+func (ts *testStaticDestroyTest) assertKubeProviderCleaned(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.kubeProvider))
+
+	kubeProvider, ok := ts.kubeProvider.(*fakeKubeClientProvider)
+	require.True(t, ok)
+	require.True(t, kubeProvider.cleaned)
+	require.False(t, kubeProvider.stopSSH)
+}
+
+func (ts *testStaticDestroyTest) assertKubeProviderIsErrorProvider(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.kubeProvider))
+	require.IsType(t, &kubeClientErrorProvider{}, ts.kubeProvider)
+}
+
+func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParams) *testStaticDestroyTest {
 	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
 	stateCache := cache.NewTestCache()
@@ -196,6 +470,9 @@ podSubnetNodeCIDRPrefix: "24"
 		"cluster-uuid": clusterUUID.String(),
 	})
 
+	metaConfig, err := config.ParseConfigFromCluster(context.TODO(), kubeCl, config.DummyPreparatorProvider())
+	require.NoError(t, err)
+
 	commanderUUID := uuid.Must(uuid.NewRandom())
 
 	loaderParams := &stateLoaderParams{
@@ -207,7 +484,7 @@ podSubnetNodeCIDRPrefix: "24"
 		forceFromCache:  true,
 	}
 
-	loader, err := initStateLoader(ctx, loaderParams, kubeClProvider)
+	loader, kubeProviderForInfraDestroyer, err := initStateLoader(ctx, loaderParams, kubeClProvider)
 	require.NoError(t, err)
 
 	loggerProvider := log.SimpleLoggerProvider(logger)
@@ -245,7 +522,7 @@ podSubnetNodeCIDRPrefix: "24"
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	tmpDir, err := fs.RandomTmpDirWith10Runes(os.TempDir(), fmt.Sprintf("%d", i), 15)
+	tmpDir, err := fs.RandomTmpDirWith10Runes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
 
 	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
@@ -253,17 +530,27 @@ podSubnetNodeCIDRPrefix: "24"
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           stateCache,
 		loggerProvider:       loggerProvider,
-		kubeProvider:         kubeClProvider,
+		kubeProvider:         kubeProviderForInfraDestroyer,
 		phasesActionProvider: phaseActionProvider,
 		commanderMode:        params.commanderMode,
 		skipResources:        params.skipResources,
 		cloudStateProvider:   nil,
 		sshClientProvider:    sshProvider,
 		tmpDir:               tmpDir,
-		nodeUserWaitParams: retry.NewEmptyParams(
-			retry.WithWait(2*time.Second),
-			retry.WithAttempts(5),
-		),
+		staticLoopsParams: static.LoopsParams{
+			NodeUserLoopParams: retry.NewEmptyParams(
+				retry.WithWait(2*time.Second),
+				retry.WithAttempts(5),
+			),
+			DestroyMasterLoopParams: retry.NewEmptyParams(
+				retry.WithWait(1*time.Second),
+				retry.WithAttempts(1),
+			),
+			GetMastersIPsLoopParams: retry.NewEmptyParams(
+				retry.WithWait(1*time.Second),
+				retry.WithAttempts(2),
+			),
+		},
 	}
 
 	destroyer := &ClusterDestroyer{
@@ -276,7 +563,7 @@ podSubnetNodeCIDRPrefix: "24"
 		infraProvider: infraProvider,
 	}
 
-	return testStaticDestroyTest{
+	return &testStaticDestroyTest{
 		params: params,
 
 		destroyer: destroyer,
@@ -284,12 +571,417 @@ podSubnetNodeCIDRPrefix: "24"
 
 		stateCache: stateCache,
 		d8State:    d8State,
+		metaConfig: metaConfig,
 
-		kubeCl:      kubeCl,
-		sshProvider: sshProvider,
+		kubeCl: kubeCl,
+
+		sshProvider:  sshProvider,
+		kubeProvider: kubeProviderForInfraDestroyer,
 
 		tmpDir: tmpDir,
 	}
+}
+
+type testCreatedResource struct {
+	name         string
+	ns           string
+	kind         string
+	getFunc      func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error
+	shouldExists bool
+}
+
+func (t testCreatedResource) Name() string {
+	return fmt.Sprintf("%s: %s/%s", t.kind, t.ns, t.name)
+}
+
+func assertResourceDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
+	ctx := context.TODO()
+	for _, r := range resources {
+		err := r.getFunc(t, ctx, kubeCl)
+		if r.shouldExists {
+			require.NoError(t, err, r.Name())
+			continue
+		}
+
+		require.Error(t, err, r.Name())
+		require.True(t, k8errors.IsNotFound(err), r.Name(), err)
+	}
+}
+
+func assertResourceExists(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
+	ctx := context.TODO()
+	for _, r := range resources {
+		err := r.getFunc(t, ctx, kubeCl)
+		require.NoError(t, err, r.Name())
+	}
+}
+
+func testCreateResourcesForStatic(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
+	return append(testCreateResourcesGeneral(t, kubeCl), testCreateCAPIResources(t, kubeCl)...)
+}
+
+func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
+	ctx := context.TODO()
+
+	createdResources := make([]testCreatedResource, 0)
+
+	deckhouseDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse",
+			Namespace: "d8-system",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "deckhouse",
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+	}
+
+	nss := []string{
+		"d8-system",
+		"d8-cloud-instance-manager",
+		"test",
+	}
+
+	for _, ns := range nss {
+		obj := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ns,
+			},
+		}
+		_, err := kubeCl.CoreV1().Namespaces().Create(ctx, &obj, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	_, err := kubeCl.AppsV1().Deployments(deckhouseDeployment.GetNamespace()).Create(ctx, deckhouseDeployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: deckhouseDeployment.GetName(),
+		ns:   deckhouseDeployment.GetNamespace(),
+		kind: "Deployment",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.AppsV1().Deployments(deckhouseDeployment.GetNamespace()).Get(ctx, deckhouseDeployment.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	minAvailable := intstr.FromString("25%")
+	pdb := policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "test",
+				},
+			},
+			MaxUnavailable: &minAvailable,
+		},
+	}
+	_, err = kubeCl.PolicyV1().PodDisruptionBudgets(pdb.GetNamespace()).Create(ctx, &pdb, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: pdb.GetName(),
+		ns:   pdb.GetNamespace(),
+		kind: "PodDisruptionBudget",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.PolicyV1().PodDisruptionBudgets(pdb.GetNamespace()).Get(ctx, pdb.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	svcLb := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-svc",
+			Namespace: "test",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{Name: "http", Port: 80},
+			},
+			Selector: map[string]string{
+				"app": "test",
+			},
+			ClusterIP: corev1.ClusterIPNone,
+			Type:      corev1.ServiceTypeLoadBalancer,
+		},
+	}
+
+	svcCluster := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster",
+			Namespace: "d8-system",
+		},
+		Spec: corev1.ServiceSpec{
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: "10.0.0.1",
+		},
+	}
+
+	for _, svc := range []corev1.Service{svcLb, svcCluster} {
+		_, err := kubeCl.CoreV1().Services(svc.Namespace).Create(ctx, &svc, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	createdResources = append(createdResources, testCreatedResource{
+		name: svcLb.GetName(),
+		ns:   svcLb.GetNamespace(),
+		kind: "Service",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.CoreV1().Services(svcLb.GetNamespace()).Get(ctx, svcLb.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	createdResources = append(createdResources, testCreatedResource{
+		name: svcCluster.GetName(),
+		ns:   svcCluster.GetNamespace(),
+		kind: "Service",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.CoreV1().Services(svcCluster.GetNamespace()).Get(ctx, svcCluster.GetName(), metav1.GetOptions{})
+			return err
+		},
+		shouldExists: true,
+	})
+
+	scLocal := testYAMLToUnstructured(t, `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: LocalStorageClass
+metadata:
+  name: local-storage-class
+spec:
+  lvm:
+    lvmVolumeGroups:
+    - name: vg-1-on-worker-0
+      thin:
+        poolName: thin-1
+    type: Thin
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+`)
+
+	_, err = kubeCl.Dynamic().Resource(v1alpha1.LocalStorageClassGRV).Create(ctx, scLocal, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: scLocal.GetName(),
+		ns:   scLocal.GetNamespace(),
+		kind: "LocalStorageClass",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.Dynamic().Resource(v1alpha1.LocalStorageClassGRV).Get(ctx, scLocal.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	reclame := corev1.PersistentVolumeReclaimDelete
+	scDefault := storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+		AllowVolumeExpansion: pointer.Bool(true),
+		Provisioner:          "test.csi.example.org",
+		Parameters: map[string]string{
+			"type": "__DEFAULT__",
+		},
+		ReclaimPolicy: &reclame,
+	}
+
+	_, err = kubeCl.StorageV1().StorageClasses().Create(ctx, &scDefault, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: scDefault.GetName(),
+		ns:   scDefault.GetNamespace(),
+		kind: "StorageClass",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.StorageV1().StorageClasses().Get(ctx, scDefault.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	pvcs := []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pvc",
+				Namespace: "test",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "upmeter",
+				Namespace: "d8-system",
+			},
+		},
+	}
+
+	for _, pvc := range pvcs {
+		pvc.Spec = corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Selector:         &metav1.LabelSelector{MatchLabels: map[string]string{"app": "test"}},
+			StorageClassName: &scDefault.Name,
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		}
+
+		_, err = kubeCl.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(ctx, &pvc, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		createdResources = append(createdResources, testCreatedResource{
+			name: pvc.GetName(),
+			ns:   pvc.GetNamespace(),
+			kind: "PersistentVolumeClaim",
+			getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+				_, err := kubeCl.CoreV1().PersistentVolumeClaims(pvc.Namespace).Get(ctx, pvc.GetName(), metav1.GetOptions{})
+				return err
+			},
+		})
+	}
+
+	podWithoutVolumes := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "staus",
+			Namespace: "d8-system",
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   "test",
+			Containers: make([]corev1.Container, 0),
+		},
+	}
+
+	_, err = kubeCl.CoreV1().Pods(podWithoutVolumes.GetNamespace()).Create(ctx, &podWithoutVolumes, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: podWithoutVolumes.GetName(),
+		ns:   podWithoutVolumes.GetNamespace(),
+		kind: "Pod",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.CoreV1().Pods(podWithoutVolumes.GetNamespace()).Get(ctx, podWithoutVolumes.GetName(), metav1.GetOptions{})
+			return err
+		},
+		shouldExists: true,
+	})
+
+	podWithVolumes := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   "test",
+			Containers: make([]corev1.Container, 0),
+			Volumes: []corev1.Volume{
+				{
+					Name: "test",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "test",
+						},
+					},
+				},
+				{
+					Name: "test2",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			},
+		},
+	}
+	_, err = kubeCl.CoreV1().Pods(podWithVolumes.GetNamespace()).Create(ctx, &podWithVolumes, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: podWithVolumes.GetName(),
+		ns:   podWithVolumes.GetNamespace(),
+		kind: "Pod",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.CoreV1().Pods(podWithVolumes.GetNamespace()).Get(ctx, podWithVolumes.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	return createdResources
+}
+
+func testCreateCAPIResources(t *testing.T, kubeCl *client.KubernetesClient) []testCreatedResource {
+	createdResources := make([]testCreatedResource, 0)
+
+	md := testYAMLToUnstructured(t, `
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  annotations:
+    machinedeployment.clusters.x-k8s.io/revision: "1"
+  labels:
+    node-group: worker
+  name: test-worker-9bfeb8f2
+  namespace: d8-cloud-instance-manager
+  ownerReferences:
+  - apiVersion: cluster.x-k8s.io/v1beta1
+    kind: Cluster
+    name: test
+    uid: 1f63df99-2a20-4460-877e-d8bc69001052
+spec:
+  clusterName: test
+  minReadySeconds: 0
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: test
+      cluster.x-k8s.io/deployment-name: test-worker-9bfeb8f2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: test
+        cluster.x-k8s.io/deployment-name: test-worker-9bfeb8f2
+        node-group: worker
+    spec:
+      bootstrap:
+        dataSecretName: worker-9e1e0bbc
+      clusterName: test
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: MachineTemplate
+        name: worker-9e1e0bbc
+        namespace: d8-cloud-instance-manager
+      nodeDeletionTimeout: 10m0s
+      nodeDrainTimeout: 10m0s
+      nodeVolumeDetachTimeout: 10m0s
+`)
+	_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Create(context.TODO(), md, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createdResources = append(createdResources, testCreatedResource{
+		name: md.GetName(),
+		ns:   md.GetNamespace(),
+		kind: "CAPIMachineDeployment",
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(md.GetNamespace()).Get(ctx, md.GetName(), metav1.GetOptions{})
+			return err
+		},
+	})
+
+	return createdResources
+}
+
+func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
+	obj := unstructured.Unstructured{}
+	err := yaml.Unmarshal([]byte(r), &obj)
+	require.NoError(t, err)
+	return &obj
 }
 
 func testCreateFakeKubeClient() *client.KubernetesClient {
@@ -317,26 +1009,26 @@ func testCreateFakeKubeClient() *client.KubernetesClient {
 	return kubeCl
 }
 
-type fakeKubeClient struct {
+type fakeKubeClientProvider struct {
 	kubeCl *client.KubernetesClient
 
 	cleaned bool
 	stopSSH bool
 }
 
-func newFakeKubeClientProvider(kubeCl *client.KubernetesClient) *fakeKubeClient {
-	return &fakeKubeClient{
+func newFakeKubeClientProvider(kubeCl *client.KubernetesClient) *fakeKubeClientProvider {
+	return &fakeKubeClientProvider{
 		kubeCl: kubeCl,
 	}
 }
-func (p *fakeKubeClient) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+func (p *fakeKubeClientProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	if p.cleaned {
 		return nil, fmt.Errorf("already cleaned")
 	}
 
 	return p.kubeCl, nil
 }
-func (p *fakeKubeClient) Cleanup(stopSSH bool) {
+func (p *fakeKubeClientProvider) Cleanup(stopSSH bool) {
 	p.cleaned = true
 	p.stopSSH = stopSSH
 }
@@ -357,8 +1049,7 @@ func testCreateNodes(t *testing.T, kubeCl *client.KubernetesClient, hosts []sess
 			ObjectMeta: metav1.ObjectMeta{
 				Name: host.Name,
 				Labels: map[string]string{
-					"node.deckhouse.io/group":               "master",
-					"node-role.kubernetes.io/control-plane": "",
+					"node.deckhouse.io/group": "master",
 				},
 			},
 			Status: corev1.NodeStatus{
@@ -379,6 +1070,38 @@ func testCreateNodes(t *testing.T, kubeCl *client.KubernetesClient, hosts []sess
 	for _, node := range nodes.Items {
 		require.Len(t, node.Status.Addresses, 2)
 	}
+}
+
+func testAddCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
+	provider := sshProvider.CommandProvider()
+	sshProvider.WithCommandProvider(func(host string, scriptPath string, args ...string) *testssh.Command {
+		if !govalue.IsNil(provider) {
+			cmd := provider(host, scriptPath, args...)
+			if !govalue.IsNil(cmd) {
+				return cmd
+			}
+		}
+		if host != forHost.Host {
+			return nil
+		}
+
+		if !strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") {
+			return nil
+		}
+
+		cmd := testssh.NewCommand([]byte(out))
+		if err != nil {
+			cmd.WithErr(err).WithRun(func() {
+				logger.LogWarnLn("Clean command failed")
+			})
+
+			return cmd
+		}
+
+		return cmd.WithErr(nil).WithRun(func() {
+			logger.LogInfoLn("Clean command success")
+		})
+	})
 }
 
 func testAddNodeUserCreated(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host, waiter *testWaiter) {

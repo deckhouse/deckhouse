@@ -124,7 +124,24 @@ func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesC
 
 func DeleteStorageClasses(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete StorageClasses", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		return kubeCl.StorageV1().StorageClasses().DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{})
+		list, err := kubeCl.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		if len(list.Items) == 0 {
+			return nil
+		}
+
+		var lastError error
+
+		for _, obj := range list.Items {
+			err = kubeCl.StorageV1().StorageClasses().Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				lastError = err
+			}
+		}
+		return lastError
 	})
 }
 

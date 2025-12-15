@@ -89,7 +89,19 @@ func (g *Destroyer) Finalize(context.Context) error {
 		return nil
 	}
 
-	err := g.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
+	alreadyDestroyed, err := g.State.IsResourcesDestroyed()
+	if err != nil {
+		return err
+	}
+
+	logger := g.logger()
+
+	if alreadyDestroyed {
+		logger.LogDebugLn("Resources already destroyed. Skip set as destroyed")
+		return nil
+	}
+
+	err = g.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
 		return nil, g.State.SetResourcesDestroyed()
 	})
 
@@ -97,7 +109,7 @@ func (g *Destroyer) Finalize(context.Context) error {
 		return err
 	}
 
-	g.logger().LogDebugF("Resources were destroyed set\n")
+	logger.LogDebugLn("Resources were destroyed set")
 	return nil
 }
 

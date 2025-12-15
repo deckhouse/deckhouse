@@ -111,7 +111,7 @@ type stateLoaderParams struct {
 	forceFromCache bool
 }
 
-func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, error) {
+func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, kube.ClientProviderWithCleanup, error) {
 	if params.commanderMode {
 		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
 		// if params.CommanderUUID == uuid.Nil {
@@ -120,9 +120,9 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 
 		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, params.logger)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
+			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}
-		return infrastructurestate.NewFileTerraStateLoader(params.stateCache, metaConfig), nil
+		return infrastructurestate.NewFileTerraStateLoader(params.stateCache, metaConfig), kubeProvider, nil
 	}
 
 	stateLoaderKubeProvider := kubeProvider
@@ -132,7 +132,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 
 	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger).
 		WithForceFromCache(params.forceFromCache)
-	return infrastructurestate.NewLazyTerraStateLoader(cached), nil
+	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }
 
 type ClusterDestroyer struct {
@@ -187,6 +187,11 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(sshClientProvider)
 
+	terraStateLoader, kubeProvider, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
 		CommanderUUID: params.CommanderUUID,
 		CommanderMode: params.CommanderMode,
@@ -198,11 +203,6 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		KubeProvider:         kubeProvider,
 		PhasedActionProvider: phaseActionProvider,
 	})
-
-	terraStateLoader, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
-	if err != nil {
-		return nil, err
-	}
 
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           params.StateCache,

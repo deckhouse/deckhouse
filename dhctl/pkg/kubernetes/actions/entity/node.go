@@ -437,7 +437,11 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx) ([]NodeIP, error) {
+var (
+	getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(5, 5*time.Second)
+)
+
+func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
 	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
 	if err != nil {
 		return nil, err
@@ -447,11 +451,9 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 
 	var nodes *corev1.NodeList
 
-	loopParams := retry.NewParams(
-		"Get control plane nodes from Kubernetes cluster",
-		5,
-		5*time.Second,
-	)
+	loopParams = retry.SafeCloneOrNewParams(loopParams, getMasterNodesIPsDefaultOpts...).
+		WithName("Get control plane nodes IPs from Kubernetes cluster")
+
 	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		var err error
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
@@ -468,7 +470,7 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 	})
 
 	if err != nil {
-		log.DebugF("Cannot get nodes after 5 attemts")
+		log.DebugF("Cannot get nodes after %d attempts\n", loopParams.Attempts())
 		return nil, err
 	}
 

@@ -39,6 +39,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type LoopsParams struct {
+	NodeUserLoopParams      retry.Params
+	DestroyMasterLoopParams retry.Params
+	GetMastersIPsLoopParams retry.Params
+}
+
 type DestroyerParams struct {
 	SSHClientProvider    sshclient.SSHProvider
 	KubeProvider         kube.ClientProviderWithCleanup
@@ -46,8 +52,9 @@ type DestroyerParams struct {
 	LoggerProvider       log.LoggerProvider
 	PhasedActionProvider phases.DefaultActionProvider
 
-	TmpDir             string
-	NodeUserWaitParams retry.Params
+	TmpDir string
+
+	Loops LoopsParams
 }
 
 type NodesWithCredentials struct {
@@ -129,7 +136,8 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 	hostToExclude := ""
 
 	ips := make([]entity.NodeIP, 0)
-	if d.nodesWithCredentials != nil {
+	// for abort we do not have nodesWithCredentials
+	if d.nodesWithCredentials != nil && !isSingleMaster(d.nodesWithCredentials.IPs) {
 		ips = d.nodesWithCredentials.IPs
 	}
 
@@ -219,7 +227,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 	logger := d.logger()
 
 	logger.LogDebugF("Starting cleanup process for host %s\n", host)
-	err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 30*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
 		c.WithTimeout(30 * time.Second)
@@ -346,7 +354,7 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 		if !isSingleMaster(d.nodesWithCredentials.IPs) {
 			// waiter checks if nil params
 			waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
-				WithParams(d.params.NodeUserWaitParams)
+				WithParams(d.params.Loops.NodeUserLoopParams)
 
 			if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials); err != nil {
 				return nil, err
@@ -385,7 +393,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
 	}
 
-	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider)
+	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider, d.params.Loops.GetMastersIPsLoopParams)
 	if err != nil {
 		return nil, err
 	}
@@ -428,6 +436,13 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 
 func (d *Destroyer) logger() log.Logger {
 	return log.SafeProvideLogger(d.params.LoggerProvider)
+}
+
+var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(5, 15*time.Second)
+
+func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
+	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMasterLoopParams, getDestroyMastersDefaultOpts...).
+		WithName(fmt.Sprintf("Clear master %s", host.String()))
 }
 
 func isSingleMaster(ips []entity.NodeIP) bool {

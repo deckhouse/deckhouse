@@ -84,6 +84,13 @@ func WithAttempts(attempts int) ParamsBuilderOpt {
 	}
 }
 
+func AttemptsWithWaitOpts(attempts int, wait time.Duration) []ParamsBuilderOpt {
+	return []ParamsBuilderOpt{
+		WithAttempts(attempts),
+		WithWait(wait),
+	}
+}
+
 func WithWait(wait time.Duration) ParamsBuilderOpt {
 	return func(p Params) {
 		p.WithWait(wait)
@@ -166,6 +173,14 @@ func (p *params) Fill(c Params) Params {
 	return p.WithName(c.Name()).
 		WithAttempts(c.Attempts()).
 		WithWait(c.Wait())
+}
+
+func SafeCloneOrNewParams(p Params, opts ...ParamsBuilderOpt) Params {
+	if !govalue.IsNil(p) {
+		return p.Clone()
+	}
+
+	return NewEmptyParams(opts...)
 }
 
 // Loop retries a task function until it succeeded with number of attempts and delay between runs are adjustable.
