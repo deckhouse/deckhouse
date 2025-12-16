@@ -11,7 +11,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: |
-          Определяет конфигурацию ресурса ObjectKeeper.
+          Определяет конфигурацию единого механизма отложенного и каскадного удаления ресурсов кластера.
         properties:
           apiVersion:
             type: string
@@ -23,9 +23,9 @@ spec:
             properties:
               followObjectRef:
                 description: |-
-                  FollowObjectRef — параметры отслеживаемого объекта.
-                  Параметр обязателен, если mode = FollowObject или FollowObjectWithTTL.
-                  Объект ObjectKeeper будет удалён после удаления отслеживаемого объекта.
+                  `FollowObjectRef` — параметры отслеживаемого объекта.
+                  Параметр обязателен, если `mode` = `FollowObject` или `FollowObjectWithTTL`.
+                  Объект `ObjectKeeper` будет удалён после удаления отслеживаемого объекта.
                 properties:
                   apiVersion:
                     description: Версия API отслеживаемого объекта.
@@ -51,7 +51,7 @@ spec:
                 - uid
                 type: object
               mode:
-                description: Режим управления временем жизни объекта
+                description: Режим управления временем жизни объекта.
                 enum:
                 - FollowObject
                 - TTL
@@ -59,10 +59,10 @@ spec:
                 type: string
               ttl:
                 description: |-
-                  TTL — продолжительность жизни ObjectKeeper.
-                  Обязательно, если mode = TTL или FollowObjectWithTTL.
+                  `TTL` — продолжительность жизни `ObjectKeeper`.
+                  Обязательно, если `mode = TTL` или `FollowObjectWithTTL`.
                   Объект будет удалён после указанного времени.
-                  При FollowObjectWithTTL — отсчёт начинается после удаления связанного объекта.
+                  При `FollowObjectWithTTL` — отсчёт начинается после удаления связанного объекта.
                 type: string
             required:
             - mode

@@ -18,6 +18,8 @@ permalink: en/reference/api/cr.html
 {{ site.data.schemas.crds.module-source | format_crd: "global" }}
 {{ site.data.schemas.crds.module-update-policy | format_crd: "global" }}
 
+{{ site.data.schemas.crds.objectkeeper | format_crd: "global" }}
+
 {{ site.data.schemas.crds.static_cluster_configuration | format_cluster_configuration }}
 
 {{ site.data.schemas.crds.ssh_configuration | format_cluster_configuration }}
