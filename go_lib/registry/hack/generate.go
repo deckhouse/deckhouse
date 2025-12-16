@@ -19,7 +19,7 @@ limitations under the License.
 // go generate automatically executes the deepcopy-gen command below,
 // which generates DeepCopy() and DeepCopyInto() methods for all
 // types marked with the +k8s:deepcopy-gen=true annotation in the
-// ./... directory tree (current directory and all subdirectories).
+// ../models/... directory tree (current directory and all subdirectories).
 //
-//go:generate deepcopy-gen --output-file zz_generated.deepcopy.go --go-header-file ../hack/boilerplate.go.txt -v 2 ./...
-package models
+//go:generate deepcopy-gen --output-file zz_generated.deepcopy.go --go-header-file ./boilerplate.go.txt -v 2 ../models/...
+package hack

@@ -8,8 +8,10 @@ This package provides shared models and methods for the registry module.
 ### Layout
 
 ```bash
+hack/
+  boilerplate.go.txt - header template for generated files
+  generate.go — triggers code generation (via go:generate annotation) for all models
 models/ — contains data structures for which deepcopy generation is applied
-  generate.go — triggers code generation (via go:generate annotation) for all models in this package
   moduleconfig/
     deckhouse.go — type definitions annotated with `+k8s:deepcopy-gen=true` for automatic method generation
     zz_generated.deepcopy.go — auto-generated file with DeepCopy() methods (created after running go generate)
