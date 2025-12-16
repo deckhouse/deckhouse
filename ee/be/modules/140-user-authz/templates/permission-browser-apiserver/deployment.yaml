@@ -83,6 +83,7 @@ spec:
         - --user-authz-config=/etc/user-authz-webhook/config.json
         - --authentication-kubeconfig=/etc/kubernetes/kubeconfig.yaml
         - --authorization-kubeconfig=/etc/kubernetes/kubeconfig.yaml
+        - --feature-gates=APIPriorityAndFairness=false
         - --v=2
         ports:
         - containerPort: 8443
