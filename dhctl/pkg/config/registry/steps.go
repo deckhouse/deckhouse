@@ -31,9 +31,11 @@ import (
 
 const (
 	secretsNamespace            = "d8-system"
-	initSecretName              = "registry-init"
 	stateSecretName             = "registry-state"
+	initSecretName              = "registry-init"
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
+
+	conditionTypeReady = "Ready"
 )
 
 // WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
@@ -127,16 +129,17 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 		return "", ErrIsNotReady
 	}
 
-	var msg strings.Builder
-	ready := true
+	var (
+		msg   strings.Builder
+		ready bool
+	)
 
 	for _, condition := range conditions {
 		if condition.Status == metav1.ConditionTrue {
-			continue
-		}
+			if condition.Type == conditionTypeReady {
+				ready = true
+			}
 
-		ready = false
-		if condition.Type == "Ready" {
 			continue
 		}
 

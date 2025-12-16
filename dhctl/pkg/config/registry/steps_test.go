@@ -63,7 +63,7 @@ func createStatusSecret(ctx context.Context, kubeClient client.KubeClient, ready
 
 	if ready {
 		conditions = append(conditions, metav1.Condition{
-			Type:   "Ready",
+			Type:   conditionTypeReady,
 			Status: metav1.ConditionTrue,
 		})
 	}
