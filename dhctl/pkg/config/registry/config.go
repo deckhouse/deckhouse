@@ -113,3 +113,20 @@ func (c *Config) Process(userSettings module_config.DeckhouseSettings, legacyMod
 func (c *Config) Manifest() *ManifestBuilder {
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
 }
+
+// DeepCopyInto copies the receiver into out.
+func (c *Config) DeepCopyInto(out *Config) {
+	*out = *c
+	c.Settings.DeepCopyInto(&out.Settings)
+	c.DeckhouseSettings.DeepCopyInto(&out.DeckhouseSettings)
+}
+
+// DeepCopy returns a deep copy of the receiver.
+func (c *Config) DeepCopy() *Config {
+	if c == nil {
+		return nil
+	}
+	out := new(Config)
+	c.DeepCopyInto(out)
+	return out
+}

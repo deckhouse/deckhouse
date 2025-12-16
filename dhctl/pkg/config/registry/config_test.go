@@ -17,7 +17,6 @@ package registry
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -178,8 +177,8 @@ func TestConfig_UseDefault(t *testing.T) {
 			err := config.UseDefault(tt.input.criSupported)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.output.mode, config.Settings.Mode)
-			assert.Equal(t, tt.output.legacyMode, config.LegacyMode)
+			require.Equal(t, tt.output.mode, config.Settings.Mode)
+			require.Equal(t, tt.output.legacyMode, config.LegacyMode)
 		})
 	}
 }
@@ -219,8 +218,8 @@ func TestConfig_UseInitConfig(t *testing.T) {
 			err := config.UseInitConfig(tt.input.initConfig)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.output.mode, config.Settings.Mode)
-			assert.True(t, config.LegacyMode, "should be legacy mode")
+			require.Equal(t, tt.output.mode, config.Settings.Mode)
+			require.True(t, config.LegacyMode, "should be legacy mode")
 		})
 	}
 }
@@ -267,8 +266,28 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 			err := config.UseDeckhouseSettings(tt.input.deckhouse)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
-			assert.False(t, config.LegacyMode, "should not be legacy mode")
+			require.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
+			require.False(t, config.LegacyMode, "should not be legacy mode")
 		})
 	}
+}
+
+func TestConfig_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of Config", func(t *testing.T) {
+		config := ConfigBuilder(
+			WithModeDirect(),
+		)
+		original := &config
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilConfig *Config
+		copied := nilConfig.DeepCopy()
+		require.Nil(t, copied)
+	})
 }

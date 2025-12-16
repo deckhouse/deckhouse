@@ -98,3 +98,16 @@ func (d Data) DockerCfgBase64() (string, error) {
 func (d Data) AddressAndPath() (address string, path string) {
 	return helpers.SplitAddressAndPath(d.ImagesRepo)
 }
+
+func (d *Data) DeepCopyInto(out *Data) {
+	*out = *d
+}
+
+func (d *Data) DeepCopy() *Data {
+	if d == nil {
+		return nil
+	}
+	out := new(Data)
+	d.DeepCopyInto(out)
+	return out
+}

@@ -84,6 +84,20 @@ func (s ModeSettings) toUnmanagedModel() ModeModel {
 	}
 }
 
+func (s *ModeSettings) DeepCopyInto(out *ModeSettings) {
+	*out = *s
+	s.RemoteData.DeepCopyInto(&out.RemoteData)
+}
+
+func (s *ModeSettings) DeepCopy() *ModeSettings {
+	if s == nil {
+		return nil
+	}
+	out := new(ModeSettings)
+	s.DeepCopyInto(out)
+	return out
+}
+
 type ModeModel struct {
 	Mode                constant.ModeType
 	InClusterImagesRepo string

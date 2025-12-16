@@ -520,7 +520,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = *m.Registry.DeepCopy()
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

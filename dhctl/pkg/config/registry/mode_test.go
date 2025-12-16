@@ -290,3 +290,29 @@ func TestModeUnmanaged(t *testing.T) {
 		})
 	})
 }
+
+func TestModeSettings_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of ModeSettings", func(t *testing.T) {
+		original := &ModeSettings{
+			Mode: "test-mode",
+			RemoteData: Data{
+				ImagesRepo: "test-repo",
+				Scheme:     "https",
+				CA:         "test-ca",
+				Username:   "test-user",
+				Password:   "test-pass",
+			},
+		}
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilSettings *ModeSettings
+		copied := nilSettings.DeepCopy()
+		require.Nil(t, copied)
+	})
+}

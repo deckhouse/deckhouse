@@ -17,7 +17,6 @@ package registry
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -28,7 +27,7 @@ func TestGeneratePKI(t *testing.T) {
 		pki, err := GeneratePKI()
 		require.NoError(t, err)
 
-		assert.NotNil(t, pki.CA)
+		require.NotNil(t, pki.CA)
 	})
 }
 
@@ -43,6 +42,6 @@ func TestGetPKI(t *testing.T) {
 		pki, err := GetPKI(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.NotNil(t, pki.CA)
+		require.NotNil(t, pki.CA)
 	})
 }

@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
@@ -59,7 +59,7 @@ func TestKubeadmContext_ToMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.input.ToMap()
 
-			assert.Equal(t, tt.output, result)
+			require.Equal(t, tt.output, result)
 		})
 	}
 }
@@ -113,7 +113,7 @@ func TestData_FromRegistrySettings(t *testing.T) {
 			var data Data
 			data.fromRegistrySettings(tt.input)
 
-			assert.Equal(t, tt.output, data)
+			require.Equal(t, tt.output, data)
 		})
 	}
 }
@@ -160,7 +160,7 @@ func TestData_AuthBase64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.output, tt.input.AuthBase64())
+			require.Equal(t, tt.output, tt.input.AuthBase64())
 		})
 	}
 }
@@ -284,32 +284,32 @@ func TestData_DockerCfg(t *testing.T) {
 			dockerCfg, err := tt.input.DockerCfg()
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// get dockerCfg base64
 			dockerCfgBase64, err := tt.input.DockerCfgBase64()
 
 			if tt.output.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Compare dockerCfg from DockerCfg and DockerCfgBase64
 			decoded, err := base64.StdEncoding.DecodeString(string(dockerCfgBase64))
-			assert.NoError(t, err)
-			assert.Equal(t, dockerCfg, decoded)
+			require.NoError(t, err)
+			require.Equal(t, dockerCfg, decoded)
 
 			// Compare with test case
 			var dockerCfgJson map[string]any
 
 			err = json.Unmarshal(dockerCfg, &dockerCfgJson)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
-			assert.Equal(t, tt.output.auths, dockerCfgJson["auths"])
+			require.Equal(t, tt.output.auths, dockerCfgJson["auths"])
 		})
 	}
 }
@@ -381,8 +381,31 @@ func TestData_AddressAndPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			addr, path := tt.input.AddressAndPath()
 
-			assert.Equal(t, tt.output.address, addr)
-			assert.Equal(t, tt.output.path, path)
+			require.Equal(t, tt.output.address, addr)
+			require.Equal(t, tt.output.path, path)
 		})
 	}
+}
+
+func TestData_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of Data", func(t *testing.T) {
+		original := &Data{
+			ImagesRepo: "test-repo",
+			Scheme:     "https",
+			CA:         "test-ca",
+			Username:   "test-user",
+			Password:   "test-pass",
+		}
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilData *Data
+		copied := nilData.DeepCopy()
+		require.Nil(t, copied)
+	})
 }

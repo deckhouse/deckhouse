@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -116,26 +115,26 @@ func TestCheckRegistryInitialization(t *testing.T) {
 		isExist, isApplied, err := getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.True(t, isExist, "Init secret should exist initially")
-		assert.False(t, isApplied, "Init secret should not be applied initially")
+		require.True(t, isExist, "Init secret should exist initially")
+		require.False(t, isApplied, "Init secret should not be applied initially")
 
 		// First run: delete the secret
 		err = checkRegistryInitialization(ctx, kubeClient, config)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.False(t, isExist, "Init secret should be deleted after first run")
+		require.False(t, isExist, "Init secret should be deleted after first run")
 
 		// Second run: verify deletion is idempotent
 		err = checkRegistryInitialization(ctx, kubeClient, config)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.False(t, isExist, "Init secret should remain deleted")
+		require.False(t, isExist, "Init secret should remain deleted")
 	})
 
 	t.Run("not legacy - should delete init secret after ready", func(t *testing.T) {
@@ -150,39 +149,39 @@ func TestCheckRegistryInitialization(t *testing.T) {
 		isExist, isApplied, err := getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.True(t, isExist, "Init secret should exist initially")
-		assert.True(t, isApplied, "Init secret should be applied initially")
+		require.True(t, isExist, "Init secret should exist initially")
+		require.True(t, isApplied, "Init secret should be applied initially")
 
 		// First run: preserve secret when module status is unknown
 		err = checkRegistryInitialization(ctx, kubeClient, config)
-		assert.EqualError(t, err, ErrIsNotReady.Error())
+		require.EqualError(t, err, ErrIsNotReady.Error())
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.True(t, isExist, "Init secret should be preserved when module status is unknown")
+		require.True(t, isExist, "Init secret should be preserved when module status is unknown")
 
 		// Second run: preserve secret with unready status
 		err = createStatusSecret(ctx, kubeClient, false)
 		require.NoError(t, err)
 
 		err = checkRegistryInitialization(ctx, kubeClient, config)
-		assert.EqualError(t, err, ErrIsNotReady.Error())
+		require.EqualError(t, err, ErrIsNotReady.Error())
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		assert.True(t, isExist, "Init secret should remain preserved with unready status")
+		require.True(t, isExist, "Init secret should remain preserved with unready status")
 
 		// Third run: delete secret when status becomes ready
 		err = createStatusSecret(ctx, kubeClient, true)
 		require.NoError(t, err)
 
 		err = checkRegistryInitialization(ctx, kubeClient, config)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
-		assert.False(t, isExist, "Init secret should be deleted when module becomes ready")
+		require.False(t, isExist, "Init secret should be deleted when module becomes ready")
 	})
 }
