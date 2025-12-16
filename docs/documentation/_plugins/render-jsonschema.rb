@@ -470,7 +470,7 @@ module JSONSchemaRenderer
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '', isAdditionalProperty = false)
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '')
         result = Array.new()
         ancestorsPathString = ''
 
@@ -485,10 +485,9 @@ module JSONSchemaRenderer
 
         # The replacement with sub is for preserving anchor links for ModuleConfig parameters
         linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
-        # URL-encode linkAnchor for proper URL fragment handling (similar to Hugo's urlquery)
-        if isAdditionalProperty == false
-          linkAnchor = URI.encode_www_form_component(linkAnchor)
-        end
+        # Processing linkAnchor: replace problematic characters with -, collapse minuses, remove the first minus
+        linkAnchor = linkAnchor.gsub(/[^a-zA-Z0-9_-]/, '-').gsub(/-+/, '-').gsub(/^-|-$/, '')
+
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
 
         # Data for search index
@@ -580,7 +579,7 @@ module JSONSchemaRenderer
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
-                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI, moduleName, isAdditionalProperty))
+                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI, moduleName))
             end
             result.push('</ul>')
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
@@ -588,7 +587,7 @@ module JSONSchemaRenderer
                 #  Array of objects
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI, moduleName, isAdditionalProperty))
+                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI, moduleName))
                 end
                 result.push('</ul>')
             else
@@ -598,7 +597,7 @@ module JSONSchemaRenderer
                     lang = @lang
                     i18n = @site.data["i18n"]["common"]
                     result.push('<ul>')
-                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI, moduleName, isAdditionalProperty))
+                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI, moduleName))
                     result.push('</ul>')
                 end
             end
@@ -623,7 +622,6 @@ module JSONSchemaRenderer
                 # Prepare the description with special text for additionalProperties object
                 additionalPropertyName = '<KEY_NAME>'.gsub('<', '&lt;').gsub('>', '&gt;')
                 additionalPropertyNameQuoted = '`<KEY_NAME>`'
-                isAdditionalProperty = true
                 mapKeyName = get_hash_value(additionalPropsData, 'x-doc-map-key-name')
                 additionalPropertyNameLang = get_i18n_term('additional_property_name')
                 
@@ -657,7 +655,7 @@ module JSONSchemaRenderer
                 end
                 
                 result.push('<ul>')
-                result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName, isAdditionalProperty))
+                result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
                 result.push('</ul>')
             # Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties)
             elsif additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
@@ -665,9 +663,8 @@ module JSONSchemaRenderer
                 additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
                 additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
                 additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
-                isAdditionalProperty = true
                 result.push('<ul>')
-                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName, isAdditionalProperty))
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
                 result.push('</ul>')
             end
             

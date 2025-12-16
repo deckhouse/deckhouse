@@ -41,8 +41,10 @@
   {{- $ancestorsPathString = printf "%s." (delimit $ancestors ".") }}
 {{- end }}
 
+{{/*  Processing linkAnchor: replace problematic characters with -, collapse minuses, remove the first minus  */}}
+
 {{- if $fullPath }}
-  {{- $linkAnchor = (printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower)) | urlquery }}
+  {{- $linkAnchor = ((printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower)) | replaceRE "[^a-zA-Z0-9_-]" "-" | replaceRE "-+" "-" | replaceRE "^-|-$" "") -}}
 {{- end }}
 
 {{- if gt ($parameterTitle | len ) 0 }}
