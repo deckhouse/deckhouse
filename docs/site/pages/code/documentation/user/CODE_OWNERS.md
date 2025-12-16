@@ -108,7 +108,7 @@ Deckhouse Code uses wildcards:
 /app/**/*.rb  @ruby-team
 ```
 
-## Секции CODEOWNERS
+## CODEOWNERS sections
 
 In the `CODEOWNERS` file, sections are named areas that are analyzed separately and always applied. Until you define a section, Deckhouse Code treats the entire `CODEOWNERS` file as a single section.
 
