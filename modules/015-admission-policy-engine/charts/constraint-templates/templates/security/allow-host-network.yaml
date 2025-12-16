@@ -57,9 +57,15 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 not allowed_by_any(input.review.object)
-                msg := sprintf("The hostNetwork or hostPort/containerPort(containerPort only if hostNetwork: true) are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+                object.get(input.review.object.spec, "hostNetwork", false) == false
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
               }
-
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                not allowed_by_any(input.review.object)
+                object.get(input.review.object.spec, "hostNetwork", false) == true
+                msg := sprintf("The hostNetwork or hostPort/containerPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+              }
               allowed_by_any(obj) if {
                 allowed_by_securitypolicyexeption(obj)
               }
