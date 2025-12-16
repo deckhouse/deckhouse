@@ -29,6 +29,18 @@ spec:
         memory: 200Mi
   {{- end }}
 ---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: permission-browser-apiserver
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: permission-browser-apiserver
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
