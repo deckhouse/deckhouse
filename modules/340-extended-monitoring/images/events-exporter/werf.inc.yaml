@@ -19,7 +19,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   setup:
-  - git clone --depth 1 --branch v0.0.4 https://github.com/deckhouse/events_exporter.git /src
+  - git clone --depth 1 --branch v0.0.4 $(cat /run/secrets/SOURCE_REPO)/deckhouse/events_exporter.git /src
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
