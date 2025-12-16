@@ -287,7 +287,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Field 'direct' must be empty",
+				errMsg: "Section 'direct' must be empty",
 			},
 		},
 		// Invalid cases - Unmanaged mode validation
@@ -312,7 +312,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			},
 			output: output{
 				err:    true,
-				errMsg: "Field 'unmanaged' must be empty",
+				errMsg: "Section 'unmanaged' must be empty",
 			},
 		},
 	}

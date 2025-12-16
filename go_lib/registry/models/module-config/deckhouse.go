@@ -78,17 +78,17 @@ func (settings DeckhouseSettings) Validate() error {
 		validation.Field(&settings.Direct,
 			validation.When(settings.Mode == constant.ModeDirect,
 				validation.NotNil,
-				validation.Required.Error("Field 'direct' is required when mode is 'Direct'"),
+				validation.Required.Error("Section 'direct' is required when mode is 'Direct'"),
 			).Else(
-				validation.Nil.Error("Field 'direct' must be empty when mode is not 'Direct'"),
+				validation.Nil.Error("Section 'direct' must be empty when mode is not 'Direct'"),
 			),
 		),
 		validation.Field(&settings.Unmanaged,
 			validation.When(settings.Mode == constant.ModeUnmanaged,
 				validation.NotNil,
-				validation.Required.Error("Field 'unmanaged' is required when mode is 'Unmanaged'"),
+				validation.Required.Error("Section 'unmanaged' is required when mode is 'Unmanaged'"),
 			).Else(
-				validation.Nil.Error("Field 'unmanaged' must be empty when mode is not 'Unmanaged'"),
+				validation.Nil.Error("Section 'unmanaged' must be empty when mode is not 'Unmanaged'"),
 			),
 		),
 	)
