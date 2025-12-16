@@ -196,29 +196,35 @@ func (m *MetaConfig) prepareRegistry() error {
 }
 
 func (m *MetaConfig) registryDeckhouseSettings() (*registry_moduleconfig.DeckhouseSettings, error) {
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() != "deckhouse" {
-			continue
-		}
+	var mcDeckhouse *ModuleConfig
 
-		settings, ok := mc.Spec.Settings["registry"]
-		if !ok {
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == "deckhouse" {
+			mcDeckhouse = mc
 			break
 		}
-
-		raw, err := json.Marshal(settings)
-		if err != nil {
-			return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
-		}
-
-		var ret registry_moduleconfig.DeckhouseSettings
-		if err := json.Unmarshal(raw, &ret); err != nil {
-			return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
-		}
-		return &ret, nil
 	}
 
-	return nil, nil
+	if mcDeckhouse == nil {
+		return nil, nil
+	}
+
+	settings, ok := mcDeckhouse.Spec.Settings["registry"]
+	if !ok {
+		return nil, nil
+	}
+
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
+	}
+
+	var ret registry_moduleconfig.DeckhouseSettings
+	if err := json.Unmarshal(raw, &ret); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
+	}
+
+	return &ret, nil
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
