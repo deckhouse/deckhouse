@@ -175,6 +175,11 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		}
 	}
 
+	err := d.vsphereClient.Login()
+	if err != nil {
+		return nil, fmt.Errorf("failed to login to vSphere: %v", err)
+	}
+
 	zonesDatastores, err := d.vsphereClient.GetZonesDatastores()
 	if err != nil {
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
