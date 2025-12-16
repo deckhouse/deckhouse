@@ -7,7 +7,7 @@ permalink: en/code/documentation/user/approval-rules.html
 weight: 50
 ---
 
-Approval rules helps control code quality and ensure mandatory review before merging. They can be used to determine how many approvals are required, who should participate in the review, and in which cases the rule should be triggered.
+Approval rules help control code quality and ensure mandatory review before merging. They can be used to determine how many approvals are required, who should participate in the review, and in which cases the rule should be triggered.
 
 These rules operate at the group, project, and merge request levels, are inherited down the hierarchy, and enable centralized management of the review process. Together with [CODEOWNERS](/products/code/documentation/user/code-owners.html), they form a flexible and reliable change control system, protecting important parts of the repository from unwanted or unreviewed edits.
 
@@ -23,7 +23,7 @@ Rules can be defined at the following levels:
 
 ### Description of columns in the approval rules table
 
-- **Rule**: Contains the name of the rule and inheritance attribute. The entry «Required by Gitlab Org group» means that the rule was created in the *Gitlab Org* group.
+- **Rule**: Contains the name of the rule and inheritance attribute. The entry "Required by Gitlab Org group" means that the rule was created in the *Gitlab Org* group.
 - **Approvers**: Contains a list of users and groups whose approvals are taken into account when checking compliance with the rule.
 - **Required number of approvals**: The number of approvals that must be obtained from users or group members specified in the "Approvers" column. The value `Any eligible user` means that an approval from any user who has the right to do so will be counted.
 - **Target branch**: The rule applies only if the merge request is sent to the specified branch. A wildcard (`*`) can be used as the branch name.
@@ -61,7 +61,7 @@ You can create a new rule by clicking the **"Add approval rule"** button and spe
 
 ## Project rules
 
->**How to find it**: "Project" → "Settings" → "Merge requests" → "Approve rules".
+>**How to find it**: "Project" → "Settings" → "Merge requests" → "Approval rules".
 
 Rules created at the project level are automatically added to new merge requests as inherited.
 
@@ -103,9 +103,9 @@ At the project or group level, you can configure additional settings:
 - **Prevent approval by merge request creator**: The MR author cannot approve.
 - **Prevent approval by user who add commits**: Committers cannot approve.
 - **Prevent editing approval rules in inherited entities**: When enabled:
-  - rules are copied to child entities and become unavailable for editing or deletion
-  - lower-level groups and projects can only create their own rules
-  - rules are not automatically added to existing MRs
+  - Rules are copied to child entities and become unavailable for editing or deletion.
+  - Lower-level groups and projects can only create their own rules.
+  - Rules are not automatically added to existing MRs.
   - Current approval settings also apply to all child entities.
 - **When commit is added**: This section determines whether existing approvals should be reset when a new commit appears.
 
@@ -113,5 +113,5 @@ At the project or group level, you can configure additional settings:
 
 If the approval settings do not prohibit it, approvals can be performed by:
 
-- all project members with the **Developer** role or higher
-- members with the **Planner** role or higher, if they are assigned as responsible in the merge request.
+- All project members with the **Developer** role or higher.
+- Members with the **Planner** role or higher, if they are assigned as responsible in the merge request.

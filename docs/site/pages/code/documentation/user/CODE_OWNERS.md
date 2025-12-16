@@ -11,8 +11,8 @@ The **CODEOWNERS** feature allows you to determine individuals responsible for s
 
 Using CODEOWNERS helps:
 
-- require approval from domain experts for important directories
-- simplify the process of finding those responsible for a specific section of code.
+- Require approval from domain experts for important directories.
+- Simplify the process of finding those responsible for a specific section of code.
 
 CODEOWNERS complements the [approval rules](/products/code/documentation/user/approval-rules.html) mechanism, but does not replace it. Unlike approval rules, which are set manually in the UI, CODEOWNERS works through the `CODEOWNERS` file in the repository.
 
@@ -23,9 +23,9 @@ Deckhouse Code uses it to determine the owners of files involved in a merge requ
 
 It is searched in three places (in order of priority):
 
-1. `./CODEOWNERS`.
-1. `./docs/CODEOWNERS`.
-1. `./.gitlab/CODEOWNERS`.
+1. `./CODEOWNERS`
+1. `./docs/CODEOWNERS`
+1. `./.gitlab/CODEOWNERS`
 
 **Only the first file found** is used.
 
@@ -69,24 +69,24 @@ Owners:
 - `@user`
 - `@group`
 - `@group/subgroup`
-- roles: `@@developer`, `@@maintainer`, `@@owner`.
+- Roles: `@@developer`, `@@maintainer`, `@@owner`
 
 ### Examples
 
 ```console
-# Owner of all files
+# Owner of all files.
 * @default-team
 
-# README.md only in the root directory
+# README.md only in the root directory.
 /README.md @docs-team
 
-# All Ruby files
+# All Ruby files.
 *.rb @backend-team
 
-# The entire config directory
+# The entire config directory.
 /config/ @devops
 
-# README.md anywhere
+# README.md anywhere.
 README.md @docs
 ```
 
@@ -119,7 +119,7 @@ Features of using `CODEOWNERS`:
 - If the file path matches multiple entries within a single section, only the last matching entry in that section is used.
 - If the file path matches entries in multiple sections, the last matching entry in each section is used.
 
-For example, in a `CODEOWNERS` file with the following sections defining owners for `README`:
+For example, in a `CODEOWNERS` file with the following sections defining owners for README:
 
 ```console
 * @root
@@ -152,34 +152,34 @@ In the merge request widget, each code owner is displayed under their own label.
 
 Below is an example of a real industrial file showing:
 
-- sections with different numbers of approvals
-- redefining owners
-- optional sections
-- exceptions
-- inheritance of sections with identical names.
+- Sections with different numbers of approvals
+- Redefining owners
+- Optional sections
+- Exceptions
+- Inheritance of sections with identical names
 
 ```console
-# Global settings
+# Global settings.
 * @fallback-team
 !*.lock                    # lock files do not require approval
 !**/generated/**           # automatic generation
 
 [Backend][2] @backend-core
-# Requires 2 approvals from backend-core for any Ruby code
+# Requires 2 approvals from backend-core for any Ruby code.
 app/**/*.rb
 
-# But for critical models, we define a different order
+# But for critical models, we define a different order.
 app/models/**/*.rb @backend-core @security-team
 
-# But this model is an exception; the owner of another one
+# But this model is an exception; the owner is different.
 app/models/legacy/**/*.rb @migration-team
 
 [Backend]
-# Section update: Backend now also includes SQL
+# Section update: Backend now also includes SQL.
 db/**/*.sql @db-team
 
 [Ruby Optional]
-# Additional lighting for owners, approvals are NOT required
+# Additional highlighting for owners, approvals are NOT required.
 ^[Ruby Optional]
 *.rb @ruby-advisors
 
@@ -188,24 +188,24 @@ db/**/*.sql @db-team
 *.vue @frontend-team
 *.js  @frontend-team
 
-# redefining: specific file → specific person
+# Redefining: specific file → specific person.
 frontend/critical_entry.vue @frontend-lead
 
 [Docs]
 *.md @technical-writers
 
 [Docs]
-# redefinition: README always belongs to docs-lead
+# Redefining: README always belongs to docs-lead.
 README.md @docs-lead
 ```
 
-Features of the example:
+Things to note about the example:
 
-- The `[Backend]` section is declared twice → Deckhouse Code will merge it.
+- The `[Backend]` section is declared twice → Deckhouse Code will combine it.
 - `[Backend][2] @backend-core` specifies **2 mandatory approvals**.
 - `[Frontend][3]` requires **3 approvals** from the frontend.
 - `[Ruby Optional]` is marked as optional — owners are visible, but their approval is not required.
-- the exceptions `!*.lock` and `!**/generated/**` mean that these files do not require approvals at all.
+- The exceptions `!*.lock` and `!**/generated/**` mean that these files do not require approvals at all.
 
 ### Exclusions (!)
 
@@ -240,13 +240,13 @@ A user is considered a valid owner if:
 - They are a direct but not inherited member of a group that is invited to the project group.
 - They are a direct but not inherited member of a group that is invited to an ancestor of the project group.
 
-To sum up, all users who are displayed on the project participants page with the role of developer or higher are eligible.
+To sum up, all users who are displayed on the project participants page with the role of Developer or higher are eligible.
 
 A user is not considered an owner if:
 
-- they are blocked,
-- their access has been revoked,
-- their role is lower than Developer.
+- They are blocked.
+- Their access has been revoked.
+- Their role is lower than Developer.
 
 ### 2. Groups (via `@group` or `@group/subgroup`)
 
@@ -285,11 +285,11 @@ CODEOWNERS and approval rules work independently, but their requirements are cum
 
 Example:
 
-- The `Security` rule requires 1 approver.
-- The `[Backend][2]` section requires 2 approvers.
+- The `Security` rule requires 1 approval.
+- The `[Backend][2]` section requires 2 approvals.
 - MR changes the backend file.
 
-Result: **3 approvers** are required.
+Result: **3 approvals** are required.
 
 ## Formatting recommendations
 
@@ -303,10 +303,10 @@ When formatting the `CODEOWNERS` file, follow these recommendations:
 ## Example of the final file
 
 ```console
-# Global owners
+# Global owners.
 * @default-team
 
-# Exclusions
+# Exclusions.
 !yarn.lock
 !**/generated/**
 
