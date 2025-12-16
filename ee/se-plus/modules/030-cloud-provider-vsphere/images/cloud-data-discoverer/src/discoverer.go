@@ -175,7 +175,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		}
 	}
 
-	err := d.vsphereClient.Login()
+	err := d.vsphereClient.RefreshClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to login to vSphere: %v", err)
 	}

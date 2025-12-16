@@ -42,7 +42,7 @@ import (
 type Client interface {
 	GetZonesDatastores() (*Output, error)
 	ListPolicies() ([]StoragePolicy, error)
-	Login() error
+	RefreshClient() error
 }
 
 type client struct {
@@ -184,8 +184,16 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 	return result, nil
 }
 
-func (v *client) Login() error {
-	return v.restClient.Login(context.TODO(), url.UserPassword(v.config.Provider.Username, v.config.Provider.Password))
+func (v *client) RefreshClient() error {
+	c, err := createVsphereClient(v.config)
+	if err != nil {
+		return err
+	}
+
+	v.client = c.client
+	v.restClient = c.restClient
+
+	return nil
 }
 
 func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
