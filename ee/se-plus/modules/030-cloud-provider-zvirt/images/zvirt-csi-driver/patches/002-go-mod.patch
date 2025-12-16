@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index a81a290..c78608c 100644
+index a81a290..3d9fbdd 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,18 +1,18 @@
@@ -11,12 +11,12 @@ index a81a290..c78608c 100644
  require (
  	github.com/container-storage-interface/spec v1.2.0
 -	github.com/golang/protobuf v1.5.2
-+	github.com/golang/protobuf v1.5.3
++	github.com/golang/protobuf v1.5.4
  	github.com/kubernetes-csi/csi-lib-utils v0.7.0
  	github.com/ovirt/go-ovirt-client-log-klog/v2 v2.0.0
  	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0
 -	github.com/ovirt/go-ovirt-client/v2 v2.0.1
-+	github.com/ovirt/go-ovirt-client/v3 v3.2.0
++	github.com/ovirt/go-ovirt-client/v2 v2.1.0
  	github.com/pkg/errors v0.9.1
 -	golang.org/x/net v0.17.0
 -	golang.org/x/sys v0.13.0
@@ -68,7 +68,7 @@ index a81a290..c78608c 100644
  	k8s.io/component-base v0.21.2 // indirect
  	k8s.io/klog/v2 v2.10.0 // indirect
 diff --git a/go.sum b/go.sum
-index 0735fe7..fcfd6da 100644
+index 0735fe7..360b7ba 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -65,13 +65,13 @@ github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnweb
@@ -103,8 +103,8 @@ index 0735fe7..fcfd6da 100644
  github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
 -github.com/golang/protobuf v1.5.2 h1:ROPKBNFfQgOUMifHyP+KYbvpjbdoFNs+aK7DXlji0Tw=
  github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
-+github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
-+github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
++github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
++github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
  github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
  github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
  github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
@@ -125,8 +125,8 @@ index 0735fe7..fcfd6da 100644
  github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
 -github.com/ovirt/go-ovirt-client/v2 v2.0.1 h1:Avznl0vB5kCeOf1Wxg/kWjZ7cr2sIc4sGKwD4T+/C9o=
 -github.com/ovirt/go-ovirt-client/v2 v2.0.1/go.mod h1:Zi2RF2khEr+hcr3fCAf6WL7OEoUwUHeWWiob/WcEaDc=
-+github.com/ovirt/go-ovirt-client/v3 v3.2.0 h1:gDQhxtubwzdlDIm2lh4XiOwkte2nR3JX1Q0O8iLGY84=
-+github.com/ovirt/go-ovirt-client/v3 v3.2.0/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
++github.com/ovirt/go-ovirt-client/v2 v2.1.0 h1:0wpDXCkJRGqBI4cVuzb3opO6EqMCJnmsbQ0wpsM1KzA=
++github.com/ovirt/go-ovirt-client/v2 v2.1.0/go.mod h1:Zi2RF2khEr+hcr3fCAf6WL7OEoUwUHeWWiob/WcEaDc=
  github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
  github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
  github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
