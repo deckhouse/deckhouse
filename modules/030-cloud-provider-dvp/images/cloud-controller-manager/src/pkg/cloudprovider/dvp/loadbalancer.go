@@ -27,8 +27,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const dvpDefaultLoadBalancerClass = "dvp-public"
-
 func (c *Cloud) GetLoadBalancer(
 	ctx context.Context,
 	clusterName string,
@@ -101,15 +99,6 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 	}
 
 	lbName := defaultLoadBalancerName(service)
-
-	lbClass, err := c.dvpService.LoadBalancerService.EnsureServiceLoadBalancerClass(ctx, service, dvpDefaultLoadBalancerClass)
-	if err != nil {
-		return nil, err
-	}
-
-	klog.Infof("DVP LoadBalancer ensure: service=%s/%s lbName=%s loadBalancerClass=%q",
-		service.Namespace, service.Name, lbName, lbClass,
-	)
 
 	lb := api.LoadBalancer{
 		Name:    lbName,
