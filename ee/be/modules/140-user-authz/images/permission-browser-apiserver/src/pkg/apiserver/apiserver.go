@@ -7,6 +7,7 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -127,10 +128,9 @@ func initInformers() (*initResult, error) {
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
-func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer, *multitenancy.Engine) {
+func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer, *multitenancy.Engine, error) {
 	if init.informerFactory == nil {
-		klog.Warning("No informer factory available, using allow-all fallback")
-		return &allowAllAuthorizer{}, nil
+		return nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
 	}
 
 	// Create RBAC authorizer
@@ -159,9 +159,9 @@ func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer
 
 	// Combine authorizers
 	if mtEngine != nil {
-		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine
+		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine, nil
 	}
-	return rbacAuth, nil
+	return rbacAuth, nil, nil
 }
 
 // startInformers starts the informer factory and waits for cache sync.
@@ -218,7 +218,11 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	}
 
 	// Initialize authorizers
-	compositeAuth, mtEngine := initAuthorizers(initRes, c.ExtraConfig.ConfigPath)
+	compositeAuth, mtEngine, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
+	}
 
 	// Start informers
 	startInformers(ctx, initRes.informerFactory)
@@ -237,11 +241,4 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	return &PermissionBrowserServer{
 		GenericAPIServer: genericServer,
 	}, nil
-}
-
-// allowAllAuthorizer is a fallback authorizer that allows everything
-type allowAllAuthorizer struct{}
-
-func (a *allowAllAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attributes) (authorizer.Decision, string, error) {
-	return authorizer.DecisionAllow, "allow-all fallback", nil
 }
