@@ -78,7 +78,7 @@ func TestConfig_ApplySettings(t *testing.T) {
 				RegistryScheme: "HTTPS",
 			},
 			expected: Config{
-				ImagesRepo:     constant.CEImagesRepo,
+				ImagesRepo:     constant.DefaultImagesRepo,
 				RegistryScheme: "HTTPS",
 			},
 		},
@@ -90,15 +90,15 @@ func TestConfig_ApplySettings(t *testing.T) {
 			},
 			expected: Config{
 				ImagesRepo:     "registry.example.com",
-				RegistryScheme: string(constant.CEScheme),
+				RegistryScheme: string(constant.DefaultScheme),
 			},
 		},
 		{
 			name:  "default ImagesRepo and Scheme",
 			input: Config{},
 			expected: Config{
-				ImagesRepo:     constant.CEImagesRepo,
-				RegistryScheme: string(constant.CEScheme),
+				ImagesRepo:     constant.DefaultImagesRepo,
+				RegistryScheme: string(constant.DefaultScheme),
 			},
 		},
 		{

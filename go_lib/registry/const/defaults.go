@@ -17,8 +17,8 @@ limitations under the License.
 package constant
 
 const (
-	UnknownVersion  = "unknown"
-	LicenseUsername = "license-token"
-	CEImagesRepo    = "registry.deckhouse.io/deckhouse/ce"
-	CEScheme        = SchemeHTTPS
+	UnknownVersion    = "unknown"
+	LicenseUsername   = "license-token"
+	DefaultImagesRepo = "registry.deckhouse.io/deckhouse/ce"
+	DefaultScheme     = SchemeHTTPS
 )

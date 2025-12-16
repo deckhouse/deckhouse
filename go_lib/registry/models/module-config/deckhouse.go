@@ -136,8 +136,8 @@ func (settings RegistrySettings) ToMap() map[string]any {
 func (settings *RegistrySettings) ApplySettings(userSettings *RegistrySettings) {
 	// Set default
 	*settings = RegistrySettings{
-		ImagesRepo: constant.CEImagesRepo,
-		Scheme:     constant.CEScheme,
+		ImagesRepo: constant.DefaultImagesRepo,
+		Scheme:     constant.DefaultScheme,
 	}
 
 	if userSettings == nil {

@@ -37,8 +37,8 @@ type Config struct {
 
 func (config *Config) ApplyConfig(userConfig Config) {
 	*config = Config{
-		ImagesRepo:     constant.CEImagesRepo,
-		RegistryScheme: string(constant.CEScheme),
+		ImagesRepo:     constant.DefaultImagesRepo,
+		RegistryScheme: string(constant.DefaultScheme),
 	}
 
 	// Set user config

@@ -104,8 +104,8 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 			expected: DeckhouseSettings{
 				Mode: constant.ModeDirect,
 				Direct: &RegistrySettings{
-					ImagesRepo: constant.CEImagesRepo,
-					Scheme:     constant.CEScheme,
+					ImagesRepo: constant.DefaultImagesRepo,
+					Scheme:     constant.DefaultScheme,
 				},
 			},
 		},
@@ -117,8 +117,8 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 			expected: DeckhouseSettings{
 				Mode: constant.ModeUnmanaged,
 				Unmanaged: &RegistrySettings{
-					ImagesRepo: constant.CEImagesRepo,
-					Scheme:     constant.CEScheme,
+					ImagesRepo: constant.DefaultImagesRepo,
+					Scheme:     constant.DefaultScheme,
 				},
 			},
 		},
@@ -155,7 +155,7 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 				Scheme:     "HTTPS",
 			},
 			expected: RegistrySettings{
-				ImagesRepo: constant.CEImagesRepo,
+				ImagesRepo: constant.DefaultImagesRepo,
 				Scheme:     "HTTPS",
 			},
 		},
@@ -167,15 +167,15 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 			},
 			expected: RegistrySettings{
 				ImagesRepo: "registry.example.com",
-				Scheme:     constant.CEScheme,
+				Scheme:     constant.DefaultScheme,
 			},
 		},
 		{
 			name:  "default ImagesRepo and Scheme",
 			input: nil,
 			expected: RegistrySettings{
-				ImagesRepo: constant.CEImagesRepo,
-				Scheme:     constant.CEScheme,
+				ImagesRepo: constant.DefaultImagesRepo,
+				Scheme:     constant.DefaultScheme,
 			},
 		},
 		{

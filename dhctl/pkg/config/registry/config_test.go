@@ -36,8 +36,8 @@ func ConfigBuilder(opts ...any) Config {
 		mode             = constant.ModeUnmanaged
 		legacyMode       = false
 		registrySettings = module_config.RegistrySettings{
-			ImagesRepo: constant.CEImagesRepo,
-			Scheme:     constant.CEScheme,
+			ImagesRepo: constant.DefaultImagesRepo,
+			Scheme:     constant.DefaultScheme,
 		}
 	)
 
