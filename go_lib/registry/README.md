@@ -3,25 +3,17 @@
 This package provides shared models and methods for the registry module.
 
 
-## Go Generate
+## Go generate
 
 ### Layout
 
 ```bash
-hack/ — scripts and helper files for go generate execution
-  codegen.sh — library with code generation functions
-  update-codegen.sh — runs code generation for the entire package
-  verify-codegen.sh — checks for ungenerated or incorrectly generated files
-  boilerplate.go.txt — header template for generated files
-
-models/ — folder with models for which deepcopy go generate is applied
-  ...
+models/ — contains data structures for which deepcopy generation is applied
+  generate.go — triggers code generation (via go:generate annotation) for all models in this package
+  moduleconfig/
+    deckhouse.go — type definitions annotated with `+k8s:deepcopy-gen=true` for automatic method generation
+    zz_generated.deepcopy.go — auto-generated file with DeepCopy() methods (created after running go generate)
 ```
-
-### How codegen works
-
-DeepCopy uses k8s code-generator to generate deepcopy methods into: `models/<model-name>/zz_generated.deepcopy.go`.
-
 
 ### Example of adding deepCopy generation
 
@@ -47,13 +39,8 @@ DeepCopy uses k8s code-generator to generate deepcopy methods into: `models/<mod
 
 2. Run the generation:
     ```bash
-    cd ./hack
-
-    # Go generate
-    ./update-codegen.sh
-
-    # Ensure there are no errors after generation
-    ./verify-codegen.sh
+    cd ./go_lib/registry
+    task generate
     ```
 
 3. Verify the presence of the `zz_generated.deepcopy.go` file with filled deepcopy methods and the inserted header:

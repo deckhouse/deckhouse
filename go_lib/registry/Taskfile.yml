@@ -1,0 +1,34 @@
+version: "3"
+
+tasks:
+  # All
+  generate:
+    desc: "Run generate"
+    deps:
+      - go:generate
+
+  test:
+    desc: "Run test"
+    deps:
+      - go:test
+
+  # Tools
+  go:tools:deepcopy-gen:
+    desc: "Install deepcopy-gen tool"
+    status:
+      - which deepcopy-gen > /dev/null 2>&1
+    cmds:
+      - go install k8s.io/code-generator/cmd/deepcopy-gen@latest
+
+  # GO
+  go:test:
+    desc: "Run go test"
+    cmds:
+      - go test -v ./...
+
+  go:generate:
+    desc: "Run go generate"
+    deps:
+      - go:tools:deepcopy-gen
+    cmds:
+      - go generate ./...
