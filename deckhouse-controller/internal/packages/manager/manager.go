@@ -155,7 +155,7 @@ func (m *Manager) ApplySettings(ctx context.Context, name string, settings addon
 	}
 
 	if !res.Allow {
-		return newApplySettingsErr(errors.New(res.Warning))
+		return newApplySettingsErr(errors.New(res.Message))
 	}
 
 	if err = app.ApplySettings(settings); err != nil {
