@@ -72,3 +72,7 @@ Ignore error when using IPv4 address for egress gateway other than assigned
 ## 014-kernel-verifier-stat.patch
 
 Added kernel verifer statistics in logs and prometeus metric as max bpf program complexity
+
+## 015-new-migration-cleanup-ct-logic.patch
+
+new-migration-cleanup-ct-logic.patch
