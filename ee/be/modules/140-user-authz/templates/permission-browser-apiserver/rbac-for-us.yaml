@@ -1,0 +1,73 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: permission-browser-apiserver
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:permission-browser-apiserver
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+# Access to namespaces for multi-tenancy engine
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+# Access to RBAC resources for authorization checks
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
+# Access to discovery API for checking if resources are namespaced
+- nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:permission-browser-apiserver
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authz:permission-browser-apiserver
+subjects:
+- kind: ServiceAccount
+  name: permission-browser-apiserver
+  namespace: d8-{{ .Chart.Name }}
+---
+# Role for delegated authentication
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:permission-browser-apiserver:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: permission-browser-apiserver
+  namespace: d8-{{ .Chart.Name }}
+---
+# Role for reading authentication config
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:user-authz:permission-browser-apiserver:authentication-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: permission-browser-apiserver
+  namespace: d8-{{ .Chart.Name }}
+{{- end }}
+
