@@ -57,6 +57,10 @@ type LoadBalancer struct {
 	ServiceLabels map[string]string
 }
 
+func NewLoadBalancerService(service *Service) *LoadBalancerService {
+	return &LoadBalancerService{service}
+}
+
 func (lb *LoadBalancerService) GetLoadBalancerByName(ctx context.Context, name string) (*corev1.Service, error) {
 	var svc corev1.Service
 	if err := lb.client.Get(ctx, types.NamespacedName{Name: name, Namespace: lb.namespace}, &svc); err != nil {
