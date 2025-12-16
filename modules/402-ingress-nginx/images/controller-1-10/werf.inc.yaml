@@ -328,13 +328,6 @@ import:
   add: /bin/pgrep
   to: /usr/bin/pgrep
   before: setup
-- image: tools/procps
-  add: /
-  to: /
-  includePaths:
-  - bin/pkill
-  - bin/pgrep
-  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
