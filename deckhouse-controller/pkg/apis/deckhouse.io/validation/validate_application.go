@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
@@ -46,10 +46,10 @@ func applicationValidationHandler(manager packageManager) http.Handler {
 		}
 
 		if res.Allow {
-			return allowResult([]string{res.Warning})
+			return allowResult(res.Warnings)
 		}
 
-		return rejectResult(res.Warning)
+		return rejectResult(res.Message)
 	})
 
 	// Create webhook.
