@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # Copyright 2017 The Kubernetes Authors.
 # Copyright 2025 Flant JSC
 #
