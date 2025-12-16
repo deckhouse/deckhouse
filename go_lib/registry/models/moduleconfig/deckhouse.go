@@ -25,6 +25,7 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
+// +k8s:deepcopy-gen=true
 type DeckhouseSettings struct {
 	Mode      constant.ModeType `json:"mode" yaml:"mode"`
 	Direct    *RegistrySettings `json:"direct,omitempty" yaml:"direct,omitempty"`
@@ -94,6 +95,7 @@ func (settings DeckhouseSettings) Validate() error {
 	)
 }
 
+// +k8s:deepcopy-gen=true
 type RegistrySettings struct {
 	ImagesRepo string                 `json:"imagesRepo" yaml:"imagesRepo"`
 	Scheme     constant.SchemeType    `json:"scheme" yaml:"scheme"`
