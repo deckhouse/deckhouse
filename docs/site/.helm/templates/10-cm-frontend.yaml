@@ -115,11 +115,32 @@ data:
         }
 
         # Redirect for installer
-        location /downloads/installer   {
+        location /downloads/installer/latest/([^/]+)/([^/]+)$   {
             # $installer_channel_name is mapped to $installer_channel_version (see map above)
             set $installer_channel_name "latest";
 
-            rewrite ^/downloads/installer/latest/(?<filename>.+)$ /$installer_channel_version/$filename  break;
+            rewrite ^/downloads/installer/latest/([^/]+)/([^/]+)$ /targets/releases/$installer_channel_version/$1/bin/$2  break;
+            rewrite ^ /get  break;
+
+            proxy_cache             dcache;
+            proxy_cache_key         $uri;
+            proxy_cache_methods     GET;
+            proxy_set_header        X-Real-IP         $remote_addr;
+            proxy_set_header        X-Original-URI    $request_uri;
+            proxy_set_header        X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_buffer_size       16k;
+            proxy_buffers           4 16k;
+            proxy_ignore_headers    Set-Cookie;
+            proxy_ignore_headers    Cache-Control;
+            proxy_intercept_errors  on;
+
+            error_page              301 302 307 = @handle_redirects;
+            proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru;
+        }
+
+        # Redirect for installer with specific version
+        location ~* ^/downloads/installer/(v[0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$   {
+            rewrite ^/downloads/installer/(v[0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$ /targets/releases/$1/$2/bin/$3  break;
             rewrite ^ /get  break;
 
             proxy_cache             dcache;
@@ -193,24 +214,6 @@ data:
 
             error_page              301 302 307 = @handle_redirects;
             proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru;
-        }
-
-        # Redirect for installer
-        location ~* ^/downloads/installer/([^/]+)/([^/]+)$ {
-            rewrite ^/downloads/installer/([^/]+)/([^/]+)$ /targets/releases/0.5.0/$1/bin/$2  break;
-            proxy_cache             dcache;
-            proxy_cache_key         "$scheme$request_method$host$request_uri";
-            proxy_cache_methods     GET;
-            proxy_set_header        X-Real-IP         $remote_addr;
-            proxy_set_header        X-Original-URI    $request_uri;
-            proxy_set_header        X-Forwarded-For   $proxy_add_x_forwarded_for;
-            proxy_buffer_size       16k;
-            proxy_buffers           4 16k;
-            proxy_ignore_headers    Set-Cookie;
-            proxy_ignore_headers    Cache-Control;
-            proxy_intercept_errors  on;
-            error_page              301 302 307 = @handle_redirects;
-            proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru$uri;
         }
 
         location @handle_redirects {
