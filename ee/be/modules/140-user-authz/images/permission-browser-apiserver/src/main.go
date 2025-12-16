@@ -17,6 +17,9 @@ import (
 )
 
 func main() {
+	// Initialize klog flags (--v, --vmodule, etc.)
+	klog.InitFlags(nil)
+
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
