@@ -1,3 +1,42 @@
+diff --git a/pkg/apis/core/validation/validation.go b/pkg/apis/core/validation/validation.go
+index 797783912f3..f33c1f70d67 100644
+--- a/pkg/apis/core/validation/validation.go
++++ b/pkg/apis/core/validation/validation.go
+@@ -2236,6 +2236,34 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
+ func ValidatePersistentVolumeClaim(pvc *core.PersistentVolumeClaim, opts PersistentVolumeClaimSpecValidationOptions) field.ErrorList {
+ 	allErrs := ValidateObjectMeta(&pvc.ObjectMeta, true, ValidatePersistentVolumeName, field.NewPath("metadata"))
+ 	allErrs = append(allErrs, ValidatePersistentVolumeClaimSpec(&pvc.Spec, field.NewPath("spec"), opts)...)
++	allErrs = append(allErrs, validatePersistentVolumeClaimLabels(pvc.Labels, field.NewPath("metadata", "labels"))...)
++	return allErrs
++}
++
++// validatePersistentVolumeClaimLabels validates the labels of a PersistentVolumeClaim
++func validatePersistentVolumeClaimLabels(labels map[string]string, fldPath *field.Path) field.ErrorList {
++	allErrs := field.ErrorList{}
++	if labels == nil {
++		return allErrs
++	}
++
++	storageLabels := []string{
++		v1.LabelResourceQuotaCapStorage,
++		v1.LabelResourceQuotaDiscountStorage,
++	}
++
++	for _, labelKey := range storageLabels {
++		if value, exists := labels[labelKey]; exists {
++			labelPath := fldPath.Key(labelKey)
++			quantity, err := resource.ParseQuantity(value)
++			if err != nil {
++				allErrs = append(allErrs, field.Invalid(labelPath, value, fmt.Sprintf("must be a valid quantity: %v", err)))
++			} else {
++				allErrs = append(allErrs, ValidateNonnegativeQuantity(quantity, labelPath)...)
++			}
++		}
++
++	}
+ 	return allErrs
+ }
+ 
 diff --git a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
 index a4da87b496b..89554b690d5 100644
 --- a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
