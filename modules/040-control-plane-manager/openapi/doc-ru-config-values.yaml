@@ -190,4 +190,5 @@ properties:
     description: |
       Список включенных в control plane feature gates.
 
-      Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      Список поддерживаемых в DKP feature gates см. [в разделе Feature Gates](../#feature-gates).
