@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index df0b40e3..aad50fcd 100644
+index df0b40e3..81f5c9e9 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -46,7 +46,7 @@ index df0b40e3..aad50fcd 100644
  	k8s.io/mount-utils v0.32.7
  	k8s.io/utils v0.0.0-20241210054802-24370beab758
  	software.sslmate.com/src/go-pkcs12 v0.5.0
-@@ -45,21 +45,22 @@ require (
+@@ -45,21 +45,23 @@ require (
  
  // the below fixes the "go list -m all" execution
  replace (
@@ -61,6 +61,7 @@ index df0b40e3..aad50fcd 100644
 -	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.32.7
 -	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.32.7
 -	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.32.7
++	github.com/opencontainers/runc => github.com/opencontainers/runc v1.2.9
 +	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.32.10
 +	k8s.io/cri-client => k8s.io/cri-client v0.32.10
 +	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.32.10
@@ -80,7 +81,7 @@ index df0b40e3..aad50fcd 100644
  	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
  	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
  	github.com/MichaelTJones/walk v0.0.0-20161122175330-4748e29d5718 // indirect
-@@ -77,7 +78,7 @@ require (
+@@ -77,7 +79,7 @@ require (
  	github.com/containerd/ttrpc v1.2.7 // indirect
  	github.com/coreos/go-semver v0.3.1 // indirect
  	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -89,19 +90,19 @@ index df0b40e3..aad50fcd 100644
  	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
  	github.com/distribution/reference v0.6.0 // indirect
  	github.com/docker/go-units v0.5.0 // indirect
-@@ -127,9 +128,9 @@ require (
+@@ -127,9 +129,9 @@ require (
  	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
  	github.com/opencontainers/go-digest v1.0.0 // indirect
  	github.com/opencontainers/image-spec v1.1.0 // indirect
 -	github.com/opencontainers/runc v1.2.5 // indirect
-+	github.com/opencontainers/runc v1.2.8 // indirect
++	github.com/opencontainers/runc v1.2.9 // indirect
  	github.com/opencontainers/runtime-spec v1.2.0 // indirect
 -	github.com/opencontainers/selinux v1.11.1 // indirect
-+	github.com/opencontainers/selinux v1.13.0 // indirect
++	github.com/opencontainers/selinux v1.13.1 // indirect
  	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
  	github.com/pkg/errors v0.9.1 // indirect
  	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-@@ -161,13 +162,13 @@ require (
+@@ -161,13 +163,13 @@ require (
  	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
  	go.uber.org/zap v1.27.0 // indirect
@@ -121,7 +122,7 @@ index df0b40e3..aad50fcd 100644
  	google.golang.org/genproto/googleapis/api v0.0.0-20250219182151-9fdb1cabc7b2 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20250219182151-9fdb1cabc7b2 // indirect
  	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
-@@ -177,16 +178,16 @@ require (
+@@ -177,16 +179,16 @@ require (
  	gopkg.in/warnings.v0 v0.1.2 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/apiextensions-apiserver v0.32.7 // indirect
@@ -142,7 +143,7 @@ index df0b40e3..aad50fcd 100644
  	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
  	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 diff --git a/go.sum b/go.sum
-index aa90c324..3d425754 100644
+index aa90c324..879c46c1 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -2,6 +2,8 @@ cel.dev/expr v0.21.2 h1:o+Wj235dy4gFYlYin3JsMpp3EEfMrPm/6tdoyjT98S0=
@@ -171,14 +172,14 @@ index aa90c324..3d425754 100644
  github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
 -github.com/opencontainers/runc v1.2.5 h1:8KAkq3Wrem8bApgOHyhRI/8IeLXIfmZ6Qaw6DNSLnA4=
 -github.com/opencontainers/runc v1.2.5/go.mod h1:dOQeFo29xZKBNeRBI0B19mJtfHv68YgCTh1X+YphA+4=
-+github.com/opencontainers/runc v1.2.8 h1:RnEICeDReapbZ5lZEgHvj7E9Q3Eex9toYmaGBsbvU5Q=
-+github.com/opencontainers/runc v1.2.8/go.mod h1:cC0YkmZcuvr+rtBZ6T7NBoVbMGNAdLa/21vIElJDOzI=
++github.com/opencontainers/runc v1.2.9 h1:szn/ts2m7YujxUKxGOZYWnb/PCAE+HGa3v+4MezQg7A=
++github.com/opencontainers/runc v1.2.9/go.mod h1:PVeJMb4P50vsdTkVmHmZU4Z6EhjSruje+2EFt2PJUBM=
  github.com/opencontainers/runtime-spec v1.2.0 h1:z97+pHb3uELt/yiAWD691HNHQIF07bE7dzrbT927iTk=
  github.com/opencontainers/runtime-spec v1.2.0/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 -github.com/opencontainers/selinux v1.11.1 h1:nHFvthhM0qY8/m+vfhJylliSshm8G1jJ2jDMcgULaH8=
 -github.com/opencontainers/selinux v1.11.1/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
-+github.com/opencontainers/selinux v1.13.0 h1:Zza88GWezyT7RLql12URvoxsbLfjFx988+LGaWfbL84=
-+github.com/opencontainers/selinux v1.13.0/go.mod h1:XxWTed+A/s5NNq4GmYScVy+9jzXhGBVEOAyucdRUY8s=
++github.com/opencontainers/selinux v1.13.1 h1:A8nNeceYngH9Ow++M+VVEwJVpdFmrlxsN22F+ISDCJE=
++github.com/opencontainers/selinux v1.13.1/go.mod h1:S10WXZ/osk2kWOYKy1x2f/eXF5ZHJoUs8UU/2caNRbg=
  github.com/pelletier/go-toml/v2 v2.2.3 h1:YmeHyLY8mFWbdkNWwpr+qIL2bEqT0o95WSdkNHvL12M=
  github.com/pelletier/go-toml/v2 v2.2.3/go.mod h1:MfCQTFTvCcUyyvvwm1+G6H/jORL20Xlb6rzQu9GuUkc=
  github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
