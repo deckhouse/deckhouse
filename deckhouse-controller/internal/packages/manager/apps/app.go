@@ -60,9 +60,9 @@ type Application struct {
 	digests    map[string]string // Package digests
 	registry   registry.Registry // Application registry
 
-	hooks         *hooks.Storage  // Hook storage with indices
-	values        *values.Storage // Values storage with layering
-	settingsCheck *kind.SettingsCheck
+	hooks         *hooks.Storage      // Hook storage with indices
+	values        *values.Storage     // Values storage with layering
+	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.

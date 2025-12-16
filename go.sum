@@ -145,6 +145,7 @@ github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 h1:fntxXW2hn5V
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.5.0 h1:b2GJUzMKQLr7oJVJy5lXHvyymNyvNiFXpBie7MwEWwE=
 github.com/deckhouse/module-sdk v0.5.0/go.mod h1:+EbBnP8z+poIihgL4l1oxHng5ePqDUK44c39u7sEBss=
+github.com/deckhouse/module-sdk v0.5.1-0.20251216123127-c45654f3e547/go.mod h1:+EbBnP8z+poIihgL4l1oxHng5ePqDUK44c39u7sEBss=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 h1:Ho1eOS+y2q4ogphFgyIwIwG0AfTyYlSNUvdB0uoY5wk=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3/go.mod h1:fFmOHeP+jqXhyEVftxMtsmBa5K8XTeVn3/AGVT9xcm8=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
@@ -203,6 +204,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.17.9 h1:9yv53wIuTZfLWsHEkUn6N0bWy/pfbhJA1F6G2UODfaM=
 github.com/flant/addon-operator v1.17.9/go.mod h1:/V50uwE8+uKayxabAu8uv5W8oK4kUzvp41EdP4/cD2k=
+github.com/flant/addon-operator v1.17.10-0.20251216123433-1fbea7d6af94 h1:LqTvpDUSIOfSjU4UfwMYQFitsFZ5irHNxbFCV5F1Vg4=
+github.com/flant/addon-operator v1.17.10-0.20251216123433-1fbea7d6af94/go.mod h1:05qbs/YWGI+tqtYOGDYMRmAk14CC0qtgAF/LKh1+KO4=
 github.com/flant/kube-client v1.5.1 h1:9UTPMxZqAPHUQzWS/4yE5hEPNIYhS+gGmegfi3r2lvQ=
 github.com/flant/kube-client v1.5.1/go.mod h1:hpJZ0FnDKHW3r5q5SYQgBrTw9k94q4+dcnJ4uOGYBHc=
 github.com/flant/shell-operator v1.12.3 h1:KFOnV34aen1yT3AKaYVNQlqufQHJiIKeUKmE/7aftiY=
