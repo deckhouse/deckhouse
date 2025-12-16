@@ -199,6 +199,29 @@ To assign this operational policy, add the `operation-policy.deckhouse.io/enable
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
+### Limiting GPU resource usage to specific namespaces
+
+To limit GPU usage, you can create an [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy) with the `D8DisallowedCustomResources` policy. In the example below, specifying resources in `resources.requests` and `resources.limits` that match the `nvidia.com/.*` regular expression is forbidden in all namespaces where the `gpu` label is set and has a value other than `enabled`. As a result, GPU resources are allowed only in namespaces labeled `gpu: enabled` (unless they are limited by other policies).
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: allow-nvidia-by-label
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+        - key: gpu
+          operator: NotIn
+          values: ["enabled"]
+  enforcementAction: Deny
+  policies:
+    disallowedCustomResources:
+      - "nvidia.com/.*"
+```
+
 ## Security policies
 
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy) resource,

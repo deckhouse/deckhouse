@@ -32,7 +32,7 @@ spec:
                     disallowedImageTags:
                       description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
                     disallowedCustomResources:
-                      description: "Запретить контейнерам запрашивать ресурсы, указанные в списке. Это полезно для управления доступом к GPU в связке с оператором `notIn` в `namespaceSelector`."
+                      description: "Запрещает контейнерам запрашивать перечисленные в списке ресурсы. Полезно для управления доступом к GPU при использовании оператора `notIn` в `namespaceSelector`."
                     disallowedTolerations:
                       description: |
                         Запрещает создание подов с tolerations из указанного списка.

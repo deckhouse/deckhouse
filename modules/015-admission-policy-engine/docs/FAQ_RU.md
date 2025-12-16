@@ -493,9 +493,9 @@ spec:
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Пространство имён доступно в `input.review.namespace`.
 
-## Как ограничить использование ресурсов GPU только в определенных пространствах имен?
+## Как ограничить использование ресурсов GPU только в определённых пространствах имён?
 
-Можно создать OperationPolicy с политикой `D8DisallowedCustomResources`. В примере ниже, использование в контейнерах `resources.requests` и `resources.limits`, подпадающих под регулярное выражение `nvidia.com/.*` разрешено только в пространствах имен с меткой `gpu: enabled`.
+Для ограничения использования GPU можно создать [`OperationPolicy`](cr.html#operationpolicy) с политикой `D8DisallowedCustomResources`. В примере ниже запрещается указывать в контейнерах ресурсы в `resources.requests` и `resources.limits`, подпадающие под регулярное выражение `nvidia.com/.*`, во всех пространствах имён, где метка `gpu` задана и имеет значение, отличное от `enabled`. Таким образом, использование ресурсов GPU допускается только в пространствах имён с меткой `gpu: enabled` (если их не ограничивают другие политики).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
