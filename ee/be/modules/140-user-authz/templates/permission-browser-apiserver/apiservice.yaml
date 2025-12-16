@@ -13,7 +13,7 @@ spec:
   group: authorization.deckhouse.io
   version: v1alpha1
   insecureSkipTLSVerify: false
-  caBundle: {{ .Values.userAuthz.internal.permissionBrowserApiserverCA | b64enc }}
+  caBundle: {{ .Values.userAuthz.internal.apiserverCertificate.ca | b64enc }}
   groupPriorityMinimum: 1000
   versionPriority: 15
 {{- end }}
