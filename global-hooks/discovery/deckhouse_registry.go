@@ -27,7 +27,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
 const (

@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 func validContext() *Context {

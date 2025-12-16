@@ -21,8 +21,8 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
 type (

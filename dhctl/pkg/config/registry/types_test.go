@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
 func TestKubeadmContext_ToMap(t *testing.T) {

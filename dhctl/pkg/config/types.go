@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
+	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 )
 
 const (

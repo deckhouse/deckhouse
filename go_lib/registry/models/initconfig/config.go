@@ -25,7 +25,7 @@ import (
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
 type Config struct {

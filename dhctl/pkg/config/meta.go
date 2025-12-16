@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"

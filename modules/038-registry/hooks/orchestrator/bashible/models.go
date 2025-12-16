@@ -24,7 +24,7 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )

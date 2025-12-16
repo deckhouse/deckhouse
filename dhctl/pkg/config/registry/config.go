@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/init-config"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/module-config"
+	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
 type Config struct {

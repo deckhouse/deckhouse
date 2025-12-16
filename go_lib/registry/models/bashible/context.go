@@ -21,7 +21,7 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/init-secret"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 var (
