@@ -1,6 +1,7 @@
 ---
 image: deckhouse-controller-src-artifact
 final: false
+fromCacheVersion: 2025-12-17-01
 fromImage: builder/src
 git:
 - add: /

@@ -1,4 +1,3 @@
-{{- if include "cluster_autoscaler_enabled" . }}
 - name: d8.cluster-autoscaler.availability
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
@@ -156,7 +155,3 @@
         ```shell
         d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
-
-{{- else }}
-[]
-{{- end }}

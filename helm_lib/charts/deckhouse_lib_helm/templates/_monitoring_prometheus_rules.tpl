@@ -1,17 +1,29 @@
-{{- /* Usage: {{ include "helm_lib_prometheus_rules_recursion" (list . <namespace> <root dir> [current dir]) }} */ -}}
+{{- /* Usage: {{ include "helm_lib_prometheus_rules_recursion" (list . <namespace> <root dir> [current dir] [file list]) }} */ -}}
 {{- /* returns all the prometheus rules from <root dir>/ */ -}}
 {{- /* current dir is optional — used for recursion but you can use it for partially generating rules */ -}}
+{{- /* file list is optional - list of files to include (filters all files if provided) */ -}}
 {{- define "helm_lib_prometheus_rules_recursion" -}}
   {{- $context := index . 0 }}    {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $namespace := index . 1 }}  {{- /* Namespace for creating rules */ -}}
   {{- $rootDir := index . 2 }}    {{- /* Rules root dir */ -}}
   {{- $currentDir := "" }}        {{- /* Current dir (optional) */ -}}
+  {{- $fileList := list }}        {{- /* File list for filtering (optional) */ -}}
+
   {{- if gt (len .) 3 }} {{- $currentDir = index . 3 }} {{- else }} {{- $currentDir = $rootDir }} {{- end }}
+  {{- if gt (len .) 4 }} {{- $fileList = index . 4 }} {{- end }}
+  
   {{- $currentDirIndex := (sub ($currentDir | splitList "/" | len) 1) }}
   {{- $rootDirIndex := (sub ($rootDir | splitList "/" | len) 1) }}
   {{- $folderNamesIndex := (add1 $rootDirIndex) }}
 
   {{- range $path, $_ := $context.Files.Glob (print $currentDir "/*.{yaml,tpl}") }}
+    {{- /* Filter files if fileList is provided */ -}}
+    {{- $shouldProcess := true }}
+    {{- if gt (len $fileList) 0 }}
+      {{- $shouldProcess = has $path $fileList }}
+    {{- end }}
+    
+    {{- if $shouldProcess }}
     {{- $fileName := ($path | splitList "/" | last ) }}
     {{- $definition := "" }}
     {{- if eq ($path | splitList "." | last) "tpl" -}}
@@ -23,7 +35,6 @@
     {{- $definition = $definition | replace "__SCRAPE_INTERVAL__" (printf "%ds" ($context.Values.global.discovery.prometheusScrapeInterval | default 30)) | replace "__SCRAPE_INTERVAL_X_2__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 2)) | replace "__SCRAPE_INTERVAL_X_3__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 3)) | replace "__SCRAPE_INTERVAL_X_4__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 4)) }}
 
 {{/*    Patch expression based on `d8_ignore_on_update` annotation*/}}
-
 
     {{ $definition = printf "Rules:\n%s" ($definition | nindent 2) }}
     {{- $definitionStruct :=  ( $definition | fromYaml )}}
@@ -76,6 +87,7 @@ spec:
   groups:
     {{- $definition | nindent 4 }}
     {{- end }}
+    {{- end }}
   {{- end }}
 
   {{- $subDirs := list }}
@@ -85,18 +97,23 @@ spec:
   {{- end }}
 
   {{- range $subDir := ($subDirs | uniq) }}
-{{ include "helm_lib_prometheus_rules_recursion" (list $context $namespace $rootDir $subDir) }}
+{{ include "helm_lib_prometheus_rules_recursion" (list $context $namespace $rootDir $subDir $fileList) }}
   {{- end }}
 {{- end }}
 
 
-{{- /* Usage: {{ include "helm_lib_prometheus_rules" (list . <namespace>) }} */ -}}
-{{- /* returns all the prometheus rules from monitoring/prometheus-rules/ */ -}}
+{{- /* Usage: {{ include "helm_lib_prometheus_rules" (list . <namespace> [fileList]) }} */ -}}
+{{- /* returns all the prometheus rules from monitoring/prometheus-rules/ optionally filtered by fileList */ -}}
 {{- define "helm_lib_prometheus_rules" -}}
   {{- $context := index . 0 }}    {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $namespace := index . 1 }}  {{- /* Namespace for creating rules */ -}}
+  {{- $rootDir := "monitoring/prometheus-rules" }}
+  {{- $fileList := list }}
+  {{- if gt (len .) 2 }}
+    {{- $fileList = index . 2 }}
+  {{- end }}
   {{- if ( $context.Values.global.enabledModules | has "operator-prometheus-crd" ) }}
-{{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
+{{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace $rootDir $rootDir $fileList) }}
   {{- end }}
 {{- end }}
 
