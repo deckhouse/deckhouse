@@ -170,7 +170,7 @@ spec:
     kind: Deployment
     name: frontend
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Auto" # InPlaceOrRecreate Working only from kubernetes 1.33
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
