@@ -24,6 +24,14 @@ rules:
 # Access to discovery API for checking if resources are namespaced
 - nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
   verbs: ["get"]
+# Access to admission webhooks for generic apiserver
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch"]
+# Access to API priority and fairness for generic apiserver
+- apiGroups: ["flowcontrol.apiserver.k8s.io"]
+  resources: ["prioritylevelconfigurations", "flowschemas"]
+  verbs: ["get", "list", "watch"]
 ---
 # ClusterRole for clients who can create BulkSubjectAccessReviews
 # This should be granted to UI service accounts or users who need bulk permission checks
