@@ -57,7 +57,7 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 not allowed_by_any(input.review.object)
-                msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+                msg := sprintf("The hostNetwork or hostPort/containerPort(containerPort only if hostNetwork: true) are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
               }
 
               allowed_by_any(obj) if {
@@ -82,20 +82,29 @@ spec:
                 exception.spec.network.hostNetwork.allowedValue == obj.spec.hostNetwork
               }
 
-              allowed_hostports_by_exception(_, exception) if {
-                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+              allowed_hostports_by_exception(obj, exception) if {
+                obj.spec.hostNetwork == true
                 # if hostNetwork all ports is hostPort and should be allowed
-                object_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                object_container_ports := [{"port": entry.containerPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
                 allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
-                every port in array.concat(object_host_ports, object_ports) {
+                every port in array.concat(object_host_ports, object_container_ports) {
                   port in allowed_ports
                 }
               }
 
+              allowed_hostports_by_exception(obj, exception) if {
+                obj.spec.hostNetwork == false
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in object_host_ports {
+                  port in allowed_ports
+                }
+              }
 
               allowed_by_securitypolicy(obj) if {
                 allowed_hostnetwork_by_securitypolicy(obj)
-                allowed_hostports_by_securitypolicy
+                allowed_hostports_by_securitypolicy(obj)
               }
 
               allowed_hostnetwork_by_securitypolicy(_) if {
@@ -108,17 +117,23 @@ spec:
               allowed_hostnetwork_by_securitypolicy(obj) if {
                 not obj.spec.hostNetwork # not exist
               }
-              allowed_hostports_by_securitypolicy if {
-                hostPort := input_containers[_].ports[_].hostPort
+
+              allowed_hostports_by_securitypolicy(obj) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+                hostPort := [hp | hp := input_containers[_].ports[_].hostPort ]
                 in_range(input.parameters.ranges, hostPort)
               }
 
-              allowed_hostports_by_securitypolicy if {
-                port := input_containers[_].ports[_]
-                not port.hostPort
-              }
 
-              allowed_hostports_by_securitypolicy if {
+              allowed_hostports_by_securitypolicy(obj) if {
+                obj.spec.hostNetwork == true
+                hostPort := [hp | hp := input_containers[_].ports[_].hostPort ]
+                containerPort := [cp | cp := input_containers[_].ports[_].containerPort]
+                ports = array.concat(hostPort, containerPort)
+                in_range(input.parameters.ranges, ports)
+              }
+            
+              allowed_hostports_by_securitypolicy(_) if {
                 container := input_containers[_]
                 not container.ports
               }

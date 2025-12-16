@@ -1,4 +1,4 @@
-apiVersion: v1
+disallowed-hostnetwork-true-container-portapiVersion: v1
 kind: Pod
 metadata:
   name: allowed-by-exception-hostport-despite-empty-ranges

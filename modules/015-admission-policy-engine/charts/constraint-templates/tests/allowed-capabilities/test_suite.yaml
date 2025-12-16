@@ -3,222 +3,194 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-capabilities
 tests:
-  - name: pss-baseline
-    template: ../../templates/security/allowed-capabilities.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-no-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-no-capabilities.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-audit-write
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-audit-write.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-multiple-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-multiple-capabilities.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-net-admin
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-net-admin.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-deployment-no-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-deployment-no-capabilities.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-deployment-net-admin
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-deployment-net-admin.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-daemonset-no-capabilities.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-daemonset-net-admin
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-daemonset-net-admin.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-sys-admin
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-sys-admin.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-containers-one-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-containers-one-disallowed.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-initContainer-disallowed-capability
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-initContainer-disallowed-capability.yaml
-        assertions:
-          - violations: yes
-
-  - name: pss-restricted
-    template: ../../templates/security/allowed-capabilities.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-no-capabilities-drop-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-no-capabilities-drop-all.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-net-bind-service-drop-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-net-bind-service-drop-all.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-not-dropping-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-not-dropping-all.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-no-drop-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-no-drop-capabilities.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-disallowed-capability
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-disallowed-capability.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-deployment-no-capabilities-drop-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-deployment-no-capabilities-drop-all.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-deployment-disallowed-capability
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-deployment-disallowed-capability.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-capabilities-drop-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-daemonset-no-capabilities-drop-all.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-daemonset-disallowed-capability
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-daemonset-disallowed-capability.yaml
-        assertions:
-          - violations: no
-
-  - name: pss-baseline-with-exception
-    template: ../../templates/security/allowed-capabilities.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-by-exception-net-admin
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-net-admin.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-capabilities
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-multiple-capabilities.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-capabilities.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-capability-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-capability-mismatch.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-no-exception-label
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-by-exception-mismatch-but-constraint-allows
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-multiple-containers-one-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-containers-one-mismatch.yaml
-        assertions:
-          - violations: yes
-
-  - name: pss-restricted-with-exception
-    template: ../../templates/security/allowed-capabilities.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-by-exception-net-admin-drop-all
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin-drop-all.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-net-admin-drop-all.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-drop-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-admin-drop-all.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-drop-mismatch.yaml
-        assertions:
-          - violations: yes
-
+- name: pss-baseline
+  template: ../../templates/security/allowed-capabilities.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 5-allowed-no-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/005-allowed-no-capabilities.yaml
+    assertions:
+    - violations: no
+  - name: 1-allowed-audit-write
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/001-allowed-audit-write.yaml
+    assertions:
+    - violations: no
+  - name: 4-allowed-multiple-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/004-allowed-multiple-capabilities.yaml
+    assertions:
+    - violations: no
+  - name: 12-disallowed-net-admin
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/012-disallowed-net-admin.yaml
+    assertions:
+    - violations: yes
+  - name: 3-allowed-deployment-no-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/003-allowed-deployment-no-capabilities.yaml
+    assertions:
+    - violations: no
+  - name: 9-disallowed-deployment-net-admin
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/009-disallowed-deployment-net-admin.yaml
+    assertions:
+    - violations: no
+  - name: 2-allowed-daemonset-no-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/002-allowed-daemonset-no-capabilities.yaml
+    assertions:
+    - violations: no
+  - name: 7-disallowed-daemonset-net-admin
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/007-disallowed-daemonset-net-admin.yaml
+    assertions:
+    - violations: no
+  - name: 13-disallowed-sys-admin
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/013-disallowed-sys-admin.yaml
+    assertions:
+    - violations: yes
+  - name: 11-disallowed-multiple-containers-one-disallowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/011-disallowed-multiple-containers-one-disallowed.yaml
+    assertions:
+    - violations: yes
+  - name: 10-disallowed-initContainer-disallowed-capability
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/010-disallowed-initContainer-disallowed-capability.yaml
+    assertions:
+    - violations: yes
+- name: pss-restricted
+  template: ../../templates/security/allowed-capabilities.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 19-allowed-no-capabilities-drop-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/019-allowed-no-capabilities-drop-all.yaml
+    assertions:
+    - violations: no
+  - name: 18-allowed-net-bind-service-drop-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/018-allowed-net-bind-service-drop-all.yaml
+    assertions:
+    - violations: no
+  - name: 26-disallowed-not-dropping-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/026-disallowed-not-dropping-all.yaml
+    assertions:
+    - violations: yes
+  - name: 25-disallowed-no-drop-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/025-disallowed-no-drop-capabilities.yaml
+    assertions:
+    - violations: yes
+  - name: 24-disallowed-disallowed-capability
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/024-disallowed-disallowed-capability.yaml
+    assertions:
+    - violations: yes
+  - name: 16-allowed-deployment-no-capabilities-drop-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/016-allowed-deployment-no-capabilities-drop-all.yaml
+    assertions:
+    - violations: no
+  - name: 22-disallowed-deployment-disallowed-capability
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/022-disallowed-deployment-disallowed-capability.yaml
+    assertions:
+    - violations: no
+  - name: 14-allowed-daemonset-no-capabilities-drop-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/014-allowed-daemonset-no-capabilities-drop-all.yaml
+    assertions:
+    - violations: no
+  - name: 20-disallowed-daemonset-disallowed-capability
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/020-disallowed-daemonset-disallowed-capability.yaml
+    assertions:
+    - violations: no
+- name: pss-baseline-with-exception
+  template: ../../templates/security/allowed-capabilities.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 40-44-allowed-by-exception-net-admin
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/040-allow-net-admin.yaml
+    object: test_samples/security_policy_exceptions/pods/044-allowed-by-exception-net-admin.yaml
+    assertions:
+    - violations: no
+  - name: 38-42-allowed-by-exception-multiple-capabilities
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/038-allow-multiple-capabilities.yaml
+    object: test_samples/security_policy_exceptions/pods/042-allowed-by-exception-multiple-capabilities.yaml
+    assertions:
+    - violations: no
+  - name: 40-45-disallowed-by-exception-capability-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/040-allow-net-admin.yaml
+    object: test_samples/security_policy_exceptions/pods/045-disallowed-by-exception-capability-mismatch.yaml
+    assertions:
+    - violations: yes
+  - name: 48-disallowed-no-exception-label
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/048-disallowed-no-exception-label.yaml
+    assertions:
+    - violations: yes
+  - name: 40-41-allowed-by-exception-mismatch-but-constraint-allows
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/040-allow-net-admin.yaml
+    object: test_samples/security_policy_exceptions/pods/041-allowed-by-exception-mismatch-but-constraint-allows.yaml
+    assertions:
+    - violations: no
+  - name: 40-47-disallowed-by-exception-multiple-containers-one-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/040-allow-net-admin.yaml
+    object: test_samples/security_policy_exceptions/pods/047-disallowed-by-exception-multiple-containers-one-mismatch.yaml
+    assertions:
+    - violations: yes
+- name: pss-restricted-with-exception
+  template: ../../templates/security/allowed-capabilities.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 39-43-allowed-by-exception-net-admin-drop-all
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/039-allow-net-admin-drop-all.yaml
+    object: test_samples/security_policy_exceptions/pods/043-allowed-by-exception-net-admin-drop-all.yaml
+    assertions:
+    - violations: no
+  - name: 39-46-disallowed-by-exception-drop-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/039-allow-net-admin-drop-all.yaml
+    object: test_samples/security_policy_exceptions/pods/046-disallowed-by-exception-drop-mismatch.yaml
+    assertions:
+    - violations: yes
