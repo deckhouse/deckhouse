@@ -115,12 +115,11 @@ data:
         }
 
         # Redirect for installer
-        location /downloads/installer/latest/([^/]+)/([^/]+)$   {
+        location /downloads/installer/latest/   {
             # $installer_channel_name is mapped to $installer_channel_version (see map above)
             set $installer_channel_name "latest";
 
             rewrite ^/downloads/installer/latest/([^/]+)/([^/]+)$ /targets/releases/$installer_channel_version/$1/bin/$2  break;
-            rewrite ^ /get  break;
 
             proxy_cache             dcache;
             proxy_cache_key         $uri;
@@ -139,9 +138,8 @@ data:
         }
 
         # Redirect for installer with specific version
-        location ~* ^/downloads/installer/(v[0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$   {
-            rewrite ^/downloads/installer/(v[0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$ /targets/releases/$1/$2/bin/$3  break;
-            rewrite ^ /get  break;
+        location ~* ^/downloads/installer/([0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$   {
+            rewrite ^/downloads/installer/([0-9]+\.[0-9]+\.[0-9]+)/([^/]+)/([^/]+)$ /targets/releases/$1/$2/bin/$3  break;
 
             proxy_cache             dcache;
             proxy_cache_key         $uri;
