@@ -1,13 +1,29 @@
 diff --git a/pkg/apis/core/validation/validation.go b/pkg/apis/core/validation/validation.go
-index 797783912f3..e2d8924e3b7 100644
+index 797783912f3..70a0b2d17e4 100644
 --- a/pkg/apis/core/validation/validation.go
 +++ b/pkg/apis/core/validation/validation.go
-@@ -2236,6 +2236,69 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
+@@ -2236,6 +2236,86 @@ func allowInvalidAPIGroupInDataSourceOrRef(spec *core.PersistentVolumeClaimSpec)
  func ValidatePersistentVolumeClaim(pvc *core.PersistentVolumeClaim, opts PersistentVolumeClaimSpecValidationOptions) field.ErrorList {
  	allErrs := ValidateObjectMeta(&pvc.ObjectMeta, true, ValidatePersistentVolumeName, field.NewPath("metadata"))
  	allErrs = append(allErrs, ValidatePersistentVolumeClaimSpec(&pvc.Spec, field.NewPath("spec"), opts)...)
 +	allErrs = append(allErrs, validateResourceQuotaLabels(pvc.Labels, field.NewPath("metadata", "labels"))...)
 +	return allErrs
++}
++
++// isValidCPUQuantityString checks if a quantity string is valid for CPU resources.
++// Other DecimalSI suffixes (k, M, G, etc..) are not valid for CPU.
++func isValidCPUQuantityString(value string) bool {
++	if len(value) == 0 {
++		return false
++	}
++	lastChar := value[len(value)-1]
++	if lastChar >= '0' && lastChar <= '9' {
++		return true // No suffix
++	}
++	if lastChar == 'm' {
++		return true // Millicores suffix
++	}
++	return false
 +}
 +
 +// validateResourceQuotaLabels validates the labels of a pod and pvc
@@ -38,9 +54,10 @@ index 797783912f3..e2d8924e3b7 100644
 +				allErrs = append(allErrs, field.Invalid(labelPath, value, fmt.Sprintf("must be a valid quantity: %v", err)))
 +			} else {
 +				allErrs = append(allErrs, ValidateNonnegativeQuantity(quantity, labelPath)...)
-+				// CPU must use DecimalSI format (m suffix or no suffix)
-+				if quantity.Format != resource.DecimalSI {
-+					allErrs = append(allErrs, field.Invalid(labelPath, value, "must be a CPU quantity (e.g., '1', '500m')"))
++				// CPU must only use 'm' suffix (millicores) or no suffix (cores)
++				// Other DecimalSI suffixes like k, M, G are invalid for CPU
++				if !isValidCPUQuantityString(value) {
++					allErrs = append(allErrs, field.Invalid(labelPath, value, "must be a CPU quantity (e.g., '1', '500m', '0.5')"))
 +				}
 +			}
 +		}
@@ -72,7 +89,7 @@ index 797783912f3..e2d8924e3b7 100644
  	return allErrs
  }
  
-@@ -4070,6 +4133,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
+@@ -4070,6 +4150,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
  
  	allErrs := ValidateObjectMeta(&pod.ObjectMeta, true, ValidatePodName, metaPath)
  	allErrs = append(allErrs, ValidatePodSpecificAnnotations(pod.ObjectMeta.Annotations, &pod.Spec, metaPath.Child("annotations"), opts)...)
