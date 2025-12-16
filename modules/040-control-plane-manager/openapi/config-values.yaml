@@ -318,6 +318,7 @@ properties:
       List of feature gates enabled in the control plane.
 
       More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      The list of feature gates supported in DKP can be found in the [Feature Gates section](../#feature-gates).
     items:
       type: string
       pattern: '^[a-zA-Z]+$'
