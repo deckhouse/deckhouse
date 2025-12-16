@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}ee/be/modules/140-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   excludePaths:
   - "**/*.md"
@@ -30,17 +30,17 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o permission-browser-apiserver .`) | indent 4 }}
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o permission-browser-apiserver .`) | indent 4 }}
   - chown 64535:64535 permission-browser-apiserver
   - chmod 0700 permission-browser-apiserver
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/permission-browser-apiserver
   to: /permission-browser-apiserver
   before: setup
