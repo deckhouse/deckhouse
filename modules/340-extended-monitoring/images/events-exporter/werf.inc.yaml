@@ -19,16 +19,8 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   setup:
-  - git clone --depth 1 --branch v0.0.4 $(cat /run/secrets/SOURCE_REPO)/nabokihms/events_exporter.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
+  - git clone --depth 1 --branch v0.0.4 https://github.com/deckhouse/events_exporter.git /src
   - rm -rf /src/.git
-git:
-  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      setup:
-        - "**/*"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
