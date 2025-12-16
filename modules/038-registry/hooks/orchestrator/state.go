@@ -459,7 +459,8 @@ func (state *State) transitionToUnmanaged(inputs Inputs) error {
 	// Reset checker
 	state.CheckerParams = checker.Params{}
 
-	if (state.Mode == registry_const.ModeProxy ||
+	if (state.Mode == registry_const.ModeUnmanaged ||
+		state.Mode == registry_const.ModeProxy ||
 		state.Mode == registry_const.ModeDirect) &&
 		state.Bashible.UnmanagedParams != nil {
 		unmanagedParams := *state.Bashible.UnmanagedParams
