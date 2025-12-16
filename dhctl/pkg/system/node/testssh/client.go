@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 
@@ -32,9 +33,15 @@ import (
 )
 
 type (
-	UploadScriptProvider func(host string, scriptPath string, args ...string) *Script
-	CommandProvider      func(host string, scriptPath string, args ...string) *Command
+	UploadScriptProvider func(scriptPath string, args ...string) *Script
+	CommandProvider      func(scriptPath string, args ...string) *Command
 	FileProvider         func() *File
+	SwitchHandler        func(s Switch)
+
+	Switch struct {
+		Session     *session.Session
+		PrivateKeys []session.AgentPrivateKey
+	}
 )
 
 type SSHProvider struct {
@@ -43,9 +50,12 @@ type SSHProvider struct {
 	initPrivateKeys []session.AgentPrivateKey
 	client          *Client
 
-	scriptProvider  UploadScriptProvider
-	commandProvider CommandProvider
-	fileProvider    FileProvider
+	scriptProviders  *providersMap[UploadScriptProvider]
+	commandProviders *providersMap[CommandProvider]
+	fileProviders    *providersMap[FileProvider]
+
+	switchHandler SwitchHandler
+	switches      []Switch
 }
 
 func NewSSHProvider(initSession *session.Session, once bool) *SSHProvider {
@@ -53,31 +63,42 @@ func NewSSHProvider(initSession *session.Session, once bool) *SSHProvider {
 		initSession:     initSession,
 		initPrivateKeys: make([]session.AgentPrivateKey, 0),
 		once:            once,
+
+		scriptProviders:  newProvidersMap[UploadScriptProvider](),
+		commandProviders: newProvidersMap[CommandProvider](),
+		fileProviders:    newOneProviderMap[FileProvider](),
+
+		switches: make([]Switch, 0),
 	}
 }
 
-func (p *SSHProvider) CommandProvider() CommandProvider {
-	return p.commandProvider
-}
-
-func (p *SSHProvider) WithScriptProvider(f UploadScriptProvider) *SSHProvider {
-	p.scriptProvider = f
+func (p *SSHProvider) AddScriptProvider(host string, f UploadScriptProvider) *SSHProvider {
+	p.scriptProviders.add(host, f)
 	return p
 }
 
-func (p *SSHProvider) WithCommandProvider(f CommandProvider) *SSHProvider {
-	p.commandProvider = f
+func (p *SSHProvider) AddCommandProvider(host string, f CommandProvider) *SSHProvider {
+	p.commandProviders.add(host, f)
 	return p
 }
 
-func (p *SSHProvider) WithFileProvider(f FileProvider) *SSHProvider {
-	p.fileProvider = f
+func (p *SSHProvider) SetFileProvider(host string, f FileProvider) *SSHProvider {
+	p.fileProviders.add(host, f)
 	return p
 }
 
 func (p *SSHProvider) WithInitPrivateKeys(k []session.AgentPrivateKey) *SSHProvider {
 	p.initPrivateKeys = k
 	return p
+}
+
+func (p *SSHProvider) WithSwitchHandler(f SwitchHandler) *SSHProvider {
+	p.switchHandler = f
+	return p
+}
+
+func (p *SSHProvider) Switches() []Switch {
+	return p.switches
 }
 
 func (p *SSHProvider) Client() (node.SSHClient, error) {
@@ -96,29 +117,54 @@ func (p *SSHProvider) Client() (node.SSHClient, error) {
 	return p.newClient(p.initSession, p.initPrivateKeys), nil
 }
 func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error) {
+	privateKeysCpy := make([]session.AgentPrivateKey, len(privateKeys))
+	copy(privateKeysCpy, privateKeys)
+
+	sessCopy := sess.Copy()
+	// copy reset current host
+	sessCopy.ChoiceNewHost()
+
+	s := Switch{
+		Session:     sessCopy,
+		PrivateKeys: privateKeysCpy,
+	}
+
+	if !govalue.IsNil(p.switchHandler) {
+		p.switchHandler(s)
+	}
+
+	p.switches = append(p.switches, s)
+
 	return p.newClient(sess, privateKeys), nil
 }
 
 func (p *SSHProvider) newClient(session *session.Session, k []session.AgentPrivateKey) *Client {
-	return NewClient(session, k).
-		WithScriptProvider(p.scriptProvider).
-		WithCommandProvider(p.commandProvider).
-		WithFileProvider(p.fileProvider)
+	c := NewClient(session, k)
+
+	p.scriptProviders.copyTo(p.scriptProviders)
+	p.commandProviders.copyTo(c.commandProviders)
+	p.fileProviders.copyTo(c.fileProviders)
+
+	return c
 }
 
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
 		privateKeys: privKeys,
+
+		scriptProviders:  newProvidersMap[UploadScriptProvider](),
+		commandProviders: newProvidersMap[CommandProvider](),
+		fileProviders:    newOneProviderMap[FileProvider](),
 	}
 }
 
 type Client struct {
 	Settings *session.Session
 
-	scriptProvider  UploadScriptProvider
-	commandProvider CommandProvider
-	fileProvider    FileProvider
+	commandProviders *providersMap[CommandProvider]
+	scriptProviders  *providersMap[UploadScriptProvider]
+	fileProviders    *providersMap[FileProvider]
 
 	privateKeys []session.AgentPrivateKey
 
@@ -129,36 +175,36 @@ type Client struct {
 	stopped     bool
 }
 
-func (p *Client) WithScriptProvider(f UploadScriptProvider) *Client {
-	p.scriptProvider = f
-	return p
+func (c *Client) AddScriptProvider(host string, f UploadScriptProvider) *Client {
+	c.scriptProviders.add(host, f)
+	return c
 }
 
-func (p *Client) WithCommandProvider(f CommandProvider) *Client {
-	p.commandProvider = f
-	return p
+func (c *Client) AddCommandProvider(host string, f CommandProvider) *Client {
+	c.commandProviders.add(host, f)
+	return c
 }
 
-func (p *Client) WithFileProvider(f FileProvider) *Client {
-	p.fileProvider = f
-	return p
+func (c *Client) SetFileProvider(host string, f FileProvider) *Client {
+	c.fileProviders.add(host, f)
+	return c
 }
 
-func (s *Client) OnlyPreparePrivateKeys() error {
+func (c *Client) OnlyPreparePrivateKeys() error {
 	// Double start is safe here because for initializing private keys we are using sync.Once
-	return s.Start()
+	return c.Start()
 }
 
-func (s *Client) Start() error {
-	if s.Settings == nil {
+func (c *Client) Start() error {
+	if c.Settings == nil {
 		return fmt.Errorf("Possible bug in ssh client: session should be created before start")
 	}
 
-	if s.isStopped() {
+	if c.isStopped() {
 		return fmt.Errorf("Possible bug in ssh client: client stopped")
 	}
 
-	s.setStarted()
+	c.setStarted()
 
 	return nil
 }
@@ -166,143 +212,183 @@ func (s *Client) Start() error {
 // Easy access to frontends
 
 // Tunnel is used to open local (L) and remote (R) tunnels
-func (s *Client) Tunnel(address string) node.Tunnel {
+func (c *Client) Tunnel(address string) node.Tunnel {
 	return &tunnel{address: address}
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
-func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
+func (c *Client) ReverseTunnel(address string) node.ReverseTunnel {
 	return &reverseTunnel{address: address}
 }
 
+func errorCommand(name, errStr string) node.Command {
+	return NewCommand(nil).WithErr(fmt.Errorf("%s: '%s'", errStr, name))
+}
+
 // Command is used to run commands on remote server
-func (s *Client) Command(name string, arg ...string) node.Command {
-	if s.commandProvider == nil {
-		return NewCommand(nil).WithErr(fmt.Errorf("Command provider not passed: '%s'", name))
+func (c *Client) Command(name string, arg ...string) node.Command {
+	host := c.Settings.Host()
+	providers, err := c.commandProviders.get(host)
+	if err != nil {
+		return errorCommand(name, err.Error())
 	}
 
-	host := s.Settings.Host()
-
-	cmd := s.commandProvider(host, name, arg...)
-	if govalue.IsNil(cmd) {
-		return NewCommand(nil).WithErr(fmt.Errorf("Provider returns nil command for '%s' for host '%s'", name, host))
+	for _, provider := range providers {
+		cmd := provider(name, arg...)
+		if !govalue.IsNil(cmd) {
+			return cmd
+		}
 	}
 
-	return cmd
+	return errorCommand(name, fmt.Sprintf("All commands providers (%d) returns nil command for host: %s", len(providers), host))
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
-func (s *Client) KubeProxy() node.KubeProxy {
+func (c *Client) KubeProxy() node.KubeProxy {
 	p := &kubeProxy{}
-	s.kubeProxies = append(s.kubeProxies, p)
+	c.kubeProxies = append(c.kubeProxies, p)
 	return p
 }
 
+func errorFile(errStr string) node.File {
+	err := fmt.Errorf(errStr)
+
+	upload := func(data []byte, dstPath string) error {
+		return err
+	}
+
+	download := func(srcPath string) ([]byte, error) {
+		return nil, err
+	}
+
+	return NewFile(upload, download)
+}
+
 // File is used to upload and download files and directories
-func (s *Client) File() node.File {
-	if s.fileProvider == nil {
-		return NewFile(func(data []byte, dstPath string) error {
-			return fmt.Errorf("File provider did not provided")
-		}, func(srcPath string) ([]byte, error) {
-			return nil, fmt.Errorf("File provider did not provided")
-		})
+func (c *Client) File() node.File {
+	host := c.Settings.Host()
+
+	provider, err := c.fileProviders.get(host)
+	if err != nil {
+		return errorFile(err.Error())
 	}
-	return s.fileProvider()
+
+	// get returns error if not found
+	file := provider[0]()
+	if govalue.IsNil(file) {
+		return errorFile(fmt.Sprintf("File provider returns nil File for host: %s", host))
+	}
+
+	return file
+}
+
+func errorScript(path, errStr string) node.Script {
+	return NewScript(nil).WithError(fmt.Errorf("%s: %s", errStr, path))
 }
 
 // UploadScript is used to upload script and execute it on remote server
-func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
-	if s.scriptProvider == nil {
-		return NewScript(nil).WithError(fmt.Errorf("Upload script provider not passed: %v", scriptPath))
+func (c *Client) UploadScript(scriptPath string, args ...string) node.Script {
+	host := c.Settings.Host()
+
+	providers, err := c.scriptProviders.get(host)
+	if err != nil {
+		return errorScript(scriptPath, err.Error())
 	}
 
-	return s.scriptProvider(s.Settings.Host(), scriptPath, args...)
+	for _, provider := range providers {
+		s := provider(scriptPath, args...)
+		if !govalue.IsNil(s) {
+			return s
+		}
+	}
+
+	return errorScript(scriptPath, fmt.Sprintf("All script providers (%d) returns nil command for host: %s", len(providers), host))
 }
 
 // UploadScript is used to upload script and execute it on remote server
-func (s *Client) Check() node.Check {
+func (c *Client) Check() node.Check {
 	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
 		return frontend.NewCommand(sess, cmd)
-	}, s.Settings)
+	}, c.Settings)
 }
 
 // Stop the client
-func (s *Client) Stop() {
-	if s.isStopped() {
+func (c *Client) Stop() {
+	if c.isStopped() {
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	for _, p := range s.kubeProxies {
+	for _, p := range c.kubeProxies {
 		p.StopAll()
 	}
 
-	s.kubeProxies = nil
-	s.stopped = true
+	c.kubeProxies = nil
+	c.stopped = true
 }
 
-func (s *Client) Session() *session.Session {
-	return s.Settings
+func (c *Client) Session() *session.Session {
+	return c.Settings
 }
 
-func (s *Client) PrivateKeys() []session.AgentPrivateKey {
-	return s.privateKeys
+func (c *Client) PrivateKeys() []session.AgentPrivateKey {
+	return c.privateKeys
 }
 
-func (s *Client) RefreshPrivateKeys() error {
+func (c *Client) RefreshPrivateKeys() error {
 	return nil
 }
 
 // Loop Looping all available hosts
-func (s *Client) Loop(fn node.SSHLoopHandler) error {
+func (c *Client) Loop(fn node.SSHLoopHandler) error {
 	var err error
 
 	resetSession := func() {
-		s.Settings = s.Settings.Copy()
-		s.Settings.ChoiceNewHost()
+		c.Settings = c.Settings.Copy()
+		c.Settings.ChoiceNewHost()
 	}
 	defer resetSession()
 	resetSession()
 
-	for range s.Settings.AvailableHosts() {
-		err = fn(s)
+	for range c.Settings.AvailableHosts() {
+		err = fn(c)
 		if err != nil {
 			return err
 		}
-		s.Settings.ChoiceNewHost()
+		c.Settings.ChoiceNewHost()
 	}
 
 	return nil
 }
 
-func (s *Client) setStarted() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (c *Client) setStarted() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	s.started = true
+	c.started = true
 }
 
-func (s *Client) isStarted() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (c *Client) isStarted() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	return s.started
+	return c.started
 }
 
-func (s *Client) isStopped() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (c *Client) isStopped() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	return s.stopped
+	return c.stopped
 }
 
-func (s *Client) appendProxy(p *kubeProxy) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (c *Client) appendProxy(p *kubeProxy) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	s.kubeProxies = append(s.kubeProxies, p)
+	c.kubeProxies = append(c.kubeProxies, p)
 }
 
 type kubeProxy struct{}
@@ -513,6 +599,10 @@ func NewFile(upload UploadFn, download DownloadFn) *File {
 }
 
 func (f *File) Upload(ctx context.Context, srcPath, dstPath string) error {
+	if govalue.IsNil(f.uploadFn) {
+		return fmt.Errorf("uploadFn is nil for path '%s'", dstPath)
+	}
+
 	data, err := os.ReadFile(srcPath)
 	if err != nil {
 		return err
@@ -530,9 +620,81 @@ func (f *File) Download(ctx context.Context, srcPath, dstPath string) error {
 }
 
 func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) error {
+	if govalue.IsNil(f.uploadFn) {
+		return fmt.Errorf("uploadFn is nil for path '%s'", remotePath)
+	}
 	return f.uploadFn(data, remotePath)
 }
 
 func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, error) {
+	if govalue.IsNil(f.downloadFn) {
+		return nil, fmt.Errorf("downloadFn is nil for path '%s'", remotePath)
+	}
 	return f.downloadFn(remotePath)
+}
+
+type providersMap[T any] struct {
+	hostToProviders map[string][]T
+	hasOne          bool
+}
+
+func newProvidersMap[T any]() *providersMap[T] {
+	return &providersMap[T]{
+		hostToProviders: make(map[string][]T),
+		hasOne:          false,
+	}
+}
+
+func newOneProviderMap[T any]() *providersMap[T] {
+	return &providersMap[T]{
+		hostToProviders: make(map[string][]T),
+	}
+}
+
+func (m *providersMap[T]) add(host string, provider T) {
+	mp := m.hostToProviders
+	if len(mp) == 0 {
+		mp = make(map[string][]T)
+	}
+
+	providers, ok := mp[host]
+	if !ok || len(providers) == 0 {
+		providers = make([]T, 0, 1)
+	}
+
+	if m.hasOne {
+		providers = []T{provider}
+	} else {
+		providers = append(providers, provider)
+	}
+
+	mp[host] = providers
+
+	m.hostToProviders = mp
+}
+
+func (m *providersMap[T]) copyTo(dst *providersMap[T]) {
+	for host, providers := range m.hostToProviders {
+		for _, provider := range providers {
+			dst.add(host, provider)
+		}
+	}
+}
+
+func (m *providersMap[T]) createErr(host, err string) error {
+	tp := reflect.TypeFor[T]()
+	return fmt.Errorf("Providers for %s %s for host '%s'", tp.String(), err, host)
+}
+
+func (m *providersMap[T]) get(host string) ([]T, error) {
+	if len(m.hostToProviders) == 0 {
+		return nil, m.createErr(host, "not initialized")
+	}
+
+	providers, ok := m.hostToProviders[host]
+	if !ok || len(providers) == 0 {
+		return nil, m.createErr(host, "no providers found")
+	}
+
+	return providers, nil
 }

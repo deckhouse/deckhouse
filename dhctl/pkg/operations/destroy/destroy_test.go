@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -53,7 +54,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
@@ -86,8 +86,6 @@ func TestStaticDestroy(t *testing.T) {
 		}
 		params := testStaticDestroyTestParams{
 			skipResources:   true,
-			commanderMode:   false,
-			commanderParams: nil,
 			destroyOverHost: hosts[0],
 			hosts:           hosts,
 		}
@@ -103,31 +101,33 @@ func TestStaticDestroy(t *testing.T) {
 		tst.assertStateCacheIsEmpty(t)
 		// skip deleting
 		assertResourceExists(t, tst.kubeCl, resources)
+		tst.assertCleanCommandRan(t, make([]session.Host, 0))
+		tst.assertDownloadDiscoveryIP(t, make([]session.Host, 0))
 	})
 
-	assertStateHasMetaconfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
-		destroyed, err := tst.d8State.IsResourcesDestroyed()
-		require.NoError(t, err)
-		require.True(t, destroyed)
-
+	assertStateHasMetaConfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
+		tst.assertResourcesDestroyed(t, true)
 		tst.assertHasMetaConfigInCache(t)
 	}
 
-	t.Run("one node", func(t *testing.T) {
-		noStaticOneBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest) {}
+	t.Run("single-master", func(t *testing.T) {
+		noBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest) {}
 
-		oneNodeTests := []struct {
+		singleMasterTests := []struct {
 			name string
 
 			sshOut string
 			sshErr error
 
-			stateCacheEmpty       bool
+			cleanScriptShouldRun   bool
+			stateCacheShouldEmpty  bool
+			resourcesShouldDeleted bool
+
 			skipResources         bool
 			skipResourcesCreating bool
 
 			before func(t *testing.T, tst *testStaticDestroyTest)
-			assert func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource)
+			assert func(t *testing.T, tst *testStaticDestroyTest, err error)
 		}{
 			{
 				name: "happy case",
@@ -135,13 +135,14 @@ func TestStaticDestroy(t *testing.T) {
 				sshOut: "ok",
 				sshErr: nil,
 
-				stateCacheEmpty: true,
+				cleanScriptShouldRun:   true,
+				stateCacheShouldEmpty:  true,
+				resourcesShouldDeleted: true,
 
-				before: noStaticOneBeforeFunc,
-				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.NoError(t, err)
-					assertResourceDeleted(t, tst.kubeCl, resources)
-					tst.assertKubeProviderCleaned(t)
+					tst.assertKubeProviderCleaned(t, true)
 				},
 			},
 
@@ -151,16 +152,17 @@ func TestStaticDestroy(t *testing.T) {
 				sshOut: "ok",
 				sshErr: nil,
 
-				stateCacheEmpty: true,
+				cleanScriptShouldRun: true,
+				// test that we cannot use kube api for deleting resources
+				resourcesShouldDeleted: false,
+				stateCacheShouldEmpty:  true,
 
 				before: func(t *testing.T, tst *testStaticDestroyTest) {
 					tst.setResourcesDestroyed(t)
 				},
-				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.NoError(t, err)
-					// skip deleting
-					assertResourceExists(t, tst.kubeCl, resources)
-					tst.assertKubeProviderCleaned(t)
+					tst.assertKubeProviderCleaned(t, true)
 				},
 			},
 
@@ -170,7 +172,11 @@ func TestStaticDestroy(t *testing.T) {
 				sshOut: "ok",
 				sshErr: nil,
 
-				stateCacheEmpty:       false,
+				cleanScriptShouldRun: false,
+				// test that we cannot use kube api for deleting resources
+				resourcesShouldDeleted: false,
+				stateCacheShouldEmpty:  false,
+
 				skipResources:         true,
 				skipResourcesCreating: true,
 
@@ -178,9 +184,9 @@ func TestStaticDestroy(t *testing.T) {
 					tst.setResourcesDestroyed(t)
 					tst.saveMetaConfigToCache(t)
 				},
-				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.Error(t, err)
-					assertStateHasMetaconfigAndResourcesDestroyed(t, tst)
+					assertStateHasMetaConfigAndResourcesDestroyed(t, tst)
 					tst.assertKubeProviderIsErrorProvider(t)
 				},
 			},
@@ -191,7 +197,11 @@ func TestStaticDestroy(t *testing.T) {
 				sshOut: "ok",
 				sshErr: nil,
 
-				stateCacheEmpty:       true,
+				cleanScriptShouldRun: true,
+				// test that we cannot use kube api for deleting resources
+				resourcesShouldDeleted: false,
+				stateCacheShouldEmpty:  true,
+
 				skipResources:         true,
 				skipResourcesCreating: true,
 
@@ -200,7 +210,7 @@ func TestStaticDestroy(t *testing.T) {
 					tst.setResourcesDestroyed(t)
 					tst.saveMetaConfigToCache(t)
 				},
-				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.NoError(t, err)
 					tst.assertKubeProviderIsErrorProvider(t)
 				},
@@ -212,27 +222,26 @@ func TestStaticDestroy(t *testing.T) {
 				sshOut: "error!",
 				sshErr: errors.New("error"),
 
-				stateCacheEmpty: false,
+				cleanScriptShouldRun:   true,
+				resourcesShouldDeleted: true,
+				stateCacheShouldEmpty:  false,
 
-				before: noStaticOneBeforeFunc,
-				assert: func(t *testing.T, tst *testStaticDestroyTest, err error, resources []testCreatedResource) {
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.Error(t, err)
-					assertStateHasMetaconfigAndResourcesDestroyed(t, tst)
-					assertResourceDeleted(t, tst.kubeCl, resources)
-					tst.assertKubeProviderCleaned(t)
+					assertStateHasMetaConfigAndResourcesDestroyed(t, tst)
+					tst.assertKubeProviderCleaned(t, true)
 				},
 			},
 		}
 
-		for _, tt := range oneNodeTests {
+		for _, tt := range singleMasterTests {
 			t.Run(tt.name, func(t *testing.T) {
 				hosts := []session.Host{
 					{Host: "127.0.0.2", Name: "master-1"},
 				}
 				params := testStaticDestroyTestParams{
 					skipResources:   tt.skipResources,
-					commanderMode:   false,
-					commanderParams: nil,
 					destroyOverHost: hosts[0],
 					hosts:           hosts,
 				}
@@ -249,14 +258,263 @@ func TestStaticDestroy(t *testing.T) {
 
 				tt.before(t, tst)
 
-				testAddCleanCommand(tst.sshProvider, hosts[0], tt.sshOut, tt.sshErr, tst.logger)
+				tst.addCleanCommand(tst.sshProvider, hosts[0], tt.sshOut, tt.sshErr, tst.logger)
 
 				err := tst.destroyer.DestroyCluster(context.TODO(), true)
 
 				tst.assertNodeUserDidNotCreate(t)
-				tst.assertStateCache(t, tt.stateCacheEmpty)
+				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
+				tst.assertDownloadDiscoveryIP(t, make([]session.Host, 0))
+				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
 
-				tt.assert(t, tst, err, resources)
+				cleanScriptRunOnHosts := make([]session.Host, 0)
+				if tt.cleanScriptShouldRun {
+					cleanScriptRunOnHosts = append(cleanScriptRunOnHosts, hosts[0])
+				}
+				tst.assertCleanCommandRan(t, cleanScriptRunOnHosts)
+				switchedHosts := make([]session.Host, 0)
+				tst.assertClientSwitches(t, switchedHosts)
+				tst.assertPrivateKeyWritten(t, len(switchedHosts))
+
+				tt.assert(t, tst, err)
+			})
+		}
+	})
+
+	t.Run("multi-master", func(t *testing.T) {
+		noBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest) {}
+
+		type host struct {
+			ip   string
+			name string
+
+			sshOut string
+			sshErr error
+
+			discoveryIPFile    bool
+			discoveryIPFileErr error
+
+			cleanScriptShouldRun bool
+
+			notCreateNodeUser     bool
+			switchToConvergerUser bool
+		}
+
+		multimasterMasterTests := []struct {
+			name string
+
+			hosts []host
+
+			resourcesShouldDeleted bool
+			stateCacheShouldEmpty  bool
+			nodeUserShouldCreated  bool
+
+			skipResources         bool
+			skipResourcesCreating bool
+
+			before func(t *testing.T, tst *testStaticDestroyTest)
+			assert func(t *testing.T, tst *testStaticDestroyTest, err error)
+		}{
+			{
+				name: "happy case 3 masters",
+				hosts: []host{
+					{
+						ip:                    "127.0.0.2",
+						name:                  "master-1",
+						sshOut:                "ok",
+						sshErr:                nil,
+						discoveryIPFile:       true,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+					{
+						ip:                    "127.0.0.3",
+						name:                  "master-2",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+					{
+						ip:                    "127.0.0.4",
+						name:                  "master-3",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+				},
+
+				stateCacheShouldEmpty:  true,
+				nodeUserShouldCreated:  true,
+				resourcesShouldDeleted: true,
+
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
+					require.NoError(t, err)
+					tst.assertKubeProviderCleaned(t, true)
+				},
+			},
+
+			{
+				name: "happy case 2 masters",
+				hosts: []host{
+					{
+						ip:                    "127.0.0.2",
+						name:                  "master-1",
+						sshOut:                "ok",
+						sshErr:                nil,
+						discoveryIPFile:       true,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+					{
+						ip:                    "127.0.0.3",
+						name:                  "master-2",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+				},
+
+				stateCacheShouldEmpty:  true,
+				nodeUserShouldCreated:  true,
+				resourcesShouldDeleted: true,
+
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
+					require.NoError(t, err)
+					tst.assertKubeProviderCleaned(t, true)
+				},
+			},
+			{
+				name: "user cannot create on same nodes",
+				hosts: []host{
+					{
+						ip:                    "127.0.0.2",
+						name:                  "master-1",
+						sshOut:                "ok",
+						sshErr:                nil,
+						discoveryIPFile:       false,
+						cleanScriptShouldRun:  false,
+						switchToConvergerUser: false,
+					},
+					{
+						ip:                    "127.0.0.3",
+						name:                  "master-2",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  false,
+						switchToConvergerUser: false,
+						notCreateNodeUser:     true,
+					},
+					{
+						ip:                    "127.0.0.4",
+						name:                  "master-3",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  false,
+						switchToConvergerUser: false,
+					},
+				},
+
+				stateCacheShouldEmpty:  false,
+				nodeUserShouldCreated:  true,
+				resourcesShouldDeleted: false,
+
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
+					require.Error(t, err)
+					tst.assertKubeProviderCleaned(t, false)
+					tst.assertNodeUserCredsSavedInCache(t)
+					tst.assertResourcesDestroyed(t, false)
+				},
+			},
+		}
+
+		for _, tt := range multimasterMasterTests {
+			t.Run(tt.name, func(t *testing.T) {
+				hosts := make([]session.Host, 0, len(tt.hosts))
+				hostsToCreateNodeUser := make([]session.Host, 0, len(tt.hosts))
+				hostsToSwitchToConverger := make([]session.Host, 0, len(tt.hosts))
+				sessionHosts := make(map[string]session.Host, len(tt.hosts))
+
+				for _, h := range tt.hosts {
+					sh := session.Host{
+						Host: h.ip,
+						Name: h.name,
+					}
+					hosts = append(hosts, sh)
+					sessionHosts[h.ip] = sh
+
+					if !h.notCreateNodeUser {
+						hostsToCreateNodeUser = append(hostsToCreateNodeUser, sh)
+					}
+
+					if h.switchToConvergerUser {
+						hostsToSwitchToConverger = append(hostsToSwitchToConverger, sh)
+					}
+				}
+
+				params := testStaticDestroyTestParams{
+					skipResources:   tt.skipResources,
+					destroyOverHost: hosts[0],
+					hosts:           hosts,
+				}
+
+				tst := createTestStaticDestroyTest(t, params)
+				defer tst.clean(t)
+
+				testCreateNodes(t, tst.kubeCl, hosts)
+
+				var resources []testCreatedResource
+				if !tt.skipResourcesCreating {
+					resources = testCreateResourcesForStatic(t, tst.kubeCl)
+				}
+
+				tt.before(t, tst)
+
+				hostsWithRunCleanScript := make([]session.Host, 0, len(tt.hosts))
+				hostsWithRunDownloadDiscoveryIP := make([]session.Host, 0, len(tt.hosts))
+				for _, h := range tt.hosts {
+					sh, ok := sessionHosts[h.ip]
+					require.True(t, ok)
+					tst.addCleanCommand(tst.sshProvider, sh, h.sshOut, h.sshErr, tst.logger)
+					if h.cleanScriptShouldRun {
+						hostsWithRunCleanScript = append(hostsWithRunCleanScript, sh)
+					}
+
+					if h.discoveryIPFile {
+						tst.addDiscoveryIPFileDownload(tst.sshProvider, sh, h.discoveryIPFileErr)
+						hostsWithRunDownloadDiscoveryIP = append(hostsWithRunDownloadDiscoveryIP, sh)
+					}
+				}
+
+				ctx := context.TODO()
+
+				var waiter *testWaiter
+				if len(hostsToCreateNodeUser) > 0 {
+					waiter = newTestWaiter()
+					waiter.goWaitNodeUserAddUserToNodes(ctx, tst.kubeCl, hostsToCreateNodeUser)
+				}
+
+				err := tst.destroyer.DestroyCluster(ctx, true)
+
+				if waiter != nil {
+					waiter.waitAll()
+					require.NoError(t, waiter.getErr())
+				}
+
+				tst.assertNodeUserCreated(t, tt.nodeUserShouldCreated)
+				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
+				tst.assertDownloadDiscoveryIP(t, hostsWithRunDownloadDiscoveryIP)
+				tst.assertCleanCommandRan(t, hostsWithRunCleanScript)
+				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
+				tst.assertClientSwitches(t, hostsToSwitchToConverger)
+				tst.assertPrivateKeyWritten(t, len(hostsToSwitchToConverger))
+
+				tt.assert(t, tst, err)
 			})
 		}
 	})
@@ -265,9 +523,6 @@ func TestStaticDestroy(t *testing.T) {
 
 type testStaticDestroyTestParams struct {
 	skipResources bool
-
-	commanderMode   bool
-	commanderParams *commander.CommanderModeParams
 
 	destroyOverHost session.Host
 
@@ -300,6 +555,47 @@ func (w *testWaiter) getErr() error {
 	return w.err
 }
 
+func (w *testWaiter) waitAll() {
+	w.wg.Wait()
+}
+
+func (w *testWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host) {
+	w.wg.Add(1)
+
+	go func() {
+		defer w.wg.Done()
+		err := retry.NewSilentLoop("wait node user", 20, 500*time.Millisecond).RunContext(ctx, func() error {
+			_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(ctx, global.ConvergeNodeUserName, metav1.GetOptions{})
+			return err
+		})
+		if err != nil {
+			w.setErr(err)
+			return
+		}
+
+		for _, host := range hosts {
+			node, err := kubeCl.CoreV1().Nodes().Get(ctx, host.Name, metav1.GetOptions{})
+			if err != nil {
+				w.setErr(err)
+				return
+			}
+
+			if len(node.Annotations) == 0 {
+				node.Annotations = make(map[string]string)
+			}
+
+			node.Annotations[global.ConvergerNodeUserAnnotation] = "true"
+			_, err = kubeCl.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+			if err != nil {
+				w.setErr(err)
+				return
+			}
+		}
+
+		w.setErr(nil)
+	}()
+}
+
 type testStaticDestroyTest struct {
 	params testStaticDestroyTestParams
 
@@ -314,6 +610,9 @@ type testStaticDestroyTest struct {
 	stateCache dhctlstate.Cache
 	d8State    *deckhouse.State
 	metaConfig *config.MetaConfig
+
+	cleanCommandsRanOnHosts       map[string]struct{}
+	downloadDiscoveryIPRanOnHosts map[string]struct{}
 
 	tmpDir string
 }
@@ -402,6 +701,14 @@ func (ts *testStaticDestroyTest) assertStateCache(t *testing.T, empty bool) {
 	ts.assertStateCacheNotEmpty(t)
 }
 
+func (ts *testStaticDestroyTest) assertResourcesDestroyed(t *testing.T, destroyed bool) {
+	require.False(t, govalue.IsNil(ts.d8State))
+
+	destroyedInCache, err := ts.d8State.IsResourcesDestroyed()
+	require.NoError(t, err)
+	require.Equal(t, destroyed, destroyedInCache)
+}
+
 func (ts *testStaticDestroyTest) assertStateCacheIsEmpty(t *testing.T) {
 	keys := ts.stateCacheKeys(t)
 	require.Empty(t, keys, fmt.Sprintf("has keys %v", keys))
@@ -412,26 +719,203 @@ func (ts *testStaticDestroyTest) assertStateCacheNotEmpty(t *testing.T) {
 	require.NotEmpty(t, keys, "has not keys")
 }
 
-func (ts *testStaticDestroyTest) assertNodeUserDidNotCreate(t *testing.T) {
+func (ts *testStaticDestroyTest) assertNodeUserCredsSavedInCache(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	_, err := static.NewDestroyState(ts.stateCache).NodeUser()
+	require.NoError(t, err)
+
+}
+
+func (ts *testStaticDestroyTest) assertNodeUserExistsSavedInCache(t *testing.T, saved bool) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	exists := static.NewDestroyState(ts.stateCache).IsNodeUserExists()
+	require.Equal(t, saved, exists)
+}
+
+const (
+	bastionHost = "127.0.0.1"
+	bastionUser = "notexistsb"
+	bastionPort = "23"
+	inputPort   = "22"
+)
+
+var (
+	inputPrivateKeys = []string{"/tmp/fake_ssh/input_private_key_1", "/tmp/fake_ssh/input_private_key_2"}
+)
+
+func (ts *testStaticDestroyTest) assertClientSwitches(t *testing.T, hosts []session.Host) {
+	require.False(t, govalue.IsNil(ts.sshProvider))
+
+	switches := ts.sshProvider.Switches()
+	require.Len(t, hosts, len(switches))
+
+	if len(hosts) == 0 {
+		return
+	}
+
+	privateKeys := make(map[string]struct{})
+	hostsMap := make(map[string]struct{})
+
+	for _, h := range hosts {
+		hostsMap[h.Host] = struct{}{}
+	}
+
+	for _, s := range switches {
+		require.NotNil(t, s.Session)
+		require.Equal(t, bastionHost, s.Session.BastionHost)
+		require.Equal(t, bastionUser, s.Session.BastionUser)
+		require.Equal(t, bastionPort, s.Session.BastionPort)
+		require.Equal(t, global.ConvergeNodeUserName, s.Session.User)
+		require.Equal(t, inputPort, s.Session.Port)
+
+		require.Contains(t, hostsMap, s.Session.Host())
+		for _, pk := range s.PrivateKeys {
+			privateKeys[pk.Key] = struct{}{}
+		}
+	}
+
+	// all user passed keys and converger private key
+	// for every host with converge user we create different key
+	require.Len(t, privateKeys, len(inputPrivateKeys)+len(hosts))
+	for _, pk := range inputPrivateKeys {
+		require.Contains(t, privateKeys, pk)
+	}
+}
+
+func (ts *testStaticDestroyTest) assertPrivateKeyWritten(t *testing.T, keysCount int) {
+	require.NotEmpty(t, ts.tmpDir)
+
+	destroyTmpDir := filepath.Join(ts.tmpDir, "destroy")
+	tmpDirStat, err := os.Stat(destroyTmpDir)
+
+	if keysCount == 0 {
+		require.Error(t, err)
+		require.True(t, errors.Is(err, os.ErrNotExist))
+		return
+	}
+
+	require.NoError(t, err)
+	require.True(t, tmpDirStat.IsDir())
+
+	keysPaths := make([]string, 0)
+	err = filepath.Walk(destroyTmpDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		if strings.HasPrefix(info.Name(), "id_rsa_destroyer.key.") {
+			keysPaths = append(keysPaths, path)
+		}
+
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.Len(t, keysPaths, keysCount)
+}
+
+func (ts *testStaticDestroyTest) assertNodeUserCreated(t *testing.T, created bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
 	_, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), global.ConvergeNodeUserName, metav1.GetOptions{})
+
+	if created {
+		require.NoError(t, err)
+		return
+	}
+
 	require.Error(t, err)
 	require.True(t, k8errors.IsNotFound(err))
 }
 
-func (ts *testStaticDestroyTest) assertKubeProviderCleaned(t *testing.T) {
+func (ts *testStaticDestroyTest) assertNodeUserDidNotCreate(t *testing.T) {
+	ts.assertNodeUserCreated(t, false)
+}
+
+func (ts *testStaticDestroyTest) assertKubeProviderCleaned(t *testing.T, cleaned bool) {
 	require.False(t, govalue.IsNil(ts.kubeProvider))
 
 	kubeProvider, ok := ts.kubeProvider.(*fakeKubeClientProvider)
 	require.True(t, ok)
-	require.True(t, kubeProvider.cleaned)
+	require.Equal(t, cleaned, kubeProvider.cleaned)
 	require.False(t, kubeProvider.stopSSH)
 }
 
 func (ts *testStaticDestroyTest) assertKubeProviderIsErrorProvider(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.kubeProvider))
 	require.IsType(t, &kubeClientErrorProvider{}, ts.kubeProvider)
+}
+
+func assertHostsMap(t *testing.T, expectedHosts []session.Host, hostsMap map[string]struct{}) {
+	require.Len(t, expectedHosts, len(hostsMap))
+
+	if len(expectedHosts) == 0 {
+		return
+	}
+
+	for _, h := range expectedHosts {
+		require.Contains(t, hostsMap, h.Host, h.Host)
+	}
+}
+
+func (ts *testStaticDestroyTest) assertCleanCommandRan(t *testing.T, hosts []session.Host) {
+	assertHostsMap(t, hosts, ts.cleanCommandsRanOnHosts)
+}
+
+func (ts *testStaticDestroyTest) assertDownloadDiscoveryIP(t *testing.T, hosts []session.Host) {
+	assertHostsMap(t, hosts, ts.downloadDiscoveryIPRanOnHosts)
+}
+
+func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh.SSHProvider, forHost session.Host, returnErr error) {
+	sshProvider.SetFileProvider(forHost.Host, func() *testssh.File {
+		download := func(srcPath string) ([]byte, error) {
+			if srcPath != "/var/lib/bashible/discovered-node-ip" {
+				return nil, fmt.Errorf("'%s' file not found", srcPath)
+			}
+
+			ts.downloadDiscoveryIPRanOnHosts[forHost.Host] = struct{}{}
+
+			if returnErr != nil {
+				return nil, returnErr
+			}
+
+			return []byte(forHost.Host), nil
+		}
+
+		upload := func(data []byte, dstPath string) error {
+			return fmt.Errorf("We should not upload any files to server during destroy static: '%s'", dstPath)
+		}
+
+		return testssh.NewFile(upload, download)
+	})
+}
+
+func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
+	sshProvider.AddCommandProvider(forHost.Host, func(scriptPath string, args ...string) *testssh.Command {
+		if !strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") {
+			return nil
+		}
+
+		cmd := testssh.NewCommand([]byte(out))
+		if err != nil {
+			cmd.WithErr(err).WithRun(func() {
+				ts.cleanCommandsRanOnHosts[forHost.Host] = struct{}{}
+				logger.LogWarnLn("Clean command failed")
+			})
+
+			return cmd
+		}
+
+		return cmd.WithErr(nil).WithRun(func() {
+			ts.cleanCommandsRanOnHosts[forHost.Host] = struct{}{}
+			logger.LogInfoLn("Clean command success")
+		})
+	})
 }
 
 func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParams) *testStaticDestroyTest {
@@ -443,10 +927,6 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	kubeClProvider := newFakeKubeClientProvider(kubeCl)
 
 	ctx := context.TODO()
-
-	if params.commanderMode {
-		require.NotNil(t, params.commanderParams)
-	}
 
 	clusterUUID := uuid.Must(uuid.NewRandom())
 
@@ -473,11 +953,11 @@ podSubnetNodeCIDRPrefix: "24"
 	metaConfig, err := config.ParseConfigFromCluster(context.TODO(), kubeCl, config.DummyPreparatorProvider())
 	require.NoError(t, err)
 
-	commanderUUID := uuid.Must(uuid.NewRandom())
+	const commanderMode = false
 
 	loaderParams := &stateLoaderParams{
-		commanderMode:   params.commanderMode,
-		commanderParams: params.commanderParams,
+		commanderMode:   commanderMode,
+		commanderParams: nil,
 		stateCache:      stateCache,
 		logger:          logger,
 		skipResources:   params.skipResources,
@@ -497,8 +977,8 @@ podSubnetNodeCIDRPrefix: "24"
 	d8State := deckhouse.NewState(stateCache)
 
 	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
-		CommanderMode: params.commanderMode,
-		CommanderUUID: commanderUUID,
+		CommanderMode: commanderMode,
+		CommanderUUID: uuid.Nil,
 		SkipResources: params.skipResources,
 
 		State: d8State,
@@ -508,17 +988,24 @@ podSubnetNodeCIDRPrefix: "24"
 		PhasedActionProvider: phaseActionProvider,
 	})
 
+	initKeys := make([]session.AgentPrivateKey, 0, len(inputPrivateKeys))
+	for _, key := range inputPrivateKeys {
+		initKeys = append(initKeys, session.AgentPrivateKey{
+			Key: key,
+		})
+	}
+
 	sshProvider := testssh.NewSSHProvider(session.NewSession(session.Input{
 		User:        "notexists",
-		Port:        "22",
-		BastionHost: "127.0.0.1",
-		BastionUser: "notexists",
-		BastionPort: "22",
+		Port:        inputPort,
+		BastionHost: bastionHost,
+		BastionUser: bastionUser,
+		BastionPort: bastionPort,
 		BecomePass:  "",
 		AvailableHosts: []session.Host{
 			params.destroyOverHost,
 		},
-	}), true)
+	}), true).WithInitPrivateKeys(initKeys)
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -532,7 +1019,7 @@ podSubnetNodeCIDRPrefix: "24"
 		loggerProvider:       loggerProvider,
 		kubeProvider:         kubeProviderForInfraDestroyer,
 		phasesActionProvider: phaseActionProvider,
-		commanderMode:        params.commanderMode,
+		commanderMode:        commanderMode,
 		skipResources:        params.skipResources,
 		cloudStateProvider:   nil,
 		sshClientProvider:    sshProvider,
@@ -578,6 +1065,9 @@ podSubnetNodeCIDRPrefix: "24"
 		sshProvider:  sshProvider,
 		kubeProvider: kubeProviderForInfraDestroyer,
 
+		cleanCommandsRanOnHosts:       make(map[string]struct{}),
+		downloadDiscoveryIPRanOnHosts: make(map[string]struct{}),
+
 		tmpDir: tmpDir,
 	}
 }
@@ -594,7 +1084,16 @@ func (t testCreatedResource) Name() string {
 	return fmt.Sprintf("%s: %s/%s", t.kind, t.ns, t.name)
 }
 
-func assertResourceDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
+func assertResources(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource, shouldDeleted bool) {
+	if shouldDeleted {
+		assertResourcesDeleted(t, kubeCl, resources)
+		return
+	}
+
+	assertResourceExists(t, kubeCl, resources)
+}
+
+func assertResourcesDeleted(t *testing.T, kubeCl *client.KubernetesClient, resources []testCreatedResource) {
 	ctx := context.TODO()
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
@@ -1070,75 +1569,6 @@ func testCreateNodes(t *testing.T, kubeCl *client.KubernetesClient, hosts []sess
 	for _, node := range nodes.Items {
 		require.Len(t, node.Status.Addresses, 2)
 	}
-}
-
-func testAddCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
-	provider := sshProvider.CommandProvider()
-	sshProvider.WithCommandProvider(func(host string, scriptPath string, args ...string) *testssh.Command {
-		if !govalue.IsNil(provider) {
-			cmd := provider(host, scriptPath, args...)
-			if !govalue.IsNil(cmd) {
-				return cmd
-			}
-		}
-		if host != forHost.Host {
-			return nil
-		}
-
-		if !strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") {
-			return nil
-		}
-
-		cmd := testssh.NewCommand([]byte(out))
-		if err != nil {
-			cmd.WithErr(err).WithRun(func() {
-				logger.LogWarnLn("Clean command failed")
-			})
-
-			return cmd
-		}
-
-		return cmd.WithErr(nil).WithRun(func() {
-			logger.LogInfoLn("Clean command success")
-		})
-	})
-}
-
-func testAddNodeUserCreated(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host, waiter *testWaiter) {
-	waiter.wg.Add(1)
-
-	go func() {
-		defer waiter.wg.Done()
-		err := retry.NewLoop("wait node user", 20, 500*time.Millisecond).RunContext(ctx, func() error {
-			_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(ctx, global.ConvergeNodeUserName, metav1.GetOptions{})
-			return err
-		})
-		if err != nil {
-			waiter.setErr(err)
-			return
-		}
-
-		for _, host := range hosts {
-			node, err := kubeCl.CoreV1().Nodes().Get(ctx, host.Name, metav1.GetOptions{})
-			if err != nil {
-				waiter.setErr(err)
-				return
-			}
-
-			if len(node.Annotations) == 0 {
-				node.Annotations = make(map[string]string)
-			}
-
-			node.Annotations[global.ConvergerNodeUserAnnotation] = "true"
-			_, err = kubeCl.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
-			if err != nil {
-				waiter.setErr(err)
-				return
-			}
-		}
-
-		waiter.setErr(nil)
-	}()
 }
 
 func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string][]byte) {

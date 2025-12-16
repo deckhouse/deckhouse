@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CreateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser) error {
+func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
 	if err != nil {
 		return fmt.Errorf("Failed to convert NodeUser to unstructured: %w", err)

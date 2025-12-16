@@ -198,6 +198,9 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	for _, host := range masterHosts {
+		// if we have additional masters hosts (multimaster) we should switch to node user
+		// because it was created
+		// else we will process with setting passed by user because we did not switch above
 		if len(additionalMastersHosts) > 0 {
 			settings := sshClient.Session().Copy()
 			if settings.BastionHost == settings.AvailableHosts()[0].Host {
@@ -275,11 +278,12 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 	logger.LogDebugF("Tempdir '%s' created for SSH client\n", tmpDir)
 
+	privateKeyPrefixPathWithoutSuffix := filepath.Join(tmpDir, "id_rsa_destroyer.key")
+
 	n := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	privateKeyPath := fmt.Sprintf("%s.%d", privateKeyPrefixPathWithoutSuffix, n)
 
-	privateKeyPath := filepath.Join(tmpDir, fmt.Sprintf("id_rsa_converger.%d", n))
-
-	privateKey := session.AgentPrivateKey{
+	convergerPrivateKey := session.AgentPrivateKey{
 		Key:        privateKeyPath,
 		Passphrase: d.nodesWithCredentials.Password,
 	}
@@ -297,21 +301,34 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		oldSSHClient.Stop()
 
 		// wait for keep-alive goroutine will exit
-		time.Sleep(15 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	sess := session.NewSession(session.Input{
-		User:           d.nodesWithCredentials.Name,
-		Port:           settings.Port,
-		BastionHost:    settings.BastionHost,
-		BastionPort:    settings.BastionPort,
-		BastionUser:    d.nodesWithCredentials.Name,
+		User:        d.nodesWithCredentials.Name,
+		Port:        settings.Port,
+		BastionHost: settings.BastionHost,
+		BastionPort: settings.BastionPort,
+		// we should connect over bastion because bastion host can not have converger user
+		// because bastion can be not in cluster
+		BastionUser:    settings.BastionUser,
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     d.nodesWithCredentials.Password,
 	})
 
-	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, []session.AgentPrivateKey{privateKey})
+	privateKeys := []session.AgentPrivateKey{convergerPrivateKey}
+
+	oldPrivateKeys := oldSSHClient.PrivateKeys()
+	for _, oldKey := range oldPrivateKeys {
+		// skip another temp keys for another hosts
+		// add only user passed keys
+		if !strings.HasPrefix(oldKey.Key, privateKeyPrefixPathWithoutSuffix) {
+			privateKeys = append(privateKeys, oldKey)
+		}
+	}
+
+	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +395,7 @@ func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.
 		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
 	}
 
-	err = entity.CreateNodeUser(ctx, d.params.KubeProvider, nodeUser)
+	err = entity.CreateOrUpdateNodeUser(ctx, d.params.KubeProvider, nodeUser)
 	if err != nil {
 		return nil, err
 	}
