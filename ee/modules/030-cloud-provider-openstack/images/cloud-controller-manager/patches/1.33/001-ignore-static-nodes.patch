@@ -1,32 +1,32 @@
 diff --git a/pkg/openstack/instances.go b/pkg/openstack/instances.go
-index b52d6f58..a78e9305 100644
+index f9b61773..026dba1b 100644
 --- a/pkg/openstack/instances.go
 +++ b/pkg/openstack/instances.go
-@@ -19,6 +19,7 @@ package openstack
+@@ -18,6 +18,7 @@ package openstack
+ 
  import (
- 	"bytes"
  	"context"
 +	stderrors "errors"
  	"fmt"
- 	"net"
  	sysos "os"
-@@ -249,7 +250,9 @@ func (i *Instances) InstanceExists(ctx context.Context, node *v1.Node) (bool, er
-
- func instanceExistsByProviderID(ctx context.Context, compute *gophercloud.ServiceClient, providerID string, region string) (bool, error) {
- 	instanceID, instanceRegion, err := instanceIDFromProviderID(providerID)
--	if err != nil {
-+	if stderrors.Is(err, errStaticNode) {
+ 	"regexp"
+@@ -85,6 +86,10 @@ func (os *OpenStack) InstancesV2() (cloudprovider.InstancesV2, bool) {
+ 
+ // InstanceExists indicates whether a given node exists according to the cloud provider
+ func (i *InstancesV2) InstanceExists(ctx context.Context, node *v1.Node) (bool, error) {
++	if strings.HasPrefix(node.Spec.ProviderID, "static://") {
 +		return true, nil
-+	} else if err != nil {
- 		return false, err
- 	}
-
-@@ -444,11 +447,16 @@ func isValidLabelValue(v string) bool {
++	}
++
+ 	_, err := i.getInstance(ctx, node)
+ 	if err == cloudprovider.InstanceNotFound {
+ 		klog.V(6).Infof("instance not found for node: %s", node.Name)
+@@ -216,12 +221,17 @@ func getServerByName(ctx context.Context, client *gophercloud.ServiceClient, nam
+ 
  // If Instances.InstanceID or cloudprovider.GetInstanceProviderID is changed, the regexp should be changed too.
  var providerIDRegexp = regexp.MustCompile(`^` + ProviderName + `://([^/]*)/([^/]+)$`)
-
 +var errStaticNode = stderrors.New("static Node detected")
-+
+ 
  // instanceIDFromProviderID splits a provider's id and return instanceID.
  // A providerID is build out of '${ProviderName}:///${instance-id}' which contains ':///'.
  // or '${ProviderName}://${region}/${instance-id}' which contains '://'.
@@ -35,6 +35,7 @@ index b52d6f58..a78e9305 100644
 +	if strings.HasPrefix(providerID, "static://") {
 +		return "", "", errStaticNode
 +	}
-
++
  	// https://github.com/kubernetes/kubernetes/issues/85731
  	if providerID != "" && !strings.Contains(providerID, "://") {
+ 		providerID = ProviderName + "://" + providerID
