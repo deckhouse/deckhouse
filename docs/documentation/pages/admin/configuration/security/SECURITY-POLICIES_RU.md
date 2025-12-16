@@ -204,7 +204,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 ### Ограничение использования ресурсов GPU только в определённых пространствах имён
 
-Для ограничения использования GPU можно создать [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy) с политикой `D8DisallowedCustomResources`. В примере ниже запрещается указывать в контейнерах ресурсы в `resources.requests` и `resources.limits`, подпадающие под регулярное выражение `nvidia.com/.*`, во всех пространствах имён, где метка `gpu` задана и имеет значение, отличное от `enabled`. Таким образом, использование ресурсов GPU допускается только в пространствах имён с меткой `gpu: enabled` (если их не ограничивают другие политики).
+Для ограничения использования GPU можно создать [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) с политикой `D8DisallowedCustomResources`. В примере ниже запрещается указывать в контейнерах ресурсы в `resources.requests` и `resources.limits`, подпадающие под регулярное выражение `nvidia.com/.*`, во всех пространствах имён, где метка `gpu` задана и имеет значение, отличное от `enabled`. Таким образом, использование ресурсов GPU допускается только в пространствах имён с меткой `gpu: enabled` (если их не ограничивают другие политики).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
