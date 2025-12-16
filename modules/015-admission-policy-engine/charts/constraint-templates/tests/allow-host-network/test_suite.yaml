@@ -7,19 +7,19 @@ tests:
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_pss_baseline.yaml
     cases:
-      - name: 2-allowed-no-hostnetwork
+      - name: 002-allowed-no-hostnetwork
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/pss_baseline/002-allowed-no-hostnetwork.yaml
         assertions:
           - violations: no
-      - name: 1-allowed-no-hostnetwork-multiple-containers
+      - name: 001-allowed-no-hostnetwork-multiple-containers
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/pss_baseline/001-allowed-no-hostnetwork-multiple-containers.yaml
         assertions:
           - violations: no
-      - name: 3-disallowed-hostnetwork-true
+      - name: 003-disallowed-hostnetwork-true
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/pss_baseline/003-disallowed-hostnetwork-true.yaml
@@ -29,43 +29,49 @@ tests:
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: 5-allowed-hostnetwork-true-port-in-range
+      - name: 005-allowed-hostnetwork-true-port-in-range
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/005-allowed-hostnetwork-true-port-in-range.yaml
         assertions:
           - violations: no
-      - name: 6-disallowed-hostnetwork-true-container-port
+      - name: 006-disallowed-hostnetwork-true-container-port
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/006-disallowed-hostnetwork-true-container-port.yaml
         assertions:
           - violations: yes
-      - name: 4-allowed-hostnetwork-false
+      - name: 004-allowed-hostnetwork-false
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/004-allowed-hostnetwork-false.yaml
         assertions:
           - violations: no
-      - name: 10-disallowed-hostnetwork-true-port-out-of-range-low
+      - name: 010-disallowed-hostnetwork-true-port-out-of-range-low
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/010-disallowed-hostnetwork-true-port-out-of-range-low.yaml
         assertions:
           - violations: yes
-      - name: 9-disallowed-hostnetwork-true-port-out-of-range-high
+      - name: 011-disallowed-hostnetwork-true-container-port-out-of-range
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/constraint_templates/security_policy/011-disallowed-hostnetwork-true-container-port-out-of-range.yaml
+        assertions:
+          - violations: yes
+      - name: 009-disallowed-hostnetwork-true-port-out-of-range-high
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/009-disallowed-hostnetwork-true-port-out-of-range-high.yaml
         assertions:
           - violations: yes
-      - name: 8-disallowed-hostnetwork-true-port-on-edge-min
+      - name: 008-disallowed-hostnetwork-true-port-on-edge-min
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/008-disallowed-hostnetwork-true-port-on-edge-min.yaml
         assertions:
           - violations: yes
-      - name: 7-disallowed-hostnetwork-true-port-on-edge-max
+      - name: 007-disallowed-hostnetwork-true-port-on-edge-max
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/constraint_templates/security_policy/007-disallowed-hostnetwork-true-port-on-edge-max.yaml
@@ -75,156 +81,176 @@ tests:
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_security_policy.yaml
     cases:
-      - name: 20-26-allowed-by-exception-hostnetwork-true-tcp-25000
+      - name: 020-026-allowed-by-exception-hostnetwork-true-tcp-25000
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/020-allow-hostnetwork-true-tcp-25000.yaml
         object: test_samples/security_policy_exceptions/pods/026-allowed-by-exception-hostnetwork-true-tcp-25000.yaml
         assertions:
           - violations: no
-      - name: 12-23-allowed-by-exception-hostnetwork-false-empty
+      - name: 012-023-allowed-by-exception-hostnetwork-false-empty
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/012-allow-hostnetwork-false-empty.yaml
         object: test_samples/security_policy_exceptions/pods/023-allowed-by-exception-hostnetwork-false-empty.yaml
         assertions:
           - violations: no
-      - name: 15-24-disallowed-by-exception-hostnetwork-true-container-port
+      - name: 015-024-disallowed-by-exception-hostnetwork-true-container-port
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/015-allow-hostnetwork-true-multiple-ports.yaml
         object: test_samples/security_policy_exceptions/pods/024-allowed-by-exception-hostnetwork-true-container-port-80.yaml
         assertions:
           - violations: yes
-      - name: 15-28-allowed-by-exception-multiple-ports-tcp
+      - name: 015-028-allowed-by-exception-multiple-ports-tcp
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/015-allow-hostnetwork-true-multiple-ports.yaml
         object: test_samples/security_policy_exceptions/pods/028-allowed-by-exception-multiple-ports-tcp.yaml
         assertions:
           - violations: no
-      - name: 15-29-allowed-by-exception-multiple-ports-udp
+      - name: 015-029-allowed-by-exception-multiple-ports-udp
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/015-allow-hostnetwork-true-multiple-ports.yaml
         object: test_samples/security_policy_exceptions/pods/029-allowed-by-exception-multiple-ports-udp.yaml
         assertions:
           - violations: no
-      - name: 16-32-allowed-by-exception-port-in-constraint-range
+      - name: 016-032-allowed-by-exception-port-in-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/016-allow-hostnetwork-true-port-in-constraint-range.yaml
         object: test_samples/security_policy_exceptions/pods/032-allowed-by-exception-port-in-constraint-range.yaml
         assertions:
           - violations: no
-      - name: 19-35-allowed-by-exception-port-out-of-constraint-range
+      - name: 019-035-allowed-by-exception-port-out-of-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/019-allow-hostnetwork-true-port-out-of-constraint-range.yaml
         object: test_samples/security_policy_exceptions/pods/035-allowed-by-exception-port-out-of-constraint-range.yaml
         assertions:
           - violations: no
-      - name: 18-34-allowed-by-exception-port-on-constraint-edge-min
+      - name: 018-034-allowed-by-exception-port-on-constraint-edge-min
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/018-allow-hostnetwork-true-port-on-constraint-edge-min.yaml
         object: test_samples/security_policy_exceptions/pods/034-allowed-by-exception-port-on-constraint-edge-min.yaml
         assertions:
           - violations: no
-      - name: 17-33-allowed-by-exception-port-on-constraint-edge-max
+      - name: 017-033-allowed-by-exception-port-on-constraint-edge-max
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/017-allow-hostnetwork-true-port-on-constraint-edge-max.yaml
         object: test_samples/security_policy_exceptions/pods/033-allowed-by-exception-port-on-constraint-edge-max.yaml
         assertions:
           - violations: no
-      - name: 21-36-disallowed-by-exception-hostnetwork-mismatch
+      - name: 021-036-disallowed-by-exception-hostnetwork-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/021-allow-hostnetwork-true-wrong-port.yaml
         object: test_samples/security_policy_exceptions/pods/036-disallowed-by-exception-hostnetwork-mismatch.yaml
         assertions:
           - violations: yes
-      - name: 21-37-disallowed-by-exception-hostport-mismatch
+      - name: 021-037-disallowed-by-exception-hostport-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/021-allow-hostnetwork-true-wrong-port.yaml
         object: test_samples/security_policy_exceptions/pods/037-disallowed-by-exception-hostport-mismatch.yaml
         assertions:
           - violations: yes
-      - name: 21-38-disallowed-by-exception-protocol-mismatch
+      - name: 021-038-disallowed-by-exception-protocol-mismatch
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/021-allow-hostnetwork-true-wrong-port.yaml
         object: test_samples/security_policy_exceptions/pods/038-disallowed-by-exception-protocol-mismatch.yaml
         assertions:
           - violations: yes
-      - name: 42-disallowed-no-exception-label
+      - name: 042-disallowed-no-exception-label
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/security_policy_exceptions/pods/042-disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
-      - name: 13-39-disallowed-exception-allows-false-but-pod-has-true
+      - name: 013-039-disallowed-exception-allows-false-but-pod-has-true
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/013-allow-hostnetwork-false-with-hostport.yaml
         object: test_samples/security_policy_exceptions/pods/039-disallowed-exception-allows-false-but-pod-has-true.yaml
         assertions:
           - violations: yes
-      - name: 12-41-disallowed-exception-allows-false-constraint-allows-true
+      - name: 012-041-disallowed-exception-allows-false-constraint-allows-true
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/012-allow-hostnetwork-false-empty.yaml
         object: test_samples/security_policy_exceptions/pods/041-disallowed-exception-allows-false-constraint-allows-true.yaml
         assertions:
           - violations: yes
-      - name: 12-40-disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
+      - name: 012-040-disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/012-allow-hostnetwork-false-empty.yaml
         object: test_samples/security_policy_exceptions/pods/040-disallowed-exception-allows-false-constraint-allows-true-pod-uses-true.yaml
         assertions:
           - violations: yes
-      - name: 43-disallowed-no-exception-port-out-of-constraint-range
+      - name: 043-disallowed-no-exception-port-out-of-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/security_policy_exceptions/pods/043-disallowed-no-exception-port-out-of-constraint-range.yaml
         assertions:
           - violations: yes
-      - name: 18-31-allowed-by-exception-port-exactly-min-constraint-range
+      - name: 044-disallowed-no-exception-container-port
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/security_policy_exceptions/pods/044-disallowed-no-exception-container-port.yaml
+        assertions:
+          - violations: yes          
+      - name: 018-031-allowed-by-exception-port-exactly-min-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/018-allow-hostnetwork-true-port-on-constraint-edge-min.yaml
         object: test_samples/security_policy_exceptions/pods/031-allowed-by-exception-port-exactly-min-constraint-range.yaml
         assertions:
           - violations: no
-      - name: 17-30-allowed-by-exception-port-exactly-max-constraint-range
+      - name: 017-030-allowed-by-exception-port-exactly-max-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/017-allow-hostnetwork-true-port-on-constraint-edge-max.yaml
         object: test_samples/security_policy_exceptions/pods/030-allowed-by-exception-port-exactly-max-constraint-range.yaml
         assertions:
           - violations: no
+      - name: 022-045-allowed-exception-container-port
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/022-allow-hostport-despite-empty-ranges.yaml
+        object: test_samples/security_policy_exceptions/pods/045-allowed-exception-container-port.yaml
+        assertions:
+          - violations: no
+      - name: 022-046-disallowed-exception-container-port
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/022-allow-hostport-despite-empty-ranges.yaml
+        object: test_samples/security_policy_exceptions/pods/046-disallowed-exception-container-port.yaml
+        assertions:
+          - violations: yes
   - name: security-policy-restrictive-with-exception
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_pss_deny_all.yaml
     cases:
-      - name: 14-25-allowed-by-exception-hostnetwork-true-despite-constraint-false
+      - name: 014-025-allowed-by-exception-hostnetwork-true-despite-constraint-false
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/014-allow-hostnetwork-true-despite-constraint.yaml
         object: test_samples/security_policy_exceptions/pods/025-allowed-by-exception-hostnetwork-true-despite-constraint-false.yaml
         assertions:
           - violations: no
-      - name: 22-27-allowed-by-exception-hostport-despite-empty-ranges
+      - name: 022-027-allowed-by-exception-hostport-despite-empty-ranges
         inventory:
           - ../common/test_samples/ns.yaml
           - test_samples/security_policy_exceptions/exceptions/022-allow-hostport-despite-empty-ranges.yaml
         object: test_samples/security_policy_exceptions/pods/027-allowed-by-exception-hostport-despite-empty-ranges.yaml
         assertions:
           - violations: no
-      - name: 42-disallowed-no-exception-hostnetwork-true
+      - name: 042-disallowed-no-exception-hostnetwork-true
         inventory:
           - ../common/test_samples/ns.yaml
         object: test_samples/security_policy_exceptions/pods/042-disallowed-no-exception-label.yaml

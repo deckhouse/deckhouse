@@ -79,12 +79,12 @@ spec:
               }
 
               allowed_hostnetwork_by_exception(obj, exception) if {
-                exception.spec.network.hostNetwork.allowedValue == obj.spec.hostNetwork
+                obj_hostNetwork := object.get(obj.spec, "hostNetwork", false)
+                exception.spec.network.hostNetwork.allowedValue == obj_hostNetwork
               }
 
               allowed_hostports_by_exception(obj, exception) if {
                 obj.spec.hostNetwork == true
-                # if hostNetwork all ports is hostPort and should be allowed
                 object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
                 object_container_ports := [{"port": entry.containerPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
                 allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
@@ -94,7 +94,7 @@ spec:
               }
 
               allowed_hostports_by_exception(obj, exception) if {
-                obj.spec.hostNetwork == false
+                object.get(obj.spec, "hostNetwork", false) == false
                 object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
                 allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
                 every port in object_host_ports {
@@ -112,35 +112,30 @@ spec:
               }
 
               allowed_hostnetwork_by_securitypolicy(obj) if {
-                obj.spec.hostNetwork == false
+                object.get(obj.spec, "hostNetwork", false) == false
               }
-              allowed_hostnetwork_by_securitypolicy(obj) if {
-                not obj.spec.hostNetwork # not exist
-              }
+ 
 
               allowed_hostports_by_securitypolicy(obj) if {
                 object.get(obj.spec, "hostNetwork", false) == false
-                hostPort := [hp | hp := input_containers[_].ports[_].hostPort ]
-                in_range(input.parameters.ranges, hostPort)
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                in_range(input.parameters.ranges, hostPorts)
               }
 
 
               allowed_hostports_by_securitypolicy(obj) if {
                 obj.spec.hostNetwork == true
-                hostPort := [hp | hp := input_containers[_].ports[_].hostPort ]
-                containerPort := [cp | cp := input_containers[_].ports[_].containerPort]
-                ports = array.concat(hostPort, containerPort)
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                containerPorts := [cp | cp := input_containers[_].ports[_].containerPort]
+                ports = array.concat(hostPorts, containerPorts)
                 in_range(input.parameters.ranges, ports)
               }
             
-              allowed_hostports_by_securitypolicy(_) if {
-                container := input_containers[_]
-                not container.ports
-              }
-
-              in_range(ranges, port) if {
-                matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
-                count(matching) > 0
+              in_range(ranges, ports) if {
+                every port in ports{
+                  matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
+                  count(matching) > 0
+                }
               }
 
               input_containers contains c if {
