@@ -95,7 +95,6 @@ osDistributions:
           Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
   '_mosos-arbat':
     name: 'МОС ОС'
-    url: https://os.mos.ru/
     ru_support: 'true'
     en_support: 'false'
 
