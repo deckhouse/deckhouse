@@ -252,7 +252,7 @@ A user is not considered an owner if:
 
 A group can be an owner **only if:**
 
-- It is directly invited to the project with the Developer+ role (via “Share group with project”).
+- It is directly invited to the project with the Developer+ role (via “Invite a group”).
 - Only *direct members* of this group are considered owners.
 
 Inherited members of parent groups are not considered owners.

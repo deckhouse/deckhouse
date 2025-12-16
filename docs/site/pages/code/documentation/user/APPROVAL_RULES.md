@@ -17,7 +17,7 @@ Rules can be defined at the following levels:
 
 - [Groups](#rules-for-the-group) (available for the **Maintainer** role). To define rules for a group, go to "Group" → "Settings" → "Merge requests" → "Approval rules".
 - [Project](#project-rules) (available for the **Maintainer** role). To define rules for a project, go to "Settings" → "Merge Requests" → "Approve Rules".
-- [Merge requests](#rules-for-merge-requests) (available for the **Developer** role). To define rules for a project, expand the **"Approval rules"** section on the MR creation or editing page.
+- [Merge requests](#rules-for-merge-requests) (available for the **Developer** role). To define rules for a merge request, expand the **"Approval rules"** section on the MR creation or editing page.
 
 ![Approval rules table](/images/code/approval_rules_en.png)
 
