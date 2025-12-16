@@ -185,7 +185,7 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 }
 
 func (v *client) Login() error {
-	return v.client.Login(context.TODO(), url.UserPassword(v.config.Provider.Username, v.config.Provider.Password))
+	return v.restClient.Login(context.TODO(), url.UserPassword(v.config.Provider.Username, v.config.Provider.Password))
 }
 
 func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
