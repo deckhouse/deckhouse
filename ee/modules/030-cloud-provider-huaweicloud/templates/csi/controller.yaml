@@ -66,7 +66,7 @@
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
-  {{- $_ := set $csiControllerConfig "dnsPolicy" "Default" }}
+  {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
@@ -78,7 +78,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
-  {{- $_ := set $csiNodeConfig "dnsPolicy" "Default" }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}
