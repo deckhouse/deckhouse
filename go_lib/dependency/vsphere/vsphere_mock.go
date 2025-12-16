@@ -31,12 +31,12 @@ type ClientMock struct {
 	beforeListPoliciesCounter uint64
 	ListPoliciesMock          mClientMockListPolicies
 
-	funcLogin          func() (err error)
-	funcLoginOrigin    string
-	inspectFuncLogin   func()
-	afterLoginCounter  uint64
-	beforeLoginCounter uint64
-	LoginMock          mClientMockLogin
+	funcRefreshClient          func() (err error)
+	funcRefreshClientOrigin    string
+	inspectFuncRefreshClient   func()
+	afterRefreshClientCounter  uint64
+	beforeRefreshClientCounter uint64
+	RefreshClientMock          mClientMockRefreshClient
 }
 
 // NewClientMock returns a mock for Client
@@ -51,7 +51,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.ListPoliciesMock = mClientMockListPolicies{mock: m}
 
-	m.LoginMock = mClientMockLogin{mock: m}
+	m.RefreshClientMock = mClientMockRefreshClient{mock: m}
 
 	t.Cleanup(m.MinimockFinish)
 
@@ -432,27 +432,27 @@ func (m *ClientMock) MinimockListPoliciesInspect() {
 	}
 }
 
-type mClientMockLogin struct {
+type mClientMockRefreshClient struct {
 	optional           bool
 	mock               *ClientMock
-	defaultExpectation *ClientMockLoginExpectation
-	expectations       []*ClientMockLoginExpectation
+	defaultExpectation *ClientMockRefreshClientExpectation
+	expectations       []*ClientMockRefreshClientExpectation
 
 	expectedInvocations       uint64
 	expectedInvocationsOrigin string
 }
 
-// ClientMockLoginExpectation specifies expectation struct of the Client.Login
-type ClientMockLoginExpectation struct {
+// ClientMockRefreshClientExpectation specifies expectation struct of the Client.RefreshClient
+type ClientMockRefreshClientExpectation struct {
 	mock *ClientMock
 
-	results      *ClientMockLoginResults
+	results      *ClientMockRefreshClientResults
 	returnOrigin string
 	Counter      uint64
 }
 
-// ClientMockLoginResults contains results of the Client.Login
-type ClientMockLoginResults struct {
+// ClientMockRefreshClientResults contains results of the Client.RefreshClient
+type ClientMockRefreshClientResults struct {
 	err error
 }
 
@@ -461,160 +461,160 @@ type ClientMockLoginResults struct {
 // Optional() makes method check to work in '0 or more' mode.
 // It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
 // catch the problems when the expected method call is totally skipped during test run.
-func (mmLogin *mClientMockLogin) Optional() *mClientMockLogin {
-	mmLogin.optional = true
-	return mmLogin
+func (mmRefreshClient *mClientMockRefreshClient) Optional() *mClientMockRefreshClient {
+	mmRefreshClient.optional = true
+	return mmRefreshClient
 }
 
-// Expect sets up expected params for Client.Login
-func (mmLogin *mClientMockLogin) Expect() *mClientMockLogin {
-	if mmLogin.mock.funcLogin != nil {
-		mmLogin.mock.t.Fatalf("ClientMock.Login mock is already set by Set")
+// Expect sets up expected params for Client.RefreshClient
+func (mmRefreshClient *mClientMockRefreshClient) Expect() *mClientMockRefreshClient {
+	if mmRefreshClient.mock.funcRefreshClient != nil {
+		mmRefreshClient.mock.t.Fatalf("ClientMock.RefreshClient mock is already set by Set")
 	}
 
-	if mmLogin.defaultExpectation == nil {
-		mmLogin.defaultExpectation = &ClientMockLoginExpectation{}
+	if mmRefreshClient.defaultExpectation == nil {
+		mmRefreshClient.defaultExpectation = &ClientMockRefreshClientExpectation{}
 	}
 
-	return mmLogin
+	return mmRefreshClient
 }
 
-// Inspect accepts an inspector function that has same arguments as the Client.Login
-func (mmLogin *mClientMockLogin) Inspect(f func()) *mClientMockLogin {
-	if mmLogin.mock.inspectFuncLogin != nil {
-		mmLogin.mock.t.Fatalf("Inspect function is already set for ClientMock.Login")
+// Inspect accepts an inspector function that has same arguments as the Client.RefreshClient
+func (mmRefreshClient *mClientMockRefreshClient) Inspect(f func()) *mClientMockRefreshClient {
+	if mmRefreshClient.mock.inspectFuncRefreshClient != nil {
+		mmRefreshClient.mock.t.Fatalf("Inspect function is already set for ClientMock.RefreshClient")
 	}
 
-	mmLogin.mock.inspectFuncLogin = f
+	mmRefreshClient.mock.inspectFuncRefreshClient = f
 
-	return mmLogin
+	return mmRefreshClient
 }
 
-// Return sets up results that will be returned by Client.Login
-func (mmLogin *mClientMockLogin) Return(err error) *ClientMock {
-	if mmLogin.mock.funcLogin != nil {
-		mmLogin.mock.t.Fatalf("ClientMock.Login mock is already set by Set")
+// Return sets up results that will be returned by Client.RefreshClient
+func (mmRefreshClient *mClientMockRefreshClient) Return(err error) *ClientMock {
+	if mmRefreshClient.mock.funcRefreshClient != nil {
+		mmRefreshClient.mock.t.Fatalf("ClientMock.RefreshClient mock is already set by Set")
 	}
 
-	if mmLogin.defaultExpectation == nil {
-		mmLogin.defaultExpectation = &ClientMockLoginExpectation{mock: mmLogin.mock}
+	if mmRefreshClient.defaultExpectation == nil {
+		mmRefreshClient.defaultExpectation = &ClientMockRefreshClientExpectation{mock: mmRefreshClient.mock}
 	}
-	mmLogin.defaultExpectation.results = &ClientMockLoginResults{err}
-	mmLogin.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
-	return mmLogin.mock
+	mmRefreshClient.defaultExpectation.results = &ClientMockRefreshClientResults{err}
+	mmRefreshClient.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmRefreshClient.mock
 }
 
-// Set uses given function f to mock the Client.Login method
-func (mmLogin *mClientMockLogin) Set(f func() (err error)) *ClientMock {
-	if mmLogin.defaultExpectation != nil {
-		mmLogin.mock.t.Fatalf("Default expectation is already set for the Client.Login method")
+// Set uses given function f to mock the Client.RefreshClient method
+func (mmRefreshClient *mClientMockRefreshClient) Set(f func() (err error)) *ClientMock {
+	if mmRefreshClient.defaultExpectation != nil {
+		mmRefreshClient.mock.t.Fatalf("Default expectation is already set for the Client.RefreshClient method")
 	}
 
-	if len(mmLogin.expectations) > 0 {
-		mmLogin.mock.t.Fatalf("Some expectations are already set for the Client.Login method")
+	if len(mmRefreshClient.expectations) > 0 {
+		mmRefreshClient.mock.t.Fatalf("Some expectations are already set for the Client.RefreshClient method")
 	}
 
-	mmLogin.mock.funcLogin = f
-	mmLogin.mock.funcLoginOrigin = minimock.CallerInfo(1)
-	return mmLogin.mock
+	mmRefreshClient.mock.funcRefreshClient = f
+	mmRefreshClient.mock.funcRefreshClientOrigin = minimock.CallerInfo(1)
+	return mmRefreshClient.mock
 }
 
-// Times sets number of times Client.Login should be invoked
-func (mmLogin *mClientMockLogin) Times(n uint64) *mClientMockLogin {
+// Times sets number of times Client.RefreshClient should be invoked
+func (mmRefreshClient *mClientMockRefreshClient) Times(n uint64) *mClientMockRefreshClient {
 	if n == 0 {
-		mmLogin.mock.t.Fatalf("Times of ClientMock.Login mock can not be zero")
+		mmRefreshClient.mock.t.Fatalf("Times of ClientMock.RefreshClient mock can not be zero")
 	}
-	mm_atomic.StoreUint64(&mmLogin.expectedInvocations, n)
-	mmLogin.expectedInvocationsOrigin = minimock.CallerInfo(1)
-	return mmLogin
+	mm_atomic.StoreUint64(&mmRefreshClient.expectedInvocations, n)
+	mmRefreshClient.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmRefreshClient
 }
 
-func (mmLogin *mClientMockLogin) invocationsDone() bool {
-	if len(mmLogin.expectations) == 0 && mmLogin.defaultExpectation == nil && mmLogin.mock.funcLogin == nil {
+func (mmRefreshClient *mClientMockRefreshClient) invocationsDone() bool {
+	if len(mmRefreshClient.expectations) == 0 && mmRefreshClient.defaultExpectation == nil && mmRefreshClient.mock.funcRefreshClient == nil {
 		return true
 	}
 
-	totalInvocations := mm_atomic.LoadUint64(&mmLogin.mock.afterLoginCounter)
-	expectedInvocations := mm_atomic.LoadUint64(&mmLogin.expectedInvocations)
+	totalInvocations := mm_atomic.LoadUint64(&mmRefreshClient.mock.afterRefreshClientCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmRefreshClient.expectedInvocations)
 
 	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
 }
 
-// Login implements Client
-func (mmLogin *ClientMock) Login() (err error) {
-	mm_atomic.AddUint64(&mmLogin.beforeLoginCounter, 1)
-	defer mm_atomic.AddUint64(&mmLogin.afterLoginCounter, 1)
+// RefreshClient implements Client
+func (mmRefreshClient *ClientMock) RefreshClient() (err error) {
+	mm_atomic.AddUint64(&mmRefreshClient.beforeRefreshClientCounter, 1)
+	defer mm_atomic.AddUint64(&mmRefreshClient.afterRefreshClientCounter, 1)
 
-	mmLogin.t.Helper()
+	mmRefreshClient.t.Helper()
 
-	if mmLogin.inspectFuncLogin != nil {
-		mmLogin.inspectFuncLogin()
+	if mmRefreshClient.inspectFuncRefreshClient != nil {
+		mmRefreshClient.inspectFuncRefreshClient()
 	}
 
-	if mmLogin.LoginMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmLogin.LoginMock.defaultExpectation.Counter, 1)
+	if mmRefreshClient.RefreshClientMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmRefreshClient.RefreshClientMock.defaultExpectation.Counter, 1)
 
-		mm_results := mmLogin.LoginMock.defaultExpectation.results
+		mm_results := mmRefreshClient.RefreshClientMock.defaultExpectation.results
 		if mm_results == nil {
-			mmLogin.t.Fatal("No results are set for the ClientMock.Login")
+			mmRefreshClient.t.Fatal("No results are set for the ClientMock.RefreshClient")
 		}
 		return (*mm_results).err
 	}
-	if mmLogin.funcLogin != nil {
-		return mmLogin.funcLogin()
+	if mmRefreshClient.funcRefreshClient != nil {
+		return mmRefreshClient.funcRefreshClient()
 	}
-	mmLogin.t.Fatalf("Unexpected call to ClientMock.Login.")
+	mmRefreshClient.t.Fatalf("Unexpected call to ClientMock.RefreshClient.")
 	return
 }
 
-// LoginAfterCounter returns a count of finished ClientMock.Login invocations
-func (mmLogin *ClientMock) LoginAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLogin.afterLoginCounter)
+// RefreshClientAfterCounter returns a count of finished ClientMock.RefreshClient invocations
+func (mmRefreshClient *ClientMock) RefreshClientAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRefreshClient.afterRefreshClientCounter)
 }
 
-// LoginBeforeCounter returns a count of ClientMock.Login invocations
-func (mmLogin *ClientMock) LoginBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLogin.beforeLoginCounter)
+// RefreshClientBeforeCounter returns a count of ClientMock.RefreshClient invocations
+func (mmRefreshClient *ClientMock) RefreshClientBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmRefreshClient.beforeRefreshClientCounter)
 }
 
-// MinimockLoginDone returns true if the count of the Login invocations corresponds
+// MinimockRefreshClientDone returns true if the count of the RefreshClient invocations corresponds
 // the number of defined expectations
-func (m *ClientMock) MinimockLoginDone() bool {
-	if m.LoginMock.optional {
+func (m *ClientMock) MinimockRefreshClientDone() bool {
+	if m.RefreshClientMock.optional {
 		// Optional methods provide '0 or more' call count restriction.
 		return true
 	}
 
-	for _, e := range m.LoginMock.expectations {
+	for _, e := range m.RefreshClientMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
-	return m.LoginMock.invocationsDone()
+	return m.RefreshClientMock.invocationsDone()
 }
 
-// MinimockLoginInspect logs each unmet expectation
-func (m *ClientMock) MinimockLoginInspect() {
-	for _, e := range m.LoginMock.expectations {
+// MinimockRefreshClientInspect logs each unmet expectation
+func (m *ClientMock) MinimockRefreshClientInspect() {
+	for _, e := range m.RefreshClientMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ClientMock.Login")
+			m.t.Error("Expected call to ClientMock.RefreshClient")
 		}
 	}
 
-	afterLoginCounter := mm_atomic.LoadUint64(&m.afterLoginCounter)
+	afterRefreshClientCounter := mm_atomic.LoadUint64(&m.afterRefreshClientCounter)
 	// if default expectation was set then invocations count should be greater than zero
-	if m.LoginMock.defaultExpectation != nil && afterLoginCounter < 1 {
-		m.t.Errorf("Expected call to ClientMock.Login at\n%s", m.LoginMock.defaultExpectation.returnOrigin)
+	if m.RefreshClientMock.defaultExpectation != nil && afterRefreshClientCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.RefreshClient at\n%s", m.RefreshClientMock.defaultExpectation.returnOrigin)
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcLogin != nil && afterLoginCounter < 1 {
-		m.t.Errorf("Expected call to ClientMock.Login at\n%s", m.funcLoginOrigin)
+	if m.funcRefreshClient != nil && afterRefreshClientCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.RefreshClient at\n%s", m.funcRefreshClientOrigin)
 	}
 
-	if !m.LoginMock.invocationsDone() && afterLoginCounter > 0 {
-		m.t.Errorf("Expected %d calls to ClientMock.Login at\n%s but found %d calls",
-			mm_atomic.LoadUint64(&m.LoginMock.expectedInvocations), m.LoginMock.expectedInvocationsOrigin, afterLoginCounter)
+	if !m.RefreshClientMock.invocationsDone() && afterRefreshClientCounter > 0 {
+		m.t.Errorf("Expected %d calls to ClientMock.RefreshClient at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.RefreshClientMock.expectedInvocations), m.RefreshClientMock.expectedInvocationsOrigin, afterRefreshClientCounter)
 	}
 }
 
@@ -626,7 +626,7 @@ func (m *ClientMock) MinimockFinish() {
 
 			m.MinimockListPoliciesInspect()
 
-			m.MinimockLoginInspect()
+			m.MinimockRefreshClientInspect()
 		}
 	})
 }
@@ -652,5 +652,5 @@ func (m *ClientMock) minimockDone() bool {
 	return done &&
 		m.MinimockGetZonesDatastoresDone() &&
 		m.MinimockListPoliciesDone() &&
-		m.MinimockLoginDone()
+		m.MinimockRefreshClientDone()
 }
