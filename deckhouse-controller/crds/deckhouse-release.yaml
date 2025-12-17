@@ -32,6 +32,8 @@ spec:
                 Allows or disables manual updates.
 
                 Used only in `Manual` update mode (`update.mode: Manual`). Ignored if the `deckhouse` module is configured for `Auto` update mode (`update.mode: Auto`) or `AutoPatch`.
+
+                More information [in the documentation](/modules/deckhouse/usage.html#manual-update-confirmation).
             spec:
               type: object
               required:
@@ -43,12 +45,12 @@ spec:
                   x-doc-examples: ['v1.24.20']
                 applyAfter:
                   type: string
-                  description: Marks release as a part of canary release. This release will be delayed until this time. If the release is waiting to be applied, check `.status.message` for the reason.
+                  description: Marks release as a part of [canary-release](../../user/network/canary-deployment.html). This release will be delayed until this time. If the release is waiting to be applied, check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for the reason.
                 requirements:
                   type: object
                   additionalProperties:
                     type: string
-                  description: DKP release requirements. If the requirements are not met, the release may be skipped or blocked. Check `.status.message` for details (for example, requirements of active modules or the Kubernetes version).
+                  description: DKP release requirements. If the requirements are not met, the release may be skipped or blocked. Check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for details (for example, requirements of active modules or the Kubernetes version).
                 disruptions:
                   type: array
                   items:
@@ -57,7 +59,7 @@ spec:
                   description: Disruptive changes in the release.
                 changelog:
                   type: object
-                  description: Release's changelog for enabled modules.
+                  description: Release's changelog for enabled modules. More information [in the documentation](../../architecture/updating.html#retrieving-the-changelog).
                   x-kubernetes-preserve-unknown-fields: true
                 changelogLink:
                   type: string
