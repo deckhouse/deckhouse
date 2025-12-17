@@ -88,7 +88,7 @@ k8s:
     ccm:
       openstack: v1.31.2
       aws: v1.32.3
-      vsphere: v1.32.2
+      vsphere: v1.32.3
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:
@@ -112,7 +112,7 @@ k8s:
     ccm:
       openstack: v1.31.2
       aws: v1.32.0
-      vsphere: v1.32.2
+      vsphere: v1.33.1
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:
