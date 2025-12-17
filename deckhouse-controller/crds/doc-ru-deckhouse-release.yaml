@@ -4,21 +4,25 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяет конфигурацию релизов Deckhouse.
+            Определяет состояние и параметры применения релизов Deckhouse Kubernetes Platform (DKP) в кластере.
+
+            Актуальные версии DKP по каналам обновлений — [releases.deckhouse.ru](https://releases.deckhouse.ru).
           properties:
             approved:
               description: |
                 Разрешает или запрещает ручное обновление.
 
-                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`).
+                Используется только в ручном режиме обновлений (update.mode: Manual).
+                Игнорируется, если в конфигурации модуля `deckhouse` установлен режим обновления `Auto` (`update.mode: Auto`) или AutoPatch.
             spec:
               properties:
                 version:
                   description: Версия Deckhouse.
                 applyAfter:
-                  description: Время, до которого отложено обновление, если релиз является частью canary-release.
+                  description: Время, до которого отложено обновление, если релиз является частью canary-release. Если релиз ожидает применения, уточняйте причину в `.status.message`.
                 requirements:
-                  description: Требования для установки релиза.
+                  description: Требования для установки релиза. Если требования не выполняются, релиз может быть пропущен или заблокирован.
+                    Причины смотрите в `.status.message` (например, требования активных модулей или версии Kubernetes).
                 disruptions:
                   x-doc-deprecated: true
                   description: Изменения в релизе, которые могут привести к кратковременному простою в работе системных компонентов.
@@ -29,11 +33,20 @@ spec:
             status:
               properties:
                 phase:
-                  description: Текущий статус релиза.
+                  description: |                
+                    Текущий статус релиза. 
+
+                    Типичные значения:
+
+                    - `Pending` — релиз создан, но еще не применен (ожидание ручного подтверждения, окон обновлений, canary-release, минимального времени уведомления);
+                    - `Deployed` — DKP переключился на версию релиза (обновление модулей и компонентов может продолжаться асинхронно);
+                    - `Superseded` — релиз устарел и больше не используется;
+                    - `Suspended` — релиз отменен (как правило, до применения);
+                    - `Skipped` — релиз пропущен из-за невыполненных требований (`requirements`).
                 message:
                   description: Детальное сообщение об ошибки или статусе релиза.
                 transitionTime:
-                  description: Время изменения статуса релиза
+                  description: Время изменения статуса релиза.
                 approved:
                   description: |
                     Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
@@ -51,4 +64,4 @@ spec:
         - name: message
           jsonPath: .status.message
           type: string
-          description: 'Детали статуса релиза.'
+          description: 'Детали статуса релиза (почему релиз ожидает или пропущен).'
