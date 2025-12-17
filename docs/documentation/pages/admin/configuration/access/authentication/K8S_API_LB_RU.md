@@ -64,3 +64,38 @@ lang: ru
 - Deckhouse сам настроит необходимые аргументы для kube-apiserver;
 - будет сгенерирован сертификат CA и добавлен в kubeconfig;
 - будет настроен вход через Dex с поддержкой OIDC.
+
+## Доступ с использованием Basic Authentication (LDAP)
+
+Помимо OIDC, вы можете настроить прямой доступ к API с использованием Basic Authentication (логин и пароль). В этом случае проверка учетных данных осуществляется через LDAP.
+
+Для настройки:
+
+1. Включите публикацию API (параметр `publishAPI`).
+2. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию `enableBasicAuth: true`.
+
+> **Важно:** В кластере может быть только один провайдер с включенным `enableBasicAuth`.
+
+После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```

@@ -81,8 +81,8 @@ spec:
 В GitLab проекта необходимо создать новое приложение.
 
 Для этого выполните следующие шаги:
-* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
 
 Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
@@ -185,12 +185,12 @@ spec:
       - groups
 ```
 
-Если в KeyCloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
+Если в Keycloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
 
-* Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
+* Удалите сопоставление `Email verified` («Client Scopes» → «Email» → «Mappers»).
   Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
 
-* Если отредактировать или удалить маппинг `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два маппинга:
+* Если отредактировать или удалить сопоставление `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два сопоставления:
   * `email`: «Client Scopes» → `email_dkp` → «Add mapper» → «From predefined mappers» → `email`;
   * `email verified`: «Client Scopes» → `email_dkp` → «Add mapper» → «By configuration» → «Hardcoded claim». Укажите следующие поля:
     * «Name»: `email verified`;
@@ -307,6 +307,8 @@ spec:
 
     usernamePrompt: Email Address
 
+    enableBasicAuth: true
+
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
       filter: "(objectClass=person)"
@@ -322,6 +324,41 @@ spec:
       - userAttr: DN
         groupAttr: member
       nameAttr: cn
+```
+
+#### Настройка Basic Authentication
+
+Чтобы включить доступ к Kubernetes API по Basic Authentication с использованием учетных записей LDAP:
+
+1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
+2. Установите `enableBasicAuth: true` в ресурсе `DexProvider` для LDAP.
+
+> **Важно:** Опция `enableBasicAuth` может быть включена только у одного провайдера в кластере (LDAP или Crowd).
+
+После настройки пользователи смогут обращаться к Kubernetes API с помощью kubectl, используя свой LDAP логин и пароль.
+
+Пример `kubeconfig` для пользователя:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
 ```
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
@@ -478,7 +515,7 @@ spec:
 
 ### Двухфакторная аутентификация (2FA)
 
-2FA позволяет повысить уровень безопасности, требуя ввести код из приложения-аутентификатора TOTP (например, Google Authenticator) при входе.
+2FA позволяет повысить уровень безопасности, требуя ввести код из `TOTP`-приложения (например, Google Authenticator) при входе.
 
 {% raw %}
 
@@ -501,10 +538,10 @@ spec:
 Описание полей:
 
 * `enabled` — включает или отключает 2FA для всех статических пользователей;
-* `issuerName` — имя, которое будет отображаться в приложении-аутентификаторе при добавлении аккаунта.
+* `issuerName` — имя, которое будет отображаться в приложении для аутентификации при добавлении аккаунта.
 
 {% alert level="info" %}
-После включения 2FA каждый пользователь должен пройти процесс регистрации в приложении-аутентификаторе при первом входе.
+После включения 2FA каждый пользователь должен пройти процесс регистрации в приложении для аутентификации при первом входе.
 {% endalert %}
 
 ### Выдача прав пользователю или группе

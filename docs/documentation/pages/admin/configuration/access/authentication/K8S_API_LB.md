@@ -74,3 +74,38 @@ The following will be automatically configured when API publishing is enabled:
 - Deckhouse will set the required arguments for the kube-apiserver.
 - A CA certificate will be generated and added to the kubeconfig.
 - Login via Dex with OIDC support will be configured.
+
+## Access using Basic Authentication (LDAP)
+
+In addition to OIDC, you can configure direct access to the API using Basic Authentication (username and password). In this case, credentials are verified via LDAP.
+
+To configure:
+
+1. Enable API publishing (`publishAPI` parameter).
+2. Configure an LDAP provider in the `user-authn` module and enable the `enableBasicAuth: true` option.
+
+> **Important:** Only one provider in the cluster can have `enableBasicAuth` enabled.
+
+After this, users can configure their `kubeconfig` by specifying their LDAP username and password:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Path to CA certificate or insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```

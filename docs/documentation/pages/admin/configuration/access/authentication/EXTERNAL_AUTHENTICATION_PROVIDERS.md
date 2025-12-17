@@ -260,6 +260,8 @@ However, using authenticated access is recommended for improved security.
 The `bindPW` parameter must contain the password in plain text. Dex does not support hashed passwords in this field.
 {% endalert %}
 
+You can also enable Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the `enableBasicAuth: true` parameter in the `DexProvider` resource. For more details, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
+
 Example configuration for integrating with Active Directory:
 
 ```yaml
@@ -276,6 +278,8 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
+
+    enableBasicAuth: true
 
     usernamePrompt: Email Address
 
@@ -333,8 +337,8 @@ You need to create a new application in your GitLab project.
 
 To do this, follow these steps:
 
-1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
-1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
+1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback URL)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
+1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback URL)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
 1. Use the obtained `Application ID` and secret in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 {% alert level="info" %}

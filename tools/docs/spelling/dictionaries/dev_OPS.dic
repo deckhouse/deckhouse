@@ -1,4 +1,4 @@
-2526
+2533
 1GB
 2GB
 5XX
@@ -402,6 +402,7 @@ DisruptionFunc
 distros
 Django
 dkms
+dkp
 DKP
 DN
 DNAT
@@ -463,6 +464,7 @@ elasticsearch
 Elasticsearch
 ELB
 EmailConfig
+emailVerified
 emptyDir
 enableMultiTenancy
 endofftopic
@@ -559,6 +561,7 @@ Gitaly
 giterminism
 GitHub
 gitignore
+gitlab
 GitLab
 GitOps
 GKE
@@ -678,6 +681,7 @@ inodes
 inotify
 inplace
 insecureNoSSL
+insecureSkipEmailVerified
 instanceclass
 instanceClass
 InstanceClass
@@ -1010,6 +1014,7 @@ OCI
 OFFLINE
 offtopic
 OICD
+oidc
 OIDC
 ok
 OK
@@ -1025,6 +1030,7 @@ openapi
 openAPI
 OpenAPI
 openAPIV
+openid
 OpenID
 OpenKruise
 OpenLDAP
@@ -1678,6 +1684,7 @@ ZvirtInstanceClass
 аутентифицировались
 аутентифицированному
 аутентифицированных
+аутентифицированный
 аутентифицировать
 аутентифицироваться
 аутентифицирует

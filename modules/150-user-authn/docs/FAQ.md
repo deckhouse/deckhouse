@@ -162,6 +162,17 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration.
 
+## How to configure Basic Auth for accessing Kubernetes API via LDAP?
+
+1. Enable the [publishAPI](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+2. Create a [DexProvider](cr.html#dexprovider) of type `LDAP` with the `enableBasicAuth: true` field.
+3. Configure [RBAC](../../modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
+4. Distribute the `kubeconfig` with configured Basic Auth to users.
+
+> **Note:** Only one provider in the cluster can have `enableBasicAuth` enabled.
+
+For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
+
 ## How secure is Dex from brute-forcing my credentials?
 
 Only 20 login attempts are allowed per user. If this limit is used up, one additional attempt will be added every 6 seconds.

@@ -80,8 +80,8 @@ spec:
 Create a new application in the GitLab project.
 
 To do this, you need to:
-* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)` and set scopes `read_user`, `openid`;
-* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)`; also, don't forget to set scopes `read_user`, `openid`;
+* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)` and set scopes `read_user`, `openid`;
+* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)`; also, don't forget to set scopes `read_user`, `openid`;
 * (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` checkbox when creating an application.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
@@ -180,7 +180,7 @@ spec:
       - groups
 ```
 
-If email verification is not enabled in KeyCloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
+If email verification is not enabled in Keycloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
 
 * Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
   This is required for proper processing of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
@@ -299,8 +299,10 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
-
+    
     usernamePrompt: Email Address
+
+    enableBasicAuth: true
 
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
@@ -317,6 +319,41 @@ spec:
       - userAttr: DN
         groupAttr: member
       nameAttr: cn
+```
+
+#### Configuring Basic Authentication
+
+To enable Basic Authentication for the Kubernetes API using LDAP credentials:
+
+1. Ensure that the [`publishAPI`](configuration.html#parameters-publishapi) parameter is enabled in the `user-authn` module configuration.
+2. Set `enableBasicAuth: true` in your LDAP `DexProvider`.
+
+> **Note:** Only one provider in the cluster (LDAP or Crowd) can have `enableBasicAuth` enabled.
+
+After configuration, users can access the Kubernetes API using kubectl, using their LDAP username and password.
+
+Example `kubeconfig` for the user:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Path to CA certificate or insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
 ```
 
 To configure authentication, create a read-only user (service account) in LDAP.
@@ -473,7 +510,7 @@ Field description:
 
 ### Two-factor authentication (2FA)
 
-2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
+2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login.
 
 {% raw %}
 

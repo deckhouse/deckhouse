@@ -24,7 +24,7 @@ DKP поддерживает подключение следующих внеш�
 
 {% alert level="info" %}
 [Параметр `allowedGroups`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-allowedgroups) в ресурсе DexProvider позволяет ограничить вход только пользователям, входящим в указанные группы.
-Если список `allowedGroups` задан, пользователь обязан состоять хотя бы в одной из этих групп — иначе аутентификация будет считаться неуспешной.
+Если список `allowedGroups` задан, пользователь обязан состоять хотя бы в одной из этих групп — иначе аутентификация будет считаться неудачной.
 Если параметр не указан, фильтрация по группам не применяется.
 {% endalert %}
 
@@ -116,7 +116,7 @@ DKP поддерживает подключение следующих внеш�
 
 В процессе настройки Keycloak выберите подходящий `realm`, добавьте пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создайте клиент в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включённой [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), необходимой для генерации `clientSecret`. Затем выполните следующие шаги:
 
-1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `Group Membership` («Client scopes» → «Client scope details» → «Mappers» → «Configure a new mapper»). В поле «Name» и «Token Claim Name» впишите `groups`, в параметре «Full group path» задайте `off`.
+1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенное сопоставление `Group Membership` («Client scopes» → «Client scope details» → «Mappers» → «Configure a new mapper»). В поле «Name» и «Token Claim Name» впишите `groups`, в параметре «Full group path» задайте `off`.
 1. В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
 1. В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
@@ -145,10 +145,10 @@ spec:
 
 Если в Keycloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
 
-* Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
+* Удалите сопоставление `Email verified` («Client Scopes» → «Email» → «Mappers»).
   Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
 
-* Если отредактировать или удалить маппинг `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два маппинга:
+* Если отредактировать или удалить сопоставление `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два сопоставления:
   * `email`: «Client Scopes» → `email_dkp` → «Add mapper» → «From predefined mappers» → `email`;
   * `email verified`: «Client Scopes» → `email_dkp` → «Add mapper» → «By configuration» → «Hardcoded claim». Укажите следующие поля:
     * «Name»: `email verified`;
@@ -250,6 +250,8 @@ spec:
 В параметре `bindPW` укажите пароль в открытом виде (plain text). Dex не поддерживает передачу хэшированных паролей в этом параметре.
 {% endalert %}
 
+Также вы можете включить поддержку Basic Authentication для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе `DexProvider`. Подробнее см. в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
+
 Пример настройки провайдера для интеграции с Active Directory:
 
 ```yaml
@@ -266,6 +268,8 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
+
+    enableBasicAuth: true
 
     usernamePrompt: Email Address
 
@@ -323,8 +327,8 @@ spec:
 
 Для этого выполните следующие шаги:
 
-1. Self-hosted-версия GitLab: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
-1. GitLab Cloud (gitlab.com): под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
+1. Self-hosted-версия GitLab: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback URL)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
+1. GitLab Cloud (gitlab.com): под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback URL)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`.
 1. Полученные `Application ID` и секрет укажите в [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 {% alert level="info" %}
