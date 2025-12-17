@@ -30,15 +30,15 @@ variable "owner_ref_uid" {
   type = string
 }
 
-variable "prefix" {
+variable "root_disk_destructive_params_json" {
   type = string
 }
 
-variable "node_group" {
+variable "root_disk_destructive_params_json_hash" {
   type = string
 }
 
-variable "node_index" {
+variable "root_disk_name" {
   type = string
 }
 
@@ -73,23 +73,8 @@ variable "timeouts" {
 }
 
 locals {
-  root_disk_destructive_params = {
-    "rootDisk" = {
-      "storageClass" = var.storage_class
-      "image" = {
-        "type" = var.image.kind
-        "name" = var.image.name
-      }
-    }
-  }
-
-  root_disk_destructive_params_json      = jsonencode(local.root_disk_destructive_params)
-  root_disk_destructive_params_json_hash = substr(sha256(jsonencode(local.root_disk_destructive_params_json)), 0, 6)
-
-  root_disk_name = join("-", [var.prefix, var.node_group, var.node_index, local.root_disk_destructive_params_json_hash])
-
   root_disk_annotations = {
-    "last_applied_destructive_root_disk_parameters"      = local.root_disk_destructive_params_json
-    "last_applied_destructive_root_disk_parameters_hash" = local.root_disk_destructive_params_json_hash
+    "last_applied_destructive_root_disk_parameters"      = var.root_disk_destructive_params_json
+    "last_applied_destructive_root_disk_parameters_hash" = var.root_disk_destructive_params_json_hash
   }
 }

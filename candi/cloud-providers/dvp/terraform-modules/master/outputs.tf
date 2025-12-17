@@ -25,3 +25,10 @@ output "kubernetes_data_device_path" {
   value = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_${var.kubernetes_data_disk.md5_id}"
 }
 
+output "vm_name" {
+  value = local.vm_name
+}
+
+output "uid" {
+  value = data.kubernetes_resource.vm_data.object.metadata.uid
+}

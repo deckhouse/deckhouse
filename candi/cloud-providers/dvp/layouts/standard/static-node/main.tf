@@ -21,6 +21,8 @@ module "root-disk" {
   image         = local.root_disk_image
   size          = local.root_disk_size
   storage_class = local.root_disk_storage_class
+  owner_ref_name = ""
+  owner_ref_uid = ""
 }
 
 module "ipv4-address" {
@@ -28,6 +30,8 @@ module "ipv4-address" {
   namespace    = local.namespace
   hostname     = local.hostname
   ipv4_address = local.ipv4_address
+  owner_ref_name = ""
+  owner_ref_uid = ""
 }
 
 module "additional-disk" {
@@ -45,6 +49,8 @@ module "additional-disk" {
   namespace     = local.namespace
   storage_class = try(each.value.storage_class, null)
   size          = each.value.size
+  owner_ref_name = ""
+  owner_ref_uid = ""
 }
 
 locals {

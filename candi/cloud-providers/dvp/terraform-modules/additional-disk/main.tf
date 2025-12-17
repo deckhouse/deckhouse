@@ -17,7 +17,7 @@ resource "kubernetes_manifest" "additional_disk" {
     "apiVersion" = var.api_version
     "kind"       = "VirtualDisk"
     "metadata" = {
-      "name"        = local.disk_name
+      "name"        = var.disk_name
       "namespace"   = var.namespace
       "annotations" = local.disk_annotations
       "ownerReferences" = [
@@ -57,7 +57,7 @@ data "kubernetes_resource" "additional_disk" {
   kind        = "VirtualDisk"
 
   metadata {
-    name      = local.disk_name
+    name      = var.disk_name
     namespace = var.namespace
   }
 

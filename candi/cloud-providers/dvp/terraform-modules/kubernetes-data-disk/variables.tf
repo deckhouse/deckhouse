@@ -30,15 +30,15 @@ variable "owner_ref_uid" {
   type = string
 }
 
-variable "prefix" {
+variable "data_disk_destructive_params_json" {
   type = string
 }
 
-variable "node_group" {
+variable "data_disk_destructive_params_json_hash" {
   type = string
 }
 
-variable "node_index" {
+variable "data_disk_name" {
   type = string
 }
 
@@ -67,19 +67,8 @@ variable "timeouts" {
 
 
 locals {
-  data_disk_destructive_params = {
-    "kbernetesDataDisk" = {
-      "storageClass" = var.storage_class
-    }
-  }
-
-  data_disk_destructive_params_json      = jsonencode(local.data_disk_destructive_params)
-  data_disk_destructive_params_json_hash = substr(sha256(jsonencode(local.data_disk_destructive_params_json)), 0, 6)
-
-  data_disk_name = join("-", [var.prefix, var.node_group, "kubernetes-data", var.node_index, local.data_disk_destructive_params_json_hash])
-
   data_disk_annotations = {
-    "last_applied_destructive_root_disk_parameters"      = local.data_disk_destructive_params_json
-    "last_applied_destructive_root_disk_parameters_hash" = local.data_disk_destructive_params_json_hash
+    "last_applied_destructive_root_disk_parameters"      = var.data_disk_destructive_params_json
+    "last_applied_destructive_root_disk_parameters_hash" = var.data_disk_destructive_params_json_hash
   }
 }
