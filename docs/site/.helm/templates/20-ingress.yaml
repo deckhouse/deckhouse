@@ -298,7 +298,7 @@ spec:
             port:
               name: http
 {{- if ne $.Values.web.env "web-production" }}
-{{- if eq .Lang "ru" }}
+{{- if or (eq .Lang "ru") (and (eq .Lang "en") (ne $.Values.web.env "web-stage") (ne $.Values.web.env "web-test") ) }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
