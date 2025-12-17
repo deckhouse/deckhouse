@@ -13,9 +13,14 @@ ingressClass:
   _default: nginx
   prod-25: nginx
 
+wildCertificateStageSecret:
+  web-stage: wildcard-stage-flant-dev
+  web-test: wildcard-test-flant-dev
+
 certificateClusterIssuer:
-  _default: letsencrypt
-  prod-25: letsencrypt-nginx
+  _default: letsencrypt-yandex-dns-staging
+  web-stage: letsencrypt-yandex-dns
+  web-test: letsencrypt-yandex-dns
 
 moduleWatcher:
   registries:
