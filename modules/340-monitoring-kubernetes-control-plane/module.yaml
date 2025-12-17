@@ -1,10 +1,12 @@
 name: monitoring-kubernetes-control-plane
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
 requirements:
   modules:
     prometheus: ">= 0.0.0"
     control-plane-manager: ">= 0.0.0"
+descriptions:
+  en: Monitors the Kubernetes control plane components. Safely scrapes metrics and provides basic monitoring rules for kube-apiserver, kube-controller-manager, kube-scheduler, and etcd.
+  ru: Мониторит компоненты control plane Kubernetes. Организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга для kube-apiserver, kube-controller-manager, kube-scheduler и etcd.

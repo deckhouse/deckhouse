@@ -10,3 +10,6 @@ namespace: d8-system
 disable:
   confirmation: true
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+descriptions:
+  en: Manages the configuration of the registry of Deckhouse components and provides an internal container registry.
+  ru: Отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров.

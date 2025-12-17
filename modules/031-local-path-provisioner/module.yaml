@@ -1,7 +1,10 @@
 name: local-path-provisioner
-stage: "General Availability"
+stage: General Availability
 weight: 31
 critical: true
 subsystems:
   - infrastructure
 namespace: d8-local-path-provisioner
+descriptions:
+  en: Provides local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources for managing local storage provisioning.
+  ru: Предоставляет локальное хранилище на узлах Kubernetes с использованием томов HostPath. Создает ресурсы StorageClass для управления выделением локального хранилища.

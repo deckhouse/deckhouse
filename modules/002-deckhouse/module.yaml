@@ -1,10 +1,13 @@
 name: deckhouse
 critical: true
 weight: 2
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - deckhouse
 namespace: d8-system
 disable:
   confirmation: true
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+descriptions:
+  en: 'Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.'
+  ru: 'Настраивает основные параметры Deckhouse: уровень логирования, набор модулей, включенных по умолчанию, и канал обновлений.'

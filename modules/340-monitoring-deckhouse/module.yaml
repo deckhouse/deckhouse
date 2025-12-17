@@ -1,9 +1,11 @@
 name: monitoring-deckhouse
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
+descriptions:
+  en: Monitoring of Deckhouse Kubernetes Platform components and services.
+  ru: Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform.
 requirements:
   modules:
     prometheus: ">= 0.0.0"

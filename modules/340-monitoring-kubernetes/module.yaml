@@ -1,9 +1,11 @@
 name: monitoring-kubernetes
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
 requirements:
   modules:
     prometheus: ">= 0.0.0"
+descriptions:
+  en: Provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
+  ru: Обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов.
