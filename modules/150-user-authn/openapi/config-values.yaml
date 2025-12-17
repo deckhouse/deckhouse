@@ -177,7 +177,7 @@ properties:
   refreshTokenAbsoluteLifetime:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
-    default: '24h'
+    default: '4380h'
     description: |
       Maximum lifetime of refresh tokens (maps to Dex `expiry.refreshTokens.absoluteLifetime`).
 

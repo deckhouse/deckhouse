@@ -51,7 +51,7 @@
     refreshTokens:
       reuseInterval: "2m"
       validIfNotUsedFor: "2190h" # 3 months
-      absoluteLifetime: {{ $context.Values.userAuthn.refreshTokenAbsoluteLifetime | default "24h" | quote }}
+      absoluteLifetime: {{ $context.Values.userAuthn.refreshTokenAbsoluteLifetime | default "4380h" | quote }}
   logger:
     level: info
     format: json
