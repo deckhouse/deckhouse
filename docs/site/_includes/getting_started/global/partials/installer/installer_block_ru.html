@@ -45,7 +45,7 @@
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1.8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
