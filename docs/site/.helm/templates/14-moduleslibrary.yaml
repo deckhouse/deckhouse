@@ -192,7 +192,7 @@ spec:
     kind: Deployment
     name: moduleslibrary
   updatePolicy:
-    updateMode: "Auto" # InPlaceOrRecreate Working only from kubernetes 1.33
+    updateMode: "Auto"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

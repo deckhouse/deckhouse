@@ -43,6 +43,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 container := input_containers[_]
                 not allowed_by_any(input.review.object, container)
                 msg := sprintf(

@@ -33,6 +33,7 @@ spec:
         package d8.security_policies
 
         violation [{"msg": msg, "details": {}}] {
+          not input.review.operation == "DELETE"
           ingress_name := input.review.object.metadata.name
           some i
           host := input.review.object.spec.rules[i].host

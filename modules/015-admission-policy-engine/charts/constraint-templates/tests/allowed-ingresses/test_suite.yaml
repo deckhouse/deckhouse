@@ -3,53 +3,47 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-ingresses
 tests:
-  - name: pss-deny-all
-    template: ../../templates/security/allowed-ingresses.yaml
-    constraint: constraint_pss_deny_all.yaml
-    cases:
-      - name: allowed-no-wildcard
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_deny_all/allowed-no-wildcard.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-wildcard-in-host
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_deny_all/disallowed-wildcard-in-host.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-wildcard-only
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_deny_all/disallowed-wildcard-only.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-rules-one-wildcard
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_deny_all/disallowed-multiple-rules-one-wildcard.yaml
-        assertions:
-          - violations: yes
-
-  - name: security-policy
-    template: ../../templates/security/allowed-ingresses.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: allowed-wildcard-when-disabled
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-wildcard-when-disabled.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-no-wildcard-when-disabled
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-no-wildcard-when-disabled.yaml
-        assertions:
-          - violations: no
-
+- name: pss-deny-all
+  template: ../../templates/security/allowed-ingresses.yaml
+  constraint: constraint_pss_deny_all.yaml
+  cases:
+  - name: 1-allowed-no-wildcard
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_deny_all/001-allowed-no-wildcard.yaml
+    assertions:
+    - violations: no
+  - name: 3-disallowed-wildcard-in-host
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_deny_all/003-disallowed-wildcard-in-host.yaml
+    assertions:
+    - violations: yes
+  - name: 4-disallowed-wildcard-only
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_deny_all/004-disallowed-wildcard-only.yaml
+    assertions:
+    - violations: yes
+  - name: 2-disallowed-multiple-rules-one-wildcard
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_deny_all/002-disallowed-multiple-rules-one-wildcard.yaml
+    assertions:
+    - violations: yes
+- name: security-policy
+  template: ../../templates/security/allowed-ingresses.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 6-allowed-wildcard-when-disabled
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/006-allowed-wildcard-when-disabled.yaml
+    assertions:
+    - violations: yes
+  - name: 5-allowed-no-wildcard-when-disabled
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/005-allowed-no-wildcard-when-disabled.yaml
+    assertions:
+    - violations: no
