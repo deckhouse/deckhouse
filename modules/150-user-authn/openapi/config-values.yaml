@@ -181,6 +181,8 @@ properties:
     description: |
       Maximum lifetime of refresh tokens (maps to Dex `expiry.refreshTokens.absoluteLifetime`).
 
+      This setting controls how long user sessions can persist. After this period expires, users will need to re-authenticate, even if they have active refresh tokens.
+
       It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     type: boolean
