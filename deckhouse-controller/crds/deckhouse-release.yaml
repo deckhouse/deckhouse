@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for Deckhouse release.
+            Defines the state and parameters for applying Deckhouse Kubernetes Platform (DKP) releases in the cluster. Current DKP versions by update channel are available at [releases.deckhouse.ru](releases.deckhouse.ru).
           required:
             - spec
           properties:
@@ -31,7 +31,7 @@ spec:
               description: |
                 Allows or disables manual updates.
 
-                Ignored if the module's update mode is set to `Auto` (`update.mode: Auto`).
+                Used only in `Manual` update mode (`update.mode: Manual`). Ignored if the `deckhouse` module is configured for `Auto` update mode (`update.mode: Auto`) or `AutoPatch`.
             spec:
               type: object
               required:
@@ -39,16 +39,16 @@ spec:
               properties:
                 version:
                   type: string
-                  description: Deckhouse version.
+                  description: DKP version.
                   x-doc-examples: ['v1.24.20']
                 applyAfter:
                   type: string
-                  description: Marks release as a part of canary release. This release will be delayed until this time.
+                  description: Marks release as a part of canary release. This release will be delayed until this time. If the release is waiting to be applied, check `.status.message` for the reason.
                 requirements:
                   type: object
                   additionalProperties:
                     type: string
-                  description: Deckhouse release requirements.
+                  description: DKP release requirements. If the requirements are not met, the release may be skipped or blocked. Check `.status.message` for details (for example, requirements of active modules or the Kubernetes version).
                 disruptions:
                   type: array
                   items:
@@ -91,7 +91,15 @@ spec:
         - name: phase
           jsonPath: .status.phase
           type: string
-          description: 'Current release status.'
+          description: |
+            'Current release status.
+             Typical values:
+
+             - `Pending`: the release has been created but not applied yet (waiting for manual approval, update windows, canary release, or the minimal notification time);
+             - `Deployed`: DKP has switched to the release version (module and component updates may continue asynchronously);
+             - `Superseded`: the release is outdated and no longer used;
+             - `Suspended`: the release has been canceled (typically before it was applied);
+             - `Skipped`: the release was skipped because the requirements were not satisfied.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

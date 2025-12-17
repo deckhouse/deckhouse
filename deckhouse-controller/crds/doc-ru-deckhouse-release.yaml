@@ -17,7 +17,7 @@ spec:
             spec:
               properties:
                 version:
-                  description: Версия Deckhouse.
+                  description: Версия DKP.
                 applyAfter:
                   description: Время, до которого отложено обновление, если релиз является частью canary-release. Если релиз ожидает применения, уточняйте причину в `.status.message`.
                 requirements:
