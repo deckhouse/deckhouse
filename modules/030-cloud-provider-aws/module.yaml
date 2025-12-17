@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-aws
 stage: General Availability
+descriptions:
+  en: Manages interaction with AWS cloud resources. Allows to use AWS resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами AWS. Позволяет использовать ресурсы AWS при создании узлов.

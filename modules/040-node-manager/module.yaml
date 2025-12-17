@@ -4,8 +4,7 @@ weight: 40
 subsystems:
   - infrastructure
 namespace: d8-cloud-instance-manager
-description: |
-  Managing nodes
 descriptions:
-  en: Managing nodes
+  en: Manages nodes in the Kubernetes cluster as a related group. Configures and updates cluster nodes, manages cluster scaling in the cloud, and manages local users on nodes.
+  ru: Управляет узлами кластера Kubernetes как связанной группой. Настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет локальными пользователями на узлах.
 stage: General Availability

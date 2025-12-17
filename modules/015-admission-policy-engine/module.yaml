@@ -1,9 +1,10 @@
 name: admission-policy-engine
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - security
 namespace: d8-admission-policy-engine
 description: |
   Admission policy engine module
 descriptions:
-  en: Admission policy engine module
+  en: Enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.
+  ru: Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes с использованием решения Gatekeeper.
