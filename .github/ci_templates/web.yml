@@ -206,8 +206,8 @@ steps:
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
-{!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
-{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
+{!{- $url := printf "deckhouse.%s.flant.dev" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.dev" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $s3Bucket := "${{ secrets.DOC_S3_BUCKET_DEV }}" -}!}
@@ -224,23 +224,23 @@ steps:
   {!{- $s3AcessKey = "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}" -}!}
   {!{- $s3SecretKey = "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}" -}!}
 {!{- else if eq $env "test2" }!}
-  {!{- $url = "deckhouse.2.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
+  {!{- $url = "deckhouse.2.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.2.test.flant.dev" -}!}
 {!{- else if eq $env "test3" }!}
-  {!{- $url = "deckhouse.3.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.3.test.flant.com" -}!}
+  {!{- $url = "deckhouse.3.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.3.test.flant.dev" -}!}
 {!{- else if eq $env "test4" }!}
-  {!{- $url = "deckhouse.4.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.4.test.flant.com" -}!}
+  {!{- $url = "deckhouse.4.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.4.test.flant.dev" -}!}
 {!{- else if eq $env "test5" }!}
-  {!{- $url = "deckhouse.5.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.5.test.flant.com" -}!}
+  {!{- $url = "deckhouse.5.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.5.test.flant.dev" -}!}
 {!{- else if eq $env "test6" }!}
-  {!{- $url = "deckhouse.6.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.6.test.flant.com" -}!}
+  {!{- $url = "deckhouse.6.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.6.test.flant.dev" -}!}
 {!{- else if eq $env "test7" }!}
-  {!{- $url = "deckhouse.7.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}
+  {!{- $url = "deckhouse.7.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.7.test.flant.dev" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -275,8 +275,8 @@ steps:
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
-{!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
-{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
+{!{- $url := printf "deckhouse.%s.flant.dev" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.dev" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $s3BucketPublicUrl := "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}" -}!}
@@ -289,23 +289,23 @@ steps:
   {!{- $dcName = "prod-25" -}!}
   {!{- $s3BucketPublicUrl = "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_PROD }}" -}!}
 {!{- else if eq $env "test2" }!}
-  {!{- $url = "deckhouse.2.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
+  {!{- $url = "deckhouse.2.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.2.test.flant.dev" -}!}
 {!{- else if eq $env "test3" }!}
-  {!{- $url = "deckhouse.3.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.3.test.flant.com" -}!}
+  {!{- $url = "deckhouse.3.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.3.test.flant.dev" -}!}
 {!{- else if eq $env "test4" }!}
-  {!{- $url = "deckhouse.4.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.4.test.flant.com" -}!}
+  {!{- $url = "deckhouse.4.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.4.test.flant.dev" -}!}
 {!{- else if eq $env "test5" }!}
-  {!{- $url = "deckhouse.5.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.5.test.flant.com" -}!}
+  {!{- $url = "deckhouse.5.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.5.test.flant.dev" -}!}
 {!{- else if eq $env "test6" }!}
-  {!{- $url = "deckhouse.6.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.6.test.flant.com" -}!}
+  {!{- $url = "deckhouse.6.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.6.test.flant.dev" -}!}
 {!{- else if eq $env "test7" }!}
-  {!{- $url = "deckhouse.7.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}
+  {!{- $url = "deckhouse.7.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse.ru.7.test.flant.dev" -}!}
 {!{- end -}!}
 
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
