@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the state and parameters for applying Deckhouse Kubernetes Platform (DKP) releases in the cluster. Current DKP versions by update channel are available at [releases.deckhouse.ru](releases.deckhouse.ru).
+            Defines the state and parameters for applying Deckhouse Kubernetes Platform (DKP) releases in the cluster. Current DKP versions by update channel are available at [releases.deckhouse.io](https://releases.deckhouse.io).
           required:
             - spec
           properties:
@@ -31,9 +31,9 @@ spec:
               description: |
                 Allows or disables manual updates.
 
-                Used only in `Manual` update mode (`update.mode: Manual`). Ignored if the `deckhouse` module is configured for `Auto` update mode (`update.mode: Auto`) or `AutoPatch`.
+                Used only if the `deckhouse` module is configured for `Manual` update mode (`update.mode: Manual`). Ignored if the update mode is set to `Auto` or `AutoPatch`.
 
-                More information [in the documentation](/modules/deckhouse/usage.html#manual-update-confirmation).
+                For more information on confirming manual updates, refer to the [`deckhouse` module documentation](/modules/deckhouse/usage.html#manual-update-confirmation).
             spec:
               type: object
               required:
@@ -45,7 +45,7 @@ spec:
                   x-doc-examples: ['v1.24.20']
                 applyAfter:
                   type: string
-                  description: Marks release as a part of [canary-release](../../user/network/canary-deployment.html). This release will be delayed until this time. If the release is waiting to be applied, check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for the reason.
+                  description: Marks release as a part of [canary-release](../../user/network/canary-deployment.html). This release will be delayed until the specified time. If the release is waiting to be applied, check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for the reason.
                 requirements:
                   type: object
                   additionalProperties:
@@ -59,7 +59,7 @@ spec:
                   description: Disruptive changes in the release.
                 changelog:
                   type: object
-                  description: Release's changelog for enabled modules. More information [in the documentation](../../architecture/updating.html#retrieving-the-changelog).
+                  description: Release's changelog for enabled modules. For more information about DKP release changelogs, refer to [Updating](../../architecture/updating.html#retrieving-the-changelog).
                   x-kubernetes-preserve-unknown-fields: true
                 changelogLink:
                   type: string
@@ -94,14 +94,17 @@ spec:
           jsonPath: .status.phase
           type: string
           description: |
-            'Current release status.
-             Typical values:
+            Current release status.
 
-             - `Pending`: the release has been created but not applied yet (waiting for manual approval, update windows, canary release, or the minimal notification time);
-             - `Deployed`: DKP has switched to the release version (module and component updates may continue asynchronously);
-             - `Superseded`: the release is outdated and no longer used;
-             - `Suspended`: the release has been canceled (typically before it was applied);
-             - `Skipped`: the release was skipped because the requirements were not satisfied.'
+            Typical values:
+
+            - `Pending`: The release has been created but not applied yet (waiting for manual approval, update windows, canary release, or the minimal notification time).
+            - `Deployed`: DKP has switched to the release version (module and component updates may continue asynchronously).
+            - `Superseded`: The release is outdated and no longer used.
+            - `Suspended`: The release has been canceled (typically before it was applied).
+            - `Skipped`: The release was skipped because the requirements were not satisfied.
+            
+            For more information about DKP release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date
