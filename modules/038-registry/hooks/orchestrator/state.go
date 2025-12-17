@@ -447,9 +447,17 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 }
 
 func (state *State) transitionToUnmanaged(inputs Inputs) error {
-	if state.Mode != registry_const.ModeUnmanaged &&
-		state.Mode != registry_const.ModeProxy &&
-		state.Mode != registry_const.ModeDirect {
+	modeSupported := false
+
+	switch state.Mode {
+	case registry_const.ModeUnmanaged,
+		registry_const.ModeProxy,
+		registry_const.ModeDirect:
+
+		modeSupported = true
+	}
+
+	if !modeSupported {
 		return ErrTransitionNotSupported{
 			From: state.Mode,
 			To:   state.TargetMode,
@@ -459,10 +467,7 @@ func (state *State) transitionToUnmanaged(inputs Inputs) error {
 	// Reset checker
 	state.CheckerParams = checker.Params{}
 
-	if (state.Mode == registry_const.ModeUnmanaged ||
-		state.Mode == registry_const.ModeProxy ||
-		state.Mode == registry_const.ModeDirect) &&
-		state.Bashible.UnmanagedParams != nil {
+	if state.Bashible.UnmanagedParams != nil {
 		unmanagedParams := *state.Bashible.UnmanagedParams
 
 		bashibleParams := bashible.Params{
