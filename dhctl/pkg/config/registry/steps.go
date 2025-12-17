@@ -135,11 +135,12 @@ func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, erro
 	)
 
 	for _, condition := range conditions {
-		if condition.Status == metav1.ConditionTrue {
-			if condition.Type == conditionTypeReady {
-				ready = true
-			}
+		if condition.Type == conditionTypeReady {
+			ready = condition.Status == metav1.ConditionTrue
+			continue
+		}
 
+		if condition.Status == metav1.ConditionTrue {
 			continue
 		}
 
