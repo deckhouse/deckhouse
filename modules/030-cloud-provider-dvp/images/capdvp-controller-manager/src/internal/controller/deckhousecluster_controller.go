@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -101,7 +101,8 @@ func (r *DeckhouseClusterReconciler) reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
-	dvpCluster.Status.Ready = true
+	infraReady := true
+	dvpCluster.Status.Initialization.Provisioned = &infraReady
 	dvpCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: controlPlaneEndpointURL.Hostname(),
 		Port: int32(port),
