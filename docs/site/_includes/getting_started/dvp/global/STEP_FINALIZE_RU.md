@@ -128,13 +128,13 @@
    sudo chown -R nobody:nogroup /srv/nfs/dvp
    ```
 
-1. Экспортируйте каталог с правами, позволяющими доступ root-клиентам. Для Linux-сервера это делается через опцию `no_root_squash`. Добавьте следующую строку в файл `/etc/exports`:
+1. Экспортируйте каталог с правами, позволяющими доступ root-клиентам. Для Linux-сервера это делается через опцию `no_root_squash`. Выполните следующую команду, чтобы добавить конфигурацию в файл `/etc/exports`:
 
    ```bash
    echo "/srv/nfs/dvp <SubnetCIDR>(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
    ```
 
-   Замените `<SubnetCIDR>` на подсеть, в которой находятся master- и worker-узлы (например, `192.168.1.0/24`).
+   Замените `<SubnetCIDR>` на подсеть, в которой находятся master- и worker-узлы (например, `10.128.0.0/24`).
 
 1. Примените изменения конфигурации:
 
@@ -175,12 +175,6 @@
    sudo -i d8 k get module csi-nfs -w
    ```
 
-1. Проверьте, что поды драйвера запущены в пространстве имён `d8-csi-nfs`:
-
-   ```bash
-   sudo -i d8 k -n d8-csi-nfs get pod -owide -w
-   ```
-
 1. Создайте ресурс NFSStorageClass, который описывает подключение к вашему NFS-серверу:
 
    ```bash
@@ -192,7 +186,7 @@
    spec:
      connection:
        host: <IP-адрес-NFS-сервера>
-       share: /srv/nfs/dvp
+       share: <экспортируемый-каталог> # Например, /srv/nfs/dvp
        nfsVersion: "4.1"
      reclaimPolicy: Delete
      volumeBindingMode: WaitForFirstConsumer
@@ -202,7 +196,7 @@
    Параметры, которые нужно заменить:
 
   - `<IP-адрес-NFS-сервера>` — IP-адрес NFS-сервера, доступный из кластера;
-  - `share` — экспортируемый каталог на NFS-сервере (в примере `/srv/nfs/dvp`).
+  - `share` — экспортируемый каталог на NFS-сервере.
 
 1. Проверьте, что NFSStorageClass создан успешно:
 
