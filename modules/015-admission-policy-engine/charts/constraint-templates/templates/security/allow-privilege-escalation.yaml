@@ -34,6 +34,7 @@ spec:
               package d8.pod_security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any(c)
                 msg := sprintf("Privilege escalation container is not allowed: %v", [c.name])
