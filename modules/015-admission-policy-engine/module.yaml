@@ -3,7 +3,5 @@ stage: "General Availability"
 subsystems:
   - security
 namespace: d8-admission-policy-engine
-description: |
-  Admission policy engine module
 descriptions:
   en: Admission policy engine module

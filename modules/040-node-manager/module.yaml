@@ -4,8 +4,6 @@ weight: 40
 subsystems:
   - infrastructure
 namespace: d8-cloud-instance-manager
-description: |
-  Managing nodes
 descriptions:
   en: Managing nodes
 stage: General Availability

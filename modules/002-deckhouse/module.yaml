@@ -1,6 +1,8 @@
 name: deckhouse
 critical: true
 weight: 2
+descriptions:
+  en: Deckhouse module
 stage: "General Availability"
 subsystems:
   - deckhouse
