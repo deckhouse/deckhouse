@@ -114,7 +114,7 @@ index a4da87b496b..a9abf113d94 100644
  	result[corev1.ResourcePersistentVolumeClaims] = *(resource.NewQuantity(1, resource.DecimalSI))
  	result[pvcObjectCountName] = *(resource.NewQuantity(1, resource.DecimalSI))
 diff --git a/pkg/quota/v1/evaluator/core/pods.go b/pkg/quota/v1/evaluator/core/pods.go
-index 8efdec6cc2b..5e2fb8e0c33 100644
+index 8efdec6cc2b..0e034c0cbf1 100644
 --- a/pkg/quota/v1/evaluator/core/pods.go
 +++ b/pkg/quota/v1/evaluator/core/pods.go
 @@ -363,6 +363,11 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
@@ -137,29 +137,29 @@ index 8efdec6cc2b..5e2fb8e0c33 100644
 +	podUsage := podComputeUsageHelper(requests, limits)
 +
 +	// Apply discount and cap if specified via labels
-+	// Discounts/caps apply to requests.* and limits.* resources
 +	// Dont handle errors here, validated earlier in pkg/apis/core/validation/validation.go
-+	if pod.Labels != nil {
-+		// CPU discount
-+		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
-+		// CPU cap
-+		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
-+
-+		// Memory discount
-+		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
-+		// Memory cap
-+		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
-+
-+		// Ephemeral-storage discount
-+		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
-+		// Ephemeral-storage cap
-+		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
-+	}
++	applyQuotaModifiers(podUsage, pod.Labels)
 +
 +	result = quota.Add(result, podUsage)
  	return result, nil
  }
  
++// applyQuotaModifiers applies discounts and caps to the resource in usage
++func applyQuotaModifiers(usage corev1.ResourceList, labels map[string]string) {
++	if labels == nil {
++		return
++	}
++	// CPU discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
++	// Memory discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
++	// Ephemeral-storage discount + cap
++	applyDiscount(usage, labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++	applyCap(usage, labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
++}
++
 +// applyDiscount subtracts discount from the resource in usage, ensuring the result is non-negative
 +func applyDiscount(usage corev1.ResourceList, labels map[string]string, labelKey string, resources ...corev1.ResourceName) {
 +	discountStr, exists := labels[labelKey]
