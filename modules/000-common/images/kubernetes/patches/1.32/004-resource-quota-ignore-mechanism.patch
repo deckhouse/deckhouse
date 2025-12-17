@@ -114,7 +114,7 @@ index a4da87b496b..a9abf113d94 100644
  	result[corev1.ResourcePersistentVolumeClaims] = *(resource.NewQuantity(1, resource.DecimalSI))
  	result[pvcObjectCountName] = *(resource.NewQuantity(1, resource.DecimalSI))
 diff --git a/pkg/quota/v1/evaluator/core/pods.go b/pkg/quota/v1/evaluator/core/pods.go
-index 8efdec6cc2b..848e5e2b35c 100644
+index 8efdec6cc2b..5e2fb8e0c33 100644
 --- a/pkg/quota/v1/evaluator/core/pods.go
 +++ b/pkg/quota/v1/evaluator/core/pods.go
 @@ -363,6 +363,11 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
@@ -129,7 +129,7 @@ index 8efdec6cc2b..848e5e2b35c 100644
  	// always quota the object count (even if the pod is end of life)
  	// object count quotas track all objects that are in storage.
  	// where "pods" tracks all pods that have not reached a terminal state,
-@@ -385,10 +390,81 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
+@@ -385,10 +390,73 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
  	requests := resourcehelper.PodRequests(pod, opts)
  	limits := resourcehelper.PodLimits(pod, opts)
  
@@ -138,51 +138,22 @@ index 8efdec6cc2b..848e5e2b35c 100644
 +
 +	// Apply discount and cap if specified via labels
 +	// Discounts/caps apply to requests.* and limits.* resources
++	// Dont handle errors here, validated earlier in pkg/apis/core/validation/validation.go
 +	if pod.Labels != nil {
 +		// CPU discount
-+		if discountStr, exists := pod.Labels[corev1.LabelResourceQuotaDiscountCPU]; exists {
-+			if discount, err := resource.ParseQuantity(discountStr); err == nil {
-+				applyDiscount(podUsage, corev1.ResourceRequestsCPU, discount)
-+				applyDiscount(podUsage, corev1.ResourceLimitsCPU, discount)
-+			}
-+		}
++		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
 +		// CPU cap
-+		if capStr, exists := pod.Labels[corev1.LabelResourceQuotaCapCPU]; exists {
-+			if capQty, err := resource.ParseQuantity(capStr); err == nil {
-+				applyCap(podUsage, corev1.ResourceRequestsCPU, capQty)
-+				applyCap(podUsage, corev1.ResourceLimitsCPU, capQty)
-+			}
-+		}
++		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapCPU, corev1.ResourceRequestsCPU, corev1.ResourceLimitsCPU)
 +
 +		// Memory discount
-+		if discountStr, exists := pod.Labels[corev1.LabelResourceQuotaDiscountMemory]; exists {
-+			if discount, err := resource.ParseQuantity(discountStr); err == nil {
-+				applyDiscount(podUsage, corev1.ResourceRequestsMemory, discount)
-+				applyDiscount(podUsage, corev1.ResourceLimitsMemory, discount)
-+			}
-+		}
++		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
 +		// Memory cap
-+		if capStr, exists := pod.Labels[corev1.LabelResourceQuotaCapMemory]; exists {
-+			if capQty, err := resource.ParseQuantity(capStr); err == nil {
-+				applyCap(podUsage, corev1.ResourceRequestsMemory, capQty)
-+				applyCap(podUsage, corev1.ResourceLimitsMemory, capQty)
-+			}
-+		}
++		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapMemory, corev1.ResourceRequestsMemory, corev1.ResourceLimitsMemory)
 +
 +		// Ephemeral-storage discount
-+		if discountStr, exists := pod.Labels[corev1.LabelResourceQuotaDiscountStorage]; exists {
-+			if discount, err := resource.ParseQuantity(discountStr); err == nil {
-+				applyDiscount(podUsage, corev1.ResourceRequestsEphemeralStorage, discount)
-+				applyDiscount(podUsage, corev1.ResourceLimitsEphemeralStorage, discount)
-+			}
-+		}
++		applyDiscount(podUsage, pod.Labels, corev1.LabelResourceQuotaDiscountStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
 +		// Ephemeral-storage cap
-+		if capStr, exists := pod.Labels[corev1.LabelResourceQuotaCapStorage]; exists {
-+			if capQty, err := resource.ParseQuantity(capStr); err == nil {
-+				applyCap(podUsage, corev1.ResourceRequestsEphemeralStorage, capQty)
-+				applyCap(podUsage, corev1.ResourceLimitsEphemeralStorage, capQty)
-+			}
-+		}
++		applyCap(podUsage, pod.Labels, corev1.LabelResourceQuotaCapStorage, corev1.ResourceRequestsEphemeralStorage, corev1.ResourceLimitsEphemeralStorage)
 +	}
 +
 +	result = quota.Add(result, podUsage)
@@ -190,21 +161,42 @@ index 8efdec6cc2b..848e5e2b35c 100644
  }
  
 +// applyDiscount subtracts discount from the resource in usage, ensuring the result is non-negative
-+func applyDiscount(usage corev1.ResourceList, resourceName corev1.ResourceName, discount resource.Quantity) {
-+	if val, exists := usage[resourceName]; exists {
-+		val.Sub(discount)
-+		if val.Sign() == -1 {
-+			val = *resource.NewQuantity(0, resource.DecimalSI)
-+		}
-+		usage[resourceName] = val
++func applyDiscount(usage corev1.ResourceList, labels map[string]string, labelKey string, resources ...corev1.ResourceName) {
++	discountStr, exists := labels[labelKey]
++	if !exists {
++		return
 +	}
++	discount, err := resource.ParseQuantity(discountStr)
++	if err != nil {
++		return
++	}
++	for _, resourceName := range resources {
++		if val, exists := usage[resourceName]; exists {
++			val.Sub(discount)
++			if val.Sign() == -1 {
++				val = *resource.NewQuantity(0, resource.DecimalSI)
++			}
++			usage[resourceName] = val
++		}
++	}
++
 +}
 +
 +// applyCap limits the resource in usage to the cap value
-+func applyCap(usage corev1.ResourceList, resourceName corev1.ResourceName, cap resource.Quantity) {
-+	if val, exists := usage[resourceName]; exists {
-+		if val.Cmp(cap) > 0 {
-+			usage[resourceName] = cap
++func applyCap(usage corev1.ResourceList, labels map[string]string, labelKey string, resources ...corev1.ResourceName) {
++	capStr, exists := labels[labelKey]
++	if !exists {
++		return
++	}
++	cap, err := resource.ParseQuantity(capStr)
++	if err != nil {
++		return
++	}
++	for _, resourceName := range resources {
++		if val, exists := usage[resourceName]; exists {
++			if val.Cmp(cap) > 0 {
++				usage[resourceName] = cap
++			}
 +		}
 +	}
 +}
