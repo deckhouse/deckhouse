@@ -1,0 +1,48 @@
+title-en: Prometheus monitoring integration
+title-ru: Интеграция с мониторингом Prometheus
+description-en: |
+  Built-in Prometheus metrics endpoint for CoreDNS.
+  Automatic PodMonitor creation for Prometheus Operator to scrape CoreDNS metrics.
+  Includes Grafana dashboard for DNS monitoring.
+description-ru: |
+  Встроенный endpoint метрик Prometheus для CoreDNS.
+  Автоматическое создание PodMonitor для Prometheus Operator для сбора метрик CoreDNS.
+  Включает Grafana дашборд для мониторинга DNS.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Метрики доступны на порту 9153 внутри пода CoreDNS
+  - PodMonitor создается автоматически при наличии модуля operator-prometheus
+  - Grafana дашборд находится в `monitoring/grafana-dashboards/kubernetes-cluster/dns/`
+  - Метрики включают: количество запросов, время ответа, ошибки, кэш статистику
+  - Доступ к метрикам защищен через kube-rbac-proxy
+  - Полезно для мониторинга производительности DNS и выявления проблем
+user-notes-en: |
+  **Important for users:**
+  - Metrics are available on port 9153 inside CoreDNS pod
+  - PodMonitor is created automatically when operator-prometheus module is present
+  - Grafana dashboard is located in `monitoring/grafana-dashboards/kubernetes-cluster/dns/`
+  - Metrics include: request count, response time, errors, cache statistics
+  - Metrics access is protected via kube-rbac-proxy
+  - Useful for monitoring DNS performance and identifying issues
+configuration-example: |
+  Metrics are enabled automatically. To access:
+  ```bash
+  # Check PodMonitor (if operator-prometheus module is enabled)
+  kubectl get podmonitor -n d8-monitoring d8-kube-dns
+  
+  # Query metrics via kube-rbac-proxy (recommended)
+  kubectl port-forward -n kube-system <coredns-pod> 9154:9154
+  curl -k https://localhost:9154/metrics
+  
+  # Or access metrics directly from inside the pod (port 9153)
+  kubectl exec -n kube-system <coredns-pod> -c coredns -- wget -qO- http://127.0.0.1:9153/metrics
+  ```
+related-features: []
+user-stories:
+  - en: I need Prometheus metrics for CoreDNS to monitor query rates, response times, and error rates, helping me identify DNS performance issues and optimize configuration.
+    ru: Мне нужны метрики Prometheus для CoreDNS для мониторинга частоты запросов, времени отклика и частоты ошибок, помогая мне идентифицировать проблемы производительности DNS и оптимизировать конфигурацию.
+    scope: System
+  - en: I want to see DNS metrics in Grafana dashboards to proactively identify and resolve DNS issues before they affect applications.
+    ru: Я хочу видеть DNS метрики в Grafana дашбордах для проактивной идентификации и решения DNS проблем до того, как они повлияют на приложения.
+    scope: System
+

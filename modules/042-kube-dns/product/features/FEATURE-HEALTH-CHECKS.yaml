@@ -1,0 +1,49 @@
+title-en: Health checks and readiness
+title-ru: Проверки здоровья и готовности
+description-en: |
+  Built-in health and readiness endpoints for CoreDNS.
+  Health endpoint monitors CoreDNS status, readiness endpoint indicates when CoreDNS is ready to serve DNS queries.
+  Includes lameduck mode for graceful shutdown.
+description-ru: |
+  Встроенные endpoints здоровья и готовности для CoreDNS.
+  Health endpoint отслеживает статус CoreDNS, readiness endpoint указывает, когда CoreDNS готов обрабатывать DNS запросы.
+  Включает режим lameduck для graceful shutdown.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Health endpoint: `/health` - проверка работоспособности CoreDNS
+  - Readiness endpoint: `/ready` - проверка готовности обрабатывать запросы
+  - Lameduck режим: 15 секунд для graceful shutdown при обновлении
+  - Kubernetes использует эти endpoints для управления подами CoreDNS
+  - Обеспечивает отсутствие простоев при обновлении CoreDNS
+  - Поды CoreDNS не удаляются из Service до завершения обработки текущих запросов
+user-notes-en: |
+  **Important for users:**
+  - Health endpoint: `/health` - checks CoreDNS health status
+  - Readiness endpoint: `/ready` - checks readiness to process queries
+  - Lameduck mode: 15 seconds for graceful shutdown during updates
+  - Kubernetes uses these endpoints to manage CoreDNS pods
+  - Ensures no downtime during CoreDNS updates
+  - CoreDNS pods are not removed from Service until current queries are completed
+configuration-example: |
+  Health checks are configured automatically. To test:
+  ```bash
+  # Check health via port-forward (recommended)
+  kubectl port-forward -n kube-system <coredns-pod> 8080:8080
+  curl http://localhost:8080/health
+  
+  # Check readiness
+  kubectl port-forward -n kube-system <coredns-pod> 8181:8181
+  curl http://localhost:8181/ready
+  
+  # Or check directly in pod (if tools available)
+  kubectl exec -n kube-system <coredns-pod> -c coredns -- sh -c 'echo "" | nc localhost 8080 || echo "Health endpoint check"'
+  ```
+related-features: []
+user-stories:
+  - en: I need health and readiness endpoints for CoreDNS so Kubernetes can properly manage pods and route traffic only to healthy instances.
+    ru: Мне нужны health и readiness endpoints для CoreDNS, чтобы Kubernetes мог правильно управлять подами и направлять трафик только на здоровые инстансы.
+    scope: System
+  - en: I want graceful shutdown during CoreDNS updates to ensure in-flight DNS queries complete without connection drops.
+    ru: Я хочу graceful shutdown во время обновлений CoreDNS, чтобы обеспечить завершение выполняющихся DNS запросов без обрыва соединений.
+    scope: System
+
