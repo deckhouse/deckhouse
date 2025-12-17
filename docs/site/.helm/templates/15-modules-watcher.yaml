@@ -129,6 +129,7 @@ spec:
 {{ tpl (.Files.Get "dashboards/registry-modules-watcher-stats.yaml") . | indent 4 }}
 {{- end }}
 ---
+{{- if eq $.Values.web.env "web-production" }}
 {{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -140,4 +141,5 @@ spec:
   folder: Custom
   definition: |
 {{ tpl (.Files.Get "dashboards/modules-validation.yaml") . | indent 4 }}
+{{- end }}
 {{- end }}
