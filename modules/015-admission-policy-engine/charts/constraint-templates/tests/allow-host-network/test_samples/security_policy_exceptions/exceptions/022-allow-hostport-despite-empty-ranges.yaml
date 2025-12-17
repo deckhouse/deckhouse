@@ -8,6 +8,5 @@ spec:
     hostNetwork:
       allowedValue: true
     hostPorts:
-    - port: 5000
-      protocol: TCP
-
+      - port: 5000
+        protocol: TCP

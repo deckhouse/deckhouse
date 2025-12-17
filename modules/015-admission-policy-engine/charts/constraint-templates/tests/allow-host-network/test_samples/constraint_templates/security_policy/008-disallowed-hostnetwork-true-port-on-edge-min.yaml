@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: disallowed-hostnetwork-true-port-out-of-range-high
+  name: disallowed-hostnetwork-true-port-on-edge-min
   namespace: testns
 spec:
   hostNetwork: true
@@ -9,6 +9,6 @@ spec:
     - name: nginx
       image: nginx
       ports:
-        - containerPort: 9000
-          hostPort: 35000
+        - containerPort: 19999
+          hostPort: 19999
 
