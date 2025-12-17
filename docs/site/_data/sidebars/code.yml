@@ -84,6 +84,14 @@ entries:
           ru: Pull зеркалирование
         url: /code/documentation/user/pull-mirroring.html
       - title:
+          en: Approval rules
+          ru: Правила апрувов
+        url: /code/documentation/user/approval-rules.html
+      - title:
+          en: CODEOWNERS
+          ru: CODEOWNERS
+        url: /code/documentation/user/code-owners.html
+      - title:
           en: External Vault integration
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
