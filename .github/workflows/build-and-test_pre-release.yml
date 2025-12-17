@@ -2986,8 +2986,8 @@ jobs:
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
           WERF_NAMESPACE: deckhouse-web-stage
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
-          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
+          WERF_SET_URL: "global.url=deckhouse.stage.flant.dev"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.dev"
           WERF_SET_WEB_ENV: "web.env=web-stage"
           WERF_SET_DCNAME: "web.dc_name=dev"
           WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
