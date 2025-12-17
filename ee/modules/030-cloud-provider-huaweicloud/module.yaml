@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-huaweicloud
 stage: Experimental
+descriptions:
+  en: Manages interaction with Huawei Cloud resources. Allows to use Huawei Cloud resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов.

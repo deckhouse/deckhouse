@@ -1,5 +1,6 @@
 name: service-with-healthchecks
-stage: "General Availability"
+stage: General Availability
 namespace: d8-service-with-healthchecks
-description: |
-  Internal LoadBalancer with per-port healthchecks.
+descriptions:
+  en: Provides an internal LoadBalancer with per-port healthchecks. Allows independent health checks for different ports, unlike the standard Kubernetes Service load balancer.
+  ru: Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes.

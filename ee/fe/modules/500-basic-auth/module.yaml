@@ -1,3 +1,6 @@
 name: basic-auth
-stage: "General Availability"
+stage: General Availability
 namespace: kube-basic-auth
+descriptions:
+  en: Installs a service for basic authorization. Does not have any mandatory settings.
+  ru: Устанавливает сервис для базовой авторизации. Не предназначен для высоких нагрузок.

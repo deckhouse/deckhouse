@@ -1,8 +1,11 @@
 name: kube-dns
-stage: "General Availability"
+stage: General Availability
 critical: true
 weight: 42
 subsystems:
   - kubernetes
   - networking
 namespace: kube-system
+descriptions:
+  en: Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.
+  ru: Устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes. Удаляет ранее установленные kubeadm'ом Deployment, ConfigMap и RBAC для CoreDNS.

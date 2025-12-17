@@ -1,9 +1,11 @@
 name: monitoring-applications
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
+descriptions:
+  en: Collects information about applications running in the cluster and configures monitoring dashboards for them.
+  ru: Собирает информацию о работающих в кластере приложениях и настраивает для них дашборды мониторинга.
 requirements:
   modules:
-    prometheus: '>= 0.0.0'
+    prometheus: ">= 0.0.0"

@@ -1,5 +1,8 @@
 name: metallb
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - networking
 namespace: d8-metallb
+descriptions:
+  en: Implements LoadBalancer mechanism for services in bare metal clusters. Supports Layer 2 mode with improved load balancing and BGP mode based on MetalLB solution.
+  ru: Реализует механизм LoadBalancer для сервисов в кластерах bare metal. Поддерживает режим Layer 2 с улучшенной балансировкой нагрузки и режим BGP на базе решения MetalLB.

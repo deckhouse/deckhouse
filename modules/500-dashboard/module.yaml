@@ -5,3 +5,6 @@ subsystems:
 namespace: d8-dashboard
 requirements:
   user-authz: ">= 0.0.0"
+descriptions:
+  en: Installs Kubernetes Dashboard Web UI for managing applications in the cluster. Integrated with user authentication and authorization modules.
+  ru: Устанавливает Web UI Kubernetes Dashboard для управления приложениями в кластере. Интегрирован с модулями аутентификации и авторизации пользователей.
