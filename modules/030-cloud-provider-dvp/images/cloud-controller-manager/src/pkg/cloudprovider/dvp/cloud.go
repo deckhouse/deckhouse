@@ -28,6 +28,7 @@ import (
 	discv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	cloudprovider "k8s.io/cloud-provider"
@@ -45,6 +46,7 @@ const (
 type Cloud struct {
 	dvpService *api.DVPCloudAPI
 	config     config.CloudConfig
+	kubeClient kubernetes.Interface
 }
 
 func init() {
@@ -79,6 +81,7 @@ func (c *Cloud) Initialize(
 	stop <-chan struct{},
 ) {
 	clientSet := clientBuilder.ClientOrDie("cloud-controller-manager")
+	c.kubeClient = clientSet
 
 	informerFactory := informers.NewSharedInformerFactory(clientSet, time.Second*30)
 	serviceInformer := informerFactory.Core().V1().Services()
