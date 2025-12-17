@@ -8,12 +8,20 @@
     }
   },
   "transforms": {
-    "transform/destination/test-loki-dest/00_parse_json": {
+    "transform/destination/test-loki-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.ap_p[0].a) { .app=.parsed_data.ap_p[0].a } \n .foo=\"bar\"",
+      "type": "remap"
+    },
+    "transform/destination/test-loki-dest/01_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-loki-dest/00_extra_fields"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
     "transform/source/test-source/00_local_timezone": {
@@ -37,7 +45,7 @@
     "destination/cluster/test-loki-dest": {
       "type": "loki",
       "inputs": [
-        "transform/destination/test-loki-dest/00_parse_json"
+        "transform/destination/test-loki-dest/01_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false
@@ -61,9 +69,9 @@
         "verify_certificate": true
       },
       "labels": {
-        "app": "{{ parsed_data.ap_p[0].a }}",
+        "app": "{{ app }}",
         "container": "{{ container }}",
-        "foo": "bar",
+        "foo": "{{ foo }}",
         "host": "{{ host }}",
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
