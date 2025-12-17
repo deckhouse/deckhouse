@@ -13,7 +13,7 @@ user-notes-ru: |
   - Используется для миграции кластера на новый домен без простоев (см. FAQ модуля)
   - Алиас НЕ должен совпадать с доменом из publicDomainTemplate
   - Webhook автоматически добавляет алиасы в /etc/hosts для StatefulSet подов
-  - Критично для сервисов типа RabbitMQ, которые требуют раннего DNS разрешения
+  - Критично для сервисов, которые требуют раннего DNS разрешения
   - При удалении алиаса из конфигурации необходимо пересоздать все поды кластера
   - После смены clusterDomain требуется рестарт всех подов Istio (если используется)
 user-notes-en: |
@@ -21,7 +21,7 @@ user-notes-en: |
   - Used for cluster domain migration without downtime (see module FAQ)
   - Alias MUST NOT match the domain from publicDomainTemplate
   - Webhook automatically adds aliases to /etc/hosts for StatefulSet pods
-  - Critical for services like RabbitMQ that require early DNS resolution
+  - Critical for services that require early DNS resolution
   - When removing alias from configuration, all cluster pods must be recreated
   - After changing clusterDomain, all Istio pods must be restarted (if Istio is used)
 configuration-example: |
@@ -38,28 +38,11 @@ configuration-example: |
   ```
 related-features:
   - FEATURE-STS-HOSTS-WEBHOOK
-troubleshooting-ru: |
-  - **Проблема:** Алиас не работает для StatefulSet подов
-    - **Решение:** Проверьте, что webhook активен: `kubectl get mutatingwebhookconfiguration d8-kube-dns-sts-pods-hosts-appender-webhook`. Проверьте логи webhook: `kubectl logs -n kube-system -l app=sts-pods-hosts-appender-webhook`
-  - **Проблема:** После удаления алиаса сервисы не работают
-    - **Решение:** ⚠️ **Внимание:** Пересоздание всех подов приведет к простою сервисов. Используйте только при необходимости: `kubectl delete pods --all-namespaces --all`. Рекомендуется пересоздавать поды постепенно по namespace или использовать rolling restart для Deployment/StatefulSet
-  - **Проблема:** Ошибка валидации при создании алиаса
-    - **Решение:** Убедитесь, что алиас не совпадает с доменом из publicDomainTemplate. Проверьте валидацию: `kubectl describe moduleconfig kube-dns`
-troubleshooting-en: |
-  - **Issue:** Alias not working for StatefulSet pods
-    - **Solution:** Check that webhook is active: `kubectl get mutatingwebhookconfiguration d8-kube-dns-sts-pods-hosts-appender-webhook`. Check webhook logs: `kubectl logs -n kube-system -l app=sts-pods-hosts-appender-webhook`
-  - **Issue:** Services not working after removing alias
-    - **Solution:** ⚠️ **Warning:** Recreating all pods will cause service downtime. Use only when necessary: `kubectl delete pods --all-namespaces --all`. Consider recreating pods gradually by namespace or using rolling restart for Deployment/StatefulSet
-  - **Issue:** Validation error when creating alias
-    - **Solution:** Ensure alias does not match domain from publicDomainTemplate. Check validation: `kubectl describe moduleconfig kube-dns`
 user-stories:
-  - en: We're migrating from an old cluster domain to a new one, but some legacy applications still reference the old domain. By configuring domain aliases, both old and new domain names resolve correctly, allowing a gradual migration without breaking existing services.
-    ru: Мы мигрируем со старого домена кластера на новый, но некоторые legacy приложения все еще ссылаются на старый домен. Настраивая алиасы доменов, оба старых и новых доменных имени разрешаются корректно, позволяя постепенную миграцию без поломки существующих сервисов.
+  - en: I need to migrate from an old cluster domain to a new one while keeping legacy applications working. Cluster domain aliases allow both old and new domain names to resolve correctly during migration.
+    ru: Мне нужно мигрировать со старого домена кластера на новый, сохраняя работоспособность legacy приложений. Алиасы домена кластера позволяют обоим старым и новым доменным именам разрешаться корректно во время миграции.
     scope: System
-  - en: My RabbitMQ cluster fails to form because pods can't resolve each other's FQDNs during startup. Cluster domain aliases, automatically injected into /etc/hosts via webhook, ensure pod names resolve before the Ready check, allowing the cluster to bootstrap successfully.
-    ru: Мой кластер RabbitMQ не может сформироваться, потому что поды не могут разрешить FQDN друг друга во время запуска. Алиасы домена кластера, автоматически инъектируемые в /etc/hosts через webhook, гарантируют разрешение имен подов до проверки Ready, позволяя кластеру успешно запуститься.
-    scope: Payload
-  - en: Services like RabbitMQ and Elasticsearch require pod FQDN resolution before becoming Ready, but kubelet doesn't support aliases in /etc/hosts. The automatic webhook injection solves this by ensuring StatefulSet pods have aliases available immediately, without requiring manual pod configuration.
-    ru: Сервисы типа RabbitMQ и Elasticsearch требуют разрешения FQDN подов до того, как они станут Ready, но kubelet не поддерживает алиасы в /etc/hosts. Автоматическая инъекция через webhook решает это, гарантируя, что поды StatefulSet имеют алиасы доступными немедленно, без необходимости ручной настройки подов.
+  - en: I want to configure additional cluster domain aliases that work the same as the main cluster domain for service discovery, enabling compatibility with applications that require alternative domain names.
+    ru: Я хочу настроить дополнительные алиасы домена кластера, которые работают так же, как основной домен кластера для service discovery, обеспечивая совместимость с приложениями, требующими альтернативные доменные имена.
     scope: System
 

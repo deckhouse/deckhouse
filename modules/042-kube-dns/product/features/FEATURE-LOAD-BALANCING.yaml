@@ -39,24 +39,12 @@ configuration-example: |
         - 192.168.1.10
         - 192.168.1.11
   ```
-related-features:
-  - FEATURE-UPSTREAM-NAMESERVERS
-  - FEATURE-STUB-ZONES
-troubleshooting-ru: |
-  - **Проблема:** Один DNS сервер перегружен
-    - **Решение:** Добавьте больше DNS серверов в список для лучшего распределения нагрузки
-  - **Проблема:** Запросы идут только на один сервер
-    - **Решение:** Проверьте доступность всех серверов - недоступные серверы пропускаются
-troubleshooting-en: |
-  - **Issue:** One DNS server overloaded
-    - **Solution:** Add more DNS servers to the list for better load distribution
-  - **Issue:** Queries going to only one server
-    - **Solution:** Check availability of all servers - unavailable servers are skipped
+related-features: []
 user-stories:
-  - en: Relying on a single DNS server creates a single point of failure. By configuring multiple upstream nameservers, CoreDNS automatically distributes queries across them, ensuring DNS resolution continues working even if one server goes down or becomes unresponsive.
-    ru: Зависимость от одного DNS сервера создает единую точку отказа. Настраивая несколько upstream nameservers, CoreDNS автоматически распределяет запросы между ними, гарантируя, что DNS разрешение продолжает работать, даже если один сервер падает или становится недоступным.
+  - en: I need to distribute DNS queries across multiple upstream nameservers to ensure high availability and prevent single points of failure.
+    ru: Мне нужно распределять DNS запросы между несколькими upstream nameservers для обеспечения высокой доступности и предотвращения единых точек отказа.
     scope: System
-  - en: With thousands of pods making DNS queries, a single DNS server would become a bottleneck. Round-robin distribution spreads the load evenly across all configured servers, preventing any single server from being overwhelmed and improving overall DNS performance.
-    ru: С тысячами подов, делающих DNS запросы, один DNS сервер стал бы узким местом. Round-robin распределение равномерно распределяет нагрузку между всеми настроенными серверами, предотвращая перегрузку любого отдельного сервера и улучшая общую производительность DNS.
+  - en: I want round-robin load balancing for DNS queries to evenly distribute load across all configured DNS servers and improve overall DNS performance.
+    ru: Я хочу round-robin балансировку нагрузки для DNS запросов, чтобы равномерно распределять нагрузку между всеми настроенными DNS серверами и улучшать общую производительность DNS.
     scope: System
 

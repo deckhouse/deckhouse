@@ -33,24 +33,12 @@ configuration-example: |
       # - 192.168.1.10:53
       # - 192.168.1.11:53
   ```
-related-features:
-  - FEATURE-LOAD-BALANCING
-  - FEATURE-TRANSPORT-PROTOCOL-MODE
-troubleshooting-ru: |
-  - **Проблема:** DNS запросы не проходят
-    - **Решение:** Проверьте доступность DNS серверов через тестовый под: `kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup google.com 8.8.8.8`. Или проверьте логи CoreDNS: `kubectl logs -n kube-system <coredns-pod> -c coredns | grep -i error`
-  - **Проблема:** Медленное разрешение внешних доменов
-    - **Решение:** Убедитесь, что указаны несколько DNS серверов для балансировки нагрузки. Проверьте сетевую задержку до DNS серверов
-troubleshooting-en: |
-  - **Issue:** DNS queries not working
-    - **Solution:** Check DNS server accessibility via test pod: `kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup google.com 8.8.8.8`. Or check CoreDNS logs: `kubectl logs -n kube-system <coredns-pod> -c coredns | grep -i error`
-  - **Issue:** Slow external domain resolution
-    - **Solution:** Ensure multiple DNS servers are specified for load balancing. Check network latency to DNS servers
+related-features: []
 user-stories:
-  - en: When managing a production cluster, I need to point DNS resolution to trusted upstream servers (e.g., 8.8.8.8) instead of relying on node defaults, ensuring consistent and reliable name resolution across all workloads.
-    ru: При управлении продакшн кластером мне нужно направить DNS разрешение на доверенные upstream серверы (например, 8.8.8.8) вместо использования дефолтных настроек узлов, обеспечивая согласованное и надежное разрешение имен для всей нагрузки.
+  - en: I need to configure specific DNS servers for external domain resolution to ensure consistent and reliable name resolution across all cluster workloads.
+    ru: Мне нужно настроить конкретные DNS серверы для разрешения внешних доменов, чтобы обеспечить согласованное и надежное разрешение имен для всей нагрузки кластера.
     scope: System
-  - en: To comply with corporate security policies, I must route all DNS queries through our internal DNS infrastructure, which ensures that filtering, logging, and access control rules are consistently applied to every pod in the cluster.
-    ru: Для соответствия корпоративным политикам безопасности я должен направлять все DNS запросы через нашу внутреннюю DNS инфраструктуру, что гарантирует применение правил фильтрации, логирования и контроля доступа ко всем подам в кластере.
+  - en: I must route all DNS queries through our internal DNS infrastructure to comply with corporate security policies and ensure filtering, logging, and access control rules are applied.
+    ru: Я должен направлять все DNS запросы через нашу внутреннюю DNS инфраструктуру для соответствия корпоративным политикам безопасности и обеспечения применения правил фильтрации, логирования и контроля доступа.
     scope: System
 

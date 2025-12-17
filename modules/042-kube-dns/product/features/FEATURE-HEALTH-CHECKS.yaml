@@ -39,24 +39,11 @@ configuration-example: |
   kubectl exec -n kube-system <coredns-pod> -c coredns -- sh -c 'echo "" | nc localhost 8080 || echo "Health endpoint check"'
   ```
 related-features: []
-troubleshooting-ru: |
-  - **Проблема:** Поды CoreDNS постоянно перезапускаются
-    - **Решение:** Проверьте health endpoint через port-forward: `kubectl port-forward -n kube-system <pod> 8080:8080 && curl http://localhost:8080/health`. Проверьте логи пода: `kubectl logs -n kube-system <pod> -c coredns`
-  - **Проблема:** Поды не готовы после обновления
-    - **Решение:** Подождите - lameduck режим дает 15 секунд для graceful shutdown. Это нормальное поведение при обновлении
-troubleshooting-en: |
-  - **Issue:** CoreDNS pods constantly restarting
-    - **Solution:** Check health endpoint via port-forward: `kubectl port-forward -n kube-system <pod> 8080:8080 && curl http://localhost:8080/health`. Check pod logs: `kubectl logs -n kube-system <pod> -c coredns`
-  - **Issue:** Pods not ready after update
-    - **Solution:** Wait - lameduck mode gives 15 seconds for graceful shutdown. This is normal behavior during updates
 user-stories:
-  - en: When a CoreDNS pod becomes unhealthy, Kubernetes needs to know immediately to stop routing queries to it. Health and readiness endpoints provide this signal, allowing Kubernetes to automatically restart failing pods and ensure only healthy instances serve DNS traffic.
-    ru: Когда под CoreDNS становится нездоровым, Kubernetes должен знать об этом немедленно, чтобы прекратить маршрутизацию запросов к нему. Health и readiness endpoints предоставляют этот сигнал, позволяя Kubernetes автоматически перезапускать падающие поды и гарантировать, что только здоровые инстансы обслуживают DNS трафик.
+  - en: I need health and readiness endpoints for CoreDNS so Kubernetes can properly manage pods and route traffic only to healthy instances.
+    ru: Мне нужны health и readiness endpoints для CoreDNS, чтобы Kubernetes мог правильно управлять подами и направлять трафик только на здоровые инстансы.
     scope: System
-  - en: During CoreDNS updates, pods need to finish handling existing queries before shutting down. Lameduck mode gives pods 15 seconds to gracefully complete in-flight requests, preventing connection drops and ensuring smooth updates without DNS resolution failures.
-    ru: Во время обновлений CoreDNS поды должны завершить обработку существующих запросов перед остановкой. Режим lameduck дает подам 15 секунд для graceful завершения выполняющихся запросов, предотвращая обрывы соединений и обеспечивая плавные обновления без сбоев DNS разрешения.
+  - en: I want graceful shutdown during CoreDNS updates to ensure in-flight DNS queries complete without connection drops.
+    ru: Я хочу graceful shutdown во время обновлений CoreDNS, чтобы обеспечить завершение выполняющихся DNS запросов без обрыва соединений.
     scope: System
-  - en: My application's startup depends on resolving service names, but if DNS isn't ready yet, the app fails immediately. Readiness checks ensure my pods only start after CoreDNS is fully operational, preventing these early failures and reducing unnecessary pod restarts.
-    ru: Запуск моего приложения зависит от разрешения имен сервисов, но если DNS еще не готов, приложение падает немедленно. Проверки готовности гарантируют, что мои поды запускаются только после того, как CoreDNS полностью работоспособен, предотвращая эти ранние сбои и снижая ненужные перезапуски подов.
-    scope: Payload
 

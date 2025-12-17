@@ -35,21 +35,11 @@ configuration-example: |
         ip: 10.10.0.128
   ```
 related-features: []
-troubleshooting-ru: |
-  - **Проблема:** Статический хост не работает
-    - **Решение:** Проверьте формат: domain должен быть валидным доменным именем, ip - валидным IPv4 адресом
-  - **Проблема:** Нужно обновить маппинг
-    - **Решение:** Измените конфигурацию и дождитесь перезапуска подов CoreDNS (обычно автоматически)
-troubleshooting-en: |
-  - **Issue:** Static host not working
-    - **Solution:** Check format: domain must be valid domain name, ip must be valid IPv4 address
-  - **Issue:** Need to update mapping
-    - **Solution:** Change configuration and wait for CoreDNS pods restart (usually automatic)
 user-stories:
-  - en: During development, our team uses friendly domain names like api.dev.internal, but these don't exist in DNS. I configure static host mappings to point these domains to test server IPs, allowing developers to use consistent naming across environments without modifying application code.
-    ru: Во время разработки наша команда использует понятные доменные имена типа api.dev.internal, но они не существуют в DNS. Я настраиваю статические маппинги хостов, чтобы направлять эти домены на IP адреса тестовых серверов, позволяя разработчикам использовать согласованные имена в разных окружениях без изменения кода приложения.
+  - en: I need to map domain names to specific IP addresses for development and testing, allowing applications to use friendly domain names instead of hardcoded IPs.
+    ru: Мне нужно маппить доменные имена на конкретные IP адреса для разработки и тестирования, позволяя приложениям использовать понятные доменные имена вместо хардкода IP адресов.
     scope: System
-  - en: Instead of hardcoding IP addresses in my application config, I prefer using domain names like test-db.company.local. Static host mappings let me point these domains to test infrastructure IPs, making my code more portable and easier to maintain.
-    ru: Вместо хардкода IP адресов в конфигурации приложения я предпочитаю использовать доменные имена типа test-db.company.local. Статические маппинги хостов позволяют мне направлять эти домены на IP адреса тестовой инфраструктуры, делая мой код более переносимым и легким в поддержке.
+  - en: I want to use static host mappings to point domains to test infrastructure IPs, making application configuration more portable and easier to maintain across different environments.
+    ru: Я хочу использовать статические маппинги хостов для направления доменов на IP адреса тестовой инфраструктуры, делая конфигурацию приложения более переносимой и легкой в поддержке в разных окружениях.
     scope: Payload
 

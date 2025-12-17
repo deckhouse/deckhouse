@@ -42,23 +42,12 @@ configuration-example: |
         upstreamNameservers: ['192.168.1.10']
         transportProtocolMode: PreferUDP
   ```
-related-features:
-  - FEATURE-STUB-ZONES
-troubleshooting-ru: |
-  - **Проблема:** DNS запросы не проходят через корпоративный firewall
-    - **Решение:** Используйте ForceTCP для соответствия политикам безопасности
-  - **Проблема:** Медленные DNS запросы при ForceTCP
-    - **Решение:** Используйте PreferUDP, если это допустимо политиками безопасности
-troubleshooting-en: |
-  - **Issue:** DNS queries blocked by corporate firewall
-    - **Solution:** Use ForceTCP to comply with security policies
-  - **Issue:** Slow DNS queries with ForceTCP
-    - **Solution:** Use PreferUDP if allowed by security policies
+related-features: []
 user-stories:
-  - en: Our corporate firewall blocks UDP DNS traffic, causing resolution failures. By forcing TCP for all DNS queries, we comply with security policies while maintaining full DNS functionality across the cluster.
-    ru: Наш корпоративный firewall блокирует UDP DNS трафик, вызывая сбои разрешения. Принудительно используя TCP для всех DNS запросов, мы соответствуем политикам безопасности, сохраняя полную функциональность DNS в кластере.
+  - en: I need to configure transport protocol mode for DNS queries to comply with corporate firewall policies that require TCP instead of UDP.
+    ru: Мне нужно настроить режим транспортного протокола для DNS запросов для соответствия корпоративным политикам firewall, требующим TCP вместо UDP.
     scope: System
-  - en: Internal DNS servers support UDP and respond quickly, but we need TCP fallback for large responses. PreferUDP mode gives us the best of both worlds: fast UDP queries for most requests, with automatic TCP retry when responses exceed 512 bytes.
-    ru: Внутренние DNS серверы поддерживают UDP и отвечают быстро, но нам нужен TCP fallback для больших ответов. Режим PreferUDP дает нам лучшее из обоих миров: быстрые UDP запросы для большинства запросов, с автоматической TCP повторной попыткой, когда ответы превышают 512 байт.
+  - en: I want to optimize DNS query performance by using UDP for most requests with automatic TCP fallback for large responses.
+    ru: Я хочу оптимизировать производительность DNS запросов, используя UDP для большинства запросов с автоматическим TCP fallback для больших ответов.
     scope: System
 

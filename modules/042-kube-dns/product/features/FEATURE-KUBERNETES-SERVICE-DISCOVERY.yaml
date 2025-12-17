@@ -40,24 +40,14 @@ configuration-example: |
   nslookup my-statefulset-0.my-statefulset.default.svc.cluster.local
   ```
 related-features: []
-troubleshooting-ru: |
-  - **Проблема:** Сервис не разрешается
-    - **Решение:** Проверьте, что сервис существует: `kubectl get svc -n <namespace> <service-name>`
-  - **Проблема:** Короткое имя не работает
-    - **Решение:** Используйте FQDN или проверьте search domains в /etc/resolv.conf пода
-troubleshooting-en: |
-  - **Issue:** Service not resolving
-    - **Solution:** Check that service exists: `kubectl get svc -n <namespace> <service-name>`
-  - **Issue:** Short name not working
-    - **Solution:** Use FQDN or check search domains in pod's /etc/resolv.conf
 user-stories:
-  - en: Hardcoding service IPs in my application config breaks when services are recreated. Using DNS names like my-service.default.svc.cluster.local means my app automatically connects to the correct service endpoint, even after IPs change during deployments or scaling.
-    ru: Хардкод IP адресов сервисов в конфигурации приложения ломается при пересоздании сервисов. Использование DNS имен типа my-service.default.svc.cluster.local означает, что мое приложение автоматически подключается к правильному endpoint сервиса, даже после изменения IP при деплойментах или масштабировании.
+  - en: I want my application pods to resolve Kubernetes service names automatically using DNS instead of hardcoded IP addresses, ensuring connectivity even when service IPs change.
+    ru: Я хочу, чтобы мои поды приложения автоматически разрешали имена сервисов Kubernetes используя DNS вместо хардкода IP адресов, обеспечивая подключение даже при изменении IP сервисов.
     scope: Payload
-  - en: In my StatefulSet, each pod needs to connect to specific peers by name (e.g., db-0, db-1). DNS resolution lets me use stable pod FQDNs instead of tracking IP addresses, making my application configuration simpler and more resilient to pod restarts.
-    ru: В моем StatefulSet каждый под должен подключаться к конкретным пирам по имени (например, db-0, db-1). DNS разрешение позволяет мне использовать стабильные FQDN подов вместо отслеживания IP адресов, делая конфигурацию приложения проще и устойчивее к перезапускам подов.
+  - en: I need to resolve pod names using DNS in StatefulSets, allowing pods to connect to specific peers by stable FQDNs instead of tracking IP addresses.
+    ru: Мне нужно разрешать имена подов используя DNS в StatefulSets, позволяя подам подключаться к конкретным пирам по стабильным FQDN вместо отслеживания IP адресов.
     scope: Payload
-  - en: When developers create new services, they expect DNS to work immediately. CoreDNS watches the Kubernetes API and automatically updates its records, so new services are resolvable as soon as they're created, without any manual DNS configuration or waiting periods.
-    ru: Когда разработчики создают новые сервисы, они ожидают, что DNS будет работать немедленно. CoreDNS следит за Kubernetes API и автоматически обновляет свои записи, поэтому новые сервисы разрешаются сразу после создания, без ручной настройки DNS или периодов ожидания.
+  - en: I want CoreDNS to automatically discover new services and pods via Kubernetes API, so DNS resolution works immediately after service or pod creation without manual configuration.
+    ru: Я хочу, чтобы CoreDNS автоматически обнаруживал новые сервисы и поды через Kubernetes API, чтобы DNS разрешение работало сразу после создания сервиса или пода без ручной настройки.
     scope: System
 

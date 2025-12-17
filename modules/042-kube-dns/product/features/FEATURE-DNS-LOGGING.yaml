@@ -30,23 +30,12 @@ configuration-example: |
     settings:
       enableLogs: true
   ```
-related-features:
-  - FEATURE-PROMETHEUS-MONITORING
-troubleshooting-ru: |
-  - **Проблема:** Логи слишком объемные
-    - **Решение:** Отключите логирование после диагностики: `enableLogs: false`
-  - **Проблема:** Нужно найти конкретный DNS запрос
-    - **Решение:** Используйте grep для фильтрации: `kubectl logs -n kube-system <coredns-pod> | grep <domain>`
-troubleshooting-en: |
-  - **Issue:** Logs are too verbose
-    - **Solution:** Disable logging after diagnostics: `enableLogs: false`
-  - **Issue:** Need to find specific DNS query
-    - **Solution:** Use grep to filter: `kubectl logs -n kube-system <coredns-pod> | grep <domain>`
+related-features: []
 user-stories:
-  - en: When users report "service not found" errors, I need visibility into what DNS queries are actually happening. Enabling DNS logging shows me every domain being queried, helping me identify whether the issue is with DNS resolution, incorrect domain names, or network connectivity.
-    ru: Когда пользователи сообщают об ошибках "service not found", мне нужна видимость того, какие DNS запросы реально происходят. Включение логирования DNS показывает мне каждый запрашиваемый домен, помогая определить, связана ли проблема с DNS разрешением, неправильными доменными именами или сетевым подключением.
+  - en: I need to enable DNS query logging to troubleshoot DNS resolution issues and understand which domains are being queried.
+    ru: Мне нужно включить логирование DNS запросов для диагностики проблем с DNS разрешением и понимания, какие домены запрашиваются.
     scope: System
-  - en: My app can't connect to an external API, and I suspect DNS is the culprit. With DNS logging enabled, I can trace exactly which domains my pods are querying and see if requests are failing, timing out, or returning unexpected results.
-    ru: Мое приложение не может подключиться к внешнему API, и я подозреваю, что проблема в DNS. С включенным логированием DNS я могу отследить точно, какие домены запрашивают мои поды, и увидеть, терпят ли запросы неудачу, таймаутят или возвращают неожиданные результаты.
+  - en: I want to see DNS query logs when debugging application connectivity issues to identify whether problems are related to DNS resolution.
+    ru: Я хочу видеть логи DNS запросов при отладке проблем с подключением приложения, чтобы определить, связаны ли проблемы с DNS разрешением.
     scope: Payload
 

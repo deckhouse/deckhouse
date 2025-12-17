@@ -35,26 +35,12 @@ configuration-example: |
         upstreamNameservers: ['192.168.1.10']
         cacheTTLSeconds: 3600  # Cache for 1 hour
   ```
-related-features:
-  - FEATURE-STUB-ZONES
-troubleshooting-ru: |
-  - **Проблема:** DNS изменения не применяются сразу
-    - **Решение:** Это нормально - кэш обновляется по TTL. Для немедленного обновления уменьшите cacheTTLSeconds
-  - **Проблема:** Высокая нагрузка на DNS серверы
-    - **Решение:** Увеличьте cacheTTLSeconds для stub зон с редко изменяющимися записями
-troubleshooting-en: |
-  - **Issue:** DNS changes not applied immediately
-    - **Solution:** This is normal - cache updates by TTL. For immediate update, decrease cacheTTLSeconds
-  - **Issue:** High load on DNS servers
-    - **Solution:** Increase cacheTTLSeconds for stub zones with rarely changing records
+related-features: []
 user-stories:
-  - en: With hundreds of pods making DNS queries, our upstream DNS servers were getting overwhelmed. Built-in caching reduces redundant queries by serving cached responses for 30 seconds, significantly lowering DNS server load while maintaining acceptable freshness.
-    ru: Сотни подов делают DNS запросы, наши upstream DNS серверы перегружаются. Встроенное кэширование снижает избыточные запросы, отдавая кэшированные ответы на 30 секунд, значительно снижая нагрузку на DNS серверы при сохранении приемлемой актуальности.
+  - en: I need DNS response caching to reduce load on upstream DNS servers and improve response times for repeated queries.
+    ru: Мне нужно кэширование DNS ответов для снижения нагрузки на upstream DNS серверы и улучшения времени отклика для повторяющихся запросов.
     scope: System
-  - en: My application makes frequent DNS lookups to the same domains, and each lookup adds latency. DNS caching means subsequent requests for cached records return instantly, improving overall application response time and user experience.
-    ru: Мое приложение делает частые DNS lookup к одним и тем же доменам, и каждый lookup добавляет задержку. DNS кэширование означает, что последующие запросы для кэшированных записей возвращаются мгновенно, улучшая общее время отклика приложения и пользовательский опыт.
-    scope: Payload
-  - en: Internal corporate DNS records rarely change, so I set longer cache TTLs (up to 3600 seconds) for stub zones pointing to internal DNS. This minimizes query volume to our internal DNS infrastructure while external domains still use shorter TTLs for faster updates.
-    ru: Внутренние корпоративные DNS записи меняются редко, поэтому я устанавливаю более длинные TTL кэша (до 3600 секунд) для stub зон, указывающих на внутренний DNS. Это минимизирует объем запросов к нашей внутренней DNS инфраструктуре, в то время как внешние домены все еще используют более короткие TTL для быстрых обновлений.
+  - en: I want to configure different cache TTLs for different DNS zones to optimize performance based on how frequently records change.
+    ru: Я хочу настроить разные TTL кэша для разных DNS зон, чтобы оптимизировать производительность в зависимости от частоты изменения записей.
     scope: System
 
