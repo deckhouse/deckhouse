@@ -3,108 +3,95 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-privileged-container
 tests:
-  - name: pss-baseline
-    template: ../../templates/security/allow-privileged.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-no-securityContext
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-no-securityContext.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-privileged-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-privileged-false.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-multiple-containers-no-privileged
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-multiple-containers-no-privileged.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-privileged-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-privileged-true.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-containers-one-privileged-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-containers-one-privileged-true.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-initContainer-privileged-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-initContainer-privileged-true.yaml
-        assertions:
-          - violations: yes
-
-  - name: pss-baseline-with-exception
-    template: ../../templates/security/allow-privileged.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-by-exception-privileged-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-privileged-true.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-privileged-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-false.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-privileged-false.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-containers-all-privileged-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-all-privileged-true.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-privileged-mismatch-but-constraint-allows-false-no-securityContext
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-privileged-mismatch-but-constraint-allows-false.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-privileged-mismatch-but-constraint-allows-false-privileged-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-privileged-mismatch-but-constraint-allows-false-privileged-false.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privileged-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-no-exception-label
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
-        assertions:
-          - violations: yes
-
+- name: pss-baseline
+  template: ../../templates/security/allow-privileged.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 2-allowed-no-securityContext
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/002-allowed-no-securityContext.yaml
+    assertions:
+    - violations: no
+  - name: 3-allowed-privileged-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/003-allowed-privileged-false.yaml
+    assertions:
+    - violations: no
+  - name: 1-allowed-multiple-containers-no-privileged
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/001-allowed-multiple-containers-no-privileged.yaml
+    assertions:
+    - violations: no
+  - name: 6-disallowed-privileged-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/006-disallowed-privileged-true.yaml
+    assertions:
+    - violations: yes
+  - name: 5-disallowed-multiple-containers-one-privileged-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/005-disallowed-multiple-containers-one-privileged-true.yaml
+    assertions:
+    - violations: yes
+  - name: 4-disallowed-initContainer-privileged-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/004-disallowed-initContainer-privileged-true.yaml
+    assertions:
+    - violations: yes
+- name: pss-baseline-with-exception
+  template: ../../templates/security/allow-privileged.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 19-26-allowed-by-exception-privileged-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privileged-true.yaml
+    object: test_samples/security_policy_exceptions/pods/026-allowed-by-exception-privileged-true.yaml
+    assertions:
+    - violations: no
+  - name: 18-22-allowed-by-exception-privileged-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/018-allow-privileged-false.yaml
+    object: test_samples/security_policy_exceptions/pods/022-allowed-by-exception-privileged-false.yaml
+    assertions:
+    - violations: no
+  - name: 19-20-allowed-by-exception-multiple-containers-all-privileged-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privileged-true.yaml
+    object: test_samples/security_policy_exceptions/pods/020-allowed-by-exception-multiple-containers-all-privileged-true.yaml
+    assertions:
+    - violations: no
+  - name: 19-24-allowed-by-exception-privileged-mismatch-but-constraint-allows-false-no-securityContext
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privileged-true.yaml
+    object: test_samples/security_policy_exceptions/pods/024-allowed-by-exception-privileged-mismatch-but-constraint-allows-false.yaml
+    assertions:
+    - violations: no
+  - name: 19-23-allowed-by-exception-privileged-mismatch-but-constraint-allows-false-privileged-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privileged-true.yaml
+    object: test_samples/security_policy_exceptions/pods/023-allowed-by-exception-privileged-mismatch-but-constraint-allows-false-privileged-false.yaml
+    assertions:
+    - violations: no
+  - name: 19-21-allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privileged-true.yaml
+    object: test_samples/security_policy_exceptions/pods/021-allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false.yaml
+    assertions:
+    - violations: no
+  - name: 29-disallowed-no-exception-label
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/029-disallowed-no-exception-label.yaml
+    assertions:
+    - violations: yes

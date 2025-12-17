@@ -1,17 +1,15 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: disallowed-exception-allows-false-but-pod-has-true
+  name: disallowed-no-exception-label
   namespace: testns
-  labels:
-    security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-with-hostport
 spec:
   hostNetwork: true
   containers:
     - name: nginx
       image: nginx
       ports:
-        - containerPort: 9000
+        - containerPort: 5000
           hostPort: 5000
           protocol: TCP
 

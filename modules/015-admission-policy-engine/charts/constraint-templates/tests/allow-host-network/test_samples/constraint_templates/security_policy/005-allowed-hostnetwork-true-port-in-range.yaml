@@ -9,6 +9,6 @@ spec:
     - name: nginx
       image: nginx
       ports:
-        - containerPort: 9000
+        - containerPort: 25000
           hostPort: 25000
 

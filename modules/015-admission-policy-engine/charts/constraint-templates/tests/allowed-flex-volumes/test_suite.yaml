@@ -3,19 +3,19 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-volume-types
 tests:
-  - name: security-policy
-    template: ../../templates/security/allowed-flex-volumes.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: example-allowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
-        assertions:
-          - violations: no
-      - name: example-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed.yaml
-        assertions:
-          - violations: yes
+- name: security-policy
+  template: ../../templates/security/allowed-flex-volumes.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 1-example-allowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy/001-allowed.yaml
+    assertions:
+    - violations: no
+  - name: 2-example-disallowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy/002-disallowed.yaml
+    assertions:
+    - violations: yes
