@@ -188,7 +188,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
-		Registry:              *metaConfig.Registry.DeepCopy(),
+		Registry:              metaConfig.Registry,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,

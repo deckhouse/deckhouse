@@ -43,53 +43,6 @@ func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 	return &settings
 }
 
-func TestDeckhouseSettings_ToMap(t *testing.T) {
-	registrySettings := registrySettingsBuilder()
-	registrySettingsMap := map[string]any{
-		"imagesRepo": "test:80/a/b/c/d",
-		"scheme":     "HTTPS",
-		"username":   "test-user",
-		"password":   "test-password",
-		"ca":         "-----BEGIN CERTIFICATE-----",
-		"checkMode":  "Default",
-	}
-
-	tests := []struct {
-		name   string
-		input  DeckhouseSettings
-		output map[string]any
-	}{
-		{
-			name: "mode direct",
-			input: DeckhouseSettings{
-				Mode:   constant.ModeDirect,
-				Direct: registrySettings,
-			},
-			output: map[string]any{
-				"mode":   "Direct",
-				"direct": registrySettingsMap,
-			},
-		},
-		{
-			name: "mode unmanaged",
-			input: DeckhouseSettings{
-				Mode:      constant.ModeUnmanaged,
-				Unmanaged: registrySettings,
-			},
-			output: map[string]any{
-				"mode":      "Unmanaged",
-				"unmanaged": registrySettingsMap,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.EqualValues(t, tt.output, tt.input.ToMap())
-		})
-	}
-}
-
 func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -202,6 +155,95 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 			registrySettings.ApplySettings(tt.input)
 
 			require.Equal(t, tt.expected, registrySettings)
+		})
+	}
+}
+
+func TestDeckhouseSettings_ToMap(t *testing.T) {
+	registrySettings := registrySettingsBuilder()
+	registrySettingsMap := map[string]any{
+		"imagesRepo": "test:80/a/b/c/d",
+		"scheme":     "HTTPS",
+		"username":   "test-user",
+		"password":   "test-password",
+		"ca":         "-----BEGIN CERTIFICATE-----",
+		"checkMode":  "Default",
+	}
+
+	tests := []struct {
+		name   string
+		input  DeckhouseSettings
+		output map[string]any
+	}{
+		{
+			name: "mode direct",
+			input: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettings,
+			},
+			output: map[string]any{
+				"mode":   "Direct",
+				"direct": registrySettingsMap,
+			},
+		},
+		{
+			name: "mode unmanaged",
+			input: DeckhouseSettings{
+				Mode:      constant.ModeUnmanaged,
+				Unmanaged: registrySettings,
+			},
+			output: map[string]any{
+				"mode":      "Unmanaged",
+				"unmanaged": registrySettingsMap,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualValues(t, tt.output, tt.input.ToMap())
+		})
+	}
+}
+
+func TestRegistrySettings_ToMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  RegistrySettings
+		output map[string]any
+	}{
+		{
+			name:  "all fields",
+			input: *registrySettingsBuilder(),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+				"username":   "test-user",
+				"password":   "test-password",
+				"ca":         "-----BEGIN CERTIFICATE-----",
+				"checkMode":  "Default",
+			},
+		},
+		{
+			name: "optional fields",
+			input: *registrySettingsBuilder(
+				func(rs *RegistrySettings) {
+					rs.Username = ""
+					rs.Password = ""
+					rs.CA = ""
+					rs.CheckMode = ""
+				},
+			),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualValues(t, tt.output, tt.input.ToMap())
 		})
 	}
 }
@@ -329,48 +371,6 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestRegistrySettings_ToMap(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  RegistrySettings
-		output map[string]any
-	}{
-		{
-			name:  "all fields",
-			input: *registrySettingsBuilder(),
-			output: map[string]any{
-				"imagesRepo": "test:80/a/b/c/d",
-				"scheme":     "HTTPS",
-				"username":   "test-user",
-				"password":   "test-password",
-				"ca":         "-----BEGIN CERTIFICATE-----",
-				"checkMode":  "Default",
-			},
-		},
-		{
-			name: "optional fields",
-			input: *registrySettingsBuilder(
-				func(rs *RegistrySettings) {
-					rs.Username = ""
-					rs.Password = ""
-					rs.CA = ""
-					rs.CheckMode = ""
-				},
-			),
-			output: map[string]any{
-				"imagesRepo": "test:80/a/b/c/d",
-				"scheme":     "HTTPS",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.EqualValues(t, tt.output, tt.input.ToMap())
 		})
 	}
 }
@@ -575,4 +575,66 @@ func TestRegistrySettings_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeckhouseSettings_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of DeckhouseSettings", func(t *testing.T) {
+		original := &DeckhouseSettings{
+			Mode: constant.ModeDirect,
+			Direct: &RegistrySettings{
+				ImagesRepo: "test-repo",
+				Scheme:     constant.SchemeHTTPS,
+				CA:         "test-ca",
+				Username:   "test-user",
+				Password:   "test-pass",
+				License:    "test-license",
+				CheckMode:  constant.CheckModeDefault,
+			},
+			Unmanaged: &RegistrySettings{
+				ImagesRepo: "test-repo",
+				Scheme:     constant.SchemeHTTPS,
+				CA:         "test-ca",
+				Username:   "test-user",
+				Password:   "test-pass",
+				License:    "test-license",
+				CheckMode:  constant.CheckModeDefault,
+			},
+		}
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilSettings *DeckhouseSettings
+		copied := nilSettings.DeepCopy()
+		require.Nil(t, copied)
+	})
+}
+
+func TestRegistrySettings_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of RegistrySettings", func(t *testing.T) {
+		original := &RegistrySettings{
+			ImagesRepo: "test-repo",
+			Scheme:     constant.SchemeHTTPS,
+			CA:         "test-ca",
+			Username:   "test-user",
+			Password:   "test-pass",
+			License:    "test-license",
+			CheckMode:  constant.CheckModeDefault,
+		}
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilSettings *RegistrySettings
+		copied := nilSettings.DeepCopy()
+		require.Nil(t, copied)
+	})
 }

@@ -25,7 +25,6 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
-// +k8s:deepcopy-gen=true
 type DeckhouseSettings struct {
 	Mode      constant.ModeType `json:"mode" yaml:"mode"`
 	Direct    *RegistrySettings `json:"direct,omitempty" yaml:"direct,omitempty"`
@@ -95,7 +94,29 @@ func (settings DeckhouseSettings) Validate() error {
 	)
 }
 
-// +k8s:deepcopy-gen=true
+func (settings *DeckhouseSettings) DeepCopyInto(out *DeckhouseSettings) {
+	*out = *settings
+
+	if settings.Direct != nil {
+		out.Direct = new(RegistrySettings)
+		settings.Direct.DeepCopyInto(out.Direct)
+	}
+
+	if settings.Unmanaged != nil {
+		out.Unmanaged = new(RegistrySettings)
+		settings.Unmanaged.DeepCopyInto(out.Unmanaged)
+	}
+}
+
+func (settings *DeckhouseSettings) DeepCopy() *DeckhouseSettings {
+	if settings == nil {
+		return nil
+	}
+	out := new(DeckhouseSettings)
+	settings.DeepCopyInto(out)
+	return out
+}
+
 type RegistrySettings struct {
 	ImagesRepo string                 `json:"imagesRepo" yaml:"imagesRepo"`
 	Scheme     constant.SchemeType    `json:"scheme" yaml:"scheme"`
@@ -213,4 +234,17 @@ func (settings RegistrySettings) Validate() error {
 			),
 		),
 	)
+}
+
+func (settings *RegistrySettings) DeepCopyInto(out *RegistrySettings) {
+	*out = *settings
+}
+
+func (settings *RegistrySettings) DeepCopy() *RegistrySettings {
+	if settings == nil {
+		return nil
+	}
+	out := new(RegistrySettings)
+	settings.DeepCopyInto(out)
+	return out
 }
