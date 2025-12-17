@@ -52,6 +52,7 @@ locals {
       "enableParavirtualization" = true
       "osType"                   = "Generic"
       "runPolicy"                = "AlwaysOnUnlessStoppedManually"
+      "liveMigrationPolicy"      = "PreferForced"
       "virtualMachineClassName"  = var.virtual_machine_class_name
 
       "disruptions" = {
