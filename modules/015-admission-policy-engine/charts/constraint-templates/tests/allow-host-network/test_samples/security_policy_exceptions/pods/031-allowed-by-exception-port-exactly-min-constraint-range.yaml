@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: allowed-by-exception-port-on-constraint-edge-min
+  name: allowed-by-exception-port-exactly-min-constraint-range
   namespace: testns
   labels:
     security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-on-constraint-edge-min
@@ -11,7 +11,7 @@ spec:
     - name: nginx
       image: nginx
       ports:
-        - containerPort: 9000
+        - containerPort: 20000
           hostPort: 20000
           protocol: TCP
 

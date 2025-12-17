@@ -3,108 +3,95 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allow-privilege-escalation
 tests:
-  - name: pss-restricted
-    template: ../../templates/security/allow-privilege-escalation.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-allowPrivilegeEscalation-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-allowPrivilegeEscalation-false.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-no-securityContext
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-no-securityContext.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-multiple-containers-all-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-multiple-containers-all-false.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-allowPrivilegeEscalation-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-allowPrivilegeEscalation-true.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-containers-one-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-multiple-containers-one-true.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-initContainer-allowPrivilegeEscalation-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-initContainer-allowPrivilegeEscalation-true.yaml
-        assertions:
-          - violations: yes
-
-  - name: pss-restricted-with-exception
-    template: ../../templates/security/allow-privilege-escalation.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-by-exception-allowPrivilegeEscalation-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-allowPrivilegeEscalation-true.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-allowPrivilegeEscalation-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-false.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-allowPrivilegeEscalation-false.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-containers-all-true
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-all-true.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-mismatch-but-constraint-allows-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows-false.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-allowPrivilegeEscalation-mismatch-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-false.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-allowPrivilegeEscalation-mismatch-false.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-privilege-escalation-true.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-no-exception-label
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
-        assertions:
-          - violations: yes
-
+- name: pss-restricted
+  template: ../../templates/security/allow-privilege-escalation.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 1-allowed-allowPrivilegeEscalation-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/001-allowed-allowPrivilegeEscalation-false.yaml
+    assertions:
+    - violations: no
+  - name: 7-disallowed-no-securityContext
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/007-disallowed-no-securityContext.yaml
+    assertions:
+    - violations: yes
+  - name: 2-allowed-multiple-containers-all-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/002-allowed-multiple-containers-all-false.yaml
+    assertions:
+    - violations: no
+  - name: 4-disallowed-allowPrivilegeEscalation-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/004-disallowed-allowPrivilegeEscalation-true.yaml
+    assertions:
+    - violations: yes
+  - name: 6-disallowed-multiple-containers-one-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/006-disallowed-multiple-containers-one-true.yaml
+    assertions:
+    - violations: yes
+  - name: 5-disallowed-initContainer-allowPrivilegeEscalation-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/005-disallowed-initContainer-allowPrivilegeEscalation-true.yaml
+    assertions:
+    - violations: yes
+- name: pss-restricted-with-exception
+  template: ../../templates/security/allow-privilege-escalation.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 20-22-allowed-by-exception-allowPrivilegeEscalation-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/020-allow-privilege-escalation-true.yaml
+    object: test_samples/security_policy_exceptions/pods/022-allowed-by-exception-allowPrivilegeEscalation-true.yaml
+    assertions:
+    - violations: no
+  - name: 19-21-allowed-by-exception-allowPrivilegeEscalation-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privilege-escalation-false.yaml
+    object: test_samples/security_policy_exceptions/pods/021-allowed-by-exception-allowPrivilegeEscalation-false.yaml
+    assertions:
+    - violations: no
+  - name: 20-24-allowed-by-exception-multiple-containers-all-true
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/020-allow-privilege-escalation-true.yaml
+    object: test_samples/security_policy_exceptions/pods/024-allowed-by-exception-multiple-containers-all-true.yaml
+    assertions:
+    - violations: no
+  - name: 20-23-allowed-by-exception-mismatch-but-constraint-allows-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/020-allow-privilege-escalation-true.yaml
+    object: test_samples/security_policy_exceptions/pods/023-allowed-by-exception-mismatch-but-constraint-allows-false.yaml
+    assertions:
+    - violations: no
+  - name: 19-26-disallowed-by-exception-allowPrivilegeEscalation-mismatch-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/019-allow-privilege-escalation-false.yaml
+    object: test_samples/security_policy_exceptions/pods/026-disallowed-by-exception-allowPrivilegeEscalation-mismatch-false.yaml
+    assertions:
+    - violations: yes
+  - name: 20-25-allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/020-allow-privilege-escalation-true.yaml
+    object: test_samples/security_policy_exceptions/pods/025-allowed-by-exception-multiple-containers-one-mismatch-but-constraint-allows-false.yaml
+    assertions:
+    - violations: no
+  - name: 29-disallowed-no-exception-label
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/029-disallowed-no-exception-label.yaml
+    assertions:
+    - violations: yes

@@ -90,6 +90,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           is_pod
           rt := input.parameters.tolerations[_]
           pt := pod_tolerations[_]

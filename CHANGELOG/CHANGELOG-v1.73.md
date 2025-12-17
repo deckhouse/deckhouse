@@ -1,5 +1,27 @@
 # Changelog v1.73
 
+## [MALFORMED]
+
+
+ - #13577 unknown section "operator-trivy"
+ - #15401 unknown section "operator-trivy"
+ - #15401 unknown section "operator-trivy"
+ - #15401 unknown section "operator-trivy"
+ - #15401 unknown section "operator-trivy"
+ - #15637 unknown section "operator-trivy"
+ - #15669 unknown section "operator-trivy"
+ - #15881 unknown section "operator-trivy"
+ - #15909 unknown section "operator-trivy"
+ - #15977 unknown section "operator-trivy"
+ - #15992 unknown section "operator-trivy"
+ - #16006 unknown section "operator-trivy"
+ - #16085 unknown section "operator-trivy"
+ - #16194 unknown section "operator-trivy"
+ - #16277 unknown section "operator-trivy"
+ - #16338 unknown section "operator-trivy"
+ - #16445 unknown section "operator-trivy"
+ - #16489 unknown section "operator-trivy"
+
 ## Know before update
 
 
@@ -120,6 +142,7 @@
  - **[cloud-provider-vcd]** Added validation to provider.server in VCDClusterConfiguration to ensure it does not end with '/'. [#15185](https://github.com/deckhouse/deckhouse/pull/15185)
  - **[cloud-provider-vcd]** Fixed fetching VM templates from organization catalogs without direct access to organizastion. [#14980](https://github.com/deckhouse/deckhouse/pull/14980)
  - **[cloud-provider-vcd]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-vsphere]** fix stale session for cloud-data-discoverer [#17089](https://github.com/deckhouse/deckhouse/pull/17089)
  - **[cloud-provider-vsphere]** fix cloud-data-discoverer (SPBM) [#16589](https://github.com/deckhouse/deckhouse/pull/16589)
  - **[cloud-provider-vsphere]** fix vSphere storageClass template [#16275](https://github.com/deckhouse/deckhouse/pull/16275)
  - **[cloud-provider-yandex]** cloud-provider-yandex CVE's was fixed [#16611](https://github.com/deckhouse/deckhouse/pull/16611)
@@ -199,6 +222,7 @@
  - **[ingress-nginx]** Fixed nginx image build for ingress controller and template tests. [#15464](https://github.com/deckhouse/deckhouse/pull/15464)
  - **[ingress-nginx]** Disabled log messages such as `Error obtaining Endpoints for Service...`. [#15260](https://github.com/deckhouse/deckhouse/pull/15260)
  - **[ingress-nginx]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[istio]** fixing the CVE in Kiali [#17045](https://github.com/deckhouse/deckhouse/pull/17045)
  - **[istio]** The same owner is specified for the files that are used to run in the operator container. [#16154](https://github.com/deckhouse/deckhouse/pull/16154)
  - **[istio]** Resolve CVE's. [#15834](https://github.com/deckhouse/deckhouse/pull/15834)
  - **[istio]** Fixed metrics port for operator 1.25 and newer. [#15124](https://github.com/deckhouse/deckhouse/pull/15124)
@@ -230,11 +254,6 @@
  - **[openvpn]** ovpn-admin upgraded to fix the validation of static IP addresses, as well as add routes migration during the rotation of client certificates, openvpn instances will be restarted. [#14578](https://github.com/deckhouse/deckhouse/pull/14578)
  - **[openvpn]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[operator-prometheus]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
- - **[operator-trivy]** Fix CIS Benchmark report template [#16489](https://github.com/deckhouse/deckhouse/pull/16489)
- - **[operator-trivy]** Add grep to node-collector and improve error reporting [#16277](https://github.com/deckhouse/deckhouse/pull/16277)
- - **[operator-trivy]** Fixed node-collector pods crasing on startup. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
- - **[operator-trivy]** Added a passtrough for a HTTP(s) proxy parameters from operator to vulnerability scanning jobs processes. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
- - **[operator-trivy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[prometheus]** Fix namespace label value in the Ingress Nginx controller and several other metrics [#16720](https://github.com/deckhouse/deckhouse/pull/16720)
     Ingress Nginx controller dashboards are fixed
  - **[prometheus]** Fix description for not usable CVE [#16377](https://github.com/deckhouse/deckhouse/pull/16377)
@@ -358,10 +377,6 @@
  - **[node-manager]** Added sign check and integrity check to the registry-packages-proxy. [#14685](https://github.com/deckhouse/deckhouse/pull/14685)
  - **[openvpn]** The readOnlyRootFilesystem security option is set to true for all containers. [#15346](https://github.com/deckhouse/deckhouse/pull/15346)
     Pods of the openvpn module will be restarted.
- - **[operator-trivy]** Distroless-based node-collector in Trivy Operator. [#16006](https://github.com/deckhouse/deckhouse/pull/16006)
- - **[operator-trivy]** Added VEX manifests to artifacts. [#15992](https://github.com/deckhouse/deckhouse/pull/15992)
- - **[operator-trivy]** Fixed CVE-2025-22868 in trivy node-collector image. [#15669](https://github.com/deckhouse/deckhouse/pull/15669)
- - **[operator-trivy]** Fix CVE's. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
  - **[prometheus]** update pip version [#16228](https://github.com/deckhouse/deckhouse/pull/16228)
  - **[prometheus]** Add svace analyze for mimir image. [#16068](https://github.com/deckhouse/deckhouse/pull/16068)
  - **[prometheus]** Added pre-created paths create folder. [#15832](https://github.com/deckhouse/deckhouse/pull/15832)

@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: disallowed-by-exception-hostport-mismatch
+  name: allowed-by-exception-port-out-of-constraint-range
   namespace: testns
   labels:
-    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-wrong-port
+    security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-out-of-constraint-range
 spec:
   hostNetwork: true
   containers:
     - name: nginx
       image: nginx
       ports:
-        - containerPort: 9000
+        - containerPort: 5000
           hostPort: 5000
           protocol: TCP
 
