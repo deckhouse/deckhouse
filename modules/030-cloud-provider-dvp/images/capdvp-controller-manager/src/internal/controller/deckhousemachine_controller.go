@@ -241,8 +241,8 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// 	}
 		// }
 	case v1alpha2.MachineStopped:
-		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
-		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
+		// VM is stopped. With "AlwaysOnUnlessStoppedManually" run policy this can be expected
+		// (e.g., manual stop for maintenance). We do not force-start the VM here.
 		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
 		dvpMachine.Status.Ready = false
 		conditions.MarkFalse(
@@ -431,7 +431,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
-			RunPolicy:                v1alpha2.AlwaysOnPolicy,
+			RunPolicy:                "AlwaysOnUnlessStoppedManually",
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
