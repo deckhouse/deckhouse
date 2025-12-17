@@ -13,6 +13,10 @@ data:
   config.yaml: |-
     auth_enabled: false
 
+    analytics:
+      reporting_enabled: false
+      usage_stats_url: ""
+
     server:
       http_listen_address: 127.0.0.1
       http_listen_port: 3101
