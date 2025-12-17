@@ -195,22 +195,22 @@ func (a *Application) GetSettingsChecksum() string {
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
-func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (*settingscheck.Result, error) {
+func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
 	if err := a.values.ValidateConfigValues(settings); err != nil {
-		return &settingscheck.Result{}, err
+		return settingscheck.Result{}, err
 	}
 
 	// no need to call the settings check if nothing changed
 	if a.values.GetConfigChecksum() == settings.Checksum() {
-		return &settingscheck.Result{Allow: true}, nil
+		return settingscheck.Result{Valid: true}, nil
 	}
 
 	if a.settingsCheck != nil {
 		return a.settingsCheck.Check(ctx, settings)
 	}
 
-	return &settingscheck.Result{
-		Allow: true,
+	return settingscheck.Result{
+		Valid: true,
 	}, nil
 }
 

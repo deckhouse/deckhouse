@@ -119,7 +119,7 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 }
 
 // ValidateSettings validates settings against openAPI and setting check
-func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (*settingscheck.Result, error) {
+func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ValidateSettings")
 	defer span.End()
 
@@ -128,7 +128,7 @@ func (m *Manager) ValidateSettings(ctx context.Context, name string, settings ad
 
 	app, ok := m.apps[name]
 	if !ok {
-		return &settingscheck.Result{Allow: true}, nil
+		return settingscheck.Result{Valid: true}, nil
 	}
 
 	return app.ValidateSettings(ctx, settings)
@@ -154,7 +154,7 @@ func (m *Manager) ApplySettings(ctx context.Context, name string, settings addon
 		return newApplySettingsErr(err)
 	}
 
-	if !res.Allow {
+	if !res.Valid {
 		return newApplySettingsErr(errors.New(res.Message))
 	}
 

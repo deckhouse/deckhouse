@@ -341,8 +341,8 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
-			Name:         apv.Status.PackageName,
-			Version:      apv.Status.Version,
+			Name:         app.Spec.PackageName,
+			Version:      app.Spec.Version,
 			Requirements: requirements,
 		},
 		Settings: app.Spec.Settings.GetMap(),
