@@ -51,7 +51,7 @@ locals {
       "bootloader"               = var.bootloader
       "enableParavirtualization" = true
       "osType"                   = "Generic"
-      "runPolicy"                = "AlwaysOn"
+      "runPolicy"                = "AlwaysOnUnlessStoppedManually"
       "virtualMachineClassName"  = var.virtual_machine_class_name
 
       "disruptions" = {
