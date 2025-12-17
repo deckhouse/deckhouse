@@ -113,6 +113,11 @@ properties:
       Время жизни ID-токена.
 
       Задается в виде строки с указанием часов, минут и секунд: 30m, 20s, 2h30m10s, 24h.
+  refreshTokenAbsoluteLifetime:
+    description: |
+      Максимальное время жизни refresh-токенов (соответствует настройке Dex `expiry.refreshTokens.absoluteLifetime`).
+
+      Задается в виде строки с указанием часов, минут и секунд: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
