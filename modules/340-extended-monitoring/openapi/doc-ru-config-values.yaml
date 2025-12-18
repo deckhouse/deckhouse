@@ -7,6 +7,7 @@ properties:
         description: |
           Включен ли imageAvailabilityExporter.
       imageCheckInterval:
+        default: "60s"
         description: |
           Интервал запросов в registry для проверки доступности образа.
           
@@ -14,6 +15,7 @@ properties:
           
           Если не задан, то используется значение по умолчанию в 60 секунд.
       defaultRegistry:
+        default: "index.docker.io"
         description: |
           Стандартный registry для проверки доступности образов.
           Используется если в образе не указан registry.

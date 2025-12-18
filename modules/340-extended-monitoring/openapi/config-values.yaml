@@ -22,6 +22,7 @@ properties:
           
           If not specified, the default value is "60s".
       defaultRegistry:
+        default: "index.docker.io"
         type: string
         description: |
           Default registry to use when an image name is not fully qualified.
