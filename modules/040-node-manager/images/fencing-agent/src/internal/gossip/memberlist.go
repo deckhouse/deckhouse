@@ -1,4 +1,4 @@
-package swarm
+package gossip
 
 import (
 	"fmt"
@@ -9,11 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Gossip interface {
-	Start(nodeIps []string) error
-}
-
-type Swarm struct {
+type Memberlist struct {
 	logger *zap.Logger
 	list   *memberlist.Memberlist
 }
@@ -33,22 +29,28 @@ func NewMemberList(logger *zap.Logger) (Gossip, error) {
 		return nil, err
 	}
 
-	return &Swarm{
+	return &Memberlist{
 		logger: logger,
 		list:   list,
 	}, nil
 }
 
-func (s *Swarm) Start(nodeIps []string) error {
-	_, err := s.list.Join(nodeIps)
+func (ml *Memberlist) Start(peers []string) error {
+	if len(peers) == 0 {
+		ml.logger.Info("No peers found, starting as a single node")
+		return nil
+	}
+	numJoined, err := ml.list.Join(peers)
 	if err != nil {
+		ml.logger.Error("Unable to join to memberlist cluster", zap.Error(err))
 		return err
 	}
+	ml.logger.Info("Joined to memberlist cluster", zap.Int("numJoined", numJoined), zap.Int("peersAttemted", len(peers)))
 	return nil
 }
 
-func (s *Swarm) PrintNodes() {
-	for _, member := range s.list.Members() {
+func (ml *Memberlist) PrintNodes() {
+	for _, member := range ml.list.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 }

@@ -18,6 +18,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fencing-controller/internal/gossip"
 	"fencing-controller/internal/swarm"
 	"fmt"
 	"net"
@@ -26,6 +27,7 @@ import (
 
 	"fencing-controller/internal/watchdog"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -46,17 +48,17 @@ type FencingAgent struct {
 	config     Config
 	kubeClient kubernetes.Interface
 	watchDog   watchdog.WatchDog
-	sw         swarm.Gossip
+	gs         gossip.Gossip
 }
 
-func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, swarm swarm.Gossip, wd watchdog.WatchDog) *FencingAgent {
+func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, gossip gossip.Gossip, wd watchdog.WatchDog) *FencingAgent {
 	l := logger.With(zap.String("node", config.NodeName))
 	return &FencingAgent{
 		logger:     l,
 		config:     config,
 		kubeClient: kubeClient,
 		watchDog:   wd,
-		sw:         swarm,
+		gs:         gossip,
 	}
 }
 
@@ -157,19 +159,11 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	}
 	fa.logger.Info("Start memberlist discovery")
 	peers, err := fa.discoverNodePeers(ctx)
+	err = fa.gs.Start(peers)
 	if err != nil {
-		fa.logger.Error("Unable to discover peers", zap.Error(err))
-	} else if len(peers) > 0 {
-		fa.logger.Info("Joining to memberlist cluster", zap.Strings("peers", peers))
-		err = fa.sw.Start(peers)
-		if err != nil {
-			fa.logger.Error("Unable to join to memberlist cluster", zap.Error(err))
-		} else {
-			fa.logger.Info("Successfully joined to memberlist cluster")
-		}
-	} else {
-		fa.logger.Info("No peers found")
+		// retry policy
 	}
+	fa.gs.PrintNodes()
 	for {
 		select {
 		case <-ticker.C:
