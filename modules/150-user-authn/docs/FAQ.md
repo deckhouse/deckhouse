@@ -169,8 +169,9 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 3. Configure [RBAC](../../modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
 4. Distribute the `kubeconfig` with configured Basic Auth to users.
 
-> **Note:** Only one provider in the cluster can have `enableBasicAuth` enabled.
-
+{% alert level="warning" %}
+Only one provider in the cluster can have `enableBasicAuth` enabled.
+{% endalert %}
 For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
 
 ## How secure is Dex from brute-forcing my credentials?

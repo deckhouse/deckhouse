@@ -305,8 +305,8 @@ spec:
                       description: |
                         Включает возможность basic-авторизации для Kubernetes API server с использованием этого LDAP-провайдера.
 
-                        В качестве credentials для basic-авторизации используются логин и пароль пользователя из LDAP
-                        (включить можно только если в кластере настроен ровно один провайдер с типом OIDC/Crowd/LDAP).
+                        В качестве credentials для basic-авторизации используются логин и пароль пользователя из LDAP. 
+                        Эта функция недоступна если в кластере присутствует более одного провайдера типа `OIDC`, `Crowd` или `LDAP`.
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
 

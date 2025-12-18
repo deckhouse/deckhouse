@@ -55,7 +55,7 @@ func NewLDAP(oidcURL, clientID, clientSecret string, getUserInfo, basicAuthUnsup
 
 	provider, err := oidc.NewProvider(oidc.ClientContext(context.Background(), httpClient), oidcURL)
 	if err != nil {
-		panic(err)
+		panic(err) // TODO: handle error
 	}
 
 	config := oauth2.Config{

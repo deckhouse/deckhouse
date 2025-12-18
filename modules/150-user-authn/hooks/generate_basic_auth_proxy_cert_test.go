@@ -91,6 +91,25 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 		})
 	})
 
+	Context("Multiple providers with enableBasicAuth=true", func() {
+		h := HookExecutionConfigInit(`{"userAuthn":{"internal":{"providers":[
+		{"type":"LDAP","displayName":"LDAP","ldap":{"enableBasicAuth":true}},
+		{"type":"Crowd","displayName":"Crowd","crowd":{"enableBasicAuth":true}}
+	]},"publishAPI":{"enabled":true}}}`, "")
+
+		BeforeEach(func() {
+			h.ValuesSet("global.modulesImages", GetModulesImages())
+			h.KubeStateSet(``)
+			h.BindingContexts.Set(h.GenerateBeforeHelmContext())
+			h.RunHook()
+		})
+
+		It("Hook should fail when multiple providers have enableBasicAuth=true", func() {
+			Expect(h.GoHookError).To(HaveOccurred())
+			Expect(h.GoHookError.Error()).To(ContainSubstring("multiple 'enableBasicAuth: true' options are enabled while only one is supported, review your authentication configuration"))
+		})
+	})
+
 	Context("Cluster with existing cert", func() {
 		existingCert := "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJZakNDQVF5Z0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREFkTVJzd0dRWURWUVFLRXhKbWNtOXUKZEMxd2NtOTRlUzFqYkdsbGJuUXdJQmNOTURreE1URXdNak13TURBd1doZ1BNakV3T1RFd01UY3lNekF3TURCYQpNQjB4R3pBWkJnTlZCQW9URW1aeWIyNTBMWEJ5YjNoNUxXTnNhV1Z1ZERCY01BMEdDU3FHU0liM0RRRUJBUVVBCkEwc0FNRWdDUVFDaFI4ak9PRncxV29zL2F1WmxsK1QyejZqM2w4SlJSK1lhOVhWZTVDTm9zV3NtQ1RxNHVxWGoKS3QxNnNDdWsvMDVqZFo2bFh2Y1BmaWo4bitzaGFhaERBZ01CQUFHak5UQXpNQTRHQTFVZER3RUIvd1FFQXdJRgpvREFUQmdOVkhTVUVEREFLQmdnckJnRUZCUWNEQVRBTUJnTlZIUk1CQWY4RUFqQUFNQTBHQ1NxR1NJYjNEUUVCCkN3VUFBMEVBblZpM1Y3cUljTEFsYVZZME8xckpqUk1jY0NjdlZFdW5sdzJ4M2d5Wld1SHZwbDM4d3RNVytkVFUKd2NyVWFudFJEY2xIbkJwR1JMazhCTzZsRE9yN0N3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
 		existingKey := "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlCT1FJQkFBSkJBS0ZIeU00NFhEVmFpejlxNW1XWDVQYlBxUGVYd2xGSDVocjFkVjdrSTJpeGF5WUpPcmk2CnBlTXEzWHF3SzZUL1RtTjFucVZlOXc5K0tQeWY2eUZwcUVNQ0F3RUFBUUpBUVg4OGpuc1cvMWZwQ3ZVbjRnUkEKcVBjR1lKNlIvSjVkVlg5dmpmektZSDVmdHZYNDluZUswaXRleTNSTzV4bEhteWVLNkt2QmlyQnpCd3VPb0V0WAo0UUloQU1hTXRMU1pPY2RYYUVoUG9SMHJCWUlEbmdSTnprUEJiakplM2VMc2Vhb1RBaUVBei9KcFQzNmVBdElTCkN1Ym81OVdoUitjQWVNekFsdXo0MEdNVUlWbnd6eEVDSUZBN2ZhNVpHTHNQL0NqMFhLTy94Y3NERVRDbURFcmUKK0Z2TWNCZUovYVFYQWlCOUlyVjQzd3NiUzJzTUlIU2J2cFQxZmU5c3dscEsrSU9xYzFVVDFObnk0UUlnSVZhdQo1bmdsZ2pqYmQ5b1VxTnNzZS92SGV6SzlIQUZiczhRSXdSL3dJUGs9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg=="

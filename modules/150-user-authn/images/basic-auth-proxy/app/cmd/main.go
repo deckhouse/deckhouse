@@ -59,7 +59,7 @@ func main() {
 	rootCmd.PersistentFlags().StringArrayVar(&handler.OIDCScopes, "oidc-scope", nil, "Scopes passed from OIDC provider settings")
 
 	rootCmd.PersistentFlags().BoolVar(&handler.LDAPBasicAuthUnsupported, "ldap-basic-auth-unsupported", false, "basicAuthUnsupported option for LDAP OIDC provider")
-	rootCmd.PersistentFlags().BoolVar(&handler.LDAPGetUserInfo, "ldap-get-user-info", false, "getUserInfo option for LDAP OIDC provider")
+	rootCmd.PersistentFlags().BoolVar(&handler.LDAPGetUserInfo, "ldap-include-user-info-claims", false, "include user information claims from LDAP OIDC provider")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPBaseURL, "ldap-base-url", "", "URL of LDAP OIDC provider (Dex)")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientID, "ldap-client-id", "", "clientID of LDAP OIDC application")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientSecret, "ldap-client-secret", "", "clientSecret of LDAP OIDC application")

@@ -103,10 +103,6 @@ func (h *Handler) Run() {
 	h.logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
 	h.logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
 
-	// if h.CrowdBaseURL != "" && h.OIDCBaseURL != "" {
-	// 	h.logger.Fatal("only one auth provider can be used")
-	// }
-
 	enabledProviders := 0
 	if h.CrowdBaseURL != "" {
 		enabledProviders++

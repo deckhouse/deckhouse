@@ -146,7 +146,7 @@ spec:
         - --ldap-base-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
         - --ldap-client-id=kubernetes
         - --ldap-client-secret={{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
-        - --ldap-get-user-info=true
+        - --ldap-include-user-info-claims=true
         - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}
           {{- range $scope := $config.scopes }}
