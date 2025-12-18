@@ -50,9 +50,9 @@ spec:
               number: 80
 ```
 
-## Пример ресурса NGINX Ingress
+## Пример ресурса Ingress NGINX
 
-Для работы с NGINX Ingress администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
+Для работы с Ingress NGINX администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
 Для этого установите параметр [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) у кастомного ресурса IngressNginxController модуля [ingress-nginx](/modules/ingress-nginx/).
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:

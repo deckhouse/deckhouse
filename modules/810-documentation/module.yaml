@@ -1,7 +1,6 @@
 name: documentation
-stage: "General Availability"
-description: |
-  Documentation module
+stage: General Availability
 descriptions:
-  en: Documentation module
+  en: Creates a documentation web UI for the Deckhouse version currently used in a cluster.
+  ru: Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform.
 namespace: d8-system

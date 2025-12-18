@@ -148,7 +148,7 @@ func (c *Checker) Check() checker.Result {
 		if !*enabled {
 			return checker.Result{
 				Enabled: false,
-				Reason:  fmt.Sprintf("dependency '%s' not enabled", name),
+				Message: fmt.Sprintf("dependency '%s' not enabled", name),
 			}
 		}
 

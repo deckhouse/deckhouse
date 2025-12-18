@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -135,6 +137,42 @@ func (a *ApplicationPackageVersion) IsDraft() bool {
 	}
 
 	return false
+}
+
+func (a *ApplicationPackageVersion) IsAppInstalled(namespace string, appName string) bool {
+	if len(a.Status.UsedBy) == 0 {
+		return false
+	}
+
+	for _, v := range a.Status.UsedBy {
+		if v.Namespace == namespace && v.Name == appName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *ApplicationPackageVersion) AddInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
+	appStatusInstalledApp := ApplicationPackageVersionStatusInstance{Namespace: namespace, Name: appName}
+
+	a.Status.UsedBy = append(a.Status.UsedBy, appStatusInstalledApp)
+
+	a.Status.UsedByCount++
+
+	return a
+}
+
+func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
+	a.Status.UsedBy = slices.DeleteFunc(a.Status.UsedBy, func(v ApplicationPackageVersionStatusInstance) bool {
+		return v.Namespace == namespace && v.Name == appName
+	})
+
+	if a.Status.UsedByCount > 0 {
+		a.Status.UsedByCount--
+	}
+
+	return a
 }
 
 // +kubebuilder:object:root=true

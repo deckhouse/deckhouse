@@ -3,11 +3,13 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
+  finalizers:
+  - applicationpackageversion.deckhouse.io/used-by-application
   labels:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
-  resourceVersion: "3"
+  resourceVersion: "4"
 spec:
   packageName: test
   packageRepository: deckhouse

@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: gatekeeper-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: manager

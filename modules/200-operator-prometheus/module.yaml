@@ -1,10 +1,8 @@
 name: operator-prometheus
-stage: "General Availability"
+stage: General Availability
 subsystems:
-  - observability
+- observability
 namespace: d8-operator-prometheus
-description: |
-  This module installs the prometheus operator for creating Prometheus installations
 descriptions:
-  en: |
-    This module installs the prometheus operator for creating Prometheus installations
+  en: Installs the Prometheus Operator, which automates the deployment and management of Prometheus installations.
+  ru: Устанавливает Prometheus Operator, который автоматизирует развёртывание и управление инсталляциями Prometheus.

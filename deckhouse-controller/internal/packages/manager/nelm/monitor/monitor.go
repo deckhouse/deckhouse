@@ -65,21 +65,15 @@ type resourcesMonitor struct {
 	once       sync.Once    // ensures Start() goroutine is created only once
 	wg         *sync.WaitGroup
 
-	name      string                                // Helm release name
-	namespace string                                // Release namespace
-	rendered  string                                // rendered manifest YAML (cleared after parsing to save memory)
-	resources map[namespacedGVK]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
+	name      string                                          // Helm release name
+	namespace string                                          // Release namespace
+	rendered  string                                          // rendered manifest YAML (cleared after parsing to save memory)
+	resources map[schema.GroupVersionKind]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
 
 	nelm  *nelm.Client
 	cache runtimecache.Cache
 
 	logger *log.Logger
-}
-
-// namespacedGVK uniquely identifies a resource type within a namespace
-type namespacedGVK struct {
-	gvk       schema.GroupVersionKind
-	namespace string // empty for cluster-scoped resources
 }
 
 func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, rendered string, logger *log.Logger) *resourcesMonitor {
@@ -90,7 +84,7 @@ func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, re
 		namespace: namespace,
 		name:      name,
 		rendered:  rendered,
-		resources: make(map[namespacedGVK]map[string]struct{}),
+		resources: make(map[schema.GroupVersionKind]map[string]struct{}),
 
 		cache: cache,
 		nelm:  nelm,
@@ -207,17 +201,18 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 // On first run, it parses the rendered manifest to build the expected resource index.
 // Resource checks are performed in parallel for better performance.
 func (m *resourcesMonitor) checkResources(ctx context.Context) error {
-	_, span := otel.Tracer(monitorTracer).Start(ctx, "checkResources")
+	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResources")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
+	span.SetAttributes(attribute.Int("resources", len(m.resources)))
 
 	m.logger.Debug("check resources")
 
 	// Lazy initialization: parse manifest on first check (mutex protected)
 	m.mtx.Lock()
 	if len(m.resources) == 0 {
-		if err := m.buildNamespacedGVK(); err != nil {
+		if err := m.buildResourcesMap(); err != nil {
 			m.mtx.Unlock()
 			return fmt.Errorf("build namespaced gvk: %w", err)
 		}
@@ -242,9 +237,9 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 	return nil
 }
 
-// buildNamespacedGVK parses the rendered manifest and builds an index of expected resources.
-// It groups resources by their GVK and namespace, storing the expected resource names.
-func (m *resourcesMonitor) buildNamespacedGVK() error {
+// buildResourcesMap parses the rendered manifest and builds an index of expected resources.
+// It groups resources by their GVK, storing the expected resource names.
+func (m *resourcesMonitor) buildResourcesMap() error {
 	objs, err := m.parseManifest(m.rendered)
 	if err != nil {
 		return fmt.Errorf("parse manifest: %w", err)
@@ -265,7 +260,7 @@ func (m *resourcesMonitor) buildNamespacedGVK() error {
 			continue
 		}
 
-		key := namespacedGVK{gvk: obj.GroupVersionKind(), namespace: obj.GetNamespace()}
+		key := obj.GroupVersionKind()
 		if m.resources[key] == nil {
 			m.resources[key] = make(map[string]struct{})
 		}
@@ -305,8 +300,7 @@ func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObje
 			continue
 		}
 
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Empty() {
+		if obj.GetObjectKind().GroupVersionKind().Empty() {
 			return nil, errors.New("object has no gvk")
 		}
 
@@ -318,13 +312,13 @@ func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObje
 
 // checkResource checks if all expected resources of a given type are present in the cluster.
 // Returns ErrAbsentManifest if any expected resource is missing.
-func (m *resourcesMonitor) checkResource(ctx context.Context, res namespacedGVK) error {
-	_, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
+func (m *resourcesMonitor) checkResource(ctx context.Context, res schema.GroupVersionKind) error {
+	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
-	span.SetAttributes(attribute.String("namespace", res.namespace))
-	span.SetAttributes(attribute.String("gvk", res.gvk.String()))
+	span.SetAttributes(attribute.String("namespace", m.namespace))
+	span.SetAttributes(attribute.String("gvk", res.String()))
 
 	// Early exit if context was already canceled
 	select {
@@ -334,14 +328,20 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res namespacedGVK)
 	}
 
 	m.logger.Debug("check resource",
-		slog.String("namespace", res.namespace),
-		slog.String("gvk", res.gvk.String()))
+		slog.String("namespace", m.namespace),
+		slog.String("gvk", res.String()))
 
 	// List all resources of this type currently in the cluster
-	objects, err := m.listResources(ctx, res.namespace, res.gvk)
+	objects, err := m.listResources(ctx, m.namespace, res)
 	if err != nil {
 		return fmt.Errorf("list resources: %w", err)
 	}
+
+	span.SetAttributes(attribute.Int("resources", len(objects)))
+	m.logger.Debug("found resources",
+		slog.Int("resources", len(objects)),
+		slog.String("namespace", m.namespace),
+		slog.String("gvk", res.String()))
 
 	// Check if each expected resource name exists in the cluster
 	for obj := range m.resources[res] {

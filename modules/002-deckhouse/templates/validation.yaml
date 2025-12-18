@@ -64,8 +64,19 @@ spec:
           && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
           && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
           != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+    - name: 'exclude-heritage-bypass-delete'
+      expression: |
+        !(
+          request.operation == "DELETE"
+          && has(oldObject.metadata)
+          && has(oldObject.metadata.labels)
+          && "security.deckhouse.io/heritage-bypass" in oldObject.metadata.labels
+          && oldObject.metadata.labels["security.deckhouse.io/heritage-bypass"] == "delete"
+        )
   validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
+    - expression: |
+        request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || request.userInfo.username.startsWith("system:serviceaccount:kube-")
       reason: Forbidden
       messageExpression: "'Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'"
   auditAnnotations:

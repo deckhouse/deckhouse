@@ -5,7 +5,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-cacheVersion: "2025-09-18"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -76,6 +75,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/016-maxmind-alerts.patch
   - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
   - patch -p1 < /patches/ingress-nginx/018-geoip-ver-metric.patch
+  - patch -p1 < /patches/ingress-nginx/019-skip-tls-verification-maxmind.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch

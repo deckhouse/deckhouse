@@ -28,6 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -94,6 +95,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// handle delete event
 	if !apv.DeletionTimestamp.IsZero() {
 		return r.handleDelete(ctx, apv)
+	}
+
+	// add finalizer if it is not set
+	if !controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
+		r.logger.Debug("adding finalizer to application package version", slog.String("name", apv.Name))
+
+		patch := client.MergeFrom(apv.DeepCopy())
+
+		controllerutil.AddFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
+
+		err := r.client.Patch(ctx, apv, patch)
+		if err != nil {
+			return res, fmt.Errorf("add finalizer to ApplicationPackageVersion %s: %w", apv.Name, err)
+		}
 	}
 
 	// skip handle for non drafted resources
@@ -211,9 +226,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		logger.Debug("got metadata from package.yaml", slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
+	// Patch the status
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
 
-	// Patch the status
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
 	logger.Debug("patch package version status")
@@ -223,7 +238,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// Delete label "draft" and patch the main object
+	original = apv.DeepCopy()
+
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
+
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch ApplicationPackageVersion %s: %w", apv.Name, err)
@@ -232,12 +250,31 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	return nil
 }
 
-func (r *reconciler) handleDelete(_ context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", apv.Name))
 	logger.Debug("deleting ApplicationPackageVersion")
 	defer logger.Debug("delete ApplicationPackageVersion complete")
 
 	res := ctrl.Result{}
+
+	if apv.Status.UsedByCount > 0 {
+		logger.Warn("application package version is used by applications, skipping deletion", slog.Int("used_by_count", apv.Status.UsedByCount))
+
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	if controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
+		logger.Debug("removing finalizer from application package version")
+
+		patch := client.MergeFrom(apv.DeepCopy())
+
+		controllerutil.RemoveFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
+
+		err := r.client.Patch(ctx, apv, patch)
+		if err != nil {
+			return res, fmt.Errorf("remove finalizer from ApplicationPackageVersion %s: %w", apv.Name, err)
+		}
+	}
 
 	return res, nil
 }

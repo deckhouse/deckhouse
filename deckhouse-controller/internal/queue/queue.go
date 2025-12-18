@@ -131,11 +131,14 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	}
 
 	wrapper := &taskWrapper{
-		ctx:        ctx,
-		wg:         opt.wg,
-		id:         uuid.New().String(),
-		task:       task,
-		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
+		ctx:  ctx,
+		wg:   opt.wg,
+		id:   uuid.New().String(),
+		task: task,
+		backoff: backoff.NewExponentialBackOff(
+			backoff.WithMaxElapsedTime(0),
+			backoff.WithMaxInterval(time.Minute),
+			backoff.WithInitialInterval(15*time.Second)),
 		nextRetry:  time.Now(),
 		enqueuedAt: time.Now(),
 		onDone:     opt.onDone,

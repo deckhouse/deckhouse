@@ -86,10 +86,10 @@ func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, 
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
+			instanceScope.Logger.V(1).Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
-			instanceScope.Logger.Info("using gossh")
+			instanceScope.Logger.V(1).Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 
@@ -116,7 +116,7 @@ func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, 
 		return true
 	})
 	if done == nil || !*done {
-		instanceScope.Logger.Info("Adopting is not finished yet, waiting...")
+		instanceScope.Logger.V(1).Info("Adopting is not finished yet, waiting...")
 		return false, nil
 	}
 

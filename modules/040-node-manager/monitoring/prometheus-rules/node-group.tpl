@@ -1,6 +1,6 @@
 {{- define "todo_list" }}
         This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
-        
+
         Possible causes:
 
         1. Cloud provider resource limits.
@@ -9,25 +9,25 @@
         4. Problems with bootstrapping the Machine.
 
         Recommended actions:
-        
+
         1. Check the status of the NodeGroup:
-        
+
            ```shell
-           kubectl get ng {{`{{ $labels.node_group }}`}} -o yaml
+           d8 k get ng {{`{{ $labels.node_group }}`}} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
-        
+
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -113,7 +113,7 @@
       plk_markup_format: "markdown"
       summary: The master NodeGroup is missing the required control-plane taint.
       description: |
-        The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.  
+        The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.
         This may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.
 
         To resolve the issue, add the following to the `master` NodeGroup spec:
@@ -124,5 +124,5 @@
             - effect: NoSchedule
               key: node-role.kubernetes.io/control-plane
         ```
-        
+
         Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.

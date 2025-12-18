@@ -621,6 +621,17 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("cleanup old operations", func() {
+		suite.setupController("cleanup-old-operations.yaml")
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-7")
+
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+		})
+
+		require.NoError(suite.T(), err)
+	})
 }
 
 // nolint:unparam

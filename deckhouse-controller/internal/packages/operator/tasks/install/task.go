@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -29,8 +30,12 @@ const (
 )
 
 type installer interface {
-	Download(ctx context.Context, reg registry.Registry, packageName, version string) error
 	Install(ctx context.Context, registry, instance, packageName, version string) error
+}
+
+type statusService interface {
+	SetConditionTrue(name string, conditionName status.ConditionName)
+	HandleError(name string, err error)
 }
 
 type task struct {
@@ -40,17 +45,19 @@ type task struct {
 	registry    registry.Registry
 
 	installer installer
+	status    statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name, pack, version string, reg registry.Registry, installer installer, logger *log.Logger) queue.Task {
+func NewTask(name, pack, version string, reg registry.Registry, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
 		instance:    name,
 		packageName: pack,
 		version:     version,
 		registry:    reg,
 		installer:   installer,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -66,17 +73,14 @@ func (t *task) Execute(ctx context.Context) error {
 		slog.String("registry", t.registry.Name),
 		slog.String("version", t.version))
 
-	// Download package from repository
-	logger.Debug("download package")
-	if err := t.installer.Download(ctx, t.registry, t.packageName, t.version); err != nil {
-		return fmt.Errorf("download package: %w", err)
-	}
-
 	// Install (mount) package to apps directory
 	logger.Debug("install application")
 	if err := t.installer.Install(ctx, t.registry.Name, t.instance, t.packageName, t.version); err != nil {
+		t.status.HandleError(t.instance, err)
 		return fmt.Errorf("install application: %w", err)
 	}
+
+	t.status.SetConditionTrue(t.instance, status.ConditionReadyOnFilesystem)
 
 	return nil
 }

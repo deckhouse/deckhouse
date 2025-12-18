@@ -19,9 +19,9 @@ properties:
             items:
               type: string
               enum:
-              - deny
-              - dryrun
-              - warn
+                - deny
+                - dryrun
+                - warn
       effectiveStorageClass:
         default: false
         oneOf:

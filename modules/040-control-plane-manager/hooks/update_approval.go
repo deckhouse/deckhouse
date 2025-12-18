@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "nodes",
+			Name:                   "control_plane_nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			WaitForSynchronization: ptr.To(false),
@@ -51,7 +51,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updateApprovalFilterNode,
 		},
 		{
-			Name:                   "control_plane_manager",
+			Name:                   "etcd_arbiter_nodes",
+			ApiVersion:             "v1",
+			Kind:                   "Node",
+			WaitForSynchronization: ptr.To(false),
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "node.deckhouse.io/etcd-arbiter",
+						Operator: v1.LabelSelectorOpExists,
+					},
+				},
+			},
+			FilterFunc: updateApprovalFilterNode,
+		},
+		{
+			Name:                   "control_plane_manager_pods",
 			ApiVersion:             "v1",
 			Kind:                   "Pod",
 			WaitForSynchronization: ptr.To(false),
@@ -63,9 +78,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "app",
+						Key:      "component",
 						Operator: v1.LabelSelectorOpIn,
-						Values:   []string{"d8-control-plane-manager"},
+						Values:   []string{"control-plane-manager"},
 					},
 				},
 			},
@@ -152,7 +167,8 @@ type approvedPod struct {
 
 func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snaps := input.Snapshots.Get("nodes")
+
+	snaps := input.Snapshots.Get("control_plane_nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
@@ -161,11 +177,20 @@ func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 		nodeMap[node.Name] = node
 	}
 
+	snaps = input.Snapshots.Get("etcd_arbiter_nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'etcd_arbiter_nodes' snapshots: %v", err)
+		}
+
+		nodeMap[node.Name] = node
+	}
+
 	// Remove approved annotations if pod is ready and node has annotation
-	snaps = input.Snapshots.Get("control_plane_manager")
+	snaps = input.Snapshots.Get("control_plane_manager_pods")
 	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)
+			return fmt.Errorf("failed to iterate over 'control_plane_manager_pods' snapshots: %v", err)
 		}
 
 		if !pod.IsReady {
