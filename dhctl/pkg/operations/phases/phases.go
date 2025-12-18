@@ -53,6 +53,7 @@ const (
 	DeckhouseConfigurationPhase OperationPhase = "DeckhouseConfiguration"
 	// destroy only
 	CreateStaticDestroyerNodeUserPhase OperationPhase = "CreateStaticDestroyerNodeUser"
+	UpdateStaticDestroyerIPs           OperationPhase = "UpdateStaticDestroyerIPs"
 	WaitStaticDestroyerNodeUserPhase   OperationPhase = "WaitStaticDestroyerNodeUser"
 	SetDeckhouseResourcesDeletedPhase  OperationPhase = "SetDeckhouseResourcesDelete"
 	// all

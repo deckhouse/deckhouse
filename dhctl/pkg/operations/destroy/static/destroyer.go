@@ -40,9 +40,10 @@ import (
 )
 
 type LoopsParams struct {
-	NodeUserLoopParams      retry.Params
-	DestroyMasterLoopParams retry.Params
-	GetMastersIPsLoopParams retry.Params
+	NodeUser       retry.Params
+	DestroyMaster  retry.Params
+	GetMastersIPs  retry.Params
+	CreateNodeUser retry.Params
 }
 
 type DestroyerParams struct {
@@ -58,8 +59,31 @@ type DestroyerParams struct {
 }
 
 type NodesWithCredentials struct {
-	*v1.NodeUserCredentials
-	IPs []entity.NodeIP
+	NodeUser     *v1.NodeUserCredentials
+	IPs          []entity.NodeIP
+	ProcessedIPS []session.Host
+}
+
+func (c *NodesWithCredentials) SetHostAsProcessed(host session.Host) bool {
+	if len(c.ProcessedIPS) == 0 {
+		return false
+	}
+
+	for _, ip := range c.ProcessedIPS {
+		if ip.Host == host.Host {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *NodesWithCredentials) AddToProcessed(host session.Host) {
+	if len(c.ProcessedIPS) == 0 {
+		c.ProcessedIPS = make([]session.Host, 0, 1)
+	}
+
+	c.ProcessedIPS = append(c.ProcessedIPS, host)
 }
 
 type Destroyer struct {
@@ -180,6 +204,10 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		}
 
 		for _, host := range additionalMastersHosts {
+			if d.hostProcessed(host) {
+				logger.LogDebugF("Skipping additional master host: '%s'. Host already processed\n", host.String())
+				continue
+			}
 			settings.SetAvailableHosts([]session.Host{host})
 			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
 			if err != nil {
@@ -192,7 +220,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 				return err
 			}
 
-			logger.LogDebugF("host %s was cleaned up successfully\n", host.Host)
+			logger.LogDebugF("Host %s was cleaned up successfully\n", host.Host)
 		}
 
 	}
@@ -227,9 +255,8 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 }
 
 func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
-	logger := d.logger()
+	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
 
-	logger.LogDebugF("Starting cleanup process for host %s\n", host)
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
@@ -253,7 +280,11 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 		return err
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return d.addHostAsProcessed(host)
 }
 
 func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
@@ -285,10 +316,10 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 	convergerPrivateKey := session.AgentPrivateKey{
 		Key:        privateKeyPath,
-		Passphrase: d.nodesWithCredentials.Password,
+		Passphrase: d.nodesWithCredentials.NodeUser.Password,
 	}
 
-	err = os.WriteFile(privateKeyPath, []byte(d.nodesWithCredentials.PrivateKey), 0o600)
+	err = os.WriteFile(privateKeyPath, []byte(d.nodesWithCredentials.NodeUser.PrivateKey), 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to write private key for NodeUser: %w", err)
 	}
@@ -305,7 +336,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 	}
 
 	sess := session.NewSession(session.Input{
-		User:        d.nodesWithCredentials.Name,
+		User:        d.nodesWithCredentials.NodeUser.Name,
 		Port:        settings.Port,
 		BastionHost: settings.BastionHost,
 		BastionPort: settings.BastionPort,
@@ -314,7 +345,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		BastionUser:    settings.BastionUser,
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
-		BecomePass:     d.nodesWithCredentials.Password,
+		BecomePass:     d.nodesWithCredentials.NodeUser.Password,
 	})
 
 	privateKeys := []session.AgentPrivateKey{convergerPrivateKey}
@@ -371,9 +402,9 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 		if !isSingleMaster(d.nodesWithCredentials.IPs) {
 			// waiter checks if nil params
 			waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
-				WithParams(d.params.Loops.NodeUserLoopParams)
+				WithParams(d.params.Loops.NodeUser)
 
-			if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUserCredentials); err != nil {
+			if err := waiter.WaitPresentOnNodes(ctx, d.nodesWithCredentials.NodeUser); err != nil {
 				return nil, err
 			}
 		} else {
@@ -395,7 +426,7 @@ func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.
 		return nil, fmt.Errorf("Failed to generate NodeUser: %w", err)
 	}
 
-	err = entity.CreateOrUpdateNodeUser(ctx, d.params.KubeProvider, nodeUser)
+	err = entity.CreateOrUpdateNodeUser(ctx, d.params.KubeProvider, nodeUser, d.params.Loops.CreateNodeUser)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +441,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
 	}
 
-	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider, d.params.Loops.GetMastersIPsLoopParams)
+	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider, d.params.Loops.GetMastersIPs)
 	if err != nil {
 		return nil, err
 	}
@@ -431,8 +462,8 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 		}
 
 		nodesWithCredentials = &NodesWithCredentials{
-			NodeUserCredentials: nodeUserCredentials,
-			IPs:                 nodeIPs,
+			NodeUser: nodeUserCredentials,
+			IPs:      nodeIPs,
 		}
 
 		if err := d.params.State.SaveNodeUser(nodesWithCredentials); err != nil {
@@ -451,6 +482,33 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 	return nodesWithCredentials, nil
 }
 
+func (d *Destroyer) hostProcessed(host session.Host) bool {
+	if d.nodesWithCredentials == nil {
+		return false
+	}
+
+	return d.nodesWithCredentials.SetHostAsProcessed(host)
+}
+
+func (d *Destroyer) addHostAsProcessed(host session.Host) error {
+	// for abort we do not have nodesWithCredentials
+	if d.nodesWithCredentials == nil {
+		return nil
+	}
+
+	return d.params.PhasedActionProvider().Run(phases.UpdateStaticDestroyerIPs, false, func() (phases.DefaultContextType, error) {
+		d.nodesWithCredentials.AddToProcessed(host)
+
+		if err := d.params.State.SaveNodeUser(d.nodesWithCredentials); err != nil {
+			return nil, err
+		}
+
+		d.logger().LogDebugF("Host %+v saved as processed to cache. Have processed hosts %+v\n", host, d.nodesWithCredentials.ProcessedIPS)
+
+		return nil, nil
+	})
+}
+
 func (d *Destroyer) logger() log.Logger {
 	return log.SafeProvideLogger(d.params.LoggerProvider)
 }
@@ -458,7 +516,7 @@ func (d *Destroyer) logger() log.Logger {
 var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(5, 15*time.Second)
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
-	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMasterLoopParams, getDestroyMastersDefaultOpts...).
+	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).
 		WithName(fmt.Sprintf("Clear master %s", host.String()))
 }
 

@@ -32,13 +32,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser) error {
+var (
+	createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
+)
+
+func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser, loopParams retry.Params) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
 	if err != nil {
 		return fmt.Errorf("Failed to convert NodeUser to unstructured: %w", err)
 	}
 
-	return retry.NewLoop("Save dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() error {
+	loopParams = retry.SafeCloneOrNewParams(loopParams, createUpdateNodeUsersDefaultOpts...).
+		WithName(fmt.Sprintf("Save NodeUser '%s'", nodeUser.GetName()))
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err

@@ -22,11 +22,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
@@ -206,7 +208,16 @@ func TestStaticDestroy(t *testing.T) {
 				skipResourcesCreating: true,
 
 				before: func(t *testing.T, tst *testStaticDestroyTest) {
-					tst.saveNodeUser(t, tst.params.hosts, nil)
+					masterIPs := make([]string, 0, len(tst.params.hosts))
+					for _, host := range tst.params.hosts {
+						masterIPs = append(masterIPs, host.Host)
+					}
+					tst.generateAndSaveNodeUserToCache(t, testNodeUserSaveParams{
+						generate:     false,
+						createInKube: false,
+						processedIPs: nil,
+						masterIPs:    masterIPs,
+					})
 					tst.setResourcesDestroyed(t)
 					tst.saveMetaConfigToCache(t)
 				},
@@ -282,8 +293,6 @@ func TestStaticDestroy(t *testing.T) {
 	})
 
 	t.Run("multi-master", func(t *testing.T) {
-		noBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest) {}
-
 		type host struct {
 			ip   string
 			name string
@@ -296,23 +305,42 @@ func TestStaticDestroy(t *testing.T) {
 
 			cleanScriptShouldRun bool
 
-			notCreateNodeUser     bool
 			switchToConvergerUser bool
+
+			notCreateNodeUser  bool
+			notSavedAsMasterIP bool
 		}
+
+		extractMasterIPsSavedFromHosts := func(hosts []host) []string {
+			res := make([]string, 0, len(hosts))
+			for _, h := range hosts {
+				if !h.notSavedAsMasterIP {
+					res = append(res, h.ip)
+				}
+			}
+			// sort for prevent flaky tests
+			sort.Strings(res)
+			return res
+		}
+
+		noBeforeFunc := func(t *testing.T, tst *testStaticDestroyTest, hosts []host) {}
 
 		multimasterMasterTests := []struct {
 			name string
 
 			hosts []host
 
-			resourcesShouldDeleted bool
-			stateCacheShouldEmpty  bool
-			nodeUserShouldCreated  bool
+			resourcesShouldDeleted     bool
+			stateCacheShouldEmpty      bool
+			nodeUserShouldCreated      bool
+			nodeUserShouldSavedInCache bool
+			nodeUserExistsSavedInCache bool
+			kubeProviderShouldCleaned  bool
 
 			skipResources         bool
 			skipResourcesCreating bool
 
-			before func(t *testing.T, tst *testStaticDestroyTest)
+			before func(t *testing.T, tst *testStaticDestroyTest, hosts []host)
 			assert func(t *testing.T, tst *testStaticDestroyTest, err error)
 		}{
 			{
@@ -345,9 +373,10 @@ func TestStaticDestroy(t *testing.T) {
 					},
 				},
 
-				stateCacheShouldEmpty:  true,
-				nodeUserShouldCreated:  true,
-				resourcesShouldDeleted: true,
+				stateCacheShouldEmpty:     true,
+				nodeUserShouldCreated:     true,
+				resourcesShouldDeleted:    true,
+				kubeProviderShouldCleaned: true,
 
 				before: noBeforeFunc,
 				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
@@ -378,9 +407,10 @@ func TestStaticDestroy(t *testing.T) {
 					},
 				},
 
-				stateCacheShouldEmpty:  true,
-				nodeUserShouldCreated:  true,
-				resourcesShouldDeleted: true,
+				stateCacheShouldEmpty:     true,
+				nodeUserShouldCreated:     true,
+				resourcesShouldDeleted:    true,
+				kubeProviderShouldCleaned: true,
 
 				before: noBeforeFunc,
 				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
@@ -419,16 +449,72 @@ func TestStaticDestroy(t *testing.T) {
 					},
 				},
 
-				stateCacheShouldEmpty:  false,
-				nodeUserShouldCreated:  true,
-				resourcesShouldDeleted: false,
+				stateCacheShouldEmpty:      false,
+				nodeUserShouldCreated:      true,
+				resourcesShouldDeleted:     false,
+				nodeUserShouldSavedInCache: true,
+				kubeProviderShouldCleaned:  false,
 
 				before: noBeforeFunc,
 				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
 					require.Error(t, err)
-					tst.assertKubeProviderCleaned(t, false)
-					tst.assertNodeUserCredsSavedInCache(t)
-					tst.assertResourcesDestroyed(t, false)
+					tst.assertSetHostsAsProcessedInCache(t, make([]session.Host, 0))
+				},
+			},
+
+			{
+				name: "restart destroy after fix node user creating on same or all nodes but all clean errors",
+				hosts: []host{
+					{
+						ip:     "127.0.0.2",
+						name:   "master-1",
+						sshOut: "error",
+						sshErr: errors.New("error"),
+						// first master as last
+						discoveryIPFile:       true,
+						cleanScriptShouldRun:  false,
+						switchToConvergerUser: false,
+					},
+					{
+						ip:     "127.0.0.3",
+						name:   "master-2",
+						sshOut: "error",
+						sshErr: errors.New("error"),
+						// second master return error because we save in cache sorted ips
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+					},
+					{
+						ip:     "127.0.0.4",
+						name:   "master-3",
+						sshOut: "error",
+						sshErr: errors.New("error"),
+						// third master not run because we save in cache sorted ips
+						cleanScriptShouldRun:  false,
+						switchToConvergerUser: false,
+					},
+				},
+
+				stateCacheShouldEmpty:      false,
+				nodeUserShouldCreated:      true,
+				resourcesShouldDeleted:     true,
+				nodeUserShouldSavedInCache: true,
+				nodeUserExistsSavedInCache: true,
+				kubeProviderShouldCleaned:  true,
+
+				before: func(t *testing.T, tst *testStaticDestroyTest, hosts []host) {
+					mastersIPsInCache := extractMasterIPsSavedFromHosts(hosts)
+					tst.generateAndSaveNodeUserToCache(t, testNodeUserSaveParams{
+						masterIPs:    mastersIPsInCache,
+						createInKube: true,
+						generate:     true,
+						processedIPs: nil,
+					})
+				},
+				assert: func(t *testing.T, tst *testStaticDestroyTest, err error) {
+					require.Error(t, err)
+					tst.assertNodeUserIsNotUpdated(t, true)
+					tst.assertSetHostsAsProcessedInCache(t, make([]session.Host, 0))
 				},
 			},
 		}
@@ -438,6 +524,7 @@ func TestStaticDestroy(t *testing.T) {
 				hosts := make([]session.Host, 0, len(tt.hosts))
 				hostsToCreateNodeUser := make([]session.Host, 0, len(tt.hosts))
 				hostsToSwitchToConverger := make([]session.Host, 0, len(tt.hosts))
+				mastersIPSInCache := make([]string, 0, len(tt.hosts))
 				sessionHosts := make(map[string]session.Host, len(tt.hosts))
 
 				for _, h := range tt.hosts {
@@ -454,6 +541,10 @@ func TestStaticDestroy(t *testing.T) {
 
 					if h.switchToConvergerUser {
 						hostsToSwitchToConverger = append(hostsToSwitchToConverger, sh)
+					}
+
+					if !h.notSavedAsMasterIP {
+						mastersIPSInCache = append(mastersIPSInCache, h.ip)
 					}
 				}
 
@@ -473,7 +564,7 @@ func TestStaticDestroy(t *testing.T) {
 					resources = testCreateResourcesForStatic(t, tst.kubeCl)
 				}
 
-				tt.before(t, tst)
+				tt.before(t, tst, tt.hosts)
 
 				hostsWithRunCleanScript := make([]session.Host, 0, len(tt.hosts))
 				hostsWithRunDownloadDiscoveryIP := make([]session.Host, 0, len(tt.hosts))
@@ -513,6 +604,12 @@ func TestStaticDestroy(t *testing.T) {
 				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
 				tst.assertClientSwitches(t, hostsToSwitchToConverger)
 				tst.assertPrivateKeyWritten(t, len(hostsToSwitchToConverger))
+				tst.assertNodeUserSavedInCache(t, tt.nodeUserShouldSavedInCache)
+				if tt.nodeUserShouldSavedInCache {
+					tst.assertMasterIPsSavedInCache(t, mastersIPSInCache)
+				}
+				tst.assertNodeUserExistsSavedInCache(t, tt.nodeUserExistsSavedInCache)
+				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned)
 
 				tt.assert(t, tst, err)
 			})
@@ -614,6 +711,9 @@ type testStaticDestroyTest struct {
 	cleanCommandsRanOnHosts       map[string]struct{}
 	downloadDiscoveryIPRanOnHosts map[string]struct{}
 
+	nodeUser      *v1.NodeUser
+	nodeUserCreds *static.NodesWithCredentials
+
 	tmpDir string
 }
 
@@ -651,29 +751,6 @@ func (ts *testStaticDestroyTest) setResourcesDestroyed(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (ts *testStaticDestroyTest) saveNodeUser(t *testing.T, hosts []session.Host, credentials *v1.NodeUserCredentials) {
-	require.False(t, govalue.IsNil(ts.stateCache))
-
-	ips := make([]entity.NodeIP, 0, len(hosts))
-	for _, h := range hosts {
-		ips = append(ips, entity.NodeIP{
-			InternalIP: h.Host,
-		})
-	}
-
-	credsToSave := credentials
-	if credsToSave == nil {
-		credsToSave = &v1.NodeUserCredentials{}
-	}
-
-	err := static.NewDestroyState(ts.stateCache).SaveNodeUser(&static.NodesWithCredentials{
-		IPs:                 ips,
-		NodeUserCredentials: credsToSave,
-	})
-
-	require.NoError(t, err)
-}
-
 const metaConfigKey = "cluster-config"
 
 func (ts *testStaticDestroyTest) saveMetaConfigToCache(t *testing.T) {
@@ -682,6 +759,78 @@ func (ts *testStaticDestroyTest) saveMetaConfigToCache(t *testing.T) {
 
 	err := ts.stateCache.SaveStruct(metaConfigKey, ts.metaConfig)
 	require.NoError(t, err)
+}
+
+type testNodeUserSaveParams struct {
+	masterIPs    []string
+	processedIPs []session.Host
+	createInKube bool
+	generate     bool
+}
+
+func (ts *testStaticDestroyTest) generateAndSaveNodeUserToCache(t *testing.T, params testNodeUserSaveParams) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	var nodeUser *v1.NodeUser
+	var credentials *v1.NodeUserCredentials
+
+	if params.generate {
+		var err error
+		nodeUser, credentials, err = v1.GenerateNodeUser(v1.ConvergerNodeUser())
+		require.NoError(t, err)
+
+		ts.nodeUser = nodeUser
+	}
+
+	ips := make([]entity.NodeIP, 0, len(params.masterIPs))
+	for _, masterIP := range params.masterIPs {
+		ips = append(ips, entity.NodeIP{
+			InternalIP: masterIP,
+		})
+	}
+
+	credsToSave := &static.NodesWithCredentials{
+		NodeUser:     credentials,
+		IPs:          ips,
+		ProcessedIPS: params.processedIPs,
+	}
+
+	err := static.NewDestroyState(ts.stateCache).SaveNodeUser(credsToSave)
+	require.NoError(t, err)
+
+	ts.nodeUserCreds = credsToSave
+
+	if !params.generate || !params.createInKube {
+		return
+	}
+
+	require.False(t, govalue.IsNil(ts.kubeCl))
+	err = entity.CreateOrUpdateNodeUser(context.TODO(), newFakeKubeClientProvider(ts.kubeCl), ts.nodeUser, retry.NewEmptyParams())
+	require.NoError(t, err)
+}
+
+func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkInKube bool) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+	require.False(t, govalue.IsNil(ts.nodeUserCreds))
+
+	nodeUserCreds, err := static.NewDestroyState(ts.stateCache).NodeUser()
+	require.NoError(t, err)
+	require.Equal(t, *ts.nodeUserCreds, *nodeUserCreds)
+
+	if !checkInKube {
+		return
+	}
+
+	require.False(t, govalue.IsNil(ts.kubeCl))
+	require.False(t, govalue.IsNil(ts.nodeUser))
+	nodeUserUnstruct, err := ts.kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(context.TODO(), ts.nodeUser.GetName(), metav1.GetOptions{})
+	require.NoError(t, err)
+
+	nodeUser := v1.NodeUser{}
+	err = sdk.FromUnstructured(nodeUserUnstruct, &nodeUser)
+	require.NoError(t, err)
+
+	require.Equal(t, ts.nodeUser.Spec, nodeUser.Spec)
 }
 
 func (ts *testStaticDestroyTest) assertHasMetaConfigInCache(t *testing.T) {
@@ -719,19 +868,65 @@ func (ts *testStaticDestroyTest) assertStateCacheNotEmpty(t *testing.T) {
 	require.NotEmpty(t, keys, "has not keys")
 }
 
-func (ts *testStaticDestroyTest) assertNodeUserCredsSavedInCache(t *testing.T) {
-	require.False(t, govalue.IsNil(ts.stateCache))
-
-	_, err := static.NewDestroyState(ts.stateCache).NodeUser()
-	require.NoError(t, err)
-
-}
-
 func (ts *testStaticDestroyTest) assertNodeUserExistsSavedInCache(t *testing.T, saved bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
 	exists := static.NewDestroyState(ts.stateCache).IsNodeUserExists()
 	require.Equal(t, saved, exists)
+}
+
+func (ts *testStaticDestroyTest) assertNodeUserSavedInCache(t *testing.T, saved bool) *static.NodesWithCredentials {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	state := static.NewDestroyState(ts.stateCache)
+	nodeUser, err := state.NodeUser()
+	if !saved {
+		require.Error(t, err)
+		return nil
+	}
+
+	require.NoError(t, err)
+	require.NotNil(t, nodeUser)
+	require.NotNil(t, nodeUser.NodeUser)
+	require.Equal(t, global.ConvergeNodeUserName, nodeUser.NodeUser.Name)
+	require.Equal(t, []string{global.MasterNodeGroupName}, nodeUser.NodeUser.NodeGroups)
+	require.NotEmpty(t, nodeUser.NodeUser.Password)
+	require.NotEmpty(t, nodeUser.NodeUser.PrivateKey)
+	require.NotEmpty(t, nodeUser.NodeUser.PublicKey)
+
+	return nodeUser
+}
+
+func (ts *testStaticDestroyTest) assertSetHostsAsProcessedInCache(t *testing.T, hosts []session.Host) {
+	nodeUser := ts.assertNodeUserSavedInCache(t, true)
+	require.NotNil(t, nodeUser)
+
+	require.Len(t, nodeUser.ProcessedIPS, len(hosts))
+
+	processedMap := make(map[string]struct{})
+	for _, p := range nodeUser.ProcessedIPS {
+		processedMap[p.Host] = struct{}{}
+	}
+
+	for _, h := range hosts {
+		require.Contains(t, processedMap, h.Host)
+	}
+}
+
+func (ts *testStaticDestroyTest) assertMasterIPsSavedInCache(t *testing.T, ips []string) {
+	nodeUser := ts.assertNodeUserSavedInCache(t, true)
+	require.NotNil(t, nodeUser)
+
+	require.Len(t, nodeUser.IPs, len(ips))
+
+	ipsMap := make(map[string]struct{})
+	for _, p := range nodeUser.IPs {
+		ipsMap[p.InternalIP] = struct{}{}
+	}
+
+	for _, ip := range ips {
+		require.Contains(t, ipsMap, ip)
+	}
 }
 
 const (
@@ -1025,15 +1220,15 @@ podSubnetNodeCIDRPrefix: "24"
 		sshClientProvider:    sshProvider,
 		tmpDir:               tmpDir,
 		staticLoopsParams: static.LoopsParams{
-			NodeUserLoopParams: retry.NewEmptyParams(
+			NodeUser: retry.NewEmptyParams(
 				retry.WithWait(2*time.Second),
 				retry.WithAttempts(5),
 			),
-			DestroyMasterLoopParams: retry.NewEmptyParams(
+			DestroyMaster: retry.NewEmptyParams(
 				retry.WithWait(1*time.Second),
 				retry.WithAttempts(1),
 			),
-			GetMastersIPsLoopParams: retry.NewEmptyParams(
+			GetMastersIPs: retry.NewEmptyParams(
 				retry.WithWait(1*time.Second),
 				retry.WithAttempts(2),
 			),
