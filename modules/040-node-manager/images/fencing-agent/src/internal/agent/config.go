@@ -30,6 +30,7 @@ type Config struct {
 	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`
 	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName                   string        `env:"NODE_NAME"`
+	NodeGroup                  string        `env:"NODE_GROUP"`
 }
 
 func (c *Config) Load() error {

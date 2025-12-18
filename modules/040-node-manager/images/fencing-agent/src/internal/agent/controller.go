@@ -18,6 +18,8 @@ package agent
 import (
 	"context"
 	"errors"
+	"fencing-controller/internal/swarm"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -44,15 +46,17 @@ type FencingAgent struct {
 	config     Config
 	kubeClient kubernetes.Interface
 	watchDog   watchdog.WatchDog
+	sw         swarm.Gossip
 }
 
-func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, wd watchdog.WatchDog) *FencingAgent {
+func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, swarm swarm.Gossip, wd watchdog.WatchDog) *FencingAgent {
 	l := logger.With(zap.String("node", config.NodeName))
 	return &FencingAgent{
 		logger:     l,
 		config:     config,
 		kubeClient: kubeClient,
 		watchDog:   wd,
+		sw:         swarm,
 	}
 }
 
@@ -151,7 +155,21 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	if fa.config.HealthProbeBindAddress != "" {
 		fa.startLiveness(ctx)
 	}
-
+	fa.logger.Info("Start memberlist discovery")
+	peers, err := fa.discoverNodePeers(ctx)
+	if err != nil {
+		fa.logger.Error("Unable to discover peers", zap.Error(err))
+	} else if len(peers) > 0 {
+		fa.logger.Info("Joining to memberlist cluster", zap.Strings("peers", peers))
+		err = fa.sw.Start(peers)
+		if err != nil {
+			fa.logger.Error("Unable to join to memberlist cluster", zap.Error(err))
+		} else {
+			fa.logger.Info("Successfully joined to memberlist cluster")
+		}
+	} else {
+		fa.logger.Info("No peers found")
+	}
 	for {
 		select {
 		case <-ticker.C:
@@ -159,7 +177,6 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
 				var netErr net.Error
-
 				if errors.As(err, &netErr) && netErr.Timeout() {
 					// only API timeout is reasonable error
 					fa.logger.Error("API request timed out", zap.Error(err))
@@ -227,4 +244,27 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (fa *FencingAgent) discoverNodePeers(ctx context.Context) ([]string, error) {
+	nodes, err := fa.kubeClient.CoreV1().Nodes().List(ctx, v1.ListOptions{LabelSelector: fmt.Sprintf("node.deckhouse.io/group=%s", fa.config.NodeGroup)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	var peerIps []string
+	for _, node := range nodes.Items {
+		if node.Name == fa.config.NodeName {
+			fa.logger.Debug("Skipping myself")
+			continue
+		}
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				peerIps = append(peerIps, addr.Address)
+				break
+			}
+		}
+	}
+	fa.logger.Info("Discovered peers", zap.Strings("peers", peerIps))
+	return peerIps, nil
 }

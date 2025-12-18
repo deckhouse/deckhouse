@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fencing-controller/internal/swarm"
 	"os"
 	"os/signal"
 	"syscall"
@@ -65,7 +66,11 @@ func main() {
 	}
 
 	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, wd)
+	sw, err := swarm.NewMemberList(logger)
+	if err != nil {
+		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
+	}
+	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, sw, wd)
 	err = fencingAgent.Run(ctx)
 	if err != nil {
 		logger.Fatal("Unable run the fencing-agent", zap.Error(err))
