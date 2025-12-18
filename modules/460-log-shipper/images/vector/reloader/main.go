@@ -46,10 +46,10 @@ const (
 )
 
 var errorMetric = prometheus.NewGauge(
-    prometheus.GaugeOpts{
-        Name: "vector_config_validation_error",
-        Help: "Vector config validation error flag (1=invalid, 0=valid)",
-    },
+	prometheus.GaugeOpts{
+		Name: "vector_config_validation_error",
+		Help: "Vector config validation error flag (1=invalid, 0=valid)",
+	},
 )
 
 // pkill -P vector SIGHUP
@@ -206,16 +206,6 @@ func main() {
 		mux := http.NewServeMux()
 
 		mux.Handle("/reloader-metrics", promhttp.Handler())
-
-		mux.HandleFunc("/reloader-ready", func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("ready"))
-		})
-
-		mux.HandleFunc("/reloader-live", func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("alive"))
-		})
 
 		server := &http.Server{
 			Addr:              "127.0.0.1:9255",
