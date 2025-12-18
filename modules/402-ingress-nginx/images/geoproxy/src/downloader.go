@@ -116,7 +116,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 
 	var maxmindErr error
 	// if not leader download db from leader
-	if !d.isLeader() {
+	if !d.isCurrentPodLeader() {
 		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
 		if err == nil && link != "" {
 			account.Mirror.URL = link
@@ -124,7 +124,9 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 			account.DownloadFromLeader = true
 			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
 		}
-		log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
+		if err != nil {
+			log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
+		}
 	}
 
 	// try download db bu official library
@@ -369,6 +371,7 @@ func isTarGZArchive(gzipStream io.Reader) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("is not gzip archive: %w", err)
 	}
+	defer uncompressedStream.Close()
 
 	tarReader := tar.NewReader(uncompressedStream)
 	if _, err := tarReader.Next(); err != nil {
@@ -466,6 +469,7 @@ func (d *Downloader) saveDBFromMMDB(data io.ReadCloser, dstPathRoot, edition str
 
 func createURL(mirror, licenseKey, dbName string) string {
 	if mirror != "" {
+		mirror = strings.TrimRight(mirror, "/")
 		return fmt.Sprintf("%s/%s%s", mirror, dbName, dbExtension)
 	}
 	return fmt.Sprintf(maxmindURL, licenseKey, dbName)
@@ -502,13 +506,17 @@ func (d *Downloader) LockFileIsExpired(cfg *Config) (bool, error) {
 	return time.Since(lastTimeUpdate) >= cfg.MaxmindIntervalUpdate, nil
 }
 
-// getLeaderLinkForDownload returns base URL to the leader's download endpoint.
-// Returns "" if leader is unknown or we are the leader.
-func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port string) string {
-	if d.isLeader() {
-		return ""
+// isCurrentPodLeader returns true when the current pod is the lease holder.
+func (d *Downloader) isCurrentPodLeader() bool {
+	if d.leader == nil || d.leader.le == nil {
+		return false
 	}
 
+	return d.leader.le.IsLeader()
+}
+
+// leaderPodName extracts pod name from the current leader identity.
+func (d *Downloader) leaderPodName() string {
 	if d.leader == nil || d.leader.le == nil {
 		return ""
 	}
@@ -518,12 +526,25 @@ func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port strin
 		return ""
 	}
 
-	// Identity format: "<podName>#<random>". Extract podName before '#'.
 	hashIdx := strings.Index(leaderID, "#")
 	if hashIdx <= 0 {
 		return ""
 	}
-	leaderPod := leaderID[:hashIdx]
+
+	return leaderID[:hashIdx]
+}
+
+// getLeaderLinkForDownload returns base URL to the leader's download endpoint.
+// Returns "" if leader is unknown or we are the leader.
+func (d *Downloader) getLeaderLinkForDownload(serviceName, namespace, port string) string {
+	if d.isCurrentPodLeader() {
+		return ""
+	}
+
+	leaderPod := d.leaderPodName()
+	if leaderPod == "" {
+		return ""
+	}
 
 	// Use headless service to address the specific leader Pod and avoid round-robin back to ourselves.
 	// Expose the same /download endpoint as used by external consumers so that kube-rbac-proxy
@@ -538,6 +559,10 @@ func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string)
 
 	deadline := time.Now().Add(maxWait)
 	for {
+		if d.isCurrentPodLeader() {
+			return "", nil
+		}
+
 		link := d.getLeaderLinkForDownload(headlessServiceName, namespace, port)
 		if link != "" {
 			return link, nil
@@ -553,12 +578,4 @@ func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string)
 		case <-time.After(waitStep):
 		}
 	}
-}
-
-func (d *Downloader) isLeader() bool {
-	if d.leader == nil || d.leader.le == nil || !d.leader.le.IsLeader() {
-		return false
-	}
-
-	return true
 }

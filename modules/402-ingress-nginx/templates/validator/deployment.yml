@@ -141,7 +141,7 @@ spec:
                 fieldPath: metadata.namespace
           - name: POD_IP
             value: "127.0.0.1"
-          {{- if $geoIP2.maxmindLicenseKey }}
+          {{- if $geoIP2 }}
           - name: LUA_USE_GEOIP2
             value: "true"
           {{- end }}
@@ -166,7 +166,7 @@ spec:
           - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
           - --healthz-port=10254
           - --healthz-host=0.0.0.0
-          {{- if $geoIP2.maxmindLicenseKey }}
+          {{- if $geoIP2 }}
             {{- if $geoproxyReady }}
           - --maxmind-mirror=https://geoproxy:4250/download
           - --maxmind-skip-tls-verification=true

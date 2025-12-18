@@ -255,7 +255,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
-        {{- if $geoIP2.maxmindLicenseKey }}
+        {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
           value: "true"
         {{- end }}
@@ -310,7 +310,7 @@ spec:
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
-    {{- if $geoIP2.maxmindLicenseKey }}
+    {{- if $geoIP2 }}
       {{- if $geoproxyReady }}
         - --maxmind-mirror=https://geoproxy:4250/download
         - --maxmind-skip-tls-verification=true
