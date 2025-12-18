@@ -39,6 +39,8 @@ const (
 	StaticClusterConfigurationKind = "StaticClusterConfiguration"
 )
 
+// test
+
 var cloudProviderToProviderKind = map[string]string{
 	"OpenStack":   "OpenStackClusterConfiguration",
 	"AWS":         "AWSClusterConfiguration",
