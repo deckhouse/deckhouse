@@ -16,11 +16,11 @@ lang: ru
 d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 
-Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller:
+Создайте ресурс IngressNginxController, описывающий параметры Ingress NGINX Controller:
 
 ```yaml
 d8 k apply -f - <<EOF
-# Секция, описывающая параметры NGINX Ingress controller.
+# Секция, описывающая параметры Ingress NGINX Controller.
 # https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

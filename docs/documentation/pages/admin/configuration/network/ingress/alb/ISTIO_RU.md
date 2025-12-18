@@ -5,7 +5,7 @@ description: "Настройка Application Load Balancer с Istio в Deckhouse
 lang: ru
 ---
 
-ALB средствами Istio реализуется через Istio Ingress Gateway или NGINX Ingress. Для этого используется модуль [`istio`](/modules/istio/).
+ALB средствами Istio реализуется через Istio Ingress Gateway или Ingress NGINX. Для этого используется модуль [`istio`](/modules/istio/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#ingress-%D0%B4%D0%BB%D1%8F-%D0%BF%D1%83%D0%B1%D0%BB%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D0%B8-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D0%B9 -->
 
@@ -102,9 +102,9 @@ spec:
             host: app-svc
 ```
 
-### NGINX Ingress
+### Ingress NGINX
 
-Для работы с NGINX Ingress требуется подготовить:
+Для работы с Ingress NGINX требуется подготовить:
 
 * Ingress-контроллер, добавив к нему sidecar от Istio. Для этого установите параметр `enableIstioSidecar` кастомного ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](/modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
