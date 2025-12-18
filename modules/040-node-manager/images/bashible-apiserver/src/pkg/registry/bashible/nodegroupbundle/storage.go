@@ -52,7 +52,7 @@ func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 		if errors.As(err, &cnf) {
 			return nil, fmt.Errorf("cannot get nodegroupbundles for nodeGroup %q: nodegroup not found", ng)
 		}
-		return nil, fmt.Errorf("cannot render bundle: %w", err)
+		return nil, fmt.Errorf("cannot render nodegroup bundle for nodegroup '%s': %w", ng, err)
 	}
 
 	obj := bashible.NodeGroupBundle{}
