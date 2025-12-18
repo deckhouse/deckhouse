@@ -6,6 +6,7 @@ sitemap_include: false
 description: API reference
 lang: en
 ---
+
 {% raw %}
 
 ## auth
@@ -12565,7 +12566,7 @@ Return a list of configured UI headers.
 
 #### Responses
 
-**200**: 
+**200**: OK
 
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
@@ -15302,7 +15303,7 @@ Check the seal status of a Stronghold.
 
 #### Responses
 
-**200**: 
+**200**: OK
 
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
@@ -15785,7 +15786,7 @@ Unseal the Stronghold.
 
 #### Responses
 
-**200**: 
+**200**: OK
 
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
