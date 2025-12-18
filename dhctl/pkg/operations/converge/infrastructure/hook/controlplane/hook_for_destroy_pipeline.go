@@ -71,7 +71,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	err = deleteNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
 	if err != nil {
-		return false, fmt.Errorf("Failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 
 	return false, nil

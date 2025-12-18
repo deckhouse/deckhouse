@@ -18,8 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 
 	flantkubeclient "github.com/flant/kube-client/client"
 	apiv1 "k8s.io/api/core/v1"
@@ -124,6 +125,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
+	}
+
+	err = deleteNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
 
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
