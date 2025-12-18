@@ -385,10 +385,18 @@ entries:
             en: Automatic backup API guide
             ru: Руководство по API автоматического резервного копирования
           url: /stronghold/documentation/user/auto-snapshot.html
+        - title:
+            en: Stronghold agent
+            ru: Stronghold агент
+          url: /stronghold/documentation/agent/
     - title:
         en: Reference
         ru: Справка
       folders:
+        - title:
+            en: API
+            ru: API
+          url: /stronghold/documentation/api/openapi.html
         - title:
             en: Console utilities
             ru: Консольные утилиты
