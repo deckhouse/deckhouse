@@ -29,6 +29,7 @@ import (
 
 	_ "github.com/jpfuentes2/go-env/autoload"
 	"go.uber.org/zap"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func main() {
@@ -64,9 +65,19 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
 	}
-
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, config.NodeName, v1.GetOptions{})
+	if err != nil {
+		logger.Fatal("Unable to get node", zap.Error(err))
+	}
+	var internalIp string
+	for _, address := range node.Status.Addresses {
+		if address.Type == "InternalIP" {
+			internalIp = address.Address
+			break
+		}
+	}
 	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	sw, err := gossip.NewMemberList(logger)
+	sw, err := gossip.NewMemberList(logger, config.MemberListPort, config.NodeName, internalIp)
 	if err != nil {
 		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
 	}

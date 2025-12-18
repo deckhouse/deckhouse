@@ -31,6 +31,7 @@ type Config struct {
 	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName                   string        `env:"NODE_NAME"`
 	NodeGroup                  string        `env:"NODE_GROUP"`
+	MemberListPort int `env:"MEMBERLIST_PORT"`
 }
 
 func (c *Config) Load() error {

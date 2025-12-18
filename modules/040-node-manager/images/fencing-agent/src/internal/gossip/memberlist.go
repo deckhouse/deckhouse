@@ -1,8 +1,6 @@
 package gossip
 
 import (
-	"os"
-	"strconv"
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -15,18 +13,18 @@ type Memberlist struct {
 	isConnected bool
 }
 
-func NewMemberList(logger *zap.Logger) (Gossip, error) {
-	config := memberlist.DefaultLocalConfig()
+func NewMemberList(logger *zap.Logger, memberListPort int, nodeName string, nodeIP string) (Gossip, error) {
+	configML := memberlist.DefaultLocalConfig()
 
-	if portStr := os.Getenv("MEMBERLIST_PORT"); portStr != "" {
-		port, err := strconv.Atoi(portStr)
-		if err != nil {
-			return nil, err
-		}
-		config.BindPort = port
-		config.AdvertisePort = port
+	if memberListPort != 0 {
+		configML.BindPort = memberListPort
+		configML.AdvertisePort = memberListPort
 	}
-	list, err := memberlist.Create(config)
+	if nodeName != "" {
+		configML.Name = nodeName
+	}
+	configML.AdvertiseAddr = nodeIP
+	list, err := memberlist.Create(configML)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +34,7 @@ func NewMemberList(logger *zap.Logger) (Gossip, error) {
 		isAlone: true,
 	}
 	eventHandler := NewEventHandler(logger, nil, memList.SetAlone)
-	config.Events = eventHandler
+	configML.Events = eventHandler
 	return &memList, nil
 }
 
@@ -61,7 +59,7 @@ func (ml *Memberlist) Start(peers []string) error {
 
 func (ml *Memberlist) PrintNodes() {
 	for _, member := range ml.list.Members() {
-		ml.logger.Info("Member info", zap.String("name", member.Name), zap.Any("addr", member.Addr))
+		ml.logger.Info("Member info", zap.String("name", member.Name), zap.Any("addr", member.FullAddress()))
 	}
 }
 
