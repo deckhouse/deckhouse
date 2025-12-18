@@ -17,25 +17,25 @@ limitations under the License.
 package requestlog
 
 import (
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/util"
 	"context"
 	"net"
 	"net/http"
-
-	"bashible-apiserver/pkg/apis/bashible"
 
 	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/klog/v2"
-
-	"bashible-apiserver/pkg/util"
 )
 
 type contextKey string
 
-const requestIDKey contextKey = "bashible-request-id"
-const bashibleAPIGroup = "bashible.deckhouse.io"
+const (
+	requestIDKey     contextKey = "bashible-request-id"
+	bashibleAPIGroup            = "bashible.deckhouse.io"
+)
 
 func WithRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
