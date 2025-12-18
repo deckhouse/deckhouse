@@ -70,9 +70,6 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 		}
 
 		target := c.Session.Host()
-		if target == "" && c.Session.BastionHost != "" {
-			target = c.Session.BastionHost
-		}
 
 		log.InfoF("Connection attempt failed to host: %v\n", target)
 
