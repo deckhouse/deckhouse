@@ -72,9 +72,20 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
+	}
+
+	kubeCl := h.getter.KubeClient()
+	if kubeCl == nil {
+		log.DebugLn("Kube client is nil, skip node deletion")
+		return nil
+	}
+
+	err := deleteNode(ctx, kubeCl, h.nodeToDestroy)
+	if err != nil {
+		log.WarnF("Failed to delete node '%s': %v\n", h.nodeToDestroy, err)
 	}
 
 	cl := h.getter.KubeClient().NodeInterfaceAsSSHClient()
@@ -160,6 +171,26 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 			return err
 		}
 
+		return nil
+	})
+}
+
+func deleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(
+		fmt.Sprintf("Delete node %s", nodeName),
+		10,
+		5*time.Second,
+	).RunContext(ctx, func() error {
+		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				log.InfoF("Node '%s' already deleted. Skip\n", nodeName)
+				return nil
+			}
+			return err
+		}
+
+		log.InfoF("Node '%s' successfully deleted from cluster\n", nodeName)
 		return nil
 	})
 }
