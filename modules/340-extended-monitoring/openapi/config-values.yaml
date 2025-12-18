@@ -13,6 +13,7 @@ properties:
         description: |
           Enables imageAvailabilityExporter.
       imageCheckInterval:
+        default: "60s"
         type: string 
         description: |
           Interval for checking container registries for image availability.
