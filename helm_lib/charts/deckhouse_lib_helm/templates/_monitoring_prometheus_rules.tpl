@@ -64,6 +64,7 @@ spec:
   {{- $group | toYaml | nindent 2 }}
       {{- end }}
     {{- else }}
+      {{- if $definitionStruct.Rules }}
         {{- $definition := $definitionStruct.Rules | toYaml }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -75,6 +76,7 @@ metadata:
 spec:
   groups:
     {{- $definition | nindent 4 }}
+      {{- end }} 
     {{- end }}
   {{- end }}
 
