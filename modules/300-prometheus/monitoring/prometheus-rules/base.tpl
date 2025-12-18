@@ -145,9 +145,9 @@
         plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: >
-          Prometheus configuration reload failed for {{ $labels.pod }}.
+          Prometheus configuration reload failed.
         description: |-
-          The Prometheus configuration reload has failed for `{{ $labels.pod }}` in the `{{ $labels.namespace }}` namespace.
+          The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
 
           This usually happens when:
           - Invalid PromQL syntax in PrometheusRule resources
@@ -161,13 +161,13 @@
           1. Check the prometheus-config-reloader container logs (it triggers reloads):
 
              ```shell
-             d8 k -n d8-monitoring logs {{ $labels.pod }} -c prometheus-config-reloader
+             d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus-config-reloader
              ```
 
           2. Check the Prometheus container logs for configuration errors:
 
              ```shell
-             d8 k -n d8-monitoring logs {{ $labels.pod }} -c prometheus
+             d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
              ```
 
           3. Find recently created PrometheusRule resources that might contain errors:
@@ -183,3 +183,5 @@
              ```
 
           5. If using remote write, check the prometheus module configuration for errors.
+
+          Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.
