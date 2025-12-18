@@ -141,7 +141,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	svc.Spec.ExternalIPs = []string{}
 	svc.Spec.LoadBalancerClass = nil
 	svc.Spec.LoadBalancerIP = ""
-	svc.Spec.HealthCheckNodePort = 0
 
 	if len(serviceLabels) > 0 {
 		svc.Labels = serviceLabels
@@ -157,9 +156,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	}
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
-	}
-	if service.Spec.HealthCheckNodePort > 0 {
-		svc.Spec.HealthCheckNodePort = service.Spec.HealthCheckNodePort
 	}
 
 	err := lb.client.Update(ctx, svc)
@@ -224,9 +220,6 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	}
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
-	}
-	if service.Spec.HealthCheckNodePort > 0 {
-		svc.Spec.HealthCheckNodePort = service.Spec.HealthCheckNodePort
 	}
 
 	err := lb.client.Create(ctx, svc)

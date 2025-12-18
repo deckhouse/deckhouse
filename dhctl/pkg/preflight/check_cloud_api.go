@@ -38,7 +38,6 @@ var (
 )
 
 func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
-
 	if app.PreflightSkipCloudAPIAccessibility {
 		log.InfoLn("Checking  Cloud API is accessible from first master host was skipped (via skip flag)")
 		return nil
@@ -162,23 +161,39 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	return resp, nil
 }
 
+var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudApiConfig, error){
+	"openstack": cca.HandleOpenStackProvider,
+	"vsphere":   cca.HandleVSphereProvider,
+}
+
+func needCheckCloudAPI(metaConfig *config.MetaConfig) bool {
+	providerName := metaConfig.ProviderName
+	_, ok := cloudAPIConfigsProviders[providerName]
+
+	if !ok {
+		logSkipCloudAPICheck(providerName)
+	}
+
+	return ok
+}
+
 func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*cca.CloudApiConfig, error) {
 	providerClusterConfig, exists := metaConfig.ProviderClusterConfig["provider"]
-	if !exists {
-		return nil, fmt.Errorf("provider configuration not found in ProviderClusterConfig")
+	if !exists || len(providerClusterConfig) == 0 {
+		return nil, fmt.Errorf("Provider configuration not found in ProviderClusterConfig")
 	}
 
-	var cloudApiConfig cca.CloudApiConfig
-	var err error
+	providerName := metaConfig.ProviderName
 
-	switch providerName := metaConfig.ProviderName; providerName {
-	case "openstack":
-		cloudApiConfig, err = cca.HandleOpenStackProvider(providerClusterConfig)
-	case "vsphere":
-		cloudApiConfig, err = cca.HandleVSphereProvider(providerClusterConfig)
-	default:
-		log.DebugF("[Skip] Checking if Cloud API is accessible from first master host. Unsupported provider: %v", providerName)
+	configProvider, ok := cloudAPIConfigsProviders[providerName]
+	if !ok {
+		logSkipCloudAPICheck(providerName)
 		return nil, nil
 	}
-	return &cloudApiConfig, err
+
+	return configProvider(providerClusterConfig)
+}
+
+func logSkipCloudAPICheck(providerName string) {
+	log.DebugF("[Skip] Checking if Cloud API is accessible from first master host. Unsupported provider: %v", providerName)
 }

@@ -15,7 +15,6 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -37,29 +36,45 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 type StreamDirector struct {
-	methodsPrefix string
-	log           *slog.Logger
+	wg          *sync.WaitGroup
+	syncWriters *syncWriters
 
-	wg       *sync.WaitGroup
-	stdOutMx *sync.Mutex
-	stdErrMx *sync.Mutex
+	params StreamDirectorParams
 }
 
-func NewStreamDirector(log *slog.Logger, methodsPrefix string) *StreamDirector {
-	return &StreamDirector{
-		methodsPrefix: methodsPrefix,
-		log:           log,
+type StreamDirectorParams struct {
+	MethodsPrefix string
+	TmpDir        string
+}
 
-		wg:       &sync.WaitGroup{},
-		stdOutMx: &sync.Mutex{},
-		stdErrMx: &sync.Mutex{},
+func (params *StreamDirectorParams) Validate() error {
+	if params.TmpDir == "" {
+		return fmt.Errorf("tmpdir is required")
 	}
+	return settings.ValidateTmpPath(params.TmpDir)
+}
+
+func NewStreamDirector(params StreamDirectorParams) (*StreamDirector, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &StreamDirector{
+		params: params,
+
+		wg: &sync.WaitGroup{},
+		syncWriters: &syncWriters{
+			stdoutWriter: &syncWriter{writer: os.Stdout},
+			stderrWriter: &syncWriter{writer: os.Stderr},
+		},
+	}, nil
 }
 
 func (d *StreamDirector) Wait() {
@@ -72,22 +87,35 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 		md, _ := metadata.FromIncomingContext(ctx)
 		outCtx := metadata.NewOutgoingContext(ctx, md.Copy())
 
-		if !strings.HasPrefix(fullMethodName, d.methodsPrefix) {
+		if !strings.HasPrefix(fullMethodName, d.params.MethodsPrefix) {
 			return outCtx, nil, status.Errorf(codes.Unimplemented, "Unknown method")
 		}
 
-		address, err := socketPath()
+		proxyUUID, err := uuid.NewUUID()
 		if err != nil {
-			return outCtx, nil, err
+			return outCtx, nil, fmt.Errorf("Cannot create uuid for streaming director: %w", err)
 		}
 
+		proxyUUIDStr := proxyUUID.String()
+
+		address := d.socketPath(proxyUUIDStr)
+		tmpDirForInstance := d.tmpDirPath(proxyUUIDStr)
+
 		log := logger.L(ctx).With(slog.String("addr", address))
+		log.Info(
+			"Tmp dir for standalone dhctl from streaming director",
+			slog.String("proxyUUID", proxyUUIDStr),
+			slog.String("tmpDirForInstance", tmpDirForInstance),
+			slog.String("address", address),
+		)
 
 		cmd := exec.Command(
 			os.Args[0],
 			"_server",
 			"--server-network=unix",
+			"--do-not-write-debug-log-file",
 			fmt.Sprintf("--server-address=%s", address),
+			fmt.Sprintf("--tmp-dir=%s", tmpDirForInstance),
 		)
 
 		// Add parent envs to child envs
@@ -111,16 +139,16 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			return outCtx, nil, fmt.Errorf("getting dhctl instance stderr pipe: %w", err)
 		}
 
-		d.wg.Add(2)
-		go writeLogs(log, stdOutReader, os.Stdout, d.stdOutMx, d.wg)
-		go writeLogs(log, stdErrReader, os.Stderr, d.stdErrMx, d.wg)
+		d.writeLogs(log, stdOutReader, stdErrReader)
+
+		log.Info("Dhctl instance will start with next command arguments", slog.String("cmd", strings.Join(cmd.Args, " ")))
 
 		err = cmd.Start()
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
 
-		log.Info("started new dhctl instance")
+		log.Info("Started new dhctl instance")
 
 		d.wg.Add(1)
 		go func() {
@@ -146,6 +174,28 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 	}
 }
 
+func (d *StreamDirector) writeLogs(log *slog.Logger, stdOutReader, stdErrReader io.Reader) {
+	d.wg.Add(2)
+
+	go func() {
+		defer d.wg.Done()
+
+		err := d.syncWriters.stdoutWriter.copyFrom(stdOutReader)
+		if err != nil {
+			log.Error("writing dhctl instance stdout logs", logger.Err(err))
+		}
+	}()
+
+	go func() {
+		defer d.wg.Done()
+
+		err := d.syncWriters.stderrWriter.copyFrom(stdErrReader)
+		if err != nil {
+			log.Error("writing dhctl instance stderr logs", logger.Err(err))
+		}
+	}()
+}
+
 func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error {
 	healthCl := grpc_health_v1.NewHealthClient(conn)
 	loop := retry.NewSilentLoop("wait for dhctl server", 10, time.Second)
@@ -161,26 +211,33 @@ func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error 
 	})
 }
 
-func socketPath() (string, error) {
-	sockUUID, err := uuid.NewUUID()
-	if err != nil {
-		return "", fmt.Errorf("creating uuid for socket path")
-	}
-
-	address := filepath.Join(app.TmpDirName, sockUUID.String()+".sock")
-	return address, nil
+func (d *StreamDirector) socketPath(directorUUID string) string {
+	return filepath.Join(d.params.TmpDir, directorUUID+".sock")
 }
 
-func writeLogs(log *slog.Logger, reader io.ReadCloser, writer io.Writer, mx *sync.Mutex, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (d *StreamDirector) tmpDirPath(directorUUID string) string {
+	hash := stringsutil.Sha256Encode(directorUUID)
+	first10Runes := fmt.Sprintf("%.10s", hash)
+	return filepath.Join(d.params.TmpDir, first10Runes)
+}
 
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		mx.Lock()
-		_, err := fmt.Fprintf(writer, scanner.Text()+"\n")
-		mx.Unlock()
-		if err != nil {
-			log.Error("failed to write dhctl instance logs", logger.Err(err))
-		}
-	}
+type syncWriters struct {
+	stdoutWriter *syncWriter
+	stderrWriter *syncWriter
+}
+
+type syncWriter struct {
+	writer io.Writer
+	mx     sync.Mutex
+}
+
+func (sw *syncWriter) Write(p []byte) (n int, err error) {
+	sw.mx.Lock()
+	defer sw.mx.Unlock()
+	return sw.writer.Write(p)
+}
+
+func (sw *syncWriter) copyFrom(reader io.Reader) error {
+	_, err := io.Copy(sw, reader)
+	return err
 }

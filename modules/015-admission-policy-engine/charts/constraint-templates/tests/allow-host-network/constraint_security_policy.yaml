@@ -12,7 +12,7 @@ spec:
       matchExpressions:
         - key: security.deckhouse.io/pod-policy
           operator: In
-          values: 
+          values:
           - baseline
           - restricted
   parameters:

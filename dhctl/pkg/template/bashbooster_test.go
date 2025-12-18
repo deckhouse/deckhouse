@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -26,7 +27,7 @@ var clusterConfig = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 proxy:
@@ -46,7 +47,7 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(clusterConfig + initConfig)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider())
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}

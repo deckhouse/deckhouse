@@ -8,18 +8,18 @@ lang: ru
 
 1. Удалите из кластера все узлы кроме master-узлов:
 
-   1.1. Удалите узел из кластера Kubernetes:
+   1. Удалите узел из кластера Kubernetes:
 
-     ```shell
-     d8 k drain <node> --ignore-daemonsets --delete-local-data
-     d8 k delete node <node>
-     ```
+      ```shell
+      d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
+      d8 k delete node <node>
+      ```
 
-    1.2. Запустите на узле скрипт очистки:
+   1. Запустите на узле скрипт очистки:
 
-     ```shell
-     bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
-     ```
+      ```shell
+      bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+      ```
 
 1. Узнайте канал обновления, заданный в кластере:
 
@@ -48,7 +48,7 @@ lang: ru
 
    ```shell
    docker run -it --pull=always \
-   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Выполните команду удаления кластера:
@@ -61,7 +61,7 @@ lang: ru
    ```
 
    где:
-   - `<USER>` — пользователь удалённой машины, из-под которого производилась установка;
+   - `<USER>` — пользователь удалённой машины, из-под которого производилась установка. Если для `<USER>` требуется выполнять действия через `sudo`, добавьте флаг `--ask-become-pass`;
    - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
 Инсталлятор подключится к master-узлу и удалит на нём все компоненты платформы и кластера Kubernetes.

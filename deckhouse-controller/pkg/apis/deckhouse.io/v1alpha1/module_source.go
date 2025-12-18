@@ -53,21 +53,11 @@ var (
 
 var _ runtime.Object = (*ModuleSource)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleSourceList is a list of ModuleSource resources
-type ModuleSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleSource `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleSource source
 type ModuleSource struct {
@@ -112,4 +102,14 @@ type AvailableModule struct {
 	// Deprecated: use Error instead
 	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleSourceList is a list of ModuleSource resources
+type ModuleSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSource `json:"items"`
 }

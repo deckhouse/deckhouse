@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -71,20 +70,7 @@ func shouldRecreateKubeConfig(err error) bool {
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
 
-	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
-
-	c, err := semver.NewConstraint(">= 1.29")
-	if err != nil {
-		return fmt.Errorf("constraint not being parsable: %s", err.Error())
-	}
-	v, err := semver.NewVersion(config.KubernetesVersion)
-	if err != nil {
-		return fmt.Errorf("version not being parsable: %s", err.Error())
-	}
-	// if KubernetesVersion >= 1.29
-	if c.Check(v) {
-		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
-	}
+	kubeconfigs := []string{"super-admin", "admin", "controller-manager", "scheduler"}
 
 	for _, v := range kubeconfigs {
 		if err := renewKubeconfig(v); err != nil {
@@ -92,6 +78,11 @@ func renewKubeconfigs() error {
 		}
 	}
 	return nil
+}
+
+func renewAdminKubeconfig() error {
+	log.Info("phase: renew admin kubeconfig for etcd-arbiter mode")
+	return renewKubeconfig("admin")
 }
 
 func renewKubeconfig(componentName string) error {
@@ -176,6 +167,14 @@ func prepareKubeconfig(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
+
+	log.Info("run kubeadm",
+		slog.String("phase", "prepare-kubeconfig"),
+		slog.String("component", componentName),
+		slog.Any("args", args),
+		slog.Bool("temp_rootfs", isTemp),
+	)
+
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 )
 
 func TestStatistics_Format(t *testing.T) {
@@ -84,8 +85,8 @@ var expectedStatistics = Statistics{
 	Cluster: ClusterCheckResult{
 		Status: "ok",
 		DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
-			PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
-				ResourcesRecreated: []infrastructure.ValueChange{
+			DestructiveChanges: plan.DestructiveChanges{
+				ResourcesRecreated: []plan.ValueChange{
 					{
 						CurrentValue: map[string]any{"zone": "ru-central1-a"},
 						NextValue:    map[string]any{"zone": "ru-central1-b"},
@@ -109,8 +110,8 @@ var expectedStatistics = Statistics{
 			Group:  "master",
 			Name:   "akul-master-0",
 			Status: "destructively_changed",
-			DestructiveChanges: &infrastructure.PlanDestructiveChanges{
-				ResourcesRecreated: []infrastructure.ValueChange{
+			DestructiveChanges: &plan.DestructiveChanges{
+				ResourcesRecreated: []plan.ValueChange{
 					{
 						CurrentValue: map[string]any{"zone": "ru-central1-a"},
 						NextValue:    map[string]any{"zone": "ru-central1-b"},
@@ -119,7 +120,7 @@ var expectedStatistics = Statistics{
 			},
 		},
 	},
-	InfrastructurePlan: []infrastructure.Plan{
+	InfrastructurePlan: []plan.Plan{
 		{
 			"configuration":  map[string]any{},
 			"format_version": "0.1",

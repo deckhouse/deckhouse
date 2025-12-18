@@ -15,17 +15,21 @@
 package gossh
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/bramvdbogaerde/go-scp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"golang.org/x/crypto/ssh"
+	ssh "github.com/deckhouse/lib-gossh"
 	uuid "gopkg.in/satori/go.uuid.v1"
 )
 
@@ -40,15 +44,16 @@ func NewSSHFile(client *ssh.Client) *SSHFile {
 func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error {
 	fType, err := CheckLocalPath(srcPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open local file: %w", err)
 	}
 
+	session, err := f.sshClient.NewSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
 	if fType != "DIR" {
-		scpClient, err := scp.NewClientBySSH(f.sshClient)
-		if err != nil {
-			return err
-		}
-		defer scpClient.Close()
 		localFile, err := os.Open(srcPath)
 		if err != nil {
 			return fmt.Errorf("failed to open local file: %w", err)
@@ -66,28 +71,17 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 		}
 		log.DebugF("starting upload local %s to remote %s\n", srcPath, remotePath)
 
-		if err := scpClient.CopyFile(ctx, localFile, remotePath, "0755"); err != nil {
+		if err := CopyFile(ctx, localFile, remotePath, "0755", session); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
 	} else {
-		session, err := f.sshClient.NewSession()
-		if err != nil {
-			return err
-		}
-		defer session.Close()
-
 		err = session.Run("mkdir -p " + remotePath)
 		if err != nil {
 			return err
 		}
-		scpClient, err := scp.NewClientBySSH(f.sshClient)
-		if err != nil {
-			return err
-		}
-		defer scpClient.Close()
 		files, err := os.ReadDir(srcPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read directory: %w", err)
 		}
 		for _, file := range files {
 			err = f.Upload(ctx, srcPath+"/"+file.Name(), remotePath+"/"+file.Name())
@@ -130,17 +124,12 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 
 	if fType != "DIR" {
 		// regular file logic
-		scpClient, err := scp.NewClientBySSH(f.sshClient)
-		if err != nil {
-			return err
-		}
-		defer scpClient.Close()
 		localFile, err := os.Create(dstPath)
 		if err != nil {
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
-		if err := scpClient.CopyFromRemote(ctx, localFile, remotePath); err != nil {
+		if err := CopyFromRemote(ctx, localFile, remotePath, f.sshClient); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
 	} else {
@@ -263,4 +252,219 @@ func CheckLocalPath(path string) (string, error) {
 		return "FILE", nil
 	}
 	return "", fmt.Errorf("path '%s' is not a directory or file", path)
+}
+
+type PassThru func(r io.Reader, total int64) io.Reader
+
+func CopyFile(
+	ctx context.Context,
+	fileReader io.Reader,
+	remotePath string,
+	permissions string,
+	session *ssh.Session,
+) error {
+	contentsBytes, err := io.ReadAll(fileReader)
+	if err != nil {
+		return fmt.Errorf("failed to read all data from reader: %w", err)
+	}
+	r := bytes.NewReader(contentsBytes)
+	size := int64(len(contentsBytes))
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	w, err := session.StdinPipe()
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	filename := path.Base(remotePath)
+
+	// Start the command first and get confirmation that it has been started
+	// before sending anything through the pipes.
+	err = session.Start(fmt.Sprintf("%s -qt %q", "scp", remotePath))
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	errCh := make(chan error, 2)
+
+	// SCP protocol and file sending
+	go func() {
+		defer wg.Done()
+		defer w.Close()
+
+		_, err = fmt.Fprintln(w, "C"+permissions, size, filename)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if err = checkResponse(stdout); err != nil {
+			errCh <- err
+			return
+		}
+
+		_, err = io.Copy(w, r)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		_, err = fmt.Fprint(w, "\x00")
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if err = checkResponse(stdout); err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	// Wait for the process to exit
+	go func() {
+		defer wg.Done()
+		err := session.Wait()
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	// Wait for one of the conditions (error/timeout/completion) to occur
+	if err := wait(&wg, ctx); err != nil {
+		return err
+	}
+
+	close(errCh)
+
+	// Collect any errors from the error channel
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkResponse(r io.Reader) error {
+	_, err := scp.ParseResponse(r, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func wait(wg *sync.WaitGroup, ctx context.Context) error {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+
+	select {
+	case <-c:
+		return nil
+
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func CopyFromRemote(ctx context.Context, file *os.File, remotePath string, sshClient *ssh.Client) error {
+
+	session, err := sshClient.NewSession()
+	if err != nil {
+		return fmt.Errorf("Error creating ssh session in copy from remote: %v", err)
+	}
+	defer session.Close()
+
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, 4)
+
+	wg.Add(1)
+	go func() {
+		var err error
+
+		defer func() {
+			// NOTE: this might send an already sent error another time, but since we only receive one, this is fine. On the "happy-path" of this function, the error will be `nil` therefore completing the "err<-errCh" at the bottom of the function.
+			errCh <- err
+			// We must unblock the go routine first as we block on reading the channel later
+			wg.Done()
+
+		}()
+
+		r, err := session.StdoutPipe()
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		in, err := session.StdinPipe()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer in.Close()
+
+		err = session.Start(fmt.Sprintf("%s -f %q", "scp", remotePath))
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		err = scp.Ack(in)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		fileInfo, err := scp.ParseResponse(r, in)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		err = scp.Ack(in)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		_, err = scp.CopyN(file, r, fileInfo.Size)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		err = scp.Ack(in)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		err = session.Wait()
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	if err := wait(&wg, ctx); err != nil {
+		return err
+	}
+
+	finalErr := <-errCh
+	close(errCh)
+	return finalErr
 }

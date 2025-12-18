@@ -1,0 +1,264 @@
+"1.30":
+  forbidden: []
+  deprecated: []
+  kubelet:
+    - InPlacePodVerticalScaling
+    - KubeletPodResourcesGet
+    - KubeletSeparateDiskGC
+    - MemoryQoS
+    - MutatingAdmissionPolicy
+    - SELinuxMount
+    - RecoverVolumeExpansionFailure
+    - RecursiveReadOnlyMounts
+  apiserver:
+    - CrossNamespaceVolumeDataSource
+    - HPAScaleToZero
+    - InPlacePodVerticalScaling
+    - JobManagedBy
+    - MaxUnavailableStatefulSet
+    - MutatingAdmissionPolicy
+    - PortForwardWebsockets
+    - ProcMountType
+    - SELinuxMount
+    - ConsistentListFromCache
+    - CustomResourceFieldSelectors
+    - JobSuccessPolicy
+    - LoadBalancerIPMode
+    - MatchLabelKeysInPodAffinity
+    - OrderedNamespaceDeletion
+    - RecoverVolumeExpansionFailure
+    - RecursiveReadOnlyMounts
+    - RelaxedEnvironmentVariableValidation
+    - RetryGenerateName
+    - ServiceAccountTokenNodeBinding
+    - StrictCostEnforcementForVAP
+  kubeControllerManager:
+    - CrossNamespaceVolumeDataSource
+    - InPlacePodVerticalScaling
+    - JobManagedBy
+    - MaxUnavailableStatefulSet
+    - SELinuxMount
+    - HonorPVReclaimPolicy
+    - JobSuccessPolicy
+    - RecoverVolumeExpansionFailure
+  kubeScheduler:
+    - InPlacePodVerticalScaling
+    - SchedulerQueueingHints
+"1.31":
+  forbidden: []
+  deprecated:
+    - AllowDNSOnlyNodeCSR
+    - AllowInsecureKubeletCertificateSigningRequests
+    - DisableNodeKubeProxyVersion
+  kubelet:
+    - ConcurrentWatchObjectDecode
+    - ImageVolume
+    - InPlacePodVerticalScaling
+    - KubeletPodResourcesGet
+    - MemoryQoS
+    - MutatingAdmissionPolicy
+    - ResourceHealthStatus
+    - SELinuxMount
+    - RecoverVolumeExpansionFailure
+  apiserver:
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - HPAScaleToZero
+    - ImageVolume
+    - InPlacePodVerticalScaling
+    - JobManagedBy
+    - MaxUnavailableStatefulSet
+    - MutatingAdmissionPolicy
+    - ProcMountType
+    - ResourceHealthStatus
+    - SELinuxMount
+    - AuthorizeNodeWithSelectors
+    - AuthorizeWithSelectors
+    - DisableAllocatorDualWrite
+    - OrderedNamespaceDeletion
+    - RecoverVolumeExpansionFailure
+    - RelaxedEnvironmentVariableValidation
+    - StrictCostEnforcementForVAP
+    - StrictCostEnforcementForWebhooks
+  kubeControllerManager:
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - InPlacePodVerticalScaling
+    - JobManagedBy
+    - MaxUnavailableStatefulSet
+    - SELinuxMount
+    - RecoverVolumeExpansionFailure
+  kubeScheduler:
+    - ConcurrentWatchObjectDecode
+    - InPlacePodVerticalScaling
+    - SchedulerQueueingHints
+"1.32":
+  forbidden: []
+  deprecated:
+    - DisableNodeKubeProxyVersion
+  kubelet:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ImageVolume
+    - InPlacePodVerticalScaling
+    - KubeletPodResourcesGet
+    - MemoryQoS
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - ResourceHealthStatus
+    - SELinuxMount
+    - InPlacePodVerticalScalingAllocatedStatus
+  apiserver:
+    - AllowUnsafeMalformedObjectDeletion
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - HPAScaleToZero
+    - ImageVolume
+    - InPlacePodVerticalScaling
+    - MaxUnavailableStatefulSet
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - ProcMountType
+    - ResourceHealthStatus
+    - SELinuxChangePolicy
+    - SELinuxMount
+    - DisableAllocatorDualWrite
+    - InPlacePodVerticalScalingAllocatedStatus
+    - OrderedNamespaceDeletion
+    - PodLifecycleSleepActionAllowZero
+    - RelaxedDNSSearchValidation
+  kubeControllerManager:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - InPlacePodVerticalScaling
+    - MaxUnavailableStatefulSet
+    - SELinuxChangePolicy
+    - SELinuxMount
+  kubeScheduler:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - InPlacePodVerticalScaling
+    - SchedulerAsyncPreemption
+"1.33":
+  forbidden: []
+  deprecated:
+    - DisableNodeKubeProxyVersion
+    - GitRepoVolumeDriver
+    - InPlacePodVerticalScalingAllocatedStatus
+    - SeparateCacheWatchRPC
+    - StorageNamespaceIndex
+    - WatchFromStorageWithoutResourceVersion
+    - WindowsHostNetwork
+  kubelet:
+    - AllowParsingUserUIDFromCertAuth
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerStopSignals
+    - ImageVolume
+    - KubeletEnsureSecretPulledImages
+    - KubeletPodResourcesGet
+    - KubeletPSI
+    - MemoryQoS
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - PodObservedGenerationTracking
+    - ResourceHealthStatus
+    - SELinuxMount
+  apiserver:
+    - AllowParsingUserUIDFromCertAuth
+    - AllowUnsafeMalformedObjectDeletion
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerStopSignals
+    - CrossNamespaceVolumeDataSource
+    - DeploymentReplicaSetTerminatingReplicas
+    - HPAConfigurableTolerance
+    - HPAScaleToZero
+    - ImageVolume
+    - ListFromCacheSnapshot
+    - MaxUnavailableStatefulSet
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - PreferSameTrafficDistribution
+    - ResourceHealthStatus
+    - SELinuxMount
+    - StrictIPCIDRValidation
+    - DisableAllocatorDualWrite
+  kubeControllerManager:
+    - AllowParsingUserUIDFromCertAuth
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - DeploymentReplicaSetTerminatingReplicas
+    - HPAConfigurableTolerance
+    - MaxUnavailableStatefulSet
+    - PodObservedGenerationTracking
+    - PreferSameTrafficDistribution
+    - SELinuxMount
+  kubeScheduler:
+    - AllowParsingUserUIDFromCertAuth
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - PodObservedGenerationTracking
+"1.34":
+  forbidden: []
+  deprecated: []
+  kubelet:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerRestartRules
+    - ContainerStopSignals
+    - EnvFiles
+    - HostnameOverride
+    - ImageVolume
+    - KubeletEnsureSecretPulledImages
+    - MemoryQoS
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - ResourceHealthStatus
+    - SELinuxMount
+  apiserver:
+    - AllowUnsafeMalformedObjectDeletion
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerRestartRules
+    - ContainerStopSignals
+    - CrossNamespaceVolumeDataSource
+    - DeploymentReplicaSetTerminatingReplicas
+    - EnvFiles
+    - HPAConfigurableTolerance
+    - HPAScaleToZero
+    - ImageVolume
+    - MaxUnavailableStatefulSet
+    - MutatingAdmissionPolicy
+    - PodLogsQuerySplitStreams
+    - ResourceHealthStatus
+    - SELinuxMount
+    - StrictIPCIDRValidation
+  kubeControllerManager:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerRestartRules
+    - CrossNamespaceVolumeDataSource
+    - DeploymentReplicaSetTerminatingReplicas
+    - HPAConfigurableTolerance
+    - MaxUnavailableStatefulSet
+    - SELinuxMount
+  kubeScheduler:
+    - ComponentFlagz
+    - ComponentStatusz
+    - ConcurrentWatchObjectDecode
+    - ContainerRestartRules

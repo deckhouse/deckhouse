@@ -49,9 +49,9 @@ spec:
                       description: Требование к статусу установки кластера (только для встроенных модулей DKP).
                     modules:
                       description: Список других включенных модулей, которые необходимы для работы модуля.
-              accessibility:
-                type: object
-                description: Настройки доступности модуля.
-                properties:
-                  editions:
-                    description: Настройки работы модуля в редакциях Deckhouse.
+                accessibility:
+                  type: object
+                  description: Настройки доступности модуля.
+                  properties:
+                    editions:
+                      description: Настройки работы модуля в редакциях Deckhouse.

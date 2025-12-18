@@ -1,0 +1,5 @@
+file:
+- /run/xtables.lock
+dirs:
+- /run
+- /etc/cni/net.d

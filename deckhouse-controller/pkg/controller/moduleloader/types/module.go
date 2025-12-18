@@ -17,19 +17,20 @@ package types
 import (
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Module struct {
 	def   *Definition
-	basic *modules.BasicModule
+	basic *addonmodules.BasicModule
 }
 
-func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
-	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
+func NewModule(def *Definition, static addonutils.Values, config, values []byte, logger *log.Logger) (*Module, error) {
+	logOpt := addonmodules.WithLogger(logger)
+	basic, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, static, config, values, logOpt)
 	if err != nil {
 		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
@@ -42,7 +43,11 @@ func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 	}, nil
 }
 
-func (m *Module) GetBasicModule() *modules.BasicModule {
+func (m *Module) GetBasicModule() *addonmodules.BasicModule {
+	if m == nil {
+		return nil
+	}
+
 	return m.basic
 }
 

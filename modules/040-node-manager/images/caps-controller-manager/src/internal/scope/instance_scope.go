@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -43,11 +42,6 @@ type InstanceScope struct {
 	SSHLegacyMode bool
 }
 
-const (
-	sshLegacySecretName      = "d8-caps-use-legacy-ssh"
-	sshLegacySecretNamespace = "d8-cloud-instance-manager"
-)
-
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
@@ -67,23 +61,16 @@ func NewInstanceScope(
 	}
 
 	scope.PatchHelper = patchHelper
-	secret := &v1.Secret{}
-	legasyMode := true
-	secretKey := k8sClient.ObjectKey{
-		Name:      sshLegacySecretName,
-		Namespace: sshLegacySecretNamespace,
-	}
 
-	err = scope.Client.Get(ctx, secretKey, secret)
-	if err != nil {
-		legasyMode = false
-	}
-
-	return &InstanceScope{
+	instanceScope := &InstanceScope{
 		Scope:         scope,
 		Instance:      staticInstance,
-		SSHLegacyMode: legasyMode,
-	}, nil
+		SSHLegacyMode: true,
+	}
+
+	instanceScope.setLoggerContext()
+
+	return instanceScope, nil
 }
 
 // LoadSSHCredentials loads the SSHCredentials for the InstanceScope.
@@ -105,8 +92,16 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	}
 
 	i.Credentials = credentials
+	if len(i.Credentials.Spec.PrivateSSHKey) == 0 {
+		i.SSHLegacyMode = false
+	}
 
 	return nil
+}
+
+func (i *InstanceScope) AttachMachineScope(machineScope *MachineScope) {
+	i.MachineScope = machineScope
+	i.setLoggerContext()
 }
 
 // GetPhase returns the current phase of the static instance.
@@ -120,12 +115,19 @@ func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatus
 
 // SetPhase sets the current phase of the static instance.
 func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) {
+	prevPhase := i.GetPhase()
+
 	if i.Instance.Status.CurrentStatus == nil {
 		i.Instance.Status.CurrentStatus = &deckhousev1.StaticInstanceStatusCurrentStatus{}
 	}
 
 	i.Instance.Status.CurrentStatus.Phase = phase
 	i.Instance.Status.CurrentStatus.LastUpdateTime = metav1.NewTime(time.Now().UTC())
+	i.setLoggerContext()
+
+	if prevPhase != phase {
+		i.Logger.Info("StaticInstance phase changed", "from", prevPhase, "to", phase)
+	}
 }
 
 // Patch updates the StaticInstance resource.
@@ -157,6 +159,7 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	i.Instance.Status.MachineRef = nil
 	i.Instance.Status.NodeRef = nil
 	i.Instance.Status.CurrentStatus = nil
+	i.setLoggerContext()
 
 	conditions.MarkFalse(i.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
 
@@ -173,4 +176,13 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 // Close the InstanceScope by updating the instance spec and status.
 func (i *InstanceScope) Close(ctx context.Context) error {
 	return i.Patch(ctx)
+}
+
+func (i *InstanceScope) setLoggerContext() {
+	phase := "unknown"
+	if i.Instance.Status.CurrentStatus != nil && i.Instance.Status.CurrentStatus.Phase != "" {
+		phase = string(i.Instance.Status.CurrentStatus.Phase)
+	}
+
+	i.Logger = i.Scope.Logger.WithValues("phase", phase)
 }

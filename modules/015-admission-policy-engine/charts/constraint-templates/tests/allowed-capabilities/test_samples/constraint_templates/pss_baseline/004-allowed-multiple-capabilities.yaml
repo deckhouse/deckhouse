@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-capabilities
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        capabilities:
+          add:
+            - AUDIT_WRITE
+            - CHOWN
+            - NET_BIND_SERVICE
+

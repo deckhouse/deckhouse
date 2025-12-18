@@ -1,0 +1,57 @@
+diff --git a/cmd/nginx/main.go b/cmd/nginx/main.go
+index 82bb86fb5..6160a3f5c 100644
+--- a/cmd/nginx/main.go
++++ b/cmd/nginx/main.go
+@@ -55,6 +55,12 @@ func main() {
+ 
+ 	fmt.Println(version.String())
+ 
++	reg := prometheus.NewRegistry()
++
++	reg.MustRegister(nginx.GeoIPErrors)
++	reg.MustRegister(nginx.GeoIPVersion)
++	nginx.GeoIPVersion.Set(0)
++
+ 	showVersion, conf, err := ingressflags.ParseFlags()
+ 	if showVersion {
+ 		os.Exit(0)
+@@ -120,9 +126,6 @@ func main() {
+ 		klog.Fatalf("Unexpected error obtaining ingress-nginx pod: %v", err)
+ 	}
+ 
+-	reg := prometheus.NewRegistry()
+-
+-	reg.MustRegister(nginx.GeoIPErrors)
+ 	reg.MustRegister(collectors.NewGoCollector())
+ 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
+ 		PidFn:        func() (int, error) { return os.Getpid(), nil },
+diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+index 1a094ba47..cfb8f3709 100644
+--- a/internal/nginx/maxmind.go
++++ b/internal/nginx/maxmind.go
+@@ -65,6 +65,17 @@ var GeoIPErrors = prometheus.NewCounterVec(
+ 	[]string{"reason", "type"},
+ )
+ 
++// GeoIPVersion reflects which version of GeoIP DB is in use if any
++// 0 - no geoipdb
++// 1 - geoip v1 (predownloaded)
++// 2 - geoip v2 (downloaded)
++var GeoIPVersion = prometheus.NewGauge(
++	prometheus.GaugeOpts{
++		Name: "geoip_version",
++		Help: "The version of GeoIP DB",
++	},
++)
++
+ const (
+ 	geoIPPath   = "/etc/ingress-controller/geoip"
+ 	dbExtension = ".mmdb"
+@@ -140,6 +151,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ 
+ 		lastErr = dlError
+ 		if dlError == nil {
++			GeoIPVersion.Set(2)
+ 			klog.Infof("GeoLite2 DBs downloaded successfully")
+ 			return true, nil
+ 		}

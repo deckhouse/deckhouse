@@ -149,6 +149,7 @@ tolerations:
 {{- define "_helm_lib_any_node_tolerations" }}
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: "Exists"
 - key: dedicated
@@ -209,6 +210,9 @@ tolerations:
 {{- /* Additional strategy "uninitialized" - used for CNI's and kube-proxy to allow cni components scheduled on node after CCM initialization. */ -}}
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_uninitialized" }}
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: "Exists"
+  effect: "NoSchedule"
 - key: node.deckhouse.io/uninitialized
   operator: "Exists"
   effect: "NoSchedule"

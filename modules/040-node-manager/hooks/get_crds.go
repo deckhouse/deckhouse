@@ -303,6 +303,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	timestamp := epochTimestampAccessor()
 
 	finalNodeGroups := make([]interface{}, 0)
+	var nodeGroupErrors []string
 
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
@@ -350,7 +351,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			// check #1 — .spec.cloudInstances.classReference.kind should be allowed in our cluster
 			nodeGroupInstanceClassKind := nodeGroup.Spec.CloudInstances.ClassReference.Kind
 			if nodeGroupInstanceClassKind != kindInUse {
-				errorMsg := fmt.Sprintf("Wrong classReference: Kind %s is not allowed, the only allowed kind is %s.", nodeGroupInstanceClassKind, kindInUse)
+				errorMsg := fmt.Sprintf("Invalid classReference.kind '%s'. Expected '%s'. Please update the NodeGroup to use the correct instance class kind.", nodeGroupInstanceClassKind, kindInUse)
 
 				if input.Values.Exists("nodeManager.internal.nodeGroups") {
 					savedNodeGroups := input.Values.Get("nodeManager.internal.nodeGroups").Array()
@@ -358,13 +359,14 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 						ng := savedNodeGroup.Map()
 						if ng["name"].String() == nodeGroup.Name {
 							finalNodeGroups = append(finalNodeGroups, savedNodeGroup.Value().(map[string]interface{}))
-							errorMsg += " Earlier stored version of NG is in use now!"
+							errorMsg += " Using previously stored NodeGroup configuration to prevent cluster disruption."
 						}
 					}
 				}
 
 				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+				nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 				continue
 			}
 
@@ -378,7 +380,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 				}
 			}
 			if !isKnownClassName {
-				errorMsg := fmt.Sprintf("Wrong classReference: There is no valid instance class %s of type %s.", nodeGroupInstanceClassName, nodeGroupInstanceClassKind)
+				errorMsg := fmt.Sprintf("Instance class '%s' of type '%s' not found. Please create the required instance class or update the NodeGroup to reference an existing one.", nodeGroupInstanceClassName, nodeGroupInstanceClassKind)
 
 				if input.Values.Exists("nodeManager.internal.nodeGroups") {
 					savedNodeGroups := input.Values.Get("nodeManager.internal.nodeGroups").Array()
@@ -386,13 +388,14 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 						ng := savedNodeGroup.Map()
 						if ng["name"].String() == nodeGroup.Name {
 							finalNodeGroups = append(finalNodeGroups, savedNodeGroup.Value().(map[string]interface{}))
-							errorMsg += " Earlier stored version of NG is in use now!"
+							errorMsg += " Using previously stored NodeGroup configuration to prevent cluster disruption."
 						}
 					}
 				}
 
 				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+				nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 				continue
 			}
 
@@ -403,8 +406,10 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
+						errorMsg := fmt.Sprintf("Capacity calculation failed for instance class '%s'. The instance type is not found in built-in types and no capacity is set. ScaleFromZero will not work. Please set capacity in the %s '%s' or use a supported instance type.", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name)
 						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
-						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+						nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 						continue
 					}
 
@@ -426,10 +431,11 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 					}
 				}
 				if containCount != len(nodeGroup.Spec.CloudInstances.Zones) {
-					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
+					errorMsg := fmt.Sprintf("Invalid zones specified: %v. Available zones: %v. Please update the NodeGroup to use valid zones.", unknownZones, defaultZones.Slice())
 					input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 
 					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+					nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 					continue
 				}
 			}
@@ -546,8 +552,13 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if len(input.Snapshots.Get("ngs")) != len(finalNodeGroups) {
-		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
-			len(finalNodeGroups), len(input.Snapshots.Get("ngs")))
+		var errorDetails string
+		if len(nodeGroupErrors) > 0 {
+			errorDetails = fmt.Sprintf("\n\n=== NodeGroup Validation Errors ===\n%s\n\nSummary: %d out of %d NodeGroups passed validation.\n\nTo resolve these issues:\n1. Check the NodeGroup configurations above\n2. Ensure required instance classes are created\n3. Verify zone configurations match available zones\n4. Fix any capacity-related issues for ScaleFromZero",
+				strings.Join(nodeGroupErrors, "\n"), len(finalNodeGroups), len(input.Snapshots.Get("ngs")))
+		}
+		return fmt.Errorf("NodeGroup validation failed: %d NodeGroups have configuration errors.%s",
+			len(input.Snapshots.Get("ngs"))-len(finalNodeGroups), errorDetails)
 	}
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)

@@ -25,6 +25,8 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
+  # CSE
+  - rm -rf /src/linux/drivers/gpu/drm/ci
   - rm -rf /src/linux/.git
 ---
 image: {{ .ModuleName }}/bpftool-artifact

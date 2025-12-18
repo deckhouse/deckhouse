@@ -12,19 +12,19 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
 
   > Использовать ресурс ClusterConfiguration в конфигурации необходимо только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом ClusterConfiguration, ресурс StaticClusterConfiguration не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) — набор ресурсов, содержащих параметры конфигурации встроенных модулей платформы.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — набор ресурсов, содержащих параметры конфигурации модулей платформы.
 
 Например, при планировании параметров кластера были выбраны следующие значения:
 
-- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0./16`;
+- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0/16`;
 - Узлы связаны между собой через подсеть `192.168.1.0/24`;
 - Публичный wildcard-домен кластера `my-dvp-cluster.example.com`;
 - Канал обновлений `early-access`.
@@ -77,7 +77,7 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # Включение доступа к Kubernetes API через Ingress.
-    # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -114,7 +114,7 @@ spec:
 
 ### Выбор образа установщика
 
-Установщик запускается в виде Docker-контейнера. Образ контейнера выбирается в зависимости от редакции и канала обновлений:
+Установщик запускается в виде контейнера. Образ контейнера выбирается в зависимости от редакции и канала обновлений:
 
 ```shell
 registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
@@ -170,7 +170,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap-phase install-deckhouse`.
@@ -187,7 +187,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 Время установки может варьироваться от 5 до 30 минут в зависимости от качества соединения между master-узлом и хранилищем образов.
 
-Пример вывода при успешном окончании установки:
+{% offtopic title="Пример вывода при успешном окончании установки..." %}
 
 ```console
 ...
@@ -203,25 +203,16 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 🎉 Deckhouse cluster was created successfully!
 ```
 
-После успешной установки можно выйти из запущенного контейнера и проверить статус master-узла командой:
+{% endofftopic %}
 
-```shell
-sudo -i d8 k get no
-```
+После успешной установки можно выйти из запущенного контейнера и перейти к [настройке доступа](access.html).
 
-Пример вывода команды:
-
-```console
-NAME           STATUS   ROLES                  AGE     VERSION
-master-0       Ready    control-plane,master   5m      v1.29.10
-```
-
-### Проверки перед началом установки
+## Проверки, выполняемые перед началом установки
 
 Список проверок, выполняемых инсталлятором перед началом установки платформы:
 
 1. Общие проверки:
-   - Значения параметров [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;

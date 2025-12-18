@@ -1,0 +1,28 @@
+ci:
+  features:
+    - summary: Add static e2e for the cse edition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16544
+    - summary: Add static e2e for the cse edition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16516
+cloud-provider-azure:
+  fixes:
+    - summary: fix build image for azure ccm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16560
+cni-cilium:
+  fixes:
+    - summary: Some issues have been fixed in the EgressGateway.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16479
+dhctl:
+  fixes:
+    - summary: Fix converge manifests for static cluster in commander.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16504
+docs:
+  features:
+    - summary: Added documentation about configuration of the Kubernetes audit policy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16424
+monitoring-kubernetes:
+  fixes:
+    - summary: remove the Docker traces from the module code
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16542
+      impact: node-exporter pods will be rollout restarted during upgrade
+

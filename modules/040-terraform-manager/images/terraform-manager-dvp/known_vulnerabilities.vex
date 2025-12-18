@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-819396348420854c54b988d825529cab830b81f6a05730951c9bec690dc551f1",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2025-1767 связана с поведением kubelet при работе с GitRepo volume, terraform-provider-kubernetes не запускает kubelet и не инициирует монтирование gitRepo как исполнение кода - библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере",
+      "timestamp": "2025-10-10T07:23:24.447174Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-30153"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/getkin/kin-openapi"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой сжатых multipart/form-data запросов в компоненте ZipFileBodyDecoder библиотеки kin-openapi. terraform-provider-kubernetes использует kin-openapi только локально для чтения и валидации OpenAPI-схем, при этом прием multipart/form-data не реализован, уязвимый код не используется в провайдере",
+      "timestamp": "2025-10-10T07:23:24.420648Z"
+    }
+  ],
+  "timestamp": "2025-10-10T07:23:24Z"
+}

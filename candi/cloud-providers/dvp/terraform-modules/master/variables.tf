@@ -91,6 +91,15 @@ variable "kubernetes_data_disk" {
   })
 }
 
+variable "additional_disks" {
+  type = list(object({
+    name          = string
+    hash          = string
+    md5_id        = string
+  }))
+  default = []
+}
+
 variable "cpu" {
   type = object({
     cores         = number
@@ -169,6 +178,7 @@ locals {
     {
       "rootDiskHash" = var.root_disk.hash,
       "etcDiskHash"  = var.kubernetes_data_disk.hash
+      "additionalDisksHash" = local.additional_disks_hashes
     },
   )
 

@@ -20,3 +20,7 @@ chmod 700 /var/lib/kubelet/
 if [[ -d /etc/containerd ]]; then
     chmod 700 /etc/containerd
 fi
+
+if [[ -d /var/lib/etcd ]]; then
+    chmod 700 /var/lib/etcd
+fi

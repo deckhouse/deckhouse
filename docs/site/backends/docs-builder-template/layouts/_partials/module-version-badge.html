@@ -36,4 +36,15 @@
 {{- end }}
     </ul>
 </div>
+<script>
+  // Fix version menu item URLs for cases where the URL lacks a channel (e.g., /modules/MODULE/).
+  const currentUrl = window.location.pathname;
+
+  if (!currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)
+      && currentUrl.includes('/modules/')) {
+    document.querySelectorAll('#doc-versions-menu a.submenu-item-link').forEach(link => {
+        link.href = link.href.replace(/.*\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
+    });
+  }
+</script>
 {{- end }}

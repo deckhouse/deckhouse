@@ -134,6 +134,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -143,6 +144,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
@@ -201,6 +205,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -210,6 +215,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
@@ -291,6 +299,7 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -300,6 +309,9 @@ podAntiAffinity:
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
@@ -358,6 +370,7 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -367,6 +380,9 @@ podAntiAffinity:
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists

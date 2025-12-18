@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
@@ -137,7 +137,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:

@@ -24,16 +24,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(parent, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(parent)
 }
 
@@ -43,9 +41,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	app.DefineSanityFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -53,16 +49,12 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

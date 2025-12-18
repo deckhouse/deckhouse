@@ -1,0 +1,31 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: changed-uid-with-ttl
+spec:
+  mode: FollowObjectWithTTL
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    namespace: default
+    name: my-pod
+    uid: befc4950-0348-494d-af5e-94d65ad0d03e
+  ttl: 1h
+status:
+  lostAt: 2099-01-01T15:00:00Z  # Far future date to simulate unexpired TTL countdown
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2025-12-03T11:55:50Z"
+  name: my-pod
+  namespace: default
+  resourceVersion: "476558680"
+  uid: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: Always
+    name: my-container
+    resources: {}
+

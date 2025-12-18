@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/shell-operator/pkg/metric"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
@@ -45,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -52,10 +52,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
-	metricUpdatingFailedGroup   = "d8_updating_is_failed"
 	serviceName                 = "check-release"
 	ltsChannelName              = "lts"
 	checkDeckhouseReleasePeriod = 3 * time.Minute
@@ -81,7 +81,7 @@ type DeckhouseReleaseFetcherConfig struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	logger *log.Logger
 }
@@ -179,7 +179,7 @@ type DeckhouseReleaseFetcher struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	logger *log.Logger
 }
@@ -253,7 +253,12 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
+	}
+
+	f.metricStorage.Grouped().ExpireGroupMetrics(metrics.D8UpdatingIsFailed)
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
@@ -512,12 +517,12 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(metrics.D8UpdatingIsFailed, metrics.D8UpdatingIsFailed, 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
+	f.metricStorage.Grouped().GaugeSet(metrics.D8UpdatingIsFailed, metrics.D8UpdatingIsFailed, 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta
@@ -568,6 +573,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	}
 
 	enabledModulesChangelog := f.generateChangelogForEnabledModules(releaseMetadata)
+
 	changeCause := "check release"
 	if createProcess != "" {
 		changeCause += " (" + createProcess + ")"
@@ -591,7 +597,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 			ApplyAfter:    applyAfter,
 			Requirements:  releaseMetadata.Requirements,
 			Disruptions:   disruptions,
-			Changelog:     enabledModulesChangelog,
+			Changelog:     v1alpha1.MakeMappedFields(enabledModulesChangelog),
 			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version),
 		},
 		Approved: false,
@@ -749,31 +755,11 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			// if changelog build failed - warn about it but don't fail the release
-			f.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			meta.Changelog = make(map[string]any)
-
-			return meta, nil
-		}
-
-		meta.Changelog = changelog
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var moduleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
 		if err != nil {
-			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
-
-			meta.ModuleDefinition = nil
-
-			return meta, nil
+			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
 		meta.ModuleDefinition = &moduleDefinition
@@ -785,55 +771,21 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	cooldown := f.fetchCooldown(img)
-	if cooldown != nil {
-		meta.Cooldown = cooldown
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			// if changelog build failed - warn about it but don't fail the release
+			f.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
+
+			changelog = make(map[string]any)
+		}
+
+		meta.Changelog = changelog
 	}
 
 	return meta, nil
-}
-
-func (f *DeckhouseReleaseFetcher) fetchCooldown(image registryv1.Image) *metav1.Time {
-	cfg, err := image.ConfigFile()
-	if err != nil {
-		f.logger.Warn("image config error", log.Err(err))
-		return nil
-	}
-
-	if cfg == nil {
-		return nil
-	}
-
-	if len(cfg.Config.Labels) == 0 {
-		return nil
-	}
-
-	if v, ok := cfg.Config.Labels["cooldown"]; ok {
-		t, err := parseTime(v)
-		if err != nil {
-			f.logger.Error("parse cooldown", slog.String("cooldown", v), log.Err(err))
-			return nil
-		}
-		mt := metav1.NewTime(t)
-
-		return &mt
-	}
-
-	return nil
-}
-
-func parseTime(s string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02 15:04", s)
-	if err == nil {
-		return t, nil
-	}
-
-	t, err = time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		return t, nil
-	}
-
-	return time.Parse(time.RFC3339, s)
 }
 
 // FetchReleasesMetadata realize step by step update
@@ -1039,12 +991,10 @@ type ReleaseMetadata struct {
 	Changelog        map[string]interface{}  `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 
-	// TODO: review fields below. it can be useless now
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
-	Cooldown     *metav1.Time              `json:"-"`
 }
 
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {

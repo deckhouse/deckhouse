@@ -98,6 +98,11 @@ const unsupportedVersionsYAML = `
 
 "1.32":
   "flowcontrol.apiserver.k8s.io/v1beta3": ["FlowSchema", "PriorityLevelConfiguration"]
+  "admissionregistration.k8s.io/v1alpha1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+
+"1.34":
+  "admissionregistration.k8s.io/v1beta1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+
 `
 
 const (
@@ -156,7 +161,8 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	}
 
 	var metaConfig *config.MetaConfig
-	metaConfig, err = config.ParseConfigFromData(string(ccYaml))
+	// only cluster configuration, provider preparation and validation do not need here
+	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}

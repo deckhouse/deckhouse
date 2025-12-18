@@ -1,0 +1,9 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+final: false
+fromImage: builder/golang-bookworm
+shell:
+  install:
+    - curl --location --fail --output cuda-keyring.deb https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb
+    - dpkg -i cuda-keyring.deb
+    - apt update && apt install -y --no-install-recommends cuda-libraries-12-8 cuda-libraries-dev-12-8 make
+    - rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*

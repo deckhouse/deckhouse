@@ -33,6 +33,7 @@ spec:
         package d8.security_policies
 
         violation[{"msg": msg, "details": {}}] {
+          not input.review.operation == "DELETE"
           input.review.object.kind == "RoleBinding"
           input.review.object.roleRef.kind == "ClusterRole"
 

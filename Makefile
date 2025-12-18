@@ -38,6 +38,12 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	TRDL_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), aarch64)
+	YQ_ARCH = amd64
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
@@ -105,7 +111,7 @@ help:
 
 
 GOLANGCI_VERSION = 2.1.2
-TRIVY_VERSION= 0.63.0
+TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -205,9 +211,13 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ##@ Generate
 
+## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate -v
+generate: generate-kubernetes generate-tools
+
+.PHONY: generate-tools
+generate-tools:
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -238,8 +248,6 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
@@ -247,14 +255,12 @@ docs: bin/werf ## Run containers with the documentation.
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+	docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -325,9 +331,9 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm.
+update-lib-helm: yq ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i -y '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
 .PHONY: update-base-images-versions
 update-base-images-versions:
@@ -449,6 +455,143 @@ all-mod: go-check
 		echo "Running go mod tidy in $${dir}"; \
 		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
 	done
+
+##@ Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+DECKHOUSE_CLI ?= $(LOCALBIN)/d8
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CLIENT_GEN ?= $(LOCALBIN)/client-gen
+INFORMER_GEN ?= $(LOCALBIN)/informer-gen
+LISTER_GEN ?= $(LOCALBIN)/lister-gen
+YQ = $(LOCALBIN)/yq
+
+## Tool Versions
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
+DECKHOUSE_CLI_VERSION ?= v0.24.3
+CONTROLLER_TOOLS_VERSION ?= v0.18.0
+CODE_GENERATOR_VERSION ?= v0.32.10
+YQ_VERSION ?= v4.47.2
+
+## Generate tools documentation
+.PHONY: generate-docs
+generate-docs: deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(DECKHOUSE_CLI) help-json > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+
+## Generate codebase for deckhouse-controllers kubernetes entities
+.PHONY: generate-kubernetes
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+
+## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: controller-gen-generate
+controller-gen-generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+
+.PHONY: manifests 
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Generating CRDs..."
+	@$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases
+
+## Generate clientset
+.PHONY: client-gen-generate
+client-gen-generate: client-gen
+	$(CLIENT_GEN) \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
+		--output-dir "./deckhouse-controller/pkg/client/clientset" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
+
+## Generate listers (required for informers)
+.PHONY: lister-gen-generate
+lister-gen-generate: lister-gen
+	$(LISTER_GEN) \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-dir "./deckhouse-controller/pkg/client/listers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Generate informers
+.PHONY: informer-gen-generate
+informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
+	$(INFORMER_GEN) \
+		--versioned-clientset-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned" \
+		--listers-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers" \
+		--output-dir "./deckhouse-controller/pkg/client/informers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Tool installations
+
+## Download deckhouse-cli locally if necessary.
+.PHONY: deckhouse-cli
+deckhouse-cli:
+	@if [ -f "$(DECKHOUSE_CLI)" ]; then \
+		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
+		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
+			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+		else \
+			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+		fi; \
+	else \
+		echo "d8 not found, downloading..."; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+	fi
+
+## Download client-gen locally if necessary.
+.PHONY: client-gen
+client-gen: $(CLIENT_GEN)
+$(CLIENT_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen,$(CODE_GENERATOR_VERSION))
+
+## Download lister-gen locally if necessary.
+.PHONY: lister-gen
+lister-gen: $(LISTER_GEN)
+$(LISTER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(LISTER_GEN),k8s.io/code-generator/cmd/lister-gen,$(CODE_GENERATOR_VERSION))
+
+## Download informer-gen locally if necessary.
+.PHONY: informer-gen
+informer-gen: $(INFORMER_GEN)
+$(INFORMER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(INFORMER_GEN),k8s.io/code-generator/cmd/informer-gen,$(CODE_GENERATOR_VERSION))
+
+## Download controller-gen locally if necessary.
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+$(YQ): $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary
+# $2 - package url which can be installed
+# $3 - specific version of package
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+rm -f $(1) || true ;\
+GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
+mv $(1) $(1)-$(3) ;\
+} ;\
+ln -sf $(1)-$(3) $(1)
+endef
 
 define error-if-empty
 @if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi

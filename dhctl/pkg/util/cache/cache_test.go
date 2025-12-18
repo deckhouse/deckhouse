@@ -31,7 +31,7 @@ func TestNewTempStateCache(t *testing.T) {
 
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-cache-*")
 	require.NoError(t, err)
-	app.CacheDir = dir
+	app.SetCacheDir(dir)
 
 	defer os.RemoveAll(dir)
 

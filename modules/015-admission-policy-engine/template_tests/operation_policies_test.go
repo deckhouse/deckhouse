@@ -28,7 +28,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.29.14"}},admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.30"}},admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
@@ -61,10 +61,14 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"replicaLimits":{
 					"minReplicas":1,
 					"maxReplicas":10
-			}
+			},
+			"disallowedTolerations": [
+				{"key": "node-role.kubernetes.io/master", "operator": "Exists"},
+				{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}
+			]
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
-		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods","nodes","namespaces"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
 		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
 		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
@@ -92,6 +96,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

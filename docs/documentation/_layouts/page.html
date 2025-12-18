@@ -1,6 +1,7 @@
 ---
 layout: sidebar
 ---
+
 <div class="docs">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
@@ -46,5 +47,11 @@ layout: sidebar
         {%- endif %}
 
     </div>
+
+    {%- include related_links.liquid %}
+
+    {%- if page.showPrevNextButton %}
+      {%- include navigation.html -%}
+    {%- endif %}
 
 </div>

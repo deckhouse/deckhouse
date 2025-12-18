@@ -1,0 +1,126 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    vpaObservedContainers: coredns, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by node-local-dns: container 0: cpu request,
+      memory request; container 1: cpu request, memory request'
+  creationTimestamp: "2025-11-18T14:57:37Z"
+  generateName: node-local-dns-
+  generation: 1
+  labels:
+    app: node-local-dns
+    controller-revision-hash: 5fdd46b48
+    k8s-app: node-local-dns
+    pod-template-generation: "151"
+  name: node-local-dns-4rstp
+  namespace: kube-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: node-local-dns
+    uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
+  resourceVersion: "925143871"
+  uid: 2181f7d5-5d11-4788-a451-f588177a3d6a
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - dev-master-0
+  automountServiceAccountToken: true
+  containers:
+  - command:
+    - /coredns-helper
+    image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:7dc0a998f8a898c8863e44b19da2bbd9ef1b7209ca9db30eff5f06bfac7c5804
+    imagePullPolicy: IfNotPresent
+    name: ""
+    resources: {}
+  nodeName: dev-master-0
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:37Z"
+    status: "True"
+    type: PodScheduled
+  hostIP: 192.168.199.211
+  phase: Running
+  podIP: 10.111.0.196
+  podIPs:
+  - ip: 10.111.0.196
+  qosClass: Burstable
+  startTime: "2025-11-18T14:57:37Z"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "151"
+    meta.helm.sh/release-name: node-local-dns
+    meta.helm.sh/release-namespace: d8-system
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+  creationTimestamp: "2025-11-01T11:09:44Z"
+  generation: 156
+  labels:
+    app: node-local-dns
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: node-local-dns
+  name: node-local-dns
+  namespace: kube-system
+  resourceVersion: "999"
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: node-local-dns
+  template:
+    metadata:
+      labels:
+        app: node-local-dns
+        k8s-app: node-local-dns
+    spec:
+      containers:
+      - command:
+        - /coredns-helper
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:7dc0a998f8a898c8863e44b19da2bbd9ef1b7209ca9db30eff5f06bfac7c5804
+        imagePullPolicy: IfNotPresent
+        name: ""
+        resources: {}
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: OnDelete
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  numberMisscheduled: 0
+  numberReady: 3
+  observedGeneration: 156
+  updatedNumberScheduled: 3

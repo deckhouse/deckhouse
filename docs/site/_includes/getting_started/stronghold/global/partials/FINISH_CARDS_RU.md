@@ -26,7 +26,7 @@
 <p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>Для доступа к Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<p><a href="/products/kubernetes-platform/documentation/v1/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
+<p><a href="/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
 </div>
 </div>
 {% endif %}
@@ -88,7 +88,7 @@
 ⟳ <span class="cards-item__title-text">Настройка CI/CD-системы</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
+[Создайте](/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
@@ -101,7 +101,7 @@
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
 
-[Подробнее](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) о возможностях `ingress-nginx`
+[Подробнее](/modules/ingress-nginx/) о возможностях `ingress-nginx`
 модуля.
 </div>
 </div>
@@ -114,7 +114,7 @@
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
 Service'у.
 
-[Подробнее](/products/kubernetes-platform/documentation/v1/modules/monitoring-custom/) о модуле `monitoring-custom`.
+[Подробнее](/modules/monitoring-custom/) о модуле `monitoring-custom`.
 </div>
 </div>
 
@@ -137,13 +137,13 @@ Service'у.
 <div class="cards-item__text" markdown="1">
 {% if page.platform_type == 'cloud' %}
 При создании кластера были созданы две группы узлов. Чтобы увидеть их в кластере, выполните команду `kubectl get
-nodegroups`. Подробнее об этом в [документации](/products/kubernetes-platform/documentation/v1/modules/node-manager/) по модулю управления узлами.
+nodegroups`. Подробнее об этом в [документации](/modules/node-manager/) по модулю управления узлами.
 
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
-[NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), которая на него
+Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
+[NodeGroup](/modules/node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
 # TODO Bare metal!!!

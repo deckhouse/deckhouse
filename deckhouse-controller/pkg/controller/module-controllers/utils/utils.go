@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package utils //nolint:revive
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/gofrs/uuid/v5"
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -254,61 +251,6 @@ func GetClusterUUID(ctx context.Context, cli client.Client) string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-// GetModuleVersion gets version of the module by symlink(/downloaded/modules/{moduleName})
-func GetModuleVersion(moduleSymlink string) (string, error) {
-	downloadedModule, err := filepath.EvalSymlinks(moduleSymlink)
-	if err != nil {
-		return "", fmt.Errorf("evaluate the '%s' module symlink: %w", moduleSymlink, err)
-	}
-
-	return filepath.Base(downloadedModule), nil
-}
-
-// EnableModule deletes old symlinks and creates a new one
-func EnableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
-	// delete the old module symlink with diff version if exists
-	if oldSymlinkPath != "" {
-		if _, err := os.Lstat(oldSymlinkPath); err == nil {
-			if err = os.Remove(oldSymlinkPath); err != nil {
-				return fmt.Errorf("delete the '%s' old symlink: %w", oldSymlinkPath, err)
-			}
-		}
-	}
-
-	// delete the new module symlink
-	if _, err := os.Lstat(newSymlinkPath); err == nil {
-		if err = os.Remove(newSymlinkPath); err != nil {
-			return fmt.Errorf("delete the '%s' new symlink: %w", newSymlinkPath, err)
-		}
-	}
-
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return fmt.Errorf("the '%s' module absolute path not found", moduleAbsPath)
-	}
-
-	return os.Symlink(modulePath, newSymlinkPath)
-}
-
-// GetModuleSymlink walks over the root dir to find a module symlink by regexp
-func GetModuleSymlink(rootPath, moduleName string) (string, error) {
-	var symlinkPath string
-
-	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-
-	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, _ error) error {
-		if !moduleRegexp.MatchString(d.Name()) {
-			return nil
-		}
-		symlinkPath = path
-		return filepath.SkipDir
-	})
-
-	return symlinkPath, err
-}
-
 // EnsureModuleDocumentation creates or updates module documentation
 func EnsureModuleDocumentation(
 	ctx context.Context,
@@ -346,7 +288,11 @@ func EnsureModuleDocumentation(
 		}
 	}
 
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+	// Check if path needs to be migrated from old format (e.g., "/module/v1.0.0" or "/module/dev")
+	// to new format ("/modules/module")
+	needsPathUpdate := !strings.HasPrefix(md.Spec.Path, "/modules/")
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum || needsPathUpdate {
 		// update module documentation
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion
@@ -385,47 +331,38 @@ func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdat
 	return settings.NotificationConfig, nil
 }
 
-// SyncModuleRegistrySpec compares and updates current registry settings of a deployed module (in the ./openapi/values.yaml file)
-// and the registry settings set in the related module source
-func SyncModuleRegistrySpec(downloadedModulesDir, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource) error {
-	raw, err := os.ReadFile(filepath.Join(downloadedModulesDir, moduleName, moduleVersion, "openapi/values.yaml"))
-	if err != nil {
-		return fmt.Errorf("read the '%s' module openapi values: %w", moduleName, err)
+func BuildRegistryValue(source *v1alpha1.ModuleSource) *addonmodules.Registry {
+	if source == nil {
+		return nil
 	}
 
-	openAPISpec := new(moduleOpenAPISpec)
-	if err = yaml.Unmarshal(raw, openAPISpec); err != nil {
-		return fmt.Errorf("unmarshal the '%s' module's registry spec: %w", moduleName, err)
-	}
+	reg := new(addonmodules.Registry)
 
-	registrySpec := openAPISpec.Properties.Registry.Properties
+	reg.Base = source.Spec.Registry.Repo
+	reg.DockerCfg = buildDockerCfg(reg.Base, source.Spec.Registry.DockerCFG)
+	reg.Scheme = source.Spec.Registry.Scheme
+	reg.CA = source.Spec.Registry.CA
 
-	dockercfg := reginjector.DockerCFGForModules(moduleSource.Spec.Registry.Repo, moduleSource.Spec.Registry.DockerCFG)
-
-	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || dockercfg != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
-		err = reginjector.InjectRegistryToModuleValues(filepath.Join(downloadedModulesDir, moduleName, moduleVersion), moduleSource)
-	}
-
-	return err
+	return reg
 }
 
-type moduleOpenAPISpec struct {
-	Properties struct {
-		Registry struct {
-			Properties struct {
-				Base struct {
-					Default string `yaml:"default"`
-				} `yaml:"base"`
-				DockerCFG struct {
-					Default string `yaml:"default"`
-				} `yaml:"dockercfg"`
-				Scheme struct {
-					Default string `yaml:"default"`
-				} `yaml:"scheme"`
-				CA struct {
-					Default string `yaml:"default"`
-				} `yaml:"ca"`
-			} `yaml:"properties"`
-		} `yaml:"registry,omitempty"`
-	} `yaml:"properties,omitempty"`
+// buildDockerCfg
+// according to the deckhouse docs, for anonymous registry access we must have the value:
+// {"auths": { "<PROXY_REGISTRY>": {}}}
+// but it could be empty for a ModuleSource.
+// modules are not ready to catch empty string, so we have to fill it with the default value
+func buildDockerCfg(repo, dockercfg string) string {
+	if len(dockercfg) != 0 {
+		return dockercfg
+	}
+
+	index := strings.Index(repo, "/")
+	var registry string
+	if index != -1 {
+		registry = repo[:index]
+	} else {
+		registry = repo
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"auths": {"%s": {}}}`, registry)))
 }

@@ -18,12 +18,15 @@
 package bootstrap
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,10 +36,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
+
 	"strconv"
 	"strings"
-	"sync"
+	tplt "text/template"
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
@@ -56,7 +59,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -65,7 +68,6 @@ import (
 
 const (
 	ManifestCreatedInClusterCacheKey  = "tf-state-and-manifests-in-cluster"
-	MasterHostsCacheKey               = "cluster-hosts"
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
 )
@@ -113,8 +115,9 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 	})
 }
 
-func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
+func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCommanderMode(commanderMode)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
@@ -129,6 +132,10 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 
 		if errors.Is(err, frontend.ErrBashibleTimeout) {
 			return frontend.ErrBashibleTimeout
+		}
+
+		if errors.Is(err, gossh.ErrBashibleTimeout) {
+			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -312,7 +319,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -331,9 +338,10 @@ func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData,
 	}
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 
-	go proxy.Serve()
+	go proxy.Serve(proxyConfig)
 
 	go func() {
 		<-ctx.Done()
@@ -412,7 +420,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -462,12 +470,11 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
-			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
+			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; touch %s", DHCTLEndBootstrapBashiblePipeline))
 			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}
-
 			return nil
 		})
 	})
@@ -485,7 +492,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -497,7 +503,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -524,8 +530,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
+	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
+		BreakIf(func(err error) bool {
+			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
+		}).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 
@@ -537,7 +545,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 			log.DebugLn("Start execute bashible bundle routine")
 
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir, commanderMode)
 		})
 }
 
@@ -561,98 +569,121 @@ func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient) (func(), erro
 	return cleanUpTunnel, nil
 }
 
-func CheckDHCTLDependencies(ctx context.Context, nodeInteface node.Interface) error {
-	type checkResult struct {
-		name string
-		err  error
+const dependencyCheckTemplate = `
+for dep in {{range $i, $d := .Deps}}{{if $i}} {{end}}{{$d}}{{end}}; do
+  if command -v "$dep" >/dev/null 2>&1; then
+    echo "1 $dep"
+  else
+    echo "0 $dep"
+  fi
+done
+`
+
+func buildDependencyCheckScript(deps []string) (string, error) {
+	tmpl, err := tplt.New("dep-check").Parse(dependencyCheckTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse dependency template: %w", err)
 	}
 
-	checkDependency := func(dep string, resultsChan chan checkResult) error {
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, struct {
+		Deps []string
+	}{Deps: deps})
+	if err != nil {
+		return "", fmt.Errorf("failed to render dependency template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) error {
+	dependencies := []string{
+		"sudo", "rm", "tar", "mount", "awk",
+		"grep", "cut", "sed", "mkdir", "cp",
+		"join", "cat", "ps", "kill",
+	}
+
+	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
 		breakPredicate := func(err error) bool {
+			// Retry only for transient SSH connection issues
+			if err == nil {
+				return true
+			}
 			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				if ee.ExitCode() == 255 {
-					return false
-				}
+			if errors.As(err, &ee) && ee.ExitCode() == 255 {
+				log.WarnLn("SSH connection failed (exit 255), retrying in 5 seconds...\n")
+				return false
 			}
 			return true
 		}
 
-		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).
-			BreakIf(breakPredicate).RunContext(ctx, func() error {
-			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput(ctx)
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					log.DebugF("exit code: %v", ee)
-				}
-				e := fmt.Errorf("bashible dependency '%s' error: %v - %s",
-					dep,
-					err,
-					string(output),
-				)
-				resultsChan <- checkResult{
-					name: dep,
-					err:  e,
-				}
-				log.DebugF("Dependency check error: %v\n", e)
-				return e
-			}
-			return nil
-		})
-	}
+		var lastErr error
 
-	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
-		dependencyCommands := [][]string{
-			{"sudo", "rm", "tar", "mount", "awk"},
-			{"grep", "cut", "sed", "shopt", "mkdir"},
-			{"cp", "join", "cat", "ps", "kill"},
+		runErr := retry.NewSilentLoop("Check all DHCTL dependencies", 30, 5*time.Second).
+			BreakIf(breakPredicate).
+			RunContext(ctx, func() error {
+				bashScript, err := buildDependencyCheckScript(dependencies)
+				if err != nil {
+					return fmt.Errorf("failed to build dependency check script: %w", err)
+				}
+
+				log.DebugF("Generated dependency check bash script:\n%s\n", bashScript)
+				//Encode the script to avoid "\n" characters and safely pass it via SSH
+				encoded := base64.StdEncoding.EncodeToString([]byte(bashScript))
+				remoteCmd := fmt.Sprintf("echo %q | base64 -d | bash", encoded)
+				cmd := nodeInterface.Command("bash", "-c", remoteCmd)
+
+				output, err := cmd.CombinedOutput(ctx)
+				if err != nil {
+					var ee *exec.ExitError
+					if errors.As(err, &ee) {
+						log.DebugF("SSH exit code: %v\n", ee.ExitCode())
+					}
+					e := fmt.Errorf("remote dependency check failed: %w - %s", err, string(output))
+					log.DebugF("Dependency check error: %v\n", e)
+					return e
+				}
+
+				var missing []string
+				scanner := bufio.NewScanner(bytes.NewReader(output))
+				for scanner.Scan() {
+					fields := strings.Fields(scanner.Text())
+					if len(fields) != 2 {
+						continue
+					}
+					status, dep := fields[0], fields[1]
+
+					log.InfoF("Checking '%s' dependency\n", dep)
+					if status == "1" {
+						log.Success(fmt.Sprintf("Dependency '%s' is available\n", dep))
+					} else {
+						log.WarnLn(fmt.Sprintf("Dependency '%s' is missing!\n", dep))
+						missing = append(missing, dep)
+					}
+				}
+
+				if err := scanner.Err(); err != nil {
+					lastErr = fmt.Errorf("failed to read dependency output: %w", err)
+					return lastErr
+				}
+
+				if len(missing) > 0 {
+					lastErr = fmt.Errorf("missing dependencies: %v", missing)
+					return lastErr
+				}
+
+				log.InfoLn("All dependencies are present.")
+				return nil
+			})
+
+		if runErr != nil {
+			if lastErr != nil {
+				log.DebugF("Dependency checks exceeded maximum retries.\n")
+				return fmt.Errorf("dependency check failed after retries: %w", lastErr)
+			}
+			return runErr
 		}
 
-		resultsChan := make(chan checkResult)
-
-		exceedDependency := errors.New("All dependency checks was exceed")
-
-		go func() {
-			wg := sync.WaitGroup{}
-			for _, deps := range dependencyCommands {
-				for _, dep := range deps {
-					wg.Add(1)
-					dep := dep
-					log.InfoF("Check '%s' dependency\n", dep)
-					go func() {
-						defer wg.Done()
-						err := checkDependency(dep, resultsChan)
-						if err != nil {
-							err = errors.Join(exceedDependency, err)
-						}
-
-						resultsChan <- checkResult{
-							name: dep,
-							err:  err,
-						}
-					}()
-				}
-				time.Sleep(1 * time.Second)
-			}
-			log.DebugLn("Wait all dependency checks successful")
-			wg.Wait()
-			log.DebugLn("Close result chan")
-			close(resultsChan)
-		}()
-
-		for res := range resultsChan {
-			if res.err != nil {
-				if errors.Is(res.err, exceedDependency) {
-					return res.err
-				}
-				log.WarnLn(res.err)
-				continue
-			}
-			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
-		}
-
-		log.InfoLn("OK!")
 		return nil
 	})
 }
@@ -716,28 +747,6 @@ func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, m
 	})
 }
 
-func SaveMasterHostsToCache(hosts map[string]string) {
-	if err := cache.Global().SaveStruct(MasterHostsCacheKey, hosts); err != nil {
-		log.DebugF("Cannot save ssh hosts %v", err)
-	}
-}
-
-func GetMasterHostsIPs() ([]session.Host, error) {
-	var hosts map[string]string
-	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
-	if err != nil {
-		return nil, err
-	}
-	mastersIPs := make([]session.Host, 0, len(hosts))
-	for name, ip := range hosts {
-		mastersIPs = append(mastersIPs, session.Host{Host: ip, Name: name})
-	}
-
-	sort.Sort(session.SortByName(mastersIPs))
-
-	return mastersIPs, nil
-}
-
 func SaveBastionHostToCache(host string) {
 	if err := cache.Global().Save(BastionHostCacheKey, []byte(host)); err != nil {
 		log.ErrorF("Cannot save ssh hosts: %v\n", err)
@@ -762,7 +771,7 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context) error {
+func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context, stateCache state.Cache) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -781,7 +790,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 			}
 			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
 
-			SaveMasterHostsToCache(addressTracker)
+			state.SaveMasterHostsToCache(stateCache, addressTracker)
 		}
 
 		return nil
@@ -798,7 +807,7 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
-		case strings.HasPrefix(name, "base-infrastructure"):
+		case strings.HasPrefix(name, string(infrastructure.BaseInfraStep)):
 			fallthrough
 		case strings.HasPrefix(name, "uuid"):
 			fallthrough

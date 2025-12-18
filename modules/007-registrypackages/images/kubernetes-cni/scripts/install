@@ -14,5 +14,6 @@
 # limitations under the License.
 
 set -Eeo pipefail
-mkdir -p /opt/cni/bin
+umask 0022
+mkdir -m 0755 -p /opt/cni/bin
 cp -f bandwidth bridge dhcp dummy firewall host-device host-local ipvlan loopback macvlan portmap ptp sbr static tap tuning vlan vrf flannel /opt/cni/bin

@@ -6,7 +6,7 @@ title: "Cluster SLA Monitoring: configuration"
 
 ## Authentication
 
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
 If these options are disabled, the module will use basic auth with the auto-generated password.
 
 Use d8 k to see password:

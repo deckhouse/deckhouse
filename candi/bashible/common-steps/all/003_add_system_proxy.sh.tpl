@@ -51,6 +51,11 @@ if [ -f /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.con
   rm -f /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf
   _reload_systemd
 fi
+
+if [ -f /etc/systemd/system/kubelet.service.d/proxy-environment.conf ]; then
+  rm -f /etc/systemd/system/kubelet.service.d/proxy-environment.conf
+  _reload_systemd
+fi
 {{- end }}
 
 if [ -f /etc/profile.d/d8-system-proxy.sh ]; then

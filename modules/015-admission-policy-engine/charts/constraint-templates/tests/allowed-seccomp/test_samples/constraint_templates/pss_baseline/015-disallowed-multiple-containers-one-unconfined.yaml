@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-containers-one-unconfined
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+    - name: redis
+      image: redis
+      securityContext:
+        seccompProfile:
+          type: Unconfined
+

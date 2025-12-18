@@ -17,12 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -515,7 +515,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Labels["node"]).Should(Equal("unmanaged-wor-ker"))
 		})
 	})
@@ -977,6 +977,65 @@ spec:
 			Expect(n.Parse().DropFields("status", "metadata.creationTimestamp")).
 				To(MatchJSON(expectedJSON))
 			Expect(f.MetricsCollector.CollectedMetrics()).Should(HaveLen(1), "should have only expire metric for managed node")
+		})
+	})
+	Context("NG without nodeTemplate and Node with bashible-uninitialized taint", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: CloudEphemeral
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ""
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node.deckhouse.io/uninitialized
+  - effect: NoSchedule
+    key: node.deckhouse.io/bashible-uninitialized
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must preserve the bashible-uninitialized taint while removing other uninitialized taints", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
+			taints := node.Get("spec.taints").Array()
+
+			// Should have exactly one taint remaining - bashible-uninitialized
+			Expect(taints).To(HaveLen(1))
+
+			// Verify it's the bashible-uninitialized taint
+			taint := taints[0]
+			Expect(taint.Get("key").String()).To(Equal("node.deckhouse.io/bashible-uninitialized"))
+			Expect(taint.Get("effect").String()).To(Equal("NoSchedule"))
+
+			// Verify regular uninitialized taint was removed
+			hasRegularUninitialized := false
+			hasBashibleUninitialized := false
+			for _, taint := range taints {
+				key := taint.Get("key").String()
+				if key == "node.deckhouse.io/uninitialized" {
+					hasRegularUninitialized = true
+				}
+				if key == "node.deckhouse.io/bashible-uninitialized" {
+					hasBashibleUninitialized = true
+				}
+			}
+			Expect(hasRegularUninitialized).To(BeFalse(), "regular uninitialized taint should be removed")
+			Expect(hasBashibleUninitialized).To(BeTrue(), "bashible uninitialized taint should be preserved")
 		})
 	})
 })

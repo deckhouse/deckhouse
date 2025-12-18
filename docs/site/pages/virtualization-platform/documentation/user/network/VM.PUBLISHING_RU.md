@@ -4,6 +4,8 @@ permalink: ru/virtualization-platform/documentation/user/network/vm-publishing.h
 lang: ru
 ---
 
+{% raw %}
+
 ## Предоставление публичного доступа с использованием сервисов
 
 Достаточно часто возникает необходимость сделать так, чтобы доступ к виртуальным машинам был возможен извне, например, для удалённого администрирования или подключения к каким-либо сервисам виртуальной машины. Для этих целей предусмотрены специальные сервисы, которые обеспечивают маршрутизацию трафика из внешней сети к внутренним ресурсам кластера. Рассмотрим несколько вариантов.
@@ -245,7 +247,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
 
 Чтобы включить аутентификацию через `Dex` для приложения, выполните следующие шаги:
 
-1. Создайте кастомный ресурс [DexAuthenticator](../../../reference/cr/dexauthenticator.html). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
+1. Создайте кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
    Пример ресурса `DexAuthenticator`:
 
@@ -312,3 +314,5 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+{% endraw %}

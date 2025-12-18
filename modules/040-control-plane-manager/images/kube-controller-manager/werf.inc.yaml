@@ -19,7 +19,11 @@ import:
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-controller-manager"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}

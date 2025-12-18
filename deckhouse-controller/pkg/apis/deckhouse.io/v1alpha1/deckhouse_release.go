@@ -42,6 +42,7 @@ const (
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
 	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
+	DeckhouseReleaseAnnotationUpdateInfo            = "release.deckhouse.io/update-info"
 
 	DeckhouseReleaseAnnotationDryrun            = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
@@ -55,8 +56,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
@@ -185,12 +187,13 @@ func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
 }
 
 type DeckhouseReleaseSpec struct {
-	Version       string            `json:"version,omitempty"`
-	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
-	Requirements  map[string]string `json:"requirements,omitempty"`
-	Disruptions   []string          `json:"disruptions,omitempty"`
-	Changelog     Changelog         `json:"changelog,omitempty"`
-	ChangelogLink string            `json:"changelogLink,omitempty"`
+	Version      string            `json:"version,omitempty"`
+	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
+	Requirements map[string]string `json:"requirements,omitempty"`
+	Disruptions  []string          `json:"disruptions,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Changelog     *MappedFields `json:"changelog,omitempty"`
+	ChangelogLink string        `json:"changelogLink,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {
@@ -211,8 +214,7 @@ func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return DeckhouseReleaseGVK
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // DeckhouseReleaseList is a list of DeckhouseRelease resources
 type DeckhouseReleaseList struct {

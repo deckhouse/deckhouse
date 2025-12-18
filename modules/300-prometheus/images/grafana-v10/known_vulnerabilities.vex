@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-3be2531000161d4e4fb1227449100fdab929e9fa0624757fefc9f9a338029045",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2025-10-10T20:23:18.360168+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-8986"
+      },
+      "timestamp": "2025-10-10T20:22:40.295566+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/grafana-plugin-sdk-go@v0.218.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2024-8986 возникает исключительно в процессе сборки (build-time) Grafana плагинов, когда grafana-plugin-sdk-go встраивает в скомпилированный бинарник плагина метаданные, включающие git repository URI (полученный командой 'git remote get-url origin'). Если URI содержит учетные данные (например, https://token@github.com/private-repo.git), они попадают в финальный бинарник плагина и могут быть извлечены злоумышленником. Grafana v10 является платформой для запуска плагинов, а не плагином. Grafana использует grafana-plugin-sdk-go как библиотечную зависимость для обеспечения совместимости и взаимодействия с плагинами, но не использует SDK build tooling для собственной сборки. Grafana собирается стандартными средствами Go (go build, make), а не через механизм сборки плагинов из SDK. Уязвимый код, который встраивает git metadata в бинарники плагинов во время их сборки, не выполняется при сборке или работе самого Grafana. CVE-2024-8986 затрагивает только разработчиков, которые собирают Grafana плагины с помощью SDK и используют git URIs с embedded credentials. Сам Grafana как платформа не подвержен данной уязвимости."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1088"
+      },
+      "timestamp": "2025-10-10T20:22:36.568608+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/grafana/grafana@10.4.19"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2025-1088 связана с некорректной валидацией длины названий дашбордов и панелей в веб-интерфейсе Grafana, что приводит к зависанию браузеров на основе Chromium при рендеринге чрезмерно длинных строк. Данная уязвимость представляет собой проблему доступности (Availability/Denial of Service) исключительно на стороне клиента. Grafana v10.4.19 содержит данную уязвимость, однако она не влияет на безопасность системы и не представляет рисков для конфиденциальности, целостности или доступности данных на сервере. Это исключительно проблема пользовательского опыта (UX issue), а не security vulnerability."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-30153"
+      },
+      "timestamp": "2025-10-10T20:22:32.673593+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/getkin/kin-openapi@v0.120.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой ZIP-бомб в компоненте ZipFileBodyDecoder библиотеки kin-openapi при валидации multipart/form-data запросов через openapi3filter. Уязвимость позволяет атакующему загрузить специально созданный ZIP-файл, вызывающий исчерпание памяти сервера. Grafana v10 использует библиотеку kin-openapi для работы с OpenAPI спецификациями в контексте внутренних API и документации, но не использует компонент openapi3filter для валидации входящих HTTP запросов с multipart/form-data содержащих ZIP файлы. Grafana имеет собственные механизмы обработки загрузки файлов (например, для импорта дашбордов, загрузки изображений), которые не используют ZipFileBodyDecoder из kin-openapi. Уязвимый код в openapi3filter.ZipFileBodyDecoder, который автоматически регистрируется модулем для декодирования ZIP файлов, не вызывается в путях выполнения кода Grafana. Таким образом, механизм эксплуатации CVE-2025-30153 неприменим к Grafana."
+    }
+  ]
+}

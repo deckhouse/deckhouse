@@ -1,4 +1,7 @@
 common:
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
   of:
     en: of
     ru: ""
@@ -126,6 +129,13 @@ common:
     ru: |
       Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии.
       При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+  conversion_global_action_message:
+    en: |
+      Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number.
+      When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+    ru: |
+      Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии.
+      При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
   conversion_from_version:
     en: "updates from version"
     ru: "обновление из версии"
@@ -174,6 +184,15 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_context_dkpdocs_and_modules:
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
+  search_context_modules:
+    en: The search is performed throughout modules, excluding the DKP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+  search_context_only_product_docs:
+    en: The search is performed throughout the product documentation, excluding modules.
+    ru: Поиск выполняется по всей документации продукта, не включая модули.
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -192,9 +211,18 @@ common:
   version:
     en: version
     ru: версия
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
+  version_of_module:
+    en: Module version
+    ru: Версия модуля
+  channel_or_version_of_module:
+    en: Module channel/version
+    ru: Канал/версия модуля
   version_of_schema:
     en: Schema version
     ru: Версия схемы
@@ -237,6 +265,36 @@ common:
   role:
     en: role
     ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
+  module_x_crds:
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
+  module_x_documentation:
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
+  module_x_cluster_configuration:
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -267,6 +325,9 @@ common:
   note_ce_notguaranteed:
     en: Functionality in Community Edition is not guaranteed
     ru: Работоспособность в Community Edition не гарантируется
+  module_crd_warning_1:
+    en: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+    ru: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
@@ -318,6 +379,15 @@ common:
   d8_cli_reference_description:
     en: List of commands and parameters for Deckhouse CLI (d8)
     ru: Список команд и параметров Deckhouse CLI (d8)
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
+  show_more:
+    en: Show more
+    ru: Показать ещё
+  feature_gates_available_by_version:
+    en: List of available feature gates...
+    ru: Список доступных feature gates...
 
 comparison:
   except_parameters:

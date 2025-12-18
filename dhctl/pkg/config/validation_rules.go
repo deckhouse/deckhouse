@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"golang.org/x/crypto/ssh"
+	ssh "github.com/deckhouse/lib-gossh"
 	"sigs.k8s.io/yaml"
 )
 

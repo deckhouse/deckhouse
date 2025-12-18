@@ -34,7 +34,7 @@ operator ==> registrySVC
 controller ==> registrySVC
 exporter ==> registrySVC
 end
-registryRewritten[("**registry.deckhouse.ru**")]
+registryRewritten[("**registry.deckhouse.io**")]
 
 registrySVC ==> registryRewritten
 containerd -. "**REWRITE** registry.d8-system.svc:5001" .-> registryRewritten

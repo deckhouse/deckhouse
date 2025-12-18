@@ -9,15 +9,15 @@ In Deckhouse, this module sets up:
 
   Usually, the `Default` set is used (it is suitable for most cases).
 
-  Regardless of the set of modules enabled by default, any module can be explicitly enabled or disabled in the Deckhouse configuration (learn more [about enabling and disabling a module](../../#enabling-and-disabling-the-module)).
+  Regardless of the set of modules enabled by default, any module can be explicitly enabled or disabled in the Deckhouse configuration (learn more [about enabling and disabling a module](/products/kubernetes-platform/documentation/v1/admin/configuration/#enabling-and-disabling-the-module)).
 - **[The release channel](configuration.html#parameters-releasechannel)**;
 
-  Deckhouse has a built-in mechanism for automatic updates. This mechanism uses [5 release channels](../../deckhouse-release-channels.html) with various stability and frequency of releases. Learn more about [how the automatic update mechanism works](../../deckhouse-faq.html#how-does-automatic-deckhouse-update-work) and how you can [set the desired release channel](../../deckhouse-faq.html#how-do-i-set-the-desired-release-channel).
+  Deckhouse has a built-in mechanism for automatic updates. This mechanism uses [5 release channels](/products/kubernetes-platform/documentation/v1/reference/release-channels.html) with various stability and frequency of releases. Learn more about [how the automatic update mechanism works](/products/kubernetes-platform/documentation/v1/architecture/updating.html) and how you can [set the desired release channel](/products/kubernetes-platform/documentation/v1/admin/configuration/update/configuration.html)
 - **[The update mode](configuration.html#parameters-update-mode)** and **[update windows](configuration.html#parameters-update-windows)**;
 
   Deckhouse supports **manual** and **automatic** update modes.
 
-  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](../../cr.html#deckhouserelease-v1alpha1-approved).
+  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-approved).
 
   In the automatic update mode, Deckhouse switches to a newer release as soon as it is available in the corresponding release channel unless [update windows](configuration.html#parameters-update-windows) are **configured** for the cluster. If update windows are **configured** for the cluster, Deckhouse will upgrade to a newer release during the next available update window.
 

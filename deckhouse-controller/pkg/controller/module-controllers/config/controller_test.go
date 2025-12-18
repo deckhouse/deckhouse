@@ -28,7 +28,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -43,12 +42,15 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var (
 	generateGolden     bool
 	manifestsDelimiter *regexp.Regexp
+	conversionsStore   = conversion.NewConversionsStore()
 )
 
 func init() {
@@ -90,15 +92,16 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		Build()
 
 	rec := &reconciler{
-		init:            new(sync.WaitGroup),
-		client:          suite.client,
-		logger:          log.NewNop(),
-		handler:         newMockHandler(),
-		moduleManager:   newMockModuleManager(),
-		edition:         &d8edition.Edition{Name: "fe", Bundle: "Default"},
-		metricStorage:   metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
-		configValidator: nil, // Disable validation in tests to avoid schema issues
-		exts:            nil, // Extenders not needed for these tests
+		init:             new(sync.WaitGroup),
+		client:           suite.client,
+		logger:           log.NewNop(),
+		handler:          newMockHandler(),
+		conversionsStore: conversionsStore,
+		moduleManager:    newMockModuleManager(),
+		edition:          &d8edition.Edition{Name: "fe", Bundle: "Default"},
+		metricStorage:    metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
+		configValidator:  nil, // Disable validation in tests to avoid schema issues
+		exts:             nil, // Extenders not needed for these tests
 	}
 
 	// simulate initialization
@@ -368,7 +371,7 @@ func newMockHandler() *confighandler.Handler {
 	deckhouseConfigCh := make(chan utils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
 
-	handler := confighandler.New(nil, deckhouseConfigCh)
+	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh)
 	handler.StartInformer(context.Background(), configEventCh)
 
 	return handler

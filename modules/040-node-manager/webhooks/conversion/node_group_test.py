@@ -662,7 +662,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0
@@ -691,7 +691,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
             # assert some fields cannot changed
             t.assertIn("aaaa", obj.spec.nodeTemplate.labels)
             t.assertEqual(obj.spec.nodeTemplate.labels.aaaa, "bbbb")
-            t.assertEqual(obj.status.kubernetesVersion, "1.29")
+            t.assertEqual(obj.status.kubernetesVersion, "1.30")
             t.assertEqual(obj.status.ready, 0)
 
 
@@ -917,7 +917,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                 "desired": 0,
                                 "error": "",
                                 "instances": 0,
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "lastMachineFailures": [],
                                 "max": 0,
                                 "min": 0,
@@ -955,7 +955,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
 
             # assert some fields cannot changed
             t.assertEqual(obj.spec.nodeTemplate.labels.aaaaa, "")
-            t.assertEqual(obj.status.kubernetesVersion, "1.29")
+            t.assertEqual(obj.status.kubernetesVersion, "1.30")
             t.assertEqual(obj.status.ready, 0)
 
 
@@ -1211,7 +1211,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "statusMessage": ""
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "nodes": 1,
                                 "ready": 1,
                                 "upToDate": 1
@@ -1334,7 +1334,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "nodes": 1,
                                 "ready": 1,
                                 "upToDate": 1
@@ -1478,7 +1478,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0
@@ -1565,7 +1565,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                 "desired": 0,
                                 "error": "",
                                 "instances": 0,
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "lastMachineFailures": [],
                                 "max": 0,
                                 "min": 0,
@@ -1731,7 +1731,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                                     "synced": "True"
                                 },
                                 "error": "",
-                                "kubernetesVersion": "1.29",
+                                "kubernetesVersion": "1.30",
                                 "nodes": 0,
                                 "ready": 0,
                                 "upToDate": 0

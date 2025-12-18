@@ -24,7 +24,7 @@ shell:
   - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

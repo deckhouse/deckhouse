@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - applicationpackageversion.deckhouse.io/used-by-application
+  labels:
+    packages.deckhouse.io/draft: "false"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-v1.0.0
+  resourceVersion: "2"
+spec:
+  packageName: test
+  packageRepository: deckhouse
+  version: v1.0.0
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status:
+  syncTime: null

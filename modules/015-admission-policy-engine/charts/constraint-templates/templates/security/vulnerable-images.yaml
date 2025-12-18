@@ -14,14 +14,14 @@ spec:
         kind: D8VulnerableImages
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
+      rego: |-
         package d8.vulnerableimages
 
         violation[{"msg": msg}] {
           images := [img | img = retrieve_images[_]]
           response := external_data({"provider": "trivy-provider", "keys": images})
 
-          response_deny_request(response)
+          response_deny_request(response, input.review.operation)
           msg := sprintf("request denied: %v", [response])
         }
 
@@ -45,10 +45,12 @@ spec:
           imgs := input.review.object.spec.template.spec.initContainers[_].image
         }
 
-        response_deny_request(response) {
+        response_deny_request(response, operation) {
+          not operation == "DELETE"
           count(response.errors) > 0
         }
 
-        response_deny_request(response) {
+        response_deny_request(response, operation) {
+          not operation == "DELETE"
           count(response.system_error) > 0
         }

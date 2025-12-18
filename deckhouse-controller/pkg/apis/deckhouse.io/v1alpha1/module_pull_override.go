@@ -25,8 +25,6 @@ import (
 )
 
 const (
-	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
-
 	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
 
 	ModulePullOverrideMessageReady          = "Ready"
@@ -35,7 +33,6 @@ const (
 	ModulePullOverrideMessageModuleNotFound = "The module not found"
 	ModulePullOverrideMessageSourceNotFound = "The source not found"
 	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
-	ModulePullOverrideMessageNoDef          = "The module does not have a module definition"
 
 	ModulePullOverrideAnnotationRenew = "renew"
 )
@@ -55,21 +52,11 @@ var (
 
 var _ runtime.Object = (*ModulePullOverride)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModulePullOverrideList is a list of ModulePullOverride resources
-type ModulePullOverrideList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModulePullOverride `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModulePullOverride object
 type ModulePullOverride struct {
@@ -117,4 +104,14 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 // GetWeight returns the weight of the module
 func (mo *ModulePullOverride) GetWeight() uint32 {
 	return mo.Status.Weight
+}
+
+// +kubebuilder:object:root=true
+
+// ModulePullOverrideList is a list of ModulePullOverride resources
+type ModulePullOverrideList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModulePullOverride `json:"items"`
 }

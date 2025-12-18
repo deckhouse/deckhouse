@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company Github
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -153,7 +155,7 @@ After selecting a `realm` to configure, adding a user in the [Users](https://www
 
 * Create a `scope` named `groups` in the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section and assign it the predefined mapping `groups`. ("Client scopes" → "Client scope details" → "Mappers" → "Add predefined mappers")
 * In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
-* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate_) in the `global` module config.
+* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module config.
 
 The example shows the provider's settings for integration with Keycloak.
 
@@ -225,7 +227,7 @@ spec:
 
 #### Blitz Identity Provider
 
-Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 The example below shows the provider settings for integration with Blitz Identity Provider.
 
@@ -374,7 +376,7 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 ### Creating a user
 
-Create a password and enter its hash encoded in base64 in the `password` field.
+Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 

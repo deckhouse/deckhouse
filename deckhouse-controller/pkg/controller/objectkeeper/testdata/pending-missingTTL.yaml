@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: pending-missing-ttl
+spec:
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    name: my-pod
+    namespace: default
+    uid: 01235684-9342-4c63-94a2-15c455f4dc30
+  mode: FollowObjectWithTTL

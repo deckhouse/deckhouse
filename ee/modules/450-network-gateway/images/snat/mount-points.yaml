@@ -1,0 +1,4 @@
+files:
+- /run/xtables.lock
+dirs:
+- /etc/network-gateway-config

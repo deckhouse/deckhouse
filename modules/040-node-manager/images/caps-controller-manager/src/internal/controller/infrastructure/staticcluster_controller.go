@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/scope"
@@ -57,9 +56,10 @@ type StaticClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := ctrl.LoggerFrom(ctx).WithValues("staticCluster", req.NamespacedName.String())
+	ctx = ctrl.LoggerInto(ctx, logger)
 
-	logger.Info("Reconciling StaticCluster")
+	logger.V(1).Info("Reconciling StaticCluster")
 
 	staticCluster := &infrav1.StaticCluster{}
 	err := r.Get(ctx, req.NamespacedName, staticCluster)
@@ -68,16 +68,18 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get StaticCluster")
 		return ctrl.Result{}, err
 	}
 
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, staticCluster.ObjectMeta)
 	if err != nil {
+		logger.Error(err, "failed to get owner Cluster")
 		return ctrl.Result{}, err
 	}
 	if cluster == nil {
-		logger.Info("Cluster Controller has not yet set OwnerRef")
+		logger.V(1).Info("Cluster Controller has not yet set OwnerRef")
 
 		return ctrl.Result{}, nil
 	}
@@ -97,7 +99,12 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	return r.reconcile(ctx, clusterScope)
+	result, reconcileErr := r.reconcile(ctx, clusterScope)
+	if reconcileErr != nil {
+		clusterScope.Logger.Error(reconcileErr, "failed to reconcile StaticCluster")
+	}
+
+	return result, reconcileErr
 }
 
 func (r *StaticClusterReconciler) reconcile(

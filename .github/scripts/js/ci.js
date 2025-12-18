@@ -1253,8 +1253,8 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 
 \`\`\`
 /e2e/run/aws main
-/e2e/use/k8s/1.27
-/e2e/use/k8s/1.29
+/e2e/use/k8s/1.30
+/e2e/use/k8s/1.34
 
 This comment will run 2 e2e jobs on AWS with containerd
 and with Kubernetes version 1.20 and 1.23 using image built from main branch.

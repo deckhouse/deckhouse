@@ -138,8 +138,8 @@ metadata:
   finalizers:
   - service.kubernetes.io/load-balancer-cleanup
   annotations:
-    metallb.universe.tf/ip-allocated-from-pool: "pool-1"
-    metallb.universe.tf/address-pool: "pool-2"
+    metallb.io/ip-allocated-from-pool: "pool-1"
+    metallb.io/address-pool: "pool-2"
 spec:
   clusterIP: 4.5.6.7
   ports:

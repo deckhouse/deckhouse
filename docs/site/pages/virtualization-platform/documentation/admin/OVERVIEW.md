@@ -4,12 +4,12 @@ permalink: en/virtualization-platform/documentation/admin/overview.html
 lang: en
 ---
 
-This section is intended for Deckhouse Virtualization Platform (DVP) administrators. Administrators also have the rights to manage project resources, the description of which is contained in the [User Manual](https://deckhouse.ru/products/virtualization-platform/documentation/user/overview.html).
+This section is intended for Deckhouse Virtualization Platform (DVP) administrators. Administrators also have the rights to manage project resources, the description of which is contained in the [User Guide](/products/virtualization-platform/documentation/user/overview.html).
 
 The DVP administrator guide includes the following sections:
 
 - [Platform installation](./install/steps/prepare.html) - environment preparation, installation, and initial access setup.
-- [Platform configuration](./platform-management/node-management/node-group.html) - management of cluster nodes, network, storage, virtualization, and access control.
+- [Platform configuration](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/overview.html) - management of cluster nodes, network, storage, virtualization, and access control.
 - [Platform update](./update/update.html) - configuration of the DVP update mode and update windows, manual update approval.
 - [Removing the platform](./removing/removing.html) - DVP removal procedure.
 

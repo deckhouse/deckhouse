@@ -21,7 +21,7 @@ git:
     - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -37,6 +37,8 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /constraint_exporter .
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /constraint_exporter`) | indent 4 }}
   - chown 64535:64535 /constraint_exporter
   - chmod 0700 /constraint_exporter

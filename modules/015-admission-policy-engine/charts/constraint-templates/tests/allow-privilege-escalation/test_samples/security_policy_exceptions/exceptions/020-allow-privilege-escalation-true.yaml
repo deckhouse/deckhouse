@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-privilege-escalation-true
+spec:
+  securityContext:
+    allowPrivilegeEscalation:
+      allowedValue: true
+

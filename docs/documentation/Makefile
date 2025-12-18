@@ -19,16 +19,8 @@ registry:
 registry-down:
 		docker rm -f registry; docker volume prune -fa
 
-up: network
-		werf compose up --follow --docker-compose-command-options='-d' --env module --repo localhost:4999/docs
-
 clean:
 		werf cleanup --env module --repo localhost:4999/docs --without-kube
 
 down:
 		docker rm -f documentation 2>/dev/null
-
-dev: network
-		werf compose up --follow --docker-compose-command-options='-d' --dev --env development  --repo localhost:4999/docs
-
-.PHONY: up dev

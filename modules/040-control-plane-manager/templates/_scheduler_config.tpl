@@ -1,9 +1,5 @@
 {{- define "schedulerConfig" }}
-  {{- if semverCompare ">= 1.29" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubescheduler.config.k8s.io/v1
-  {{- else }}
-apiVersion: kubescheduler.config.k8s.io/v1beta3
-  {{- end }}
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
@@ -32,15 +28,22 @@ profiles:
 extenders:
     {{- range $extender := .scheduler.extenders }}
 - urlPrefix: {{ $extender.urlPrefix }}
-  filterVerb: filter
-  prioritizeVerb: prioritize
+  {{- if $extender.filterVerb }}
+  filterVerb: {{ $extender.filterVerb}}
+  {{- end }}
+  {{- if $extender.prioritizeVerb }}
+  prioritizeVerb: {{ $extender.prioritizeVerb}}
+  {{- end }}
+  {{- if $extender.preemptVerb }}
+  preemptVerb: {{ $extender.preemptVerb}}
+  {{- end }}
   weight: {{ $extender.weight }}
   enableHTTPS: true
+  tlsConfig:
+    caData: {{ $extender.caData }}
   httpTimeout: {{ $extender.timeout }}s
   nodeCacheCapable: true
   ignorable: {{ $extender.ignorable }}
-  tlsConfig:
-    caData: {{ $extender.caData }}
     {{- end }}
   {{- end }}
 {{- end }}

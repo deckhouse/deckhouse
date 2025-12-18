@@ -17,4 +17,4 @@ properties:
           * StorageClass, использующий `default StorageProfile`;
           * первый (по алфавиту) StorageClass из тех, что создаются модулем.
 
-          > **Параметр устарел**. Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+          > **Параметр устарел**. Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).

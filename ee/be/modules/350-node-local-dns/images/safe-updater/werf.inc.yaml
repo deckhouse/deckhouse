@@ -1,0 +1,42 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+      - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: base/distroless
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /safe-updater
+  to: /safe-updater
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/safe-updater"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /safe-updater ./cmd/
+  - chown 64535:64535 /safe-updater
+  - chmod 0700 /safe-updater

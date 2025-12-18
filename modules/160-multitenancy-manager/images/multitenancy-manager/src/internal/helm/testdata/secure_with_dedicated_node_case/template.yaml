@@ -89,7 +89,7 @@ spec:
         networkPolicy:
           description: |
             NotRestricted — Allow all traffic by default.
-            Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+            Isolated — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
           enum:
             - Isolated
             - NotRestricted
@@ -356,17 +356,17 @@ spec:
       - rule:
           name: Drop and execute new binary in container in {{ .projectName }} project
           condition: >
-            spawned_process 
-            and container 
-            and proc.is_exe_upper_layer=true 
-            {{ with .parameters.allowedUIDs }} 
-            and user.uid > {{ .min }} 
-            and user.uid < {{ .max }} 
-            {{ end }} 
-            {{ with .parameters.allowedGIDs }} 
-            and group.gid >= {{ .min }} 
-            and group.gid <= {{ .max }} 
-            {{ end }} 
+            spawned_process
+            and container
+            and proc.is_exe_upper_layer=true
+            {{ with .parameters.allowedUIDs }}
+            and user.uid > {{ .min }}
+            and user.uid < {{ .max }}
+            {{ end }}
+            {{ with .parameters.allowedGIDs }}
+            and group.gid >= {{ .min }}
+            and group.gid <= {{ .max }}
+            {{ end }}
             and k8s.ns.name={{ .projectName }}
           desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
           output: |

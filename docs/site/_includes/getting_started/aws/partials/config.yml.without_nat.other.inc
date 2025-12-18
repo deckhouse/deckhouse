@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -14,9 +14,13 @@ cloud:
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство подов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство сети сервисов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
@@ -27,9 +31,9 @@ clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -41,9 +45,9 @@ deckhouse:
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -57,9 +61,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -79,9 +83,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -93,9 +97,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -104,9 +108,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-aws/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера..
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html
+# [<ru>] https://deckhouse.io/modules/cloud-provider-aws/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithoutNAT
@@ -162,9 +166,9 @@ nodeNetworkCIDR: "10.241.32.0/20"
 sshPublicKey: *!CHANGE_SSH_KEY*
 ---
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-aws/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-aws/cr.html
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
 metadata:
@@ -187,9 +191,9 @@ spec:
   instanceType: c5.xlarge
 ---
 # [<en>] Section containing the parameters of worker node group.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -217,10 +221,10 @@ spec:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
+# [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -237,9 +241,9 @@ spec:
     node.deckhouse.io/group: worker
 ---
 # [<en>] RBAC and authorization settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
 # [<ru>] Настройки RBAC и авторизации.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -252,9 +256,9 @@ spec:
   portForwarding: true
 ---
 # [<en>] Parameters of the static user.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
 # [<ru>] Данные статического пользователя.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:

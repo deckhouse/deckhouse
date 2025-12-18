@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// +kubebuilder:object:generate=false
 type Release interface {
 	GetName() string
 	GetModuleName() string
@@ -44,8 +45,6 @@ type Release interface {
 	GetNotified() bool
 	GetUpdateSpec() *UpdateSpec
 }
-
-type Changelog map[string]any
 
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {

@@ -82,9 +82,13 @@ type: kubernetes.io/tls
 			f.RunHook()
 		})
 
-		It("Hook must fail with error message", func() {
-			Expect(f).NotTo(ExecuteSuccessfully())
-			Expect(f.ValuesGet("common.internal.customCertificateData").Exists()).To(BeFalse())
+		It("Hook must generate none certificate data", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("common.internal.customCertificateData").String()).To(MatchYAML(`
+ca.crt: <none>
+tls.crt: <none>
+tls.key: <none>
+`))
 			// gbytes.Say panics with Go hooks
 			// Expect(f.Session.Err).Should(gbytes.Say(`ERROR: custom certificate secret name is configured, but secret with this name doesn't exist.`))
 		})

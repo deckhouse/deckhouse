@@ -8,11 +8,11 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v3.41.0 $(cat /run/secrets/SOURCE_REPO)/go-task/task .
+  - git clone --depth 1 --branch v3.45.4 $(cat /run/secrets/SOURCE_REPO)/go-task/task .
   - rm -rf .git website
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

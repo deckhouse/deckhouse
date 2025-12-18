@@ -17,13 +17,14 @@ package deckhouse
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -31,10 +32,44 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 )
 
-// ConvergeDeckhouseConfiguration – reconciles deckhouse in-cluster configmaps and secrets.
+// ConvergeDeckhouseConfigurationForCommander – reconciles deckhouse in-cluster configmaps and secrets.
 // This function used in commander-mode, which stores primary configuration in the storage outside of cluster,
 // and periodically reconciles configuration inside cluster to match configuration stored outside of cluster.
-func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID, commanderUUID uuid.UUID, clusterConfig []byte, providerClusterConfig []byte) error {
+func ConvergeDeckhouseConfigurationForCommander(ctx context.Context, kubeCl *client.KubernetesClient, commanderUUID uuid.UUID, metaConfig *config.MetaConfig) error {
+	tasks, err := getTasksForRunning(ctx, kubeCl, commanderUUID, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	return log.Process("default", "Converge deckhouse configuration", func() error {
+		for _, task := range tasks {
+			err := task.CreateOrUpdate()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, commanderUUID uuid.UUID, metaConfig *config.MetaConfig) ([]actions.ManifestTask, error) {
+	clusterUUID := metaConfig.UUID
+	if clusterUUID == "" {
+		return nil, fmt.Errorf("Converge deckhouse manifest. Cluster UUID cannot be empty")
+	}
+
+	clusterConfig, err := metaConfig.ClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get cluster config yaml: %w", err)
+	}
+
+	// cluster configuration can be empty for deckhouse in managed clusters
+	// but commander does not support it in current time
+	// we protect converge with empty configuration to avoid errors in commander
+	if len(clusterConfig) == 0 {
+		return nil, fmt.Errorf("Cluster configuration is empty. Cannot converge deckhouse manifest because commander does not support managed installations")
+	}
+
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Secret "d8-cluster-configuration"`,
@@ -49,55 +84,28 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 			},
 		},
 		{
-			Name: `Secret "d8-provider-cluster-configuration"`,
+			Name: `ConfigMap "d8-cluster-uuid"`,
 			Manifest: func() interface{} {
-				return manifests.SecretWithProviderClusterConfig(
-					providerClusterConfig, nil,
-				)
+				return manifests.ClusterUUIDConfigMap(clusterUUID)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				data, err := json.Marshal(manifest.(*apiv1.Secret))
+				// NOTE: Uuid configmap uses "more careful" update task,
+				// NOTE: which will create configmap only if it does not exist,
+				// NOTE: or update configmap only if actual uuid in configmap does not match target uuid.
+				actualManifest, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifest.(*apiv1.ConfigMap).Name, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
-				_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(ctx,
-					"d8-provider-cluster-configuration",
-					types.MergePatchType,
-					data,
-					metav1.PatchOptions{},
-				)
-				return err
-			},
-		},
-		{
-			Name: `ConfigMap "d8-cluster-uuid"`,
-			Manifest: func() interface{} {
-				return manifests.ClusterUUIDConfigMap(clusterUUID.String())
-			},
-			CreateFunc: func(manifest interface{}) error {
-				// NOTE: Uuid configmap uses "more careful" update task,
-				// NOTE:  which will create configmap only if it does not exist,
-				// NOTE:  or update configmap only if actual uuid in configmap does not match target uuid.
-				actualManifest, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifest.(*apiv1.ConfigMap).Name, metav1.GetOptions{})
-				if errors.IsAlreadyExists(err) {
-					if actualManifest.Data[manifests.ClusterUUIDCmKey] != manifest.(*apiv1.ConfigMap).Data[manifests.ClusterUUIDCmKey] {
-						// Update manifest only if update needed
-						return err
-					} else {
-						// Do nothing if manifest is actual
-						return nil
-					}
+
+				if actualManifest.Data[manifests.ClusterUUIDCmKey] == manifest.(*apiv1.ConfigMap).Data[manifests.ClusterUUIDCmKey] {
+					return nil
 				}
 
-				_, err = kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
+				_, err = kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -107,13 +115,114 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, commanderUUID, kubeCl))
 	}
 
-	return log.Process("default", "Converge deckhouse configuration", func() error {
-		for _, task := range tasks {
-			err := task.CreateOrUpdate()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	providerSpecifiedTask, err := config.DoByClusterType(ctx, metaConfig, &taskProviderForCluster{kubeCl: kubeCl})
+	if err != nil {
+		return nil, err
+	}
+
+	tasks = append(tasks, *providerSpecifiedTask)
+
+	return tasks, nil
+}
+
+func convergeManifestsCreateSecret(ctx context.Context, kubeCl *client.KubernetesClient, manifest any, secretType string) error {
+	secret, ok := manifest.(*apiv1.Secret)
+	if !ok {
+		return fmt.Errorf("Cannot cast %s secret", secretType)
+	}
+
+	_, err := kubeCl.CoreV1().Secrets(secret.GetNamespace()).Create(ctx, secret, metav1.CreateOptions{})
+
+	return err
+}
+
+func convergeManifestsPatchSecret(ctx context.Context, kubeCl *client.KubernetesClient, manifest any, secretType string) error {
+	secret, ok := manifest.(*apiv1.Secret)
+	if !ok {
+		return fmt.Errorf("Cannot cast %s secret", secretType)
+	}
+
+	data, err := json.Marshal(secret)
+	if err != nil {
+		return fmt.Errorf("Cannot marshal %s secret: %w", secretType, err)
+	}
+
+	_, err = kubeCl.CoreV1().Secrets(secret.GetNamespace()).Patch(ctx,
+		secret.GetName(),
+		types.MergePatchType,
+		data,
+		metav1.PatchOptions{},
+	)
+
+	return err
+}
+
+type taskProviderForCluster struct {
+	kubeCl *client.KubernetesClient
+}
+
+func (t *taskProviderForCluster) Cloud(ctx context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get provider cluster config yaml from MetaConfig: %w", err)
+	}
+
+	if len(providerClusterConfig) == 0 {
+		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+	}
+
+	const secretName = "d8-provider-cluster-configuration"
+
+	kubeCl := t.kubeCl
+
+	return &actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "%s"`, secretName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithProviderClusterConfig(
+				providerClusterConfig, nil,
+			)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
+		},
+	}, nil
+}
+
+func (t *taskProviderForCluster) Static(ctx context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get static cluster config: %w", err)
+	}
+
+	if len(staticClusterConfig) == 0 {
+		// static cluster configuration can be empty because we have auto discovering interfaces
+		log.DebugLn("No static cluster configuration section found. Rewrite with empty data because we have auto discovery")
+	}
+
+	const secretName = "d8-static-cluster-configuration"
+
+	kubeCl := t.kubeCl
+
+	return &actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "%s"`, secretName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithStaticClusterConfig(staticClusterConfig)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
+		},
+	}, nil
+}
+func (t *taskProviderForCluster) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (*actions.ManifestTask, error) {
+	if metaConfig.ClusterType == "" {
+		return nil, fmt.Errorf("Cannot converge deckhouse manifest because commander does not support managed installations")
+	}
+
+	return nil, config.UnsupportedClusterTypeErr(metaConfig)
 }

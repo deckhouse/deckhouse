@@ -187,13 +187,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.30"]
+                  x-doc-examples: ["1.31"]
                   enum:
-                    - "1.29"
                     - "1.30"
                     - "1.31"
                     - "1.32"
                     - "1.33"
+                    - "1.34"
                 cri:
                   type: object
                   description: |
@@ -476,7 +476,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -608,8 +608,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -1106,7 +1109,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1219,8 +1222,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -1994,7 +2000,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -2108,8 +2114,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -2227,6 +2236,61 @@ spec:
                             - BestEffort
                             - Restricted
                             - SingleNumaNode
+                    memorySwap:
+                      type: object
+                      description: |
+                        Configuration of swap memory usage for kubelet.
+                      oneOf:
+                      - properties:
+                          swapBehavior:
+                            enum: ["NoSwap"]
+                        not:
+                          required: ["limitedSwap"]
+                      - properties:
+                          swapBehavior:
+                            enum: ["LimitedSwap"]
+                        required:
+                          - limitedSwap
+                      properties:
+                        swapBehavior:
+                          type: string
+                          description: |
+                            Defines how swap memory is handled on the node:
+                            
+                            * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
+                            * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
+
+                            For details on swap memory usage on nodes, refer to [Kubernetes documentation](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
+                          enum:
+                            - NoSwap
+                            - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Defines the kernel's tendency to use the swap.
+                            
+                            * `0`: Minimal swap usage (only to avoid OOM).
+                            * `60`: Default balanced behavior.
+                            * `100`: Aggressive swap usage.
+                            
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
+                        limitedSwap:
+                          type: object
+                          description: |
+                            Configuration for the limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
+                          required:
+                            - size
+                          properties:
+                            size:
+                              type: string
+                              pattern: '^\d+G$'
+                              description: |
+                                Size of the swap file to create, specified in GB (for example, "2G", "4G").
+                              x-doc-example: "1G"
                 update:
                   type: object
                   properties:

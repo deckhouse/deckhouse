@@ -1,5 +1,5 @@
 ---
-title: "Модуль ingress-nginx: пример"
+title: "Модуль ingress-nginx: примеры"
 ---
 
 {% raw %}
@@ -199,3 +199,152 @@ metallb:
    NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
    main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
    ```
+
+## Пример разделения доступа между публичной и административной зонами
+
+Во многих приложениях один и тот же бэкенд обслуживает как публичную часть, так и административный интерфейс. Например:
+
+- `https://example.com` — публичная зона;
+- `https://admin.example.com` — административная зона, к которой доступ должен быть ограничен (`ACL`, `mTLS`, `IP whitelist` и т.д.).
+
+При таком сценарии рекомендуем выносить административный трафик в отдельный Ingress-контроллер (при необходимости с отдельным Ingress-классом) и ограничивать доступ к нему с помощью параметра [`spec.acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom).
+
+### Особенности использования одного Ingress-контроллера
+
+Рассмотрим пример, когда для обслуживания запросов из публичной зоны и административного интерфейса используется один Ingress-контроллер.
+
+Пример конфигурации Ingress-ресурсов для такого случая:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "1.2.3.4/32"
+spec:
+  ingressClassName: nginx # Ingress-ресурс для административного трафика связан с тем же Ingress-контроллером, что и Ingress-ресурс для публичного трафика.
+  rules:
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: public-ingress
+spec:
+  ingressClassName: nginx # Ingress-ресурс для публичного трафика связан с тем же Ingress-контроллером, что и Ingress-ресурс для административного трафика.
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+```
+
+При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. И для приведенного выше примера возможна ситуация, когда через Ingress-ресурс для обслуживания публичного трафика можно подключиться к административной зоне, используя `x-forwarded-host`. Поэтому при использовании этой опции вы должны быть уверены, что запросы к Ingress-контроллеру направляются только от доверенных источников.
+
+### Использование раздельных Ingress-контроллеров
+
+Чтобы избежать ситуации, описанной выше (когда при [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) можно, например, через Ingress-ресурс для обслуживания публичного трафика подключиться к административной зоне, используя `x-forwarded-host`), рекомендуем:
+
+- настроить правила доступа на уровне Ingress-ресурсов,
+- использовать разные Ingress-контроллеры,
+- на Ingress-контроллерах ограничить, с каких адресов можно подключаться к ним.
+
+Пример конфигурации Ingress-ресурсов для такого случая:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "1.2.3.4/32"
+spec:
+  ingressClassName: admin-nginx # Ingress-ресурс для административного трафика связан с отдельным Ingress-контроллером.
+  rules:
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: public-ingress
+spec:
+  ingressClassName: public-nginx # Ingress-ресурс для публичного трафика связан связан с отдельным Ingress-контроллером.
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+```
+
+Пример Ingress-контроллера, который обслуживает административные Ingress-ресурсы и принимает подключения только из заданных подсетей:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: admin
+spec:
+  ingressClass: admin-nginx
+  inlet: HostPort
+  acceptRequestsFrom:
+    - 1.2.3.4/32
+    - 10.0.0.0/16
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    behindL7Proxy: true
+```
+
+В этом примере:
+
+- Ingress-контроллер доступен на портах узлов через инлет `HostPort`;
+- Параметр [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) разрешает подключение к контроллеру только из перечисленных подсетей;
+- Даже если внешний балансировщик или клиент может передавать свои значения заголовков `X-Forwarded-*`, решение о допуске соединения до контроллера принимается по реальному адресу подключения, а не по заголовкам.
+- Административные Ingress-ресурсы (в данном примере `admin-ingress`) обслуживаются этим контроллером согласно настроенному Ingress-классу.
+
+Пример Ingress-контроллера, который обслуживает Ingress-ресурсы для публичного трафика:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: public
+spec:
+  ingressClass: public-nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 8080
+    httpsPort: 8443
+    behindL7Proxy: true
+```

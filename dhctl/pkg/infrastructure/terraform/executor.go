@@ -17,66 +17,98 @@ package terraform
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "terraform", args...)
-	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
+type ExecutorParams struct {
+	RunExecutorParams
+
+	WorkingDir     string
+	PluginsDir     string
+	Step           infrastructure.Step
+	VMChangeTester plan.VMChangeTester
+}
+
+func (p *ExecutorParams) validate() error {
+	if err := p.RunExecutorParams.validateRunParams(); err != nil {
+		return err
 	}
 
-	cmd.Env = append(
-		os.Environ(),
-		"TF_IN_AUTOMATION=yes",
-		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-	)
+	if p.PluginsDir == "" {
+		return fmt.Errorf("PluginsDir is required for terraform executor")
+	}
 
-	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
+	if p.WorkingDir == "" {
+		return fmt.Errorf("WorkingDir is required for terraform executor")
+	}
 
-	cmd.Env = append(
-		cmd.Env,
-		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
-		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
-		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
-	)
-	return cmd
+	if p.Step == "" {
+		return fmt.Errorf("Step is required for terraform executor")
+	}
+
+	return nil
 }
 
 type Executor struct {
-	workingDir string
-	logger     log.Logger
-	cmd        *exec.Cmd
+	params ExecutorParams
+
+	logger log.Logger
+	cmd    *exec.Cmd
 }
 
-func NewExecutor(workingDir string, looger log.Logger) *Executor {
-	return &Executor{
-		workingDir: workingDir,
-		logger:     looger,
+func NewExecutor(params ExecutorParams, logger log.Logger) (*Executor, error) {
+	if err := params.validate(); err != nil {
+		return nil, err
 	}
+
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
+	return &Executor{
+		params: params,
+		logger: logger,
+	}, nil
 }
 
-func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
+func (e *Executor) IsVMChange(rc plan.ResourceChange) bool {
+	if e.params.VMChangeTester == nil {
+		return false
+	}
+
+	return e.params.VMChangeTester(rc)
+}
+
+func (e *Executor) Step() infrastructure.Step {
+	return e.params.Step
+}
+
+func (e *Executor) GetStatesDir() string {
+	return e.params.RootDir
+}
+
+func (e *Executor) Init(ctx context.Context) error {
 	args := []string{
 		"init",
-		fmt.Sprintf("-plugin-dir=%s", pluginsDir),
+		fmt.Sprintf("-plugin-dir=%s", e.params.PluginsDir),
 		"-get-plugins=false",
 		"-no-color",
 		"-input=false",
-		e.workingDir,
+		e.params.WorkingDir,
 	}
 
-	e.cmd = terraformCmd(ctx, args...)
+	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -96,13 +128,13 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	} else {
 		args = append(args,
 			fmt.Sprintf("-var-file=%s", opts.VariablesPath),
-			e.workingDir,
+			e.params.WorkingDir,
 		)
 	}
 
-	e.cmd = terraformCmd(ctx, args...)
+	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -128,27 +160,21 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 		args = append(args, "-destroy")
 	}
 
-	args = append(args, e.workingDir)
+	args = append(args, e.params.WorkingDir)
 
-	e.cmd = terraformCmd(ctx, args...)
+	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	return infrastructure.Exec(ctx, e.cmd, e.logger)
+	if opts.NoOutput {
+		e.cmd.Stdout = io.Discard
+		e.cmd.Stderr = io.Discard
+	}
+	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
 func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
-	args := []string{
-		"output",
-		"-no-color",
-		"-json",
-		fmt.Sprintf("-state=%s", statePath),
-	}
-	if len(outFielda) > 0 {
-		args = append(args, outFielda...)
-	}
-
-	e.cmd = terraformCmd(ctx, args...)
-
-	return e.cmd.Output()
+	cmd, output, err := terraformOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+	e.cmd = cmd
+	return output, err
 }
 
 func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts) error {
@@ -158,12 +184,12 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 		"-auto-approve",
 		fmt.Sprintf("-var-file=%s", opts.VariablesPath),
 		fmt.Sprintf("-state=%s", opts.StatePath),
-		e.workingDir,
+		e.params.WorkingDir,
 	}
 
-	e.cmd = terraformCmd(ctx, args...)
+	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -175,7 +201,7 @@ func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, er
 		planPath,
 	}
 
-	e.cmd = terraformCmd(ctx, args...)
+	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
 	return e.cmd.Output()
 }
@@ -194,4 +220,15 @@ func (e *Executor) Stop() {
 	//    from shell and from us.
 	//    See also pkg/system/ssh/cmd/ssh.go
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
+}
+
+func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+	args := []string{
+		"show",
+		"-json",
+		planPath,
+	}
+
+	cmd := terraformCmd(ctx, e.params.RunExecutorParams, args...)
+	return infrastructure.GetActions(ctx, cmd)
 }

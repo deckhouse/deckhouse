@@ -1,0 +1,49 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: add missing field to Cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16399
+cloud-provider-yandex:
+  fixes:
+    - summary: Terraform auto converger was failed for WithNATInstance layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16427
+deckhouse:
+  fixes:
+    - summary: Fix validation logic for a disabled module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16385
+dhctl:
+  fixes:
+    - summary: Validate WithNATInstance Yandex layout params only in bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16427
+    - summary: Added nil check to dhctl during converge in migrator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16289
+extended-monitoring:
+  fixes:
+    - summary: drop metrics when extended monitoring is disabled for node(s)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16446
+      impact: erroneous alerts for node disk usage are fixed
+ingress-nginx:
+  fixes:
+    - summary: A symlink to the new opentelemetry config path is added.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16433
+      impact: Ingress-Nginx controller's pods of 1.9 version will be restarted.
+    - summary: Fixed CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16432
+monitoring-kubernetes:
+  fixes:
+    - summary: Rollout changes for resources metrics kubelet
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16408
+node-manager:
+  fixes:
+    - summary: Fix panic in registry packages proxy if image not found.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16425
+operator-trivy:
+  fixes:
+    - summary: Fix CIS Benchmark report template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16489
+    - summary: fix CVE-2025-52881 CVE-2024-25621 on image trivy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16445
+registrypackages:
+  fixes:
+    - summary: Update containerd to 1.7.29 / 2.1.5 and runc to 1.3.3
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16335
+

@@ -18,23 +18,14 @@ package conversion
 
 import "sync"
 
-var (
-	instance *ConversionsStore
-	once     sync.Once
-)
-
 type ConversionsStore struct {
 	mtx sync.Mutex
 
 	converters map[string]*Converter
 }
 
-// TODO: refactor singletone
-func Store() *ConversionsStore {
-	once.Do(func() {
-		instance = &ConversionsStore{}
-	})
-	return instance
+func NewConversionsStore() *ConversionsStore {
+	return &ConversionsStore{}
 }
 
 func (s *ConversionsStore) Add(module, pathToConversions string) error {

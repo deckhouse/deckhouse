@@ -10,7 +10,7 @@ git:
     - '**/*'
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -26,7 +26,8 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
-    - go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go`) | indent 6 }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

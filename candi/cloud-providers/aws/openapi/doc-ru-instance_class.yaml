@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры инстанса в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
+            Параметры инстанса в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:

@@ -20,7 +20,7 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
 
 {% alert level="info" %}
-The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/#module-sets).
+The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
 {% endalert %}
 
 ## Deployment Scenarios
@@ -82,6 +82,10 @@ Features of the configurations listed in the table above:
   > Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
 * **Typical** — This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
+
+{% alert level="info" %}
+Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{% endalert %}
 
 ## Deciding on the amount of resources needed for nodes
 
@@ -203,7 +207,7 @@ Such clusters lack fault tolerance. We highly advise you against using this kind
 
 In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight workloads.
 
-The [Getting Started guide](../gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 60 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 60 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
 With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 

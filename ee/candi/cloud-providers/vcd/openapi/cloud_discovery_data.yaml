@@ -50,3 +50,11 @@ apiVersions:
       vcdAPIVersion:
         type: string
         description: VCD API version.
+      loadBalancer:
+        type: object
+        additionalProperties: false
+        description: Parameters for the NSX-T ALB.
+        properties:
+          enabled:
+            type: boolean
+            description: Whether the NSX-T ALB feature is enabled.

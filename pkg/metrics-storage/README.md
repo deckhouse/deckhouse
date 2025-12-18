@@ -13,7 +13,6 @@ A comprehensive metrics management package for Golang applications that provides
 - [Metric Registration](#metric-registration)
 - [Grouped Metrics](#grouped-metrics)
 - [Batch Operations with Operations API](#batch-operations-with-operations-api)
-- [Prefix Templates](#prefix-templates)
 - [Prometheus Integration](#prometheus-integration)
 - [Advanced Usage Patterns](#advanced-usage-patterns)
 - [Package Structure](#package-structure)
@@ -42,7 +41,7 @@ The `metrics-storage` package is a sophisticated wrapper around Prometheus clien
 
 The package consists of several key components:
 
-- **MetricStorage**: Main interface for metric operations and registration with support for prefix templates
+- **MetricStorage**: Main interface for metric operations and registration
 - **GroupedVault**: Internal storage that manages grouped metrics and collectors with automatic expiration
 - **Collectors**: Type-safe metric collectors (Counter, Gauge, Histogram) with consistent value handling
 - **Operations**: Batch operation system for efficient metric updates with validation and error handling
@@ -66,9 +65,9 @@ import (
 )
 
 func main() {
-    // Create a new metrics storage with prefix "app"
+    // Create a new metrics storage
     logger := log.NewLogger()
-    storage := metricsstorage.NewMetricStorage("app", 
+    storage := metricsstorage.NewMetricStorage(
         metricsstorage.WithNewRegistry(), 
         metricsstorage.WithLogger(logger),
     )
@@ -389,26 +388,6 @@ operation.ActionHistogramObserve  // Record histogram observation
 operation.ActionExpireMetrics     // Expire all metrics in a group
 ```
 
-## Prefix Templates
-
-Metric names can use template variables for dynamic prefix resolution:
-
-```go
-// Create storage with prefix "myapp"
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// Use {PREFIX} template in metric names
-storage.GaugeSet("{PREFIX}_component_status", 1.0, map[string]string{
-    "component": "database",
-})
-// Results in metric name: "myapp_component_status"
-
-storage.CounterAdd("{PREFIX}_errors_total", 1.0, map[string]string{
-    "type": "connection",
-})
-// Results in metric name: "myapp_errors_total"
-```
-
 ## Prometheus Integration
 
 ### Exposing Metrics via HTTP
@@ -501,74 +480,6 @@ metrics, err := storage.Gather()
 if err != nil {
     log.Printf("Failed to gather metrics: %v", err)
 }
-
-// Use with custom collector functions
-storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-    // Custom logic to update metrics before gathering
-    s.GaugeSet("custom_runtime_metric", getCurrentValue(), nil)
-})
-```
-
-### Using AddCollectorFunc for Dynamic Metrics
-
-The `AddCollectorFunc` method allows you to register functions that will be called every time metrics are gathered, enabling dynamic metric updates:
-
-```go
-import (
-    "runtime"
-    "time"
-    metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-)
-
-func setupDynamicMetrics(storage *metricsstorage.MetricStorage) {
-    // Add a collector function for runtime metrics
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        var m runtime.MemStats
-        runtime.ReadMemStats(&m)
-        
-        // Update runtime metrics dynamically
-        s.GaugeSet("go_memory_alloc_bytes", float64(m.Alloc), map[string]string{
-            "type": "heap",
-        })
-        s.GaugeSet("go_memory_sys_bytes", float64(m.Sys), map[string]string{
-            "type": "system",
-        })
-        s.GaugeSet("go_goroutines_total", float64(runtime.NumGoroutine()), nil)
-    })
-    
-    // Add another collector function for application-specific metrics
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        // Update application state metrics
-        s.GaugeSet("app_uptime_seconds", time.Since(startTime).Seconds(), nil)
-        s.GaugeSet("app_active_connections", float64(getActiveConnections()), nil)
-        
-        // Update configuration-based metrics
-        s.GaugeSet("app_config_version", float64(getCurrentConfigVersion()), nil)
-    })
-}
-
-var startTime = time.Now()
-
-func getActiveConnections() int {
-    // Your logic to get active connections
-    return 42
-}
-
-func getCurrentConfigVersion() int {
-    // Your logic to get current config version
-    return 1
-}
-
-func main() {
-    storage := metricsstorage.NewMetricStorage("myapp")
-    
-    // Setup dynamic metrics
-    setupDynamicMetrics(storage)
-    
-    // The collector functions will be called automatically when metrics are gathered
-    http.Handle("/metrics", storage.Handler())
-    http.ListenAndServe(":8080", nil)
-}
 ```
 
 ### Advanced Handler Configuration
@@ -618,12 +529,6 @@ func setupMetricsServer(storage *metricsstorage.MetricStorage) *http.Server {
 
 func main() {
     storage := metricsstorage.NewMetricStorage("app")
-    
-    // Setup metrics with collector functions
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        // Update metrics before each scrape
-        updateApplicationMetrics(s)
-    })
     
     server := setupMetricsServer(storage)
     
@@ -802,17 +707,7 @@ const (
 
 ## Best Practices
 
-### 1. Use Prefixes Consistently
-
-```go
-// Good: Use a consistent prefix for your application
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// Use template variables for dynamic prefixes
-storage.CounterAdd("{PREFIX}_requests_total", 1.0, labels)
-```
-
-### 2. Group Related Metrics
+### 1. Group Related Metrics
 
 ```go
 // Good: Group metrics that have related lifecycles
@@ -978,123 +873,6 @@ func endUserSession(storage *metricsstorage.MetricStorage, userID string) {
 }
 ```
 
-### Collector Functions for On-Demand Metrics
-
-Use `AddCollectorFunc` for metrics that should be updated on every scrape:
-
-```go
-import (
-    "database/sql"
-    "os"
-    "runtime"
-)
-
-func setupCollectorFunctions(storage *metricsstorage.MetricStorage, db *sql.DB) {
-    // System metrics collector
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        var m runtime.MemStats
-        runtime.ReadMemStats(&m)
-        
-        s.GaugeSet("system_memory_heap_bytes", float64(m.HeapAlloc), nil)
-        s.GaugeSet("system_memory_stack_bytes", float64(m.StackInuse), nil)
-        s.GaugeSet("system_goroutines", float64(runtime.NumGoroutine()), nil)
-        s.GaugeSet("system_gc_cycles", float64(m.NumGC), nil)
-    })
-    
-    // Database metrics collector
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        stats := db.Stats()
-        
-        s.GaugeSet("db_connections_open", float64(stats.OpenConnections), nil)
-        s.GaugeSet("db_connections_in_use", float64(stats.InUse), nil)
-        s.GaugeSet("db_connections_idle", float64(stats.Idle), nil)
-        s.CounterAdd("db_connections_wait_count", float64(stats.WaitCount), nil)
-        s.GaugeSet("db_connections_wait_duration_ms", 
-            float64(stats.WaitDuration.Milliseconds()), nil)
-    })
-    
-    // File system metrics collector
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        if info, err := os.Stat("/tmp"); err == nil {
-            s.GaugeSet("filesystem_tmp_size_bytes", float64(info.Size()), nil)
-        }
-        
-        // Add disk usage metrics
-        if usage := getDiskUsage("/"); usage != nil {
-            s.GaugeSet("filesystem_disk_used_bytes", float64(usage.Used), 
-                map[string]string{"mount": "/"})
-            s.GaugeSet("filesystem_disk_free_bytes", float64(usage.Free), 
-                map[string]string{"mount": "/"})
-        }
-    })
-    
-    // Application-specific metrics collector
-    storage.AddCollectorFunc(func(s metricsstorage.Storage) {
-        // Update cache metrics
-        if cache := getApplicationCache(); cache != nil {
-            s.GaugeSet("app_cache_size", float64(cache.Size()), nil)
-            s.GaugeSet("app_cache_hit_ratio", cache.HitRatio(), nil)
-            s.CounterAdd("app_cache_evictions", float64(cache.Evictions()), nil)
-        }
-        
-        // Update queue metrics
-        if queue := getApplicationQueue(); queue != nil {
-            s.GaugeSet("app_queue_length", float64(queue.Length()), nil)
-            s.GaugeSet("app_queue_processing_time_ms", queue.AvgProcessingTime(), nil)
-        }
-    })
-}
-
-type DiskUsage struct {
-    Used, Free uint64
-}
-
-func getDiskUsage(path string) *DiskUsage {
-    // Implementation depends on your system
-    return &DiskUsage{Used: 1024 * 1024 * 100, Free: 1024 * 1024 * 900}
-}
-
-type Cache interface {
-    Size() int
-    HitRatio() float64
-    Evictions() int
-}
-
-type Queue interface {
-    Length() int
-    AvgProcessingTime() float64
-}
-
-func getApplicationCache() Cache {
-    // Return your application's cache implementation
-    return nil
-}
-
-func getApplicationQueue() Queue {
-    // Return your application's queue implementation  
-    return nil
-}
-
-func main() {
-    storage := metricsstorage.NewMetricStorage("myapp")
-    
-    // Setup database connection
-    db, err := sql.Open("postgres", "connection-string")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer db.Close()
-    
-    // Setup all collector functions
-    setupCollectorFunctions(storage, db)
-    
-    // Start metrics server - collector functions will be called on each scrape
-    http.Handle("/metrics", storage.Handler())
-    log.Println("Metrics available at http://localhost:8080/metrics")
-    http.ListenAndServe(":8080", nil)
-}
-```
-
 ## Migration Guide
 
 ### From Direct Prometheus Usage
@@ -1129,24 +907,6 @@ func handleRequest() {
         "method": "GET",
     })
 }
-```
-
-### From Other Metrics Libraries
-
-```go
-// From other libraries, the pattern is similar:
-// 1. Create MetricStorage with appropriate prefix
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// 2. Replace direct metric calls with storage methods
-// Old: myCounter.Inc()
-// New: storage.CounterAdd("my_counter", 1.0, labels)
-
-// Old: myGauge.Set(42.0)  
-// New: storage.GaugeSet("my_gauge", 42.0, labels)
-
-// Old: myHistogram.Observe(0.5)
-// New: storage.HistogramObserve("my_histogram", 0.5, labels, buckets)
 ```
 
 ## Troubleshooting

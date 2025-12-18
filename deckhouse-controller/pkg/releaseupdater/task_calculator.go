@@ -74,10 +74,26 @@ const (
 	Process
 )
 
+// String returns the string representation of TaskType
+func (t TaskType) String() string {
+	switch t {
+	case Skip:
+		return "skip"
+	case Await:
+		return "await"
+	case Process:
+		return "process"
+	default:
+		return "unknown"
+	}
+}
+
 type Task struct {
 	TaskType TaskType
 	Message  string
 
+	IsMajor  bool
+	IsFromTo bool
 	IsPatch  bool
 	IsSingle bool
 	IsLatest bool
@@ -111,7 +127,7 @@ func (ri *releaseInfo) RemapToReleaseInfo() *ReleaseInfo {
 
 // ReleaseQueueDepthDelta represents the difference between deployed and latest releases
 type ReleaseQueueDepthDelta struct {
-	Major int // Major versions delta, not used right now, for future usage
+	Major int // Major versions delta
 	Minor int // Minor versions delta
 	Patch int // Patch versions delta
 }
@@ -153,6 +169,25 @@ func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
 	}
 
 	return 0
+}
+
+// GetMajorReleaseDepth returns the major version difference for monitoring and alerting purposes.
+// This method provides a dedicated metric for tracking major version updates separately from
+// minor and patch updates due to their potentially breaking nature.
+//
+// Major release depth calculation logic:
+//   - If major version differences exist: return the major delta count
+//   - If no major differences exist: return 0 (up to date on major version)
+//
+// Examples:
+//   - Delta{Major: 2, Minor: 3, Patch: 1} → Returns: 2 (2 major versions behind)
+//   - Delta{Major: 1, Minor: 0, Patch: 0} → Returns: 1 (1 major version behind)
+//   - Delta{Major: 0, Minor: 5, Patch: 2} → Returns: 0 (up to date on major version)
+func (d *ReleaseQueueDepthDelta) GetMajorReleaseDepth() int {
+	if d == nil || d.Major <= 0 {
+		return 0
+	}
+	return d.Major
 }
 
 // calculateReleaseQueueDepthDelta computes the version gap between the currently deployed release
@@ -343,9 +378,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	if len(releases) == 1 {
 		return &Task{
-			TaskType: Process,
-			IsSingle: true,
-			IsLatest: true,
+			TaskType:   Process,
+			IsSingle:   true,
+			IsLatest:   true,
+			QueueDepth: &ReleaseQueueDepthDelta{},
 		}, nil
 	}
 
@@ -377,6 +413,13 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 		logger.Debug("deployed release found")
 
+		// if we patch between reconcile start and calculating
+		if deployedReleaseInfo.Version.Equal(release.GetVersion()) {
+			logger.Debug("release version are equal deployed version")
+
+			return nil, ErrReleaseIsAlreadyDeployed
+		}
+
 		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
 			logger.Debug("release must be skipped, because deployed release is greater")
@@ -385,13 +428,6 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				TaskType: Skip,
 			}, nil
 		}
-
-		// if we patch between reconcile start and calculating
-		if deployedReleaseInfo.Version.Equal(release.GetVersion()) {
-			logger.Debug("release version are equal deployed version")
-
-			return nil, ErrReleaseIsAlreadyDeployed
-		}
 	}
 
 	releaseIdx, _ := slices.BinarySearchFunc(releases, release.GetVersion(), func(a v1alpha1.Release, b *semver.Version) int {
@@ -399,11 +435,13 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	})
 
 	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
-	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
+	isLatestRelease := releaseIdx == len(releases)-1
 	isPatch := true
+	isMajor := false
 
 	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
 	if deployedReleaseInfo != nil {
+		isMajor = release.GetVersion().Major() > deployedReleaseInfo.Version.Major()
 		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
 		if endpointIdx >= 0 {
@@ -418,6 +456,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			return &Task{
 				TaskType:            Process,
 				IsPatch:             false,
+				IsMajor:             isMajor,
+				IsFromTo:            true,
 				IsLatest:            endpointIdx == len(releases)-1,
 				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 				QueueDepth:          queueDepthDelta,
@@ -428,65 +468,43 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	// check previous release
 	// only for awaiting purpose
 	if releaseIdx > 0 {
-		prevRelease := releases[releaseIdx-1]
+		logger.Debug("checking previous release for awaiting logic")
 
-		// if release version is greater in major or minor version than previous release
-		if !isPatchRelease(prevRelease.GetVersion(), release.GetVersion()) ||
-			(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
-			isPatch = false
-
-			// it must await if previous release has Deployed state
-			// truncate all not deployed phase releases
-			if prevRelease.GetPhase() == v1alpha1.DeckhouseReleasePhasePending {
-				msg := prevRelease.GetMessage()
-				if !strings.Contains(msg, "awaiting") {
-					msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
-				}
-
-				logger.Debug("release awaiting", slog.String("reason", msg))
-
-				return &Task{
-					TaskType:            Await,
-					Message:             msg,
-					DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-					QueueDepth:          queueDepthDelta,
-				}, nil
+		// Find the previous release that is Pending or Deployed (skip Suspended, Superseded, Skipped)
+		var prevRelease v1alpha1.Release
+		prevReleaseFound := false
+		for i := releaseIdx - 1; i >= 0; i-- {
+			phase := releases[i].GetPhase()
+			if phase == v1alpha1.DeckhouseReleasePhasePending || phase == v1alpha1.DeckhouseReleasePhaseDeployed {
+				prevRelease = releases[i]
+				prevReleaseFound = true
+				break
 			}
+		}
 
-			// logic for equal major versions (unless constraints endpoint is ahead)
-			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
-				// here we have only Deployed phase releases in prevRelease
-				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
+		if !prevReleaseFound {
+			logger.Debug("all previous releases are suspended/superseded/skipped")
+		}
 
-				// it must await if deployed release has minor version more than one
-				if !ltsRelease &&
-					release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
-					msg := fmt.Sprintf(
-						"minor version is greater than deployed %s by one",
-						prevRelease.GetVersion().Original(),
-					)
+		if prevReleaseFound {
+			logger = logger.With(slog.String("prev_release", prevRelease.GetVersion().Original()))
 
-					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+			// if release version is greater in major or minor version than previous release
+			if !isPatchRelease(prevRelease.GetVersion(), release.GetVersion()) ||
+				(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
+				logger.Debug("current release is not a patch")
 
-					return &Task{
-						TaskType:            Await,
-						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-						QueueDepth:          queueDepthDelta,
-					}, nil
-				}
+				isPatch = false
 
-				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
-				// it must await if deployed release has minor version more than acceptable LTS channel limitation
-				// For modules, skip this check (allow any minor version jump)
-				if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
-					msg := fmt.Sprintf(
-						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
-						prevRelease.GetVersion().Original(),
-						release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
-					)
+				// it must await if previous release has Pending state (unless it's forced)
+				// truncate all not deployed phase releases
+				if prevRelease.GetPhase() == v1alpha1.DeckhouseReleasePhasePending && !prevRelease.GetForce() {
+					msg := prevRelease.GetMessage()
+					if !strings.Contains(msg, "awaiting") {
+						msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
+					}
 
-					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+					logger.Debug("release awaiting", slog.String("reason", msg))
 
 					return &Task{
 						TaskType:            Await,
@@ -495,25 +513,70 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
-			}
 
-			// logic for greater major versions
-			if release.GetVersion().Major() > prevRelease.GetVersion().Major() {
-				// it must await if trying to update major version other than 0->1
-				if prevRelease.GetVersion().Major() != 0 || release.GetVersion().Major() != 1 {
-					msg := fmt.Sprintf(
-						"major version is greater than deployed %s",
-						prevRelease.GetVersion().Original(),
-					)
+				// logic for equal major versions (unless constraints endpoint is ahead)
+				if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
+					// here we have only Deployed phase releases in prevRelease
+					ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 
-					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+					// it must await if deployed release has minor version more than one
+					if !ltsRelease &&
+						release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
+						msg := fmt.Sprintf(
+							"minor version is greater than deployed %s by one",
+							prevRelease.GetVersion().Original(),
+						)
 
-					return &Task{
-						TaskType:            Await,
-						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-						QueueDepth:          queueDepthDelta,
-					}, nil
+						logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+
+						return &Task{
+							TaskType:            Await,
+							Message:             msg,
+							DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+							QueueDepth:          queueDepthDelta,
+						}, nil
+					}
+
+					isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
+					// it must await if deployed release has minor version more than acceptable LTS channel limitation
+					// For modules, skip this check (allow any minor version jump)
+					if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+						msg := fmt.Sprintf(
+							"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+							prevRelease.GetVersion().Original(),
+							release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+						)
+
+						logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+
+						return &Task{
+							TaskType:            Await,
+							Message:             msg,
+							DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+							QueueDepth:          queueDepthDelta,
+						}, nil
+					}
+				}
+
+				// logic for greater major versions
+				if release.GetVersion().Major() > prevRelease.GetVersion().Major() {
+					// it must await if trying to update major version other than 0->1
+					if prevRelease.GetVersion().Major() != 0 || release.GetVersion().Major() != 1 {
+						msg := fmt.Sprintf(
+							"major version is greater than deployed %s",
+							prevRelease.GetVersion().Original(),
+						)
+
+						logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+
+						return &Task{
+							TaskType:            Await,
+							IsMajor:             true,
+							Message:             msg,
+							DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+							QueueDepth:          queueDepthDelta,
+						}, nil
+					}
 				}
 			}
 		}

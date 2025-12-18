@@ -26,6 +26,7 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
@@ -33,7 +34,7 @@ metadata:
     source: test-source
     status: deployed
   name: demo-1.67.5
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: demo
   version: 1.67.5
@@ -50,12 +51,14 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
   name: demo-1.75.1
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: demo
   update:
@@ -78,12 +81,14 @@ metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
   name: demo-1.75.2
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: demo
   update:
@@ -107,12 +112,14 @@ metadata:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
   name: demo-1.75.3
-  resourceVersion: "1004"
+  resourceVersion: "1006"
 spec:
   moduleName: demo
   update:
@@ -134,7 +141,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 properties: {}
 status:
   conditions:

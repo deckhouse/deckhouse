@@ -31,6 +31,13 @@ spec:
                           description: "Список запросов на выделение ресурсов, которые должны быть выполнены (процессор, память или оба запроса)."
                     disallowedImageTags:
                       description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
+                    disallowedTolerations:
+                      description: |
+                        Запрещает создание подов с tolerations из указанного списка.
+
+                        Больше информации [в документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+
+                        Список шаблонов toleration (partial match по указанным полям: key/operator/value/effect).
                     requiredLabels:
                       description: |
                         Список лейблов, которые должен указать объект.

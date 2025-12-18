@@ -1,0 +1,17 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+skinparam componentStyle rectangle
+
+component "<color:navy>Custom rules</color>" as UR #LightBlue
+component "<color:navy>Built-in rules</color>" as InR #LightBlue
+
+[Integrity control] --> [Integrity control\n when starting containers]
+[Integrity control] --> [Integrity control\n of running containers]
+[Integrity control\n of running containers] <.. InR
+[Integrity control\n of running containers] <.. UR
+@enduml

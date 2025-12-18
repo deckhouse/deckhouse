@@ -58,7 +58,7 @@ spec:
                     - cse-pro
                   description: |
                     HTTPS endpoint with remote cluster metadata.
-                  pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
+                  pattern: '^https://[0-9a-zA-Z._/-]+$'
                   x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                 metadata:
                   type: object
@@ -71,7 +71,7 @@ spec:
                       default: false
                       description: |
                         Skip validation certificate on HTTPS endpoint with remote cluster metadata.
-                      x-doc-examples: ['true']
+                      x-doc-examples: [true]
                     ca:
                       type: string
                       x-doc-d8Editions:

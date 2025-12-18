@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/mod v0.17.0
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
 	k8s.io/client-go v0.29.1

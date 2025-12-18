@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_module_documentation_uri" (list . "<path_to_document>") }} */ -}}
 {{- /* returns rendered documentation uri using publicDomainTemplate or deckhouse.io domains*/ -}}
 {{- define "helm_lib_module_documentation_uri" }}
-  {{- $default_doc_prefix := "https://deckhouse.io/products/kubernetes-platform/documentation/v1" -}}
+  {{- $default_doc_prefix := "https://deckhouse.io" -}}
   {{- $context      := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $path_portion := index . 1 -}} {{- /* Path to the document */ -}}
   {{- $uri := "" -}}

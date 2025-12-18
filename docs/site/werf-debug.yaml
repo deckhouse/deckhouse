@@ -57,7 +57,7 @@ git:
     install: ['Gemfile','Gemfile.lock']
     beforeSetup: '**/*'
 ---
-image: web-backend
+image: web-router
 from: {{ $BASE_GOLANG_16_BUSTER }}
 imageSpec:
   config:

@@ -28,6 +28,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           current := input.review.object.spec.revisionHistoryLimit
           desired := input.parameters.limit
           current > desired

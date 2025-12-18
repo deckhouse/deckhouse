@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: ratify
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: ratify
@@ -59,7 +59,7 @@ spec:
       containers:
       - name: ratify
         image: {{ include "helm_lib_module_image" (list . "ratify") }}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -118,7 +118,7 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
-      volumes:        
+      volumes:
         - name: config
           configMap:
             name: ratify-configuration

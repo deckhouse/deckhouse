@@ -1,0 +1,51 @@
+# werf git section for modules bundles data
+- add: /modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+{{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+- add: /ee/be/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/be
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+{{- end }}
+{{- if or (eq .Edition "SE") (eq .Edition "SE-plus") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+- add: /ee/se/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+- add: /ee/se-plus/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/se-plus
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+{{- end }}
+{{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+- add: /ee/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/ee
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+{{- end }}
+{{- if or (eq .Edition "FE") (eq .Mode "development")  }}
+- add: /ee/fe/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+{{- end }}

@@ -1,6 +1,6 @@
 dirs:
 - /host/
 - /var/run/node-exporter-textfile
-- /var/run/docker.sock
+- /run/node-exporter-textfile
 - /etc/containerd
 - /root/.kube

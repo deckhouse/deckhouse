@@ -6,11 +6,11 @@ lang: ru
 
 ## Образы
 
-Ресурс [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
+Ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html).
+1. Пользователь создаёт ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage).
 1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 1. После завершения загрузки ресурс становится доступным для создания дисков.
 
@@ -60,7 +60,7 @@ lang: ru
 
 Образы могут быть созданы на основе других образов и дисков виртуальных машин.
 
-С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](../../../../reference/cr/clustervirtualimage.html).
+С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](/modules/virtualization/cr.html#clustervirtualimage).
 
 ## Увеличение размера DVCR
 
@@ -333,3 +333,49 @@ some-image   Ready   false   100%       1m
 - Выберите файл в открывшемся файловом менеджере.
 - Нажмите кнопку «Создать».
 - Дождитесь, пока образ перейдет в состояние `Готов`.
+
+### Очистка хранилища образов
+
+{% alert level="info" %}
+Доступно с [версии 1.2.0](/products/virtualization-platform/documentation/release-notes.html#v120) и выше.
+{% endalert %}
+
+Со временем создание и удаление ресурсов ClusterVirtualImage, VirtualImage, VirtualDisk приводит к накоплению
+неактуальных образов во внутрикластерном хранилище. Для поддержания хранилища в актуальном состоянии предусмотрена сборка мусора по расписанию.
+По умолчанию эта функция отключена. Для включения очистки нужно задать расписание в настройках модуля в ресурсе ModuleConfig/virtualization:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  # ...
+  settings:
+    dvcr:
+      gc:
+        schedule: "0 20 * * *"
+  # ...
+```
+
+На время работы сборки мусора хранилище переводится в режим «только чтение». Все создаваемые в это время ресурсы будут ожидать окончания очистки.
+
+Для проверки наличия неактуальных образов в хранилище можно выполнить такую команду:
+
+```bash
+d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+```
+
+На экран будут выведены сведения о состоянии хранилища и список неактуальных образов, которые могут быть удалены.
+
+```console
+Found 2 cvi, 5 vi, 1 vd manifests in registry
+Found 1 cvi, 5 vi, 11 vd resources in cluster
+  Total     Used    Avail     Use%
+36.3GiB  13.1GiB  22.4GiB      39%
+Images eligible for cleanup:
+KIND                   NAMESPACE            NAME
+ClusterVirtualImage                         debian-12
+VirtualDisk            default              debian-10-root
+VirtualImage           default              ubuntu-2204
+```

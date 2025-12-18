@@ -138,8 +138,8 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
    ```yaml
    settings:
-     route53AccessKeyID: AKIABROTAITAJMPASA4A
-     route53SecretAccessKey: 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
+     route53AccessKeyID: <ACCESS_KEY_ID>
+     route53SecretAccessKey: <SECRET_ACCESS_KEY>
    ```
 
    After that, Deckhouse will automatically create ClusterIssuer and Secret for route53 in the `d8-cert-manager` namespace.
@@ -221,5 +221,5 @@ spec:
 ```
 
 {% alert level="info" %}
-An example of creating a self-signed certificate manually, without using the `cert-manager`, is available in [FAQ](../../deckhouse-faq.html#how-to-generate-a-self-signed-certificate).
+An example of creating a self-signed certificate manually, without using the `cert-manager`, is available in [FAQ](/products/kubernetes-platform/documentation/v1/user/security/tls.html).
 {% endalert %}

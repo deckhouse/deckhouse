@@ -15,8 +15,8 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 <div markdown="1">
 ```shell
 sudo -i d8 k apply -f - <<EOF
-# Параметры контроллера NGINX Ingress.
-# https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# Параметры контроллера Ingress NGINX.
+# https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:

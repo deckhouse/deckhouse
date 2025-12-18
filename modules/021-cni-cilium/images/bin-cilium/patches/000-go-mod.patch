@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index 02de3bcb..e619edd3 100644
+--- a/go.mod
++++ b/go.mod
+@@ -33,7 +33,7 @@ require (
+ 	github.com/containernetworking/cni v1.2.3
+ 	github.com/coreos/go-systemd/v22 v22.5.0
+ 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+-	github.com/docker/docker v27.4.0+incompatible
++	github.com/docker/docker v28.0.0+incompatible
+ 	github.com/docker/libnetwork v0.8.0-dev.2.0.20210525090646-64b7a4574d14
+ 	github.com/evanphx/json-patch v5.9.0+incompatible
+ 	github.com/fatih/color v1.18.0
+diff --git a/go.sum b/go.sum
+index bb271f2e..672d2aa0 100644
+--- a/go.sum
++++ b/go.sum
+@@ -164,8 +164,8 @@ github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi
+ github.com/dimchansky/utfbom v1.1.1/go.mod h1:SxdoEBH5qIqFocHMyGOXVAybYJdr71b1Q/j0mACtrfE=
+ github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5QvfrDyIgxBk=
+ github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
+-github.com/docker/docker v27.4.0+incompatible h1:I9z7sQ5qyzO0BfAb9IMOawRkAGxhYsidKiTMcm0DU+A=
+-github.com/docker/docker v27.4.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v28.0.0+incompatible h1:Olh0KS820sJ7nPsBKChVhk5pzqcwDR15fumfAd/p9hM=
++github.com/docker/docker v28.0.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/go-connections v0.5.0 h1:USnMq7hx7gwdVZq1L49hLXaFtUdTADjXGp+uj1Br63c=
+ github.com/docker/go-connections v0.5.0/go.mod h1:ov60Kzw0kKElRwhNs9UlUHAE/F9Fe6GLaXnqyDdmEXc=
+ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=

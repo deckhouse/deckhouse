@@ -22,6 +22,8 @@ git:
 imageSpec:
   config:
     entrypoint: ["/controller"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

@@ -50,7 +50,7 @@ type NodeGroupController struct {
 
 	cloudConfig     string
 	desiredReplicas int
-	layoutStep      string
+	layoutStep      infrastructure.Step
 }
 
 func NewNodeGroupController(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool) *NodeGroupController {
@@ -89,41 +89,50 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	log.DebugF("nodes to delete %v\n", len(nodesToDeleteInfo))
 
 	if !ctx.CommanderMode() {
-		availableHosts := ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts()
-
-		needReconnect := false
-		for _, host := range availableHosts {
-			for _, dhost := range nodesToDeleteInfo {
-				if host.Name == dhost.name {
-					ctx.KubeClient().NodeInterfaceAsSSHClient().Session().RemoveAvailableHosts(host)
-					if host.Host == ctx.KubeClient().NodeInterfaceAsSSHClient().Session().Host() {
-						needReconnect = true
+		sshClient := ctx.KubeClient().NodeInterfaceAsSSHClient()
+		log.DebugF("sshClient: %v\n", sshClient)
+		if sshClient != nil {
+			availableHosts := sshClient.Session().AvailableHosts()
+			needReconnect := false
+			for _, host := range availableHosts {
+				for _, dhost := range nodesToDeleteInfo {
+					if host.Name == dhost.name {
+						ctx.KubeClient().NodeInterfaceAsSSHClient().Session().RemoveAvailableHosts(host)
+						if host.Host == ctx.KubeClient().NodeInterfaceAsSSHClient().Session().Host() {
+							needReconnect = true
+						}
 					}
 				}
 			}
-		}
 
-		log.DebugF("list of available host: %-v\n", ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts())
+			log.DebugF("list of available host: %-v\n", ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts())
 
-		if len(nodesToDeleteInfo) > 0 && needReconnect {
-			err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
-				ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
-				err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
-				return err
-			})
-			if err != nil {
-				return err
+			if len(nodesToDeleteInfo) > 0 && needReconnect {
+				err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
+					ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
+					err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
+					return err
+				})
+				if err != nil {
+					return err
+				}
+
+				kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx.Ctx(), ssh.NewNodeInterfaceWrapper(ctx.KubeClient().NodeInterfaceAsSSHClient()))
+				if err != nil {
+					return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+				}
+
+				newCtx := context.NewContext(ctx.Ctx(), context.Params{
+					KubeClient:     kubeCl,
+					Cache:          ctx.StateCache(),
+					ChangeParams:   ctx.ChangesSettings(),
+					ProviderGetter: ctx.ProviderGetter(),
+					Logger:         ctx.Logger(),
+				})
+				ctx = newCtx
 			}
 
-			kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx.Ctx(), ssh.NewNodeInterfaceWrapper(ctx.KubeClient().NodeInterfaceAsSSHClient()))
-			if err != nil {
-				return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
-			}
-
-			newCtx := context.NewContext(ctx.Ctx(), kubeCl, ctx.StateCache(), ctx.ChangesSettings())
-			ctx = newCtx
 		}
-
 	}
 
 	log.DebugF("starting update nodes\n")
@@ -188,7 +197,8 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			if err != nil {
 				return err
 			}
-			cfg, err = mc.DeepCopy().Prepare()
+			// we use dummy preparator because metaConfig was prepared early
+			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyPreparatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}
@@ -215,7 +225,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			nodeState = nodeToDeleteInfo.state
 		}
 
-		nodeRunner := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
+		nodeRunner, err := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(ctx.Ctx(), cfg, infrastructure.NodeDeleteRunnerOptions{
 			NodeName:        nodeToDeleteInfo.name,
 			NodeGroupName:   c.name,
 			LayoutStep:      c.layoutStep,
@@ -229,6 +239,9 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		}, ctx.ChangesSettings().AutomaticSettings)
+		if err != nil {
+			return err
+		}
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))

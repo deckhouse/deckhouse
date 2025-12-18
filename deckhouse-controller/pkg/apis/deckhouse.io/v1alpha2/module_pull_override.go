@@ -39,21 +39,11 @@ var (
 
 var _ runtime.Object = (*ModulePullOverride)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModulePullOverrideList is a list of ModulePullOverride resources
-type ModulePullOverrideList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModulePullOverride `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModulePullOverride object
 type ModulePullOverride struct {
@@ -70,15 +60,11 @@ type ModulePullOverride struct {
 	Status ModulePullOverrideStatus `json:"status,omitempty"`
 }
 
-// +k8s:deepcopy-gen=true
-
 type ModulePullOverrideSpec struct {
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
 	Rollback     bool            `json:"rollback"`
 }
-
-// +k8s:deepcopy-gen=true
 
 type ModulePullOverrideStatus struct {
 	UpdatedAt   metav1.Time `json:"updatedAt"`
@@ -100,4 +86,14 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 // GetWeight returns the weight of the module
 func (mo *ModulePullOverride) GetWeight() uint32 {
 	return mo.Status.Weight
+}
+
+// +kubebuilder:object:root=true
+
+// ModulePullOverrideList is a list of ModulePullOverride resources
+type ModulePullOverrideList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModulePullOverride `json:"items"`
 }

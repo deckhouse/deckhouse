@@ -2,6 +2,12 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: parca-1.26.2
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: ""
 spec:
   moduleName: parca
   version: 1.26.2

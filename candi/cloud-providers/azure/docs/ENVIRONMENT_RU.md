@@ -15,7 +15,8 @@ description: "Настройка Azure для работы облачного п
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учетную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-Для управления ресурсами в облаке Microsoft Azure средствами Deckhouse необходимо создать service account. Для этого:
+Для управления ресурсами в облаке Microsoft Azure средствами Deckhouse Kubernetes Platform необходимо создать service account. Для этого:
+
 1. Установите [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), авторизуйтесь и получите `Subscription ID`:
 
    ```shell

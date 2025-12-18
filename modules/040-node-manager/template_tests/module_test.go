@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.29.8
+  kubernetesVersion: 1.30.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.30"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -136,7 +136,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -191,7 +191,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -274,7 +274,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -328,7 +328,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -392,7 +392,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -414,7 +414,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -472,7 +472,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -499,7 +499,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -565,7 +565,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -599,7 +599,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.30"
     cri:
       type: "Containerd"
 `
@@ -668,7 +668,16 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: static
+        cluster.x-k8s.io/deployment-name: worker
     spec:
       bootstrap:
         dataSecretName: manual-bootstrap-for-worker
@@ -676,8 +685,12 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: StaticMachineTemplate
+        namespace: d8-cloud-instance-manager
         name: worker
-  selector: {}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: static
+      cluster.x-k8s.io/deployment-name: worker
 `
 )
 
@@ -2070,7 +2083,7 @@ internal:
 					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
-
+				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
@@ -2205,8 +2218,8 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
 					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
 
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2216,7 +2229,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-75eea1e8",
+					templateName: "worker-a6381073",
 				})
 			})
 		})

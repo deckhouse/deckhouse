@@ -64,7 +64,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
 1. Replace the previous `clusterDomain` with the new one. Run this command to edit cluster configuration:
 
    ```bash
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Restart deckhouse pods:

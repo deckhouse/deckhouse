@@ -56,6 +56,28 @@ const globalValues = `
     kubernetesVersion: "%s.4"
 `
 
+const hybridGlobalValues = `
+  enabledModules: ["vertical-pod-autoscaler"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
+    clusterType: Static
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "%s"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      master: 3
+      worker: 1
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: "%s.4"
+`
+
 const moduleValues = `
   storageClass:
     topologyEnabled: true
@@ -267,17 +289,17 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("Openstack with k8s 1.30", func() {
-		openstackCheck(f, "1.30")
+	Context("Openstack with k8s 1.31", func() {
+		openstackCheck(f, "1.31")
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.29")
+		openstackCheck(f, "1.30")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
@@ -302,7 +324,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -314,9 +336,22 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
+	Context("Hybrid Openstack", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.30", "1.30"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Test should NOT fail", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+	})
+
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -332,7 +367,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
@@ -360,7 +395,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("all kube versions", func() {
 			Context("ignoreVolumeMicroversion disabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
@@ -376,7 +411,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Context("ignoreVolumeMicroversion enabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
@@ -423,7 +458,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant name", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.HelmRender()
@@ -454,7 +489,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant id", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection", `
@@ -494,7 +529,7 @@ region: myreg
 
 		Context("with ca cert", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection.caCert", `
@@ -529,7 +564,7 @@ ca
 
 		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
@@ -546,7 +581,7 @@ ca
 
 		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `[]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)

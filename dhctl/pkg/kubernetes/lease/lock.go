@@ -294,7 +294,7 @@ func now() *metav1.MicroTime {
 
 func getCurrentLockerError(lease *coordinationv1.Lease) error {
 	info, _ := LockInfo(lease)
-	return fmt.Errorf(info)
+	return fmt.Errorf("%s", info)
 }
 
 func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
@@ -330,6 +330,8 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
   user: %s@%s
   additionalInfo:
     %s
+If you sure that lock acquired not by auto-converger or another dhctl, for release lock use:
+  dhctl lock release
 `
 	return fmt.Sprintf(format,
 		holder,

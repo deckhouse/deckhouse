@@ -8,6 +8,8 @@ import:
     add: /terraform-provider-decort
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "decort") }}/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
     before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

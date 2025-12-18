@@ -4,11 +4,15 @@
 
 | Table of contents |
 |---|
-| **Admission Client** |
+| **Admission Client Ca** |
 | [helm_lib_admission_webhook_client_ca_certificate](#helm_lib_admission_webhook_client_ca_certificate) |
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
+| **Csi Controller** |
+| [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
+| **Dns Policy** |
+| [helm_lib_dns_policy_bootstraping_state](#helm_lib_dns_policy_bootstraping_state) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -58,6 +62,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
 | [helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted) |
+| [helm_lib_module_container_security_context_pss_restricted_flexible](#helm_lib_module_container_security_context_pss_restricted_flexible) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_pod_security_context_runtime_default](#helm_lib_module_pod_security_context_runtime_default) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
@@ -115,11 +120,11 @@
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
 
-## Admission Client
+## Admission Client Ca
 
 ### helm_lib_admission_webhook_client_ca_certificate
 
-Renders a ConfigMap with the public CA certificate used to verify client TLS certificates for AdmissionReview requests, ensuring secure mTLS authentication
+ Renders configmap with admission webhook client CA certificate which uses to verify the AdmissionReview requests. 
 
 #### Usage
 
@@ -128,8 +133,8 @@ Renders a ConfigMap with the public CA certificate used to verify client TLS cer
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc
--  Namespace where CA configmap will be created
+-  Template context with .Values, .Chart, etc 
+-  Namespace where CA configmap will be created  
 
 ## Api Version And Kind
 
@@ -162,6 +167,34 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Kind name portion 
 
+## Csi Controller
+
+### helm_lib_csi_image_with_common_fallback
+
+ returns image name from storage foundation module if enabled, otherwise from common module 
+
+#### Usage
+
+`{{ include "helm_lib_csi_image_with_common_fallback" (list . "<raw-container-name>" "<semver>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container raw name 
+-  Kubernetes semantic version 
+
+## Dns Policy
+
+### helm_lib_dns_policy_bootstraping_state
+
+ returns the proper dnsPolicy value depending on the cluster bootstrap phase 
+
+#### Usage
+
+`{{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }} `
+
+
 ## Enable Ds Eviction
 
 ### helm_lib_prevent_ds_eviction_annotation
@@ -179,7 +212,7 @@ list:
 ### helm_lib_envs_for_proxy
 
  Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-proxy) 
 
 #### Usage
 
@@ -347,7 +380,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage
@@ -645,6 +678,22 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_container_security_context_pss_restricted_flexible
+
+ SecurityContext for Deckhouse UID/GID 64535 (or root), PSS Restricted 
+ Optional keys: 
+ .ro   – bool, read-only root FS (default true) 
+ .caps – []string, capabilities.add (default empty) 
+ .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .runAsNonRoot   – bool, run as Deckhouse user when true, root when false (default true) 
+ .seccompProfile  – bool, disable seccompProfile when false (default true) 
+
+#### Usage
+
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false "runAsNonRoot" true) `
+
 
 
 ### helm_lib_module_pod_security_context_run_as_user_root
@@ -1114,7 +1163,7 @@ list:
 #### Arguments
 
 list:
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 -  Ephemeral storage requests 
 
 
@@ -1128,7 +1177,7 @@ list:
 
 #### Arguments
 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_vpa_spec
@@ -1146,7 +1195,7 @@ list:
 -  Target Kind 
 -  Target Name 
 -  Target container name 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_cpu_units_to_millicores

@@ -77,7 +77,7 @@ d8 k -n d8-log-shipper exec $pod -c vector -- ИМЯ_КОМАНДЫ
 
 Пример вывода команды:
 
-![Vector TOP output](../../images/log-shipper/vector_top.png)
+![Vector TOP output](images/vector_top.png)
 
 ### Получить необработанные образцы log'ов
 

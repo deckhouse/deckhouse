@@ -50,7 +50,6 @@ type Storage interface {
 
 	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) error
 	ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error
-	AddCollectorFunc(fn CollectorFunc)
 
 	Grouped() GroupedStorage
 	Collector() prometheus.Collector

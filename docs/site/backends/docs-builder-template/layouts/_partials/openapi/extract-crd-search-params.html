@@ -1,0 +1,102 @@
+{{/* Extracts search parameters from CRD schema */}}
+
+{{- $crdData := .crdData }}
+{{- $langData := .langData }}
+{{- $moduleName := .moduleName }}
+{{- $moduleChannel := .moduleChannel }}
+{{- $searchParams := slice }}
+
+{{- $kind := $crdData.spec.names.kind }}
+
+{{- if $crdData.spec.versions }}
+  {{- /* Find the stablest API version according to Kubernetes rules */}}
+  {{- $stablestVersion := dict }}
+  {{- $stableVersions := slice }}
+  {{- $betaVersions := slice }}
+  {{- $alphaVersions := slice }}
+
+  {{- /* Categorize versions by stability level */}}
+  {{- range $version := $crdData.spec.versions }}
+    {{- if hasPrefix $version.name "v" }}
+      {{- $versionNumber := $version.name | replaceRE "^v" "" }}
+      {{- if and (ne $versionNumber "") (not (hasPrefix $versionNumber "alpha")) (not (hasPrefix $versionNumber "beta")) }}
+        {{- /* Stable version (v1, v2, v3, etc.) */}}
+        {{- $stableVersions = $stableVersions | append $version }}
+      {{- else if hasPrefix $versionNumber "beta" }}
+        {{- /* Beta version (v1beta1, v2beta3, etc.) */}}
+        {{- $betaVersions = $betaVersions | append $version }}
+      {{- else if hasPrefix $versionNumber "alpha" }}
+        {{- /* Alpha version (v1alpha1, v2alpha2, etc.) */}}
+        {{- $alphaVersions = $alphaVersions | append $version }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* Select version in order of preference: stable > beta > alpha > first available */}}
+  {{- if gt (len $stableVersions) 0 }}
+    {{- /* Use the highest stable version */}}
+    {{- $highestStable := "" }}
+    {{- range $version := $stableVersions }}
+      {{- $versionNumber := $version.name | replaceRE "^v" "" }}
+      {{- if or (eq $highestStable "") (gt $versionNumber $highestStable) }}
+        {{- $stablestVersion = $version }}
+        {{- $highestStable = $versionNumber }}
+      {{- end }}
+    {{- end }}
+  {{- else if gt (len $betaVersions) 0 }}
+    {{- /* Use the highest beta version */}}
+    {{- $highestBeta := "" }}
+    {{- range $version := $betaVersions }}
+      {{- if or (eq $highestBeta "") (gt $version.name $highestBeta) }}
+        {{- $stablestVersion = $version }}
+        {{- $highestBeta = $version.name }}
+      {{- end }}
+    {{- end }}
+  {{- else if gt (len $alphaVersions) 0 }}
+    {{- /* Use the highest alpha version */}}
+    {{- $highestAlpha := "" }}
+    {{- range $version := $alphaVersions }}
+      {{- if or (eq $highestAlpha "") (gt $version.name $highestAlpha) }}
+        {{- $stablestVersion = $version }}
+        {{- $highestAlpha = $version.name }}
+      {{- end }}
+    {{- end }}
+  {{- else }}
+    {{- /* Fallback to first available version */}}
+    {{- $stablestVersion = index $crdData.spec.versions 0 }}
+  {{- end }}
+
+  {{- $versionName := $stablestVersion.name }}
+  {{- $versionSchema := $stablestVersion.schema.openAPIV3Schema }}
+  {{- $langVersionData := dict }}
+
+  {{- if $langData.spec.versions }}
+    {{- $langVersionData = index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
+  {{- end }}
+
+  {{- $description := $versionSchema.description }}
+  {{- if $langVersionData.schema.openAPIV3Schema.description }}
+    {{- $description = $langVersionData.schema.openAPIV3Schema.description }}
+  {{- end }}
+
+  {{- /* Add CRD resource itself as a searchable item */}}
+  {{- $crdParam := dict
+    "name" $kind
+    "module" $moduleName
+    "moduletype" "source"
+    "url" (printf "/modules/%s/%s/cr.html#%s" $moduleName $moduleChannel ( $kind | lower))
+    "path" (printf "%s-%s" ($kind | lower) $versionName)
+    "content" $description
+    "resName" $kind
+    "isResource" "true" }}
+
+  {{- $searchParams = $searchParams | append $crdParam }}
+
+  {{- /* Extract properties from the CRD schema using recursive partial */}}
+  {{- if $versionSchema.properties }}
+    {{- $crdProperties := partial "openapi/extract-crd-properties-recursive" (dict "data" $versionSchema "langData" $langVersionData.schema.openAPIV3Schema "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" slice "kind" $kind "versionName" $versionName) }}
+    {{- $searchParams = $searchParams | append $crdProperties }}
+  {{- end }}
+{{- end }}
+
+{{- return $searchParams }}

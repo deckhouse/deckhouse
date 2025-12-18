@@ -1,0 +1,15 @@
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: >-
+        add rule to d8:cloud-provider-huaweicloud:cloud-controller-manager account for list pods as
+        needed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15678
+node-manager:
+  fixes:
+    - summary: CAPI crd served version fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15731
+    - summary: >-
+        shutdown inhibitor use three-state GracefulShutdownPostpone condition so kubelet waits for
+        the final decision before ending pods
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15575
+

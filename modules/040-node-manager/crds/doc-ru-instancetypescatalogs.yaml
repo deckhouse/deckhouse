@@ -1,0 +1,37 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: instancetypescatalogs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: instancetypescatalogs
+    singular: instancetypescatalog
+    kind: InstanceTypesCatalog
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            Содержит информацию о данных, обнаруженных в облаке.
+          properties:
+            instanceTypes:
+              description: Список доступных типов виртуальных машин.
+              type: array
+              items:
+                properties:
+                  name:
+                    description: Имя типа виртуальной машины.
+                  memory:
+                    description: Объем оперативной памяти для данного типа виртуальной машины.
+                  cpu:
+                    description: Количество vCPU для данного типа виртуальной машины.
+                  rootDisk:
+                    description: Размер корневого диска.

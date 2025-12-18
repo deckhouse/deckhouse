@@ -1,4 +1,4 @@
-{{- $version := "release-4.21" }}
+{{- $version := "release-4.22" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

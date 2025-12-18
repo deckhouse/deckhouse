@@ -8,13 +8,13 @@ package ee
 import (
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -355,7 +355,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		// the first action should always be "expire"
 		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 			Group:  metadataExporterMetricsGroup,
-			Action: "expire",
+			Action: operation.ActionExpireMetrics,
 		}))
 
 		// there are no istio pods or ignored pods in the cluster, hense no metrics
@@ -368,7 +368,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
-			Action: "set",
+			Action: operation.ActionGaugeSet,
 			Value:  ptr.To(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,

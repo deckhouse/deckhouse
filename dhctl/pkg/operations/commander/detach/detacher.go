@@ -55,8 +55,13 @@ func NewDetacher(checker *check.Checker, sshClient node.SSHClient, opts Detacher
 }
 
 func (op *Detacher) Detach(ctx context.Context) error {
+	providerCleanup := func() error {
+		return nil
+	}
+
 	err := log.Process("commander/detach", "Check cluster", func() error {
-		checkRes, err := op.Checker.Check(ctx)
+		checkRes, cleanup, err := op.Checker.Check(ctx)
+		providerCleanup = cleanup
 		if err != nil {
 			return fmt.Errorf("check failed: %w", err)
 		}
@@ -68,6 +73,14 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		}
 		return nil
 	})
+
+	defer func() {
+		err = providerCleanup()
+		if err != nil {
+			op.Checker.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}()
+
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/environment.html). Здесь мы представим краткую последовательность необходимых действий (выполните их на **персональном компьютере**):
+Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/modules/cloud-provider-gcp/environment.html). Здесь мы представим краткую последовательность необходимых действий (выполните их на **персональном компьютере**):
 
 {% alert %}
 Список необходимых ролей:

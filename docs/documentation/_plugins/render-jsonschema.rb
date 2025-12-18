@@ -36,9 +36,13 @@ module JSONSchemaRenderer
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
         if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision})) == nil then
-          @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
+          if ! get_hash_value(@site.data['modules'], 'all', moduleName) then
+            puts "NOTE: No modules data for module " + moduleName
+          else
+            @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
+          end
         end
-        if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
+        if get_hash_value(@site.data['modules'], 'all', moduleName) && get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
            %Q(#{if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
                 end
@@ -113,11 +117,12 @@ module JSONSchemaRenderer
         aVersion["minVersion"] <=> bVersion["minVersion"]
     end
 
-    def AppendResource2Search(name, url, resourceName, description, version = '', search = '')
+    def AppendResource2Search(name, moduleName, url, resourceName, description, version = '', search = '')
         # Data for search index
         if name and name.length > 0
             searchItemData = Hash.new
             searchItemData['name'] = name
+            searchItemData['module'] = moduleName.nil? ? '' : moduleName
             searchItemData['url'] = sprintf('%s#%s', url, name.downcase)
             searchItemData['resourceName'] = resourceName if resourceName
             searchItemData['isResource'] = true
@@ -299,6 +304,7 @@ module JSONSchemaRenderer
         result = Array.new()
         exampleObject = nil
         lang = @lang
+        editionsString = ''
 
         if parent.has_key?('required') && parent['required'].include?(name)
             result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
@@ -357,6 +363,7 @@ module JSONSchemaRenderer
 
         if attributes['description']
           result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
+
         elsif editionsString and editionsString.size > 0
           result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
         end
@@ -368,7 +375,7 @@ module JSONSchemaRenderer
                 end
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 else
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 end
@@ -380,7 +387,7 @@ module JSONSchemaRenderer
                 end
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 else
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 end
@@ -461,7 +468,7 @@ module JSONSchemaRenderer
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '')
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '')
         result = Array.new()
         ancestorsPathString = ''
 
@@ -477,15 +484,13 @@ module JSONSchemaRenderer
         # The replacement with sub is for preserving anchor links for ModuleConfig parameters
         linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
-        if resourceName.nil? or resourceName.length < 1
-           resourceName = @page["title"]
-        end
 
         # Data for search index
         if name and name.length > 0 and ! @site.data['search']['skipParameters'].include?(name)
             searchItemData = Hash.new
             searchItemData['pathString'] = pathString
             searchItemData['name'] = name
+            searchItemData['module'] = moduleName.nil? ? '' : moduleName
             searchItemData['url'] = sprintf(%q(%s#%s), @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), linkAnchor)
             searchItemData['deprecated'] = get_hash_value(attributes,"deprecated") or get_hash_value(attributes,"x-doc-deprecated") ? true : false
             searchItemData['version'] = versionAPI
@@ -569,7 +574,7 @@ module JSONSchemaRenderer
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
-                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI))
+                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI, moduleName))
             end
             result.push('</ul>')
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
@@ -577,7 +582,7 @@ module JSONSchemaRenderer
                 #  Array of objects
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI))
+                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI, moduleName))
                 end
                 result.push('</ul>')
             else
@@ -587,12 +592,77 @@ module JSONSchemaRenderer
                     lang = @lang
                     i18n = @site.data["i18n"]["common"]
                     result.push('<ul>')
-                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI))
+                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI, moduleName))
                     result.push('</ul>')
                 end
             end
         else
             # result.push("no properties for #{name}")
+        end
+
+        # Render additionalProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
+            additionalProps = attributes['additionalProperties']
+            
+            # Render additionalProperties if it is a schema object with properties (not primitive type) AND parent has no properties
+            if additionalProps.is_a?(Hash) and 
+               (not attributes.has_key?('properties') or attributes['properties'].nil?) and
+               additionalProps.has_key?('properties') and
+               (not additionalProps.has_key?('type') or additionalProps['type'] == 'object')
+                additionalPropsData = additionalProps.dup
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                
+                # Prepare the description with special text for additionalProperties object
+                additionalPropertyName = '<KEY_NAME>'.gsub('<', '&lt;').gsub('>', '&gt;')
+                additionalPropertyNameQuoted = '`<KEY_NAME>`'
+                mapKeyName = get_hash_value(additionalPropsData, 'x-doc-map-key-name')
+                additionalPropertyNameLang = get_i18n_term('additional_property_name')
+                
+                if mapKeyName
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{mapKeyName}"
+                else
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{additionalPropertyNameLang}."
+                end
+                
+                # Get existing description if any
+                existingDescription = ''
+                if get_hash_value(additionalPropsLangData, 'description')
+                    existingDescription = additionalPropsLangData['description']
+                elsif get_hash_value(additionalPropsData, 'description')
+                    existingDescription = additionalPropsData['description']
+                end
+                
+                # Combine special text with existing description
+                finalDescription = specialDescriptionText
+                if existingDescription and existingDescription.length > 0
+                    finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                end
+                
+                # Create modified data with updated description
+                additionalPropsData['description'] = finalDescription
+                if additionalPropsLangData
+                    additionalPropsLangData = additionalPropsLangData.dup
+                    additionalPropsLangData['description'] = finalDescription
+                else
+                    additionalPropsLangData = { 'description' => finalDescription }
+                end
+                
+                result.push('<ul>')
+                result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            # Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties)
+            elsif additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                additionalPropsData = additionalProps
+                additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                result.push('<ul>')
+                result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                result.push('</ul>')
+            end
+            
         end
 
         if parameterTitle != ''
@@ -647,15 +717,15 @@ module JSONSchemaRenderer
                    if get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description")))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
                        description = escape_chars(convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
                 end
 
@@ -671,7 +741,7 @@ module JSONSchemaRenderer
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
                     end
-                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI))
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
                     end
                     result.push('</ul>')
                 end
@@ -764,8 +834,9 @@ module JSONSchemaRenderer
                     end
 
                     AppendResource2Search(input["spec"]["names"]["kind"],
+                                          moduleName,
                                           @page["url"].sub(%r{^(/?ru/|/?en/)}, ''),
-                                          @page["title"],
+                                          input["spec"]["names"]["kind"],
                                           description,
                                           item['name'],
                                           searchKeywords)
@@ -809,7 +880,7 @@ module JSONSchemaRenderer
                         linkAnchor = sprintf(%q(%s-%s), input["spec"]["names"]["kind"].downcase, item['name'].downcase)
                         resourceName = input["spec"]["names"]["kind"]
 
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI))
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
                         end
                         if header == '' then
                             result.push('</ul>')
@@ -836,12 +907,12 @@ module JSONSchemaRenderer
             if ! site.data['modules']['crds'].has_key?(resourceGroup)
               site.data['modules']['crds'][resourceGroup] = {
                     'internal' => {
-                      'en' => "/en/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
-                      'ru' => "/ru/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                      'en' => "/en/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/ru/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
                     },
                     'external' => {
-                      'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
-                      'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                      'en' => "/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
                     }
               }
             end
@@ -852,7 +923,7 @@ module JSONSchemaRenderer
 
     #
     # Returns configuration module content from the openAPI spec
-    def format_configuration(site, page, input, moduleConfig = false)
+    def format_configuration(site, page, input, moduleName, moduleConfig = false)
         @site = site
         @page = page
         @lang = @page['lang']
@@ -920,7 +991,7 @@ module JSONSchemaRenderer
                 end
                 _fallbackLanguage = get_hash_value(input,  'i18n', fallbackLanguageName, 'properties', key)
                 ancestor = ( resourceName.nil? or resourceName.length < 1 ) ? "parameters" : resourceName
-                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, [ancestor], resourceName, versionAPI ))
+                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, [ancestor], resourceName, versionAPI, moduleName))
             end
             result.push('</ul>')
         end
@@ -970,13 +1041,14 @@ module JSONSchemaRenderer
           searchKeywords = get_search_keywords(item['i18n'][@lang], item['i18n'][fallbackLanguageName])
 
           AppendResource2Search(item["resourceName"],
+                                moduleName,
                                 @page["url"].sub(%r{^(/?ru/|/?en/)}, ''),
-                                @page["title"],
+                                item["resourceName"],
                                 description,
                                 item["APIversion"],
                                 searchKeywords)
 
-          result.push(format_configuration(@site, @page, item, false))
+          result.push(format_configuration(@site, @page, item, moduleName, false))
         end
         result.push('</div>')
         result.join
@@ -988,7 +1060,7 @@ module JSONSchemaRenderer
         @moduleName = moduleName
         @resourceType = "moduleConfig"
 
-        format_configuration(site, page, input, true)
+        format_configuration(site, page, input, moduleName, true)
     end
   end
 end

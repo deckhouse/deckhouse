@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -148,12 +150,12 @@ func (bus *DBusCon) MonitorShutdown() (<-chan bool, error) {
 				return
 			}
 			if event == nil || len(event.Body) == 0 {
-				fmt.Println("Failed obtaining shutdown event, PrepareForShutdown event was empty")
+				dlog.Warn("logind shutdown signal: event body empty")
 				continue
 			}
 			shutdownActive, ok := event.Body[0].(bool)
 			if !ok {
-				fmt.Println("Failed obtaining shutdown event, PrepareForShutdown event was not bool type as expected")
+				dlog.Warn("logind shutdown signal: unexpected event type")
 				continue
 			}
 			shutdownChan <- shutdownActive

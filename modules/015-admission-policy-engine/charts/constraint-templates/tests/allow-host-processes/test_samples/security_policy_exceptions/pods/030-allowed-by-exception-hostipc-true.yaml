@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-hostipc-true
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-hostipc-true
+spec:
+  hostIPC: true
+  containers:
+    - name: nginx
+      image: nginx
+

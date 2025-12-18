@@ -19,5 +19,5 @@
         Check the status of the instances in the cluster with the following command:
 
         ```shell
-        kubectl get instance -l node.deckhouse.io/group={{`{{ $labels.machine_deployment_name }}`}}
+        d8 k get instance -l node.deckhouse.io/group={{`{{ $labels.machine_deployment_name }}`}}
         ```

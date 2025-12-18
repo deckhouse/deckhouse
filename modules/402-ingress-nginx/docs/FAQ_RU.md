@@ -172,12 +172,12 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 ## Как сконфигурировать балансировщик нагрузки для проверки доступности IngressNginxController?
 
-В ситуации, когда `IngressNginxController` размещен за балансировщиком нагрузки, рекомендуется сконфигурировать балансировщик для проверки доступности
-узлов `IngressNginxController` с помощью HTTP-запросов или TCP-подключений. В то время как тестирование с помощью TCP-подключений представляет собой простой и универсальный механизм проверки доступности, мы рекомендуем использовать проверку на основе HTTP-запросов со следующими параметрами:
+В ситуации, когда Ingress-контроллер размещен за балансировщиком нагрузки, рекомендуется сконфигурировать балансировщик для проверки доступности
+узлов Ingress-контроллер с помощью HTTP-запросов или TCP-подключений. В то время как тестирование с помощью TCP-подключений представляет собой простой и универсальный механизм проверки доступности, мы рекомендуем использовать проверку на основе HTTP-запросов со следующими параметрами:
 
 - протокол: `HTTP`;
 - путь: `/healthz`;
-- порт: `80` (в случае использования инлета `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport).
+- порт: `80` (в случае использования инлета `HostPort` нужно указать номер порта, соответствующий параметру [`httpPort`](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport)).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
@@ -345,6 +345,22 @@ spec:
     modsecurity-snippet: |
       Include /etc/nginx/modsecurity/modsecurity.conf
       SecRuleEngine On
+```
+
+Пример правила для ограничения количества аргументов в URL-адресе запроса. Если количество аргументов превышает 10, сервер отклоняет запрос с кодом ошибки 400 (Bad request).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <имя_контролера>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+      SecRule &ARGS "@gt 10" "id:100100,phase:2,deny,status:400,log,auditlog,severity:WARNING,msg:\"too many args\""
 ```
 
 Полный перечень и описание директив вы можете найти в [официальной документации](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).

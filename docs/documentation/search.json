@@ -1,0 +1,8 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: en/search.json
+---
+
+{%- include search.liquid %}

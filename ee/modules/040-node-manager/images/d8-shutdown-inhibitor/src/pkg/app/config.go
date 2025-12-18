@@ -14,7 +14,7 @@ const (
 	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
 	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days
 	WallBroadcastInterval    = 42 * time.Second
-	PodsCheckingInterval     = 30 * time.Second
+	PodsCheckingInterval     = 15 * time.Second
 )
 
 type AppConfig struct {
@@ -23,4 +23,5 @@ type AppConfig struct {
 	PodsCheckingInterval  time.Duration
 	PodLabel              string
 	NodeName              string
+	CordonEnabled         bool
 }

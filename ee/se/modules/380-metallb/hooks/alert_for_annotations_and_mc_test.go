@@ -75,7 +75,7 @@ metadata:
   name: nginx1
   namespace: nginx1-ns
   annotations:
-    metallb.universe.tf/address-pool: "aaa"
+    metallb.io/address-pool: "aaa"
 spec:
   type: LoadBalancer
 ---

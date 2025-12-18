@@ -1,0 +1,62 @@
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+index 6dec5d582..efd1b92e8 100644
+--- a/pkg/provider/azure.go
++++ b/pkg/provider/azure.go
+@@ -344,7 +344,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *config.C
+ 	az.Config = *config
+ 	az.Environment = env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
+index 239e95a81..43312c02d 100644
+--- a/pkg/provider/azure_instance_metadata.go
++++ b/pkg/provider/azure_instance_metadata.go
+@@ -109,12 +109,12 @@ type InstanceMetadataService struct {
+ }
+ 
+ // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
+-func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
++func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
+ 	ims := &InstanceMetadataService{
+ 		imdsServer: imdsServer,
+ 	}
+ 
+-	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
++	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
+index d618b1b31..582f9a3d8 100644
+--- a/pkg/provider/azure_vmss.go
++++ b/pkg/provider/azure_vmss.go
+@@ -448,6 +448,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+ 	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
+ 	if err != nil {
+ 		klog.Errorf("Failed to check VM management type: %v", err)
++
++		if vmManagementType == ManagedByUnknownVMSet {
++			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
++
++			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
++			if err != nil {
++				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			} else {
++				return nodeName, nil
++			}
++
++			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
++			if err != nil {
++				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			} else {
++				return nodeName, nil
++			}
++		}
++
+ 		return "", err
+ 	}
+ 

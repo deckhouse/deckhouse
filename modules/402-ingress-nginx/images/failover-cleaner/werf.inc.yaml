@@ -1,5 +1,3 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
@@ -14,7 +12,7 @@ git:
     - '**/*.mod'
 ---
 image: {{ .ModuleName }}/failover-cleaner-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,24 +34,9 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
 import:
-- image: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
-  add: /relocate
-  to: /
-  before: setup
 - image: {{ .ModuleName }}/failover-cleaner-artifact
   add: /failover-cleaner
   to: /failover-cleaner
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /usr/sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
   before: setup
 git:
 {{- include "image mount points" . }}

@@ -1,0 +1,55 @@
+diff --git a/cmd/nginx/main.go b/cmd/nginx/main.go
+index 1d30091ef..cfa633f16 100644
+--- a/cmd/nginx/main.go
++++ b/cmd/nginx/main.go
+@@ -122,6 +122,7 @@ func main() {
+ 
+ 	reg := prometheus.NewRegistry()
+ 
++	reg.MustRegister(nginx.GeoIPErrors)
+ 	reg.MustRegister(collectors.NewGoCollector())
+ 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
+ 		PidFn:        func() (int, error) { return os.Getpid(), nil },
+diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+index 032a3e19f..d7ca0f59c 100644
+--- a/internal/nginx/maxmind.go
++++ b/internal/nginx/maxmind.go
+@@ -30,6 +30,7 @@ import (
+ 	"syscall"
+ 	"time"
+ 
++	"github.com/prometheus/client_golang/prometheus"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	klog "k8s.io/klog/v2"
+ )
+@@ -55,6 +56,15 @@ var MaxmindRetriesTimeout = time.Second * 0
+ // minimumRetriesCount minimum value of the MaxmindRetriesCount parameter. If MaxmindRetriesCount less than minimumRetriesCount, it will be set to minimumRetriesCount
+ const minimumRetriesCount = 1
+ 
++// GeoIPErrors number of errors when loading Geo2 DB
++var GeoIPErrors = prometheus.NewCounterVec(
++	prometheus.CounterOpts{
++		Name: "geoip_errors_total",
++		Help: "Number of errors related to GeoIP",
++	},
++	[]string{"reason", "type"},
++)
++
+ const (
+ 	geoIPPath   = "/etc/ingress-controller/geoip"
+ 	dbExtension = ".mmdb"
+@@ -116,6 +126,14 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ 			klog.V(2).Infof("Attempting to download GeoIP DB: %s", dbName)
+ 			dlError = downloadDatabase(dbName)
+ 			if dlError != nil {
++				trimmedError := []rune(dlError.Error())
++				if len(trimmedError) > 64 {
++					trimmedError = trimmedError[:64]
++				}
++
++				stringErr := string(trimmedError)
++
++				GeoIPErrors.WithLabelValues(stringErr, "download").Inc()
+ 				break
+ 			}
+ 		}

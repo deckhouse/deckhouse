@@ -48,7 +48,7 @@ d8 stronghold write -f ldap/rotate-root
 
 Механизм секретов LDAP поддерживает три различные схемы:
 
-- `openldap` (по умолчению)
+- `openldap` (по умолчанию)
 - `racf`
 - `ad`
 

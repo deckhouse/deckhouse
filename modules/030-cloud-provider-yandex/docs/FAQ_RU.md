@@ -47,7 +47,7 @@ reserved: true
 
 ## Как назначить произвольный StorageClass используемым по умолчанию?
 
-Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в параметре [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) модуля `global`.
+Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в параметре [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) модуля `global`.
 Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан как используемый по умолчанию.
 
 ```shell

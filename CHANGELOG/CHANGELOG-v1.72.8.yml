@@ -1,0 +1,13 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: fix single-node LoadBalancer bug and add multi-LB per node support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14883
+cloud-provider-vsphere:
+  fixes:
+    - summary: cloud-data-discoverer fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15775
+node-manager:
+  fixes:
+    - summary: Enable SSHLegacyMode if SSHPrivateKey is not empty and fix gossh panic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15763
+

@@ -19,12 +19,12 @@ package hooks
 import (
 	"context"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -95,6 +95,25 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing because ConfigMap exists", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
+			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+		})
+	})
+
+	Context("Metric expires when annotations are removed", func() {
+		BeforeEach(func() {
+			// Start with 5 controllers, some annotated
+			f.KubeStateSet(fiveControllersWithAnnotation)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+
+			// Remove annotations from all controllers and add ConfigMap
+			f.KubeStateSet(fiveControllers + "\n---\n" + configMapSuspended)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("expires the validation suspended metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
 			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
 		})
 	})
@@ -179,3 +198,36 @@ spec:
   validationEnabled: true
 `
 )
+
+const fiveControllersWithAnnotation = `
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-1
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-2
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-3
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-4
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-5
+`

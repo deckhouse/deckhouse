@@ -88,4 +88,6 @@ shell:
   - mv /src/scripts/* /
   - chmod +x /crictl /install /uninstall
   - rm -rf vendor
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-mismatch-but-constraint-allows
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-unconfined
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
+

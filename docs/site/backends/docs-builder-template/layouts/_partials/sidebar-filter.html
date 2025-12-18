@@ -1,0 +1,8 @@
+<script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
+
+<div class="filter__container">
+    <h2 class="filter__container--title">{{ T "category" | humanize }}</h2>
+
+    <div class="filter__checkboxes"></div>
+    <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button>
+</div>

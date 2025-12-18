@@ -5,7 +5,11 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/api-proxy
   to: /api-proxy
+  owner: "64535"
+  group: "64535"
   after: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/api-proxy"]
@@ -35,6 +39,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go build -ldflags="-s -w" -o /src/api-proxy main.go models.go proxy.go
   - chmod 0500 /src/api-proxy
+  - chown -R 64535:64535 /src/api-proxy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

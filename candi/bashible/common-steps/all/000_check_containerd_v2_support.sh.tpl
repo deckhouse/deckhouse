@@ -25,6 +25,19 @@ can_load_erofs() {
   modprobe -qn erofs 2>/dev/null
 }
 
+
+# CVE-2025-37999 impacts Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6
+is_kernel_erofs_cve_vulnerable() {
+  local kv=$(uname -r | cut -d- -f1)
+  if version_ge "$kv" "6.12.0" && ! version_ge "$kv" "6.12.29"; then
+    return 0
+  fi
+  if version_ge "$kv" "6.14.0" && ! version_ge "$kv" "6.14.7"; then
+    return 0
+  fi
+  return 1
+}
+
 function check_containerd_v2_support() {
   local errors=() errs
   local kv=$(uname -r | cut -d- -f1)
@@ -39,6 +52,10 @@ function check_containerd_v2_support() {
 
   has_cgroup2 || errors+=("cgroupv2")
   can_load_erofs || errors+=("erofs")
+
+  if is_kernel_erofs_cve_vulnerable; then
+    errors+=("kernel_cve_2025_37999")
+  fi
 
   if ((${#errors[@]})); then
     errs=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
@@ -83,7 +100,31 @@ function set_labels() {
 
 function fail_fast() {
   local unsupported=$1
+  local errs=$2
+
   if (( unsupported )); then
+    echo "$errs" | jq -c '.[]' | while read err; do
+        err=$(echo $err | sed 's/"//g')
+        if [ "$err" == "systemd" ]; then
+          bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+        fi
+
+        if [ "$err" == "kernel" ]; then
+          bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+        fi
+
+        if [ "$err" == "cgroupv2" ]; then
+          bb-log-error "required cgroupv2 support"
+        fi
+
+        if [ "$err" == "erofs" ]; then
+          bb-log-error "required erofs kernel module"
+        fi
+
+        if [ "$err" == "kernel_cve_2025_37999" ]; then
+          bb-log-error "Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6 have issues with EROFS functionality (CVE-2025-37999). Kernel upgrade required to proceed."
+        fi
+    done
     bb-log-error "containerd V2 is not supported"
     exit 1
   fi
@@ -100,10 +141,11 @@ function main() {
   fi
 
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$unsupported" "$errs"
+    set_labels "$unsupported" "$errs" || exit 1
   fi
+
   {{- if eq .cri "ContainerdV2" }}
-  fail_fast "$unsupported"
+  fail_fast "$unsupported" "$errs"
   {{ end }}
 }
 

@@ -6,7 +6,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры группы OpenStack servers, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
+            Параметры группы OpenStack servers, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -48,7 +48,7 @@ spec:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
 
-                    Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                    Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
                 mainNetwork:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).

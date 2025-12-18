@@ -77,7 +77,7 @@ kubelet:
   containerLogMaxFiles: 4
   containerLogMaxSize: 50Mi
   maxPods: 13
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 manualRolloutID: ""
 name: stage
 nodeTemplate:

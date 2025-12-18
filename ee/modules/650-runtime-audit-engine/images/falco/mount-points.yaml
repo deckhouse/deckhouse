@@ -1,8 +1,0 @@
-dirs:
-- /root/.falco
-- /host/proc
-- /host/dev
-- /etc/falco/webhook
-- /etc/falco/rules.d
-files:
-- /host/run/containerd/containerd.sock

@@ -66,7 +66,6 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: istio-proxy
-        {{- include "helm_lib_module_pod_security_context_run_as_user_custom" (list . 1337 1337)  | nindent 8 }}
         args:
         - proxy
         - router
@@ -175,6 +174,11 @@ spec:
           periodSeconds: 2
           timeoutSeconds: 3
           failureThreshold: 30
+        securityContext:
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+          readOnlyRootFilesystem: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

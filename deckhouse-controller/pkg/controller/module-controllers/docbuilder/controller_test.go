@@ -98,8 +98,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with only one builder", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
@@ -121,8 +121,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with two builders", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
@@ -144,8 +144,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("one builder cannot render", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			if strings.HasPrefix(req.Host, "10-111-111-11") {
@@ -171,8 +171,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new version", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
@@ -194,8 +194,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new lease", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
@@ -217,8 +217,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new checksum", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
@@ -240,8 +240,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("keep up-to-date rendered documentation", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 		dependency.TestDC.GetClock().(clockwork.FakeClock).Advance(1 * time.Hour)
 
 		suite.setupController(string(suite.fetchTestFileData("keep-actual.yaml")))

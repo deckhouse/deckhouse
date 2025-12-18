@@ -8,7 +8,51 @@ title: "Managing control plane: FAQ"
 
 > It is important to have an odd number of masters to ensure a quorum.
 
-Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [examples](../node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
+When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../ node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: master
+```
+
+Next, when adding master nodes to the cluster using CAPS, specify the label specified in `spec.staticInstances.labelSelector` NodeGroup `master` in the corresponding `StaticInstance`. Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-master-1
+  labels:
+    # The label specified in spec.staticInstances.labelSelector NodeGroup master.
+    role: master
+spec:
+  # Specify the IP address of the static node server.
+  address: "<SERVER-IP>"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+{% alert level="info" %}
+When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
+
+When bootstrapping the cluster, the configuration specifies the first master node on which the installation takes place.
+If, after bootstrapping, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
+
+For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
+{% endalert %}
+
+Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](../node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
@@ -20,10 +64,19 @@ The following describes the conversion of a single-master cluster into a multi-m
 >
 > It is important to have an odd number of masters to ensure a quorum.
 
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -48,7 +101,7 @@ The following describes the conversion of a single-master cluster into a multi-m
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
@@ -81,11 +134,20 @@ The following describes the conversion of a multi-master cluster into a single-m
 The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
 {% endalert %}
 
-1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
-1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
-1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
-1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
+1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
+1. Copy the resulting archive outside the cluster (e.g., to a local machine).
+1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. Make sure the DKP queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -94,75 +156,38 @@ The steps described below must be performed from the first in order of the maste
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
-1. **In the installer container**, run the following command to check the state before working:
-
-   ```bash
-   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-   The command output should indicate that Terraform found no inconsistencies and no changes are required.
-
-1. Run the following command **in the installer container** and set `masterNodeGroup.replicas` to `1`:
+1. **In the installer container**, run the following command and set `masterNodeGroup.replicas` to `1`:
 
    ```bash
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
    >
-   > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
    >
    > ```yaml
    > externalIPAddresses:
    > - "Auto"
    > ```
 
-1. Remove the following labels from the master nodes to be deleted:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Use the following command to remove labels:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
-
-   ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. `drain` the nodes being deleted:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Shut down the virtual machines corresponding to the nodes to be deleted, remove the instances of those nodes from the cloud and the disks connected to them (`kubernetes-data-master-<N>`).
-
-1. In the cluster, delete the Pods running on the nodes being deleted:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. In the cluster, delete the Node objects associated with the nodes being deleted:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
-1. **In the installer container**, run the following command to start scaling:
+1. **In the installer container**, run the following command to trigger the scaling operation:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+   >
+   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   >
+   > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+
+1. Check the Deckhouse queue and make sure that there are no errors with the command:
+
+   ```shell
+   d8 system queue list
    ```
 
 ## How do I dismiss the master role while keeping the node?
@@ -170,7 +195,12 @@ The steps described below must be performed from the first in order of the maste
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. Remove the following labels:
    * `node-role.kubernetes.io/control-plane`
    * `node-role.kubernetes.io/master`
@@ -185,10 +215,14 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
    ```bash
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Exec to the node and run the following commands:
@@ -208,7 +242,12 @@ The steps described below must be performed from the first in order of the maste
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
-1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Make sure that Deckhouse queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -234,41 +273,18 @@ The steps described below must be performed from the first in order of the maste
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-1. Select the master node to update (enter its name):
+1. **In the container with the installer**, run the following command to update the nodes:
 
-   ```bash
-   NODE="<MASTER-NODE-N-NAME>"
-   ```
+   Carefully review the actions that converge plans to perform when it asks for confirmation.
 
-1. Run the following command to remove the `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` labels from the node:
-
-   ```bash
-   d8 k label node ${NODE} \
-     node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Make sure that the node is no longer listed as an etcd cluster member:
-
-   ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. **In the installer container**, run the following command to perform nodes upgrade:
-
-    You should read carefully what converge is going to do when it asks for approval.
-
-    When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
+   When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
+   Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
 
 1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
 
@@ -279,18 +295,21 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Make sure `control-plane-manager` is running on the node:
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
-     -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
 
 1. Proceed to update the next node (repeat the steps above).
@@ -301,6 +320,137 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 1. Update the master nodes following the [instructions](#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster).
 1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster).
 
+## How to configure HA mode with two master nodes and an arbiter node?
+
+Deckhouse Kubernetes Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+
+Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
+
+Requirements for the arbiter node:
+
+* At least 2 CPU cores
+* At least 4 GB of RAM
+* At least 8 GB of disk space for etcd
+
+The network latency requirements for the arbiter node are similar to those for the master nodes.
+
+### Configuring in a cloud cluster
+
+The example below applies to a cloud cluster with three master nodes.
+To configure HA mode with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
+
+To do this, follow these steps:
+
+{% alert level="warning" %}
+The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
+{% endalert %}
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
+1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
+1. Copy the resulting archive outside the cluster (for example, to a local machine).
+1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. Make sure the DKP queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+
+   ```bash
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **In the installer container**, run the following command:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Change the cloud provider settings:
+
+   * Set `masterNodeGroup.replicas` to `2`.
+   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+
+     ```yaml
+     nodeGroups:
+       - name: arbiter
+         replicas: 1
+         nodeTemplate:
+           labels:
+             node.deckhouse.io/etcd-arbiter: ""
+           taints:
+             - key: node.deckhouse.io/etcd-arbiter
+               effect: NoSchedule
+         zones:
+           - europe-west3-b
+         instanceClass:
+           machineType: n1-standard-4
+       # ... the rest of the manifest
+     ```
+
+   * Save your changes.
+
+   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+   >
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look as follows:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. **In the installer container**, run the following command to trigger the scaling operation:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
+   ```
+
+   > **Important**. For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in OpenStack itself.
+   >
+   > For example, when deleting the `cloud-demo-master-2` node in the OpenStack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   >
+   > If the `kubernetes-data` disk remains, there may be problems with etcd operation as the number of master nodes increases.
+
+1. Check the Deckhouse queue with the following command and make sure there are no errors:
+
+   ```shell
+   d8 system queue list
+   ```
+
+### Configuring in a static cluster
+
+To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
+
+1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+     kind: NodeGroup
+     metadata:
+       name: arbiter
+     spec:
+       nodeType: Static
+       nodeTemplate:
+         labels:
+           node.deckhouse.io/etcd-arbiter: ""
+         taints:
+           - key: node.deckhouse.io/etcd-arbiter
+             effect: NoSchedule
+     # ... the rest of the manifest
+     ```
+
+1. Add a node to the cluster that will be used as an arbiter node in a [way that is convenient](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster) for you.
+1. [Ensure](#how-do-i-view-the-list-of-etcd-members) that the added arbiter node is in the list of etcd cluster members.
+1. [Remove](#how-do-i-dismiss-the-master-role-while-keeping-the-node) one master node from the cluster.
+
 ## How do I view the list of etcd members?
 
 ### Option 1
@@ -310,36 +460,33 @@ Use the `etcdctl member list` command.
 Example:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Warning.** The last parameter in the output table shows etcd member is in [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in `leader` state.
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. For this command, every control-plane address must be passed after `--endpoints` flag.
-The fifth parameter in the output table will be `true` for the leader.
+To obtain information about etcd cluster nodes in tabular form, use the `etcdctl endpoint status` command. For the leader, the `IS LEADER` column will show `true`.
 
-Example of a script that automatically passes all control-plane nodes to the command:
+Example:
 
 ```shell
-MASTER_NODE_IPS=($(d8 k get nodes -l \
-node-role.kubernetes.io/control-plane="" \
--o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
---no-headers))
-unset ENDPOINTS_STRING
-for master_node_ip in ${MASTER_NODE_IPS[@]}
-do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
 done
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
--l component=etcd,tier=control-plane -o name | head -n1) \
--- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key \
-$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## What if something went wrong?
@@ -401,7 +548,7 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -414,13 +561,133 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
 1. Change the [maxDbSize](configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings  to match the value specified in the manifest.
+
+## How to defragment etcd
+
+{% alert level="warning" %}
+Before defragmenting, [back up etcd](#how-to-manually-backup-etcd).
+{% endalert %}
+
+To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  endpoint status --cluster -w table
+```
+
+Output example (the size of the etcd database on the node is specified in the `DB SIZE` column):
+
+```console
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+|          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+```
+
+### How to defragment an etcd node in a single-master cluster
+
+{% alert level="warning" %}
+Defragmenting etcd is a resource-intensive operation that temporarily blocks etcd from running on that node.
+Keep this in mind when choosing a time to perform the operation in a cluster with a single master node.
+{% endalert %}
+
+To defragment etcd in a cluster with a single master node, use the following command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+```
+
+Example output when the operation is successful:
+
+```console
+Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+```
+
+> If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+
+### How to defragment etcd in a cluster with multiple master nodes
+
+To defragment etcd in a cluster with multiple master nodes:
+
+1. Get a list of etcd pods. To do this, use the following command:
+
+   ```bash
+   d8 k -n kube-system get pod -l component=etcd -o wide
+   ```
+
+   Example output:
+
+   ```console
+   NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
+   etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
+   etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
+   etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
+   ```
+
+1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
+
+   ```bash
+   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cert=/etc/kubernetes/pki/etcd/server.crt \
+     --key=/etc/kubernetes/pki/etcd/server.key \
+     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+     endpoint status --cluster -w table
+   ```
+
+   Output example (the leader in the `IS LEADER` column will have the value `true`):
+
+   ```console
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   ```
+
+1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
+
+   > Important: Defragment the leader last.
+   >
+   > Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
+
+      ```bash
+   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+   ```
+
+   Example output when the operation is successful:
+
+   ```console
+   Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+   ```
+
+   > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
 
 ## How do I configure additional audit policies?
 
@@ -627,8 +894,13 @@ Follow these steps to restore a single-master cluster on master node:
 1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   ```
+
+   Check the version of `etcdutl` using the command:
+
+   ```shell
    etcdutl version
    ```
 
@@ -699,7 +971,7 @@ Follow these steps to restore a single-master cluster on master node:
 
 Follow these steps to restore a multi-master cluster:
 
-1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
 
 1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) for cloud clusters or independently remove static master-node from the cluster.
 
@@ -716,7 +988,7 @@ Follow these steps to restore a multi-master cluster:
 1. Wait for the deckhouse queue to complete:
 
    ```shell
-   d8 p queue main
+   d8 system queue main
    ```
 
 1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.

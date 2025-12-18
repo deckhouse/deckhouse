@@ -36,3 +36,7 @@ variable "disable_default_security_group" {
   type = bool
   default = false
 }
+
+variable "public_network_allow_list" {
+  type = list(string)
+}

@@ -54,7 +54,7 @@
              - If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in `providerClusterConfiguration`, remove them using the following command:
 
                ```bash
-               d8 p edit provider-cluster-configuration
+               d8 system edit provider-cluster-configuration
                ```
 
              - If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in `providerClusterConfiguration`, change them to the appropriate values.
@@ -64,7 +64,7 @@
                To change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress`, run the following command:
 
                ```bash
-               d8 p edit provider-cluster-configuration
+               d8 system edit provider-cluster-configuration
                ```
 
           1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine. You may have to change the container registry address to do that. After that, perform the converge.

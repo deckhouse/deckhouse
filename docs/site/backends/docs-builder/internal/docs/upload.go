@@ -144,6 +144,10 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		// Skip internal documentation directories that should not be published
+		if hasBlockedPrefix(fileName) {
+			return "", false
+		}
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
@@ -156,6 +160,30 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	return "", false
+}
+
+func hasBlockedPrefix(path string) bool {
+	blockedDocPathPrefixes := []string{
+		"/internal",
+		"/internals",
+		"/development",
+		"/dev",
+	}
+	for _, prefix := range blockedDocPathPrefixes {
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+
+		if len(path) == len(prefix) {
+			return true
+		}
+
+		if path[len(prefix)] == '/' {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {

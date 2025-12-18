@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-permalink: en/stronghold/documentation/user/secrets-engines/index.html
+permalink: en/stronghold/documentation/user/secrets-engines/
 lang: en
 description: Secrets engines are mountable engines that store or generate secrets in Stronghold.
 ---

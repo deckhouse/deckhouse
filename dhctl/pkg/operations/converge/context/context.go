@@ -20,12 +20,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -45,25 +47,45 @@ type Context struct {
 	changeParams          infrastructure.ChangeActionSettings
 	stateStore            stateStore
 	stateChecker          infrastructure.StateChecker
+
+	providerGetter infrastructure.CloudProviderGetter
+
+	logger log.Logger
 }
 
-func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
+type Params struct {
+	KubeClient     *client.KubernetesClient
+	Cache          dstate.Cache
+	ChangeParams   infrastructure.ChangeActionSettings
+	ProviderGetter infrastructure.CloudProviderGetter
+	Logger         log.Logger
+}
+
+func newContext(ctx context.Context, params Params) *Context {
+	logger := params.Logger
+
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &Context{
-		kubeClient:   kubeClient,
-		stateCache:   cache,
-		changeParams: changeParams,
-		ctx:          ctx,
+		providerGetter: params.ProviderGetter,
+		kubeClient:     params.KubeClient,
+		stateCache:     params.Cache,
+		changeParams:   params.ChangeParams,
+		ctx:            ctx,
+		logger:         logger,
 
 		stateStore: newInSecretStateStore(),
 	}
 }
 
-func NewContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
-	return newContext(ctx, kubeClient, cache, changeParams)
+func NewContext(ctx context.Context, params Params) *Context {
+	return newContext(ctx, params)
 }
 
-func NewCommanderContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, params *commander.CommanderModeParams, changeParams infrastructure.ChangeActionSettings) *Context {
-	c := newContext(ctx, kubeClient, cache, changeParams)
+func NewCommanderContext(ctx context.Context, contextParams Params, params *commander.CommanderModeParams) *Context {
+	c := newContext(ctx, contextParams)
 	c.commanderParams = params
 	return c
 }
@@ -83,6 +105,11 @@ func (c *Context) WithInfrastructureContext(ctx *infrastructure.Context) *Contex
 	return c
 }
 
+func (c *Context) WithProviderGetter(getter infrastructure.CloudProviderGetter) *Context {
+	c.providerGetter = getter
+	return c
+}
+
 func (c *Context) KubeProvider() kubernetes.KubeClientProvider {
 	return c
 }
@@ -99,7 +126,7 @@ func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastr
 	if c.infrastructureContext != nil {
 		ctx = c.infrastructureContext
 	} else {
-		ctx = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+		ctx = infrastructure.NewContextWithProvider(c.providerGetter, c.Logger())
 	}
 
 	ctx.WithStateChecker(c.stateChecker)
@@ -123,6 +150,10 @@ func (c *Context) CommanderMode() bool {
 	return c.commanderParams != nil
 }
 
+func (c *Context) ProviderGetter() infrastructure.CloudProviderGetter {
+	return c.providerGetter
+}
+
 func (c *Context) StarExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {
 	if c.phaseContext == nil {
 		return false, nil
@@ -141,7 +172,7 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.stateCache, c.commanderParams)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
@@ -149,12 +180,16 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return metaConfig, nil
+}
+
+func (c *Context) Logger() log.Logger {
+	return c.logger
 }
 
 func (c *Context) ChangesSettings() infrastructure.ChangeActionSettings {

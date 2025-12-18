@@ -1,0 +1,9 @@
+deckhouse:
+  fixes:
+    - summary: Fix module source updating fails.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15592
+vertical-pod-autoscaler:
+  fixes:
+    - summary: Disable vpa for k8s-metacollector
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15672
+

@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostpid-true-hostipc-true
+spec:
+  network:
+    hostPID:
+      allowedValue: true
+    hostIPC:
+      allowedValue: true
+

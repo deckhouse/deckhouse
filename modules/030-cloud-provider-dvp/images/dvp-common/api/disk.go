@@ -138,6 +138,18 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
+	sc, err := d.GetStorageClass(ctx, diskStorageClass)
+	if err != nil {
+		return nil, err
+	}
+
+	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != storagev1.VolumeBindingWaitForFirstConsumer {
+		err = d.WaitDiskCreation(ctx, diskName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return newDisk, nil
 }
 
@@ -209,6 +221,17 @@ func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.Stora
 		return nil, err
 	}
 	return storageClassList, nil
+}
+
+func (d *DiskService) GetStorageClass(ctx context.Context, name string) (*storagev1.StorageClass, error) {
+	storageClass, err := d.clientset.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, cloudprovider.DiskNotFound
+		}
+		return nil, err
+	}
+	return storageClass, nil
 }
 
 func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) error {

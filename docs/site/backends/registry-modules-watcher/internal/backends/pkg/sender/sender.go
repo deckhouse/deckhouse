@@ -280,9 +280,7 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 		return nil
 	}
 
-	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = MaxElapsedTime
-	b.MaxInterval = MaxInterval
+	b := s.newBackOff()
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
@@ -347,9 +345,7 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 		return nil
 	}
 
-	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = MaxElapsedTime
-	b.MaxInterval = MaxInterval
+	b := s.newBackOff()
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {

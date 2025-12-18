@@ -53,7 +53,7 @@ func ErrToString(err error) string {
 
 func PortToString(p *int32) string {
 	if p == nil {
-		return ""
+		return "22"
 	}
 	return strconv.Itoa(int(*p))
 }

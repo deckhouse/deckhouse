@@ -80,4 +80,6 @@ imageSpec:
     env: { "container": "docker" }
     entrypoint: ["/cluster-autoscaler"]
   {{- end }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

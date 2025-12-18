@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-wrong-type-securityContext-container
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seLinuxOptions:
+          type: wrongtype
+          level: somelevel
+          role: somerole
+          user: someuser
+

@@ -41,9 +41,10 @@ var (
 	EditionFile  = deckhouseDir + "/edition"
 )
 
-var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
+var defaultTmpAndStateDir = filepath.Join(os.TempDir(), "dhctl")
 
 var (
+	TmpDirName = defaultTmpAndStateDir
 	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
 	// "local" is kept for manual builds only
 	AppVersion = "local"
@@ -128,4 +129,16 @@ func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
 	VersionFile = deckhouseDir + "/version"
 	EditionFile = deckhouseDir + "/edition"
+}
+
+func SetTmpDir(tmpDir string) {
+	TmpDirName = tmpDir
+}
+
+func GetTmpDir() string {
+	return TmpDirName
+}
+
+func GetDefaultTmpDir() string {
+	return defaultTmpAndStateDir
 }

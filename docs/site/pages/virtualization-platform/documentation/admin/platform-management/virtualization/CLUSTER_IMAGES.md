@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
+The [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
 
 The process of creating an image involves the following steps:
 
-1. The user creates a [`ClusterVirtualImage`](../../../reference/cr/clustervirtualimage.html) resource.
+1. The user creates a [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource.
 1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
 1. Once the upload is complete, the resource becomes available for disk creation.
 
@@ -55,7 +55,7 @@ Images can be downloaded from various sources, such as HTTP servers hosting imag
 
 Images can also be created based on other images or virtual machine disks.
 
-For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](../../../../reference/cr/clustervirtualimage.html).
+For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](/modules/virtualization/cr.html#clustervirtualimage).
 
 ## Increasing the size of DVCR
 
@@ -328,3 +328,49 @@ How to perform the operation in the web interface:
 - Select the file in the file manager that opens.
 - Click the "Create" button.
 - Wait until the image changes to `Ready` status.
+
+### Cleaning up image storage
+
+{% alert level="info" %}
+Available in [version 1.2.0](/products/virtualization-platform/documentation/release-notes.html#v120) and later.
+{% endalert %}
+
+Over time, the creation and deletion of ClusterVirtualImage, VirtualImage, and VirtualDisk resources leads to the accumulation
+of outdated images in the intra-cluster storage. Scheduled garbage collection is implemented to keep the storage up to
+date, but this feature is disabled by default.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  # ...
+  settings:
+    dvcr:
+      gc:
+        schedule: "0 20 * * *"
+  # ...
+```
+
+While garbage collection is running, the storage is switched to read-only mode, and all resources created during this time will wait for the cleanup to finish.
+
+To check for outdated images in the storage, you can run the following command:
+
+```bash
+d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+```
+
+It prints information about the storage status and a list of outdated images that can be deleted.
+
+```console
+Found 2 cvi, 5 vi, 1 vd manifests in registry
+Found 1 cvi, 5 vi, 11 vd resources in cluster
+  Total     Used    Avail     Use%
+36.3GiB  13.1GiB  22.4GiB      39%
+Images eligible for cleanup:
+KIND                   NAMESPACE            NAME
+ClusterVirtualImage                         debian-12
+VirtualDisk            default              debian-10-root
+VirtualImage           default              ubuntu-2204
+```

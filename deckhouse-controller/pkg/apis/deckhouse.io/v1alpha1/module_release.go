@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -39,13 +38,17 @@ const (
 	ModuleReleasePhaseSkipped     = "Skipped"
 	ModuleReleasePhaseTerminating = "Terminating"
 
-	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
-	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"
-	ModuleReleaseAnnotationNotified              = "modules.deckhouse.io/notified"
-	ModuleReleaseAnnotationApplyNow              = "modules.deckhouse.io/apply-now"
-	ModuleReleaseAnnotationRegistrySpecChanged   = "modules.deckhouse.io/registry-spec-changed"
-	ModuleReleaseLabelUpdatePolicy               = "modules.deckhouse.io/update-policy"
-	ModuleReleaseFinalizerExistOnFs              = "modules.deckhouse.io/exist-on-fs"
+	ModuleReleaseApprovalAnnotation            = "modules.deckhouse.io/approved"
+	ModuleReleaseAnnotationIsUpdating          = "modules.deckhouse.io/isUpdating"
+	ModuleReleaseAnnotationNotified            = "modules.deckhouse.io/notified"
+	ModuleReleaseAnnotationApplyNow            = "modules.deckhouse.io/apply-now"
+	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
+	ModuleReleaseLabelUpdatePolicy             = "modules.deckhouse.io/update-policy"
+	ModuleReleaseFinalizerExistOnFs            = "modules.deckhouse.io/exist-on-fs"
+	// ModuleReleaseFinalizerMetricsRegistered ensures that the ModuleConfigurationError metric is reset to 0
+	// before the ModuleRelease resource is deleted. Without this finalizer, the resource could be removed
+	// before the reconciler has a chance to clear the metric, leaving stale error metrics in Prometheus.
+	ModuleReleaseFinalizerMetricsRegistered      = "modules.deckhouse.io/metrics-registered"
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
 	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
@@ -77,21 +80,11 @@ var (
 
 var _ runtime.Object = (*ModuleRelease)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleReleaseList is a list of ModuleRelease resources
-type ModuleReleaseList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleRelease `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleRelease is a Module release object.
 type ModuleRelease struct {
@@ -267,25 +260,6 @@ func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
 	return mr.Spec.UpdateSpec
 }
 
-func (c Changelog) DeepCopy() Changelog {
-	if c == nil {
-		return nil
-	}
-
-	data, err := json.Marshal(c)
-	if err != nil {
-		panic(err)
-	}
-
-	var out Changelog
-	err = json.Unmarshal(data, &out)
-	if err != nil {
-		panic(err)
-	}
-
-	return out
-}
-
 type ModuleReleaseRequirements struct {
 	ModuleReleasePlatformRequirements `json:",inline"`
 	ParentModules                     map[string]string `json:"modules,omitempty"`
@@ -304,7 +278,7 @@ type ModuleReleaseSpec struct {
 	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
 	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
-	Changelog    Changelog                  `json:"changelog,omitempty"`
+	Changelog    *MappedFields              `json:"changelog,omitempty"`
 }
 
 type UpdateSpec struct {
@@ -325,4 +299,14 @@ type ModuleReleaseStatus struct {
 	Message        string          `json:"message"`
 	Size           uint32          `json:"size"`
 	PullDuration   metav1.Duration `json:"pullDuration"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleReleaseList is a list of ModuleRelease resources
+type ModuleReleaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleRelease `json:"items"`
 }

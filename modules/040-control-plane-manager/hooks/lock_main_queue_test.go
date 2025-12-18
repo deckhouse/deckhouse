@@ -33,6 +33,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-a
   namespace: kube-system
@@ -48,6 +49,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-b
   namespace: kube-system
@@ -63,6 +65,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-a
   namespace: kube-system
@@ -78,6 +81,7 @@ kind: Pod
 metadata:
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
     pod-template-generation: "105"
   name: d8-control-plane-manager-b
   namespace: kube-system
@@ -96,6 +100,12 @@ metadata:
   generation: 105
   name: d8-control-plane-manager
   namespace: kube-system
+  labels:
+    app: d8-control-plane-manager
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager
 ---
 `
 		justRolledOutDaemonSet = `
@@ -105,6 +115,12 @@ metadata:
   generation: 106
   name: d8-control-plane-manager
   namespace: kube-system
+  labels:
+    app: d8-control-plane-manager
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager
 ---
 `
 	)
@@ -190,6 +206,150 @@ metadata:
 			Expect(f).To(Not(ExecuteSuccessfully()))
 		})
 
+	})
+
+	Context("Cluster with both main and etcd-arbiter DaemonSets, all pods ready", func() {
+		const (
+			etcdArbiterReadyPods = `
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: d8-control-plane-manager-etcd-arbiter
+    component: control-plane-manager
+    pod-template-generation: "50"
+  name: d8-control-plane-manager-etcd-arbiter-a
+  namespace: kube-system
+spec:
+  nodeName: etcd-0
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+---
+`
+			etcdArbiterDaemonSet = `
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  generation: 50
+  name: d8-control-plane-manager-etcd-arbiter
+  namespace: kube-system
+  labels:
+    app: d8-control-plane-manager
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager-etcd-arbiter
+---
+`
+		)
+
+		BeforeEach(func() {
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterReadyPods + etcdArbiterDaemonSet)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Cluster with etcd-arbiter DaemonSet but pods not ready", func() {
+		const (
+			etcdArbiterNotReadyPods = `
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: d8-control-plane-manager-etcd-arbiter
+    component: control-plane-manager
+    pod-template-generation: "50"
+  name: d8-control-plane-manager-etcd-arbiter-a
+  namespace: kube-system
+spec:
+  nodeName: etcd-0
+status:
+  conditions:
+  - type: Ready
+    status: 'False'
+---
+`
+			etcdArbiterDaemonSet = `
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  generation: 50
+  name: d8-control-plane-manager-etcd-arbiter
+  namespace: kube-system
+  labels:
+    app: d8-control-plane-manager
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager-etcd-arbiter
+---
+`
+		)
+
+		BeforeEach(func() {
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterNotReadyPods + etcdArbiterDaemonSet)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Should exit with error", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+	})
+
+	Context("Cluster with etcd-arbiter DaemonSet rolled out but pods not updated", func() {
+		const (
+			etcdArbiterOldPods = `
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: d8-control-plane-manager-etcd-arbiter
+    component: control-plane-manager
+    pod-template-generation: "49"
+  name: d8-control-plane-manager-etcd-arbiter-a
+  namespace: kube-system
+spec:
+  nodeName: etcd-0
+status:
+  conditions:
+  - type: Ready
+    status: 'True'
+---
+`
+			etcdArbiterDaemonSet = `
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  generation: 50
+  name: d8-control-plane-manager-etcd-arbiter
+  namespace: kube-system
+  labels:
+    app: d8-control-plane-manager
+spec:
+  selector:
+    matchLabels:
+      app: d8-control-plane-manager-etcd-arbiter
+---
+`
+		)
+
+		BeforeEach(func() {
+			f.KubeStateSet(runningReadyPods + properDaemonSet + etcdArbiterOldPods + etcdArbiterDaemonSet)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Should exit with error", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
 	})
 
 })

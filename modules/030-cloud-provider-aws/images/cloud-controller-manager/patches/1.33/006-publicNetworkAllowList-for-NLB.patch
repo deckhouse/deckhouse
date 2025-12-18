@@ -1,0 +1,80 @@
+diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
+index 412d2153..e7c285b7 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -376,7 +376,8 @@ type Cloud struct {
+ 	region   string
+ 	vpcID    string
+ 
+-	tagging awsTagging
++	defaultNLBClientCIDRs []string
++	tagging               awsTagging
+ 
+ 	// The AWS instance that we are running on
+ 	// Note that we cache some state in awsInstance (mountpoints), so we must preserve the instance
+@@ -618,6 +619,23 @@ func newAWSCloud2(cfg config.CloudConfig, awsServices Services, provider config.
+ 		cfg:      &cfg,
+ 		region:   regionName,
+ 	}
++
++	s := cfg.Global.PublicNetworkAllowList
++	if s != "" {
++		parts := strings.Split(s, ",")
++		cidrs := make([]string, 0, len(parts))
++		for _, p := range parts {
++			p = strings.TrimSpace(p)
++			if p != "" {
++				cidrs = append(cidrs, p)
++			}
++		}
++		if len(cidrs) > 0 {
++			awsCloud.defaultNLBClientCIDRs = cidrs
++			klog.Infof("Using publicNetworkAllowList for NLB client CIDRs: %v", cidrs)
++		}
++	}
++
+ 	awsCloud.instanceCache.cloud = awsCloud
+ 	awsCloud.zoneCache.cloud = awsCloud
+ 	awsCloud.instanceTopologyManager = resourcemanagers.NewInstanceTopologyManager(ec2v2)
+diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
+index c39ea3de..4cd53552 100644
+--- a/pkg/providers/v1/aws_loadbalancer.go
++++ b/pkg/providers/v1/aws_loadbalancer.go
+@@ -786,6 +786,11 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(lbName string, instances map[
+ 		return nil
+ 	}
+ 
++	if (len(clientCIDRs) == 0 || (len(clientCIDRs) == 1 && clientCIDRs[0] == "0.0.0.0/0")) && len(c.defaultNLBClientCIDRs) > 0 {
++		clientCIDRs = c.defaultNLBClientCIDRs
++		klog.Infof("updateInstanceSecurityGroupsForNLB: overriding clientCIDRs with defaultNLBClientCIDRs=%v", clientCIDRs)
++	}
++
+ 	clusterSGs, err := c.getTaggedSecurityGroups()
+ 	if err != nil {
+ 		return fmt.Errorf("error querying for tagged security groups: %q", err)
+diff --git a/pkg/providers/v1/config/config.go b/pkg/providers/v1/config/config.go
+index ef6e3711..2aa8ce38 100644
+--- a/pkg/providers/v1/config/config.go
++++ b/pkg/providers/v1/config/config.go
+@@ -2,9 +2,10 @@ package config
+ 
+ import (
+ 	"fmt"
+-	"github.com/aws/aws-sdk-go/aws/request"
+ 	"strings"
+ 
++	"github.com/aws/aws-sdk-go/aws/request"
++
+ 	"github.com/aws/aws-sdk-go/aws/endpoints"
+ 
+ 	"k8s.io/klog/v2"
+@@ -58,7 +59,8 @@ type CloudConfig struct {
+ 		//AWS has a hard limit of 500 security groups. For large clusters creating a security group for each ELB
+ 		//can cause the max number of security groups to be reached. If this is set instead of creating a new
+ 		//Security group for each ELB this security group will be used instead.
+-		ElbSecurityGroup string
++		ElbSecurityGroup       string
++		PublicNetworkAllowList string `json:"publicNetworkAllowList,omitempty" yaml:"publicNetworkAllowList,omitempty"`
+ 
+ 		// NodeIPFamilies determines which IP addresses are added to node objects and their ordering.
+ 		NodeIPFamilies []string

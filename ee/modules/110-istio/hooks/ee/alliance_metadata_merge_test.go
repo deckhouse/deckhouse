@@ -7,8 +7,10 @@ package ee
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"strings"
 	"time"
 
@@ -439,8 +441,225 @@ status:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-public\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-only-public\""))
 
-			// there should be 10 log messages
-			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
+			// there should be 16 log messages (including 2 new "starting token reuse logic" messages)
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(16))
+		})
+	})
+
+	Context("JWT Token Integration Tests", func() {
+		It("Check whether a new token is being created when no secret exists.", func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the token is valid
+			validationResult := validateJWTToken(apiJWT)
+			Expect(validationResult.IsExpired).To(BeFalse())
+		})
+
+		It("Checking the reuse of an existing valid secret token.", func() {
+			// Create a valid JWT token
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(1 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			validToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create kubeconfig with valid token
+			validKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, validToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that the existing token was reused
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).To(Equal(validToken))
+		})
+
+		It("Check whether a new token is being created when the existing token expires.", func() {
+			// Create an expired JWT token
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			pastTime := time.Now().Add(-1 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   pastTime,
+				"iat":   time.Now().Add(-2 * time.Hour).Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			expiredToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create kubeconfig with expired token
+			expiredKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, expiredToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(expiredKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated (different from expired one)
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(Equal(expiredToken))
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the new token is valid
+			validationResult := validateJWTToken(apiJWT)
+			Expect(validationResult.IsExpired).To(BeFalse())
 		})
 	})
 })

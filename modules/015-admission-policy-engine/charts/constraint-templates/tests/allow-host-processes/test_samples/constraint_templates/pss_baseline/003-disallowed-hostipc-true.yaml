@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-hostipc-true
+  namespace: testns
+spec:
+  hostIPC: true
+  containers:
+    - name: nginx
+      image: nginx
+

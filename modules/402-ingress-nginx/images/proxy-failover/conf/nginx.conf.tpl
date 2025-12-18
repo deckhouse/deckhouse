@@ -2,7 +2,7 @@ daemon off;
 
 worker_processes auto;
 error_log /dev/stderr warn;
-pid /opt/nginx-static/logs/nginx.pid;
+pid /opt/nginx-static/writable/nginx.pid;
 
 timer_resolution 100ms;
 worker_cpu_affinity auto;
@@ -17,7 +17,11 @@ events {
 
 http {
   access_log off;
-
+  client_body_temp_path /opt/nginx-static/writable/client_temp 1 2;
+  proxy_temp_path /opt/nginx-static/writable/proxy_temp 1 2;
+  fastcgi_temp_path /opt/nginx-static/writable/fastcgi_temp 1 2;
+  uwsgi_temp_path /opt/nginx-static/writable/uwsgi_temp 1 2;
+  scgi_temp_path /opt/nginx-static/writable/scgi_temp 1 2;
 
   server {
     server_name _;

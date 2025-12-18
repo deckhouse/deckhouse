@@ -335,3 +335,160 @@ spec:
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+
+## Как запретить удаление узла без метки
+
+> Примечание. Операции DELETE обрабатываются Gatekeeper по умолчанию.
+
+Можно создать собственную политику Gatekeeper, запрещающую удаление узла без специальной метки. Пример ниже использует `oldObject` для проверки меток удаляемого узла:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customnodedeleteguard
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomNodeDeleteGuard
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredLabelKey:
+              type: string
+            requiredLabelValue:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_delete { input.review.operation == "DELETE" }
+        is_node { input.review.kind.kind == "Node" }
+
+        has_required_label {
+          key := input.parameters.requiredLabelKey
+          val := input.parameters.requiredLabelValue
+          obj := input.review.oldObject
+          obj.metadata.labels[key] == val
+        }
+
+        violation[{"msg": msg}] {
+          is_delete
+          is_node
+          not has_required_label
+          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomNodeDeleteGuard
+metadata:
+  name: require-node-delete-label
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Node"]
+  parameters:
+    requiredLabelKey: "admission.deckhouse.io/allow-delete"
+    requiredLabelValue: "true"
+```
+
+## Как запретить операции kubectl exec и kubectl attach в определённые поды?
+
+Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper. Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
+
+### Встроенная политика для подов с heritage: deckhouse
+
+Для защиты системных компонентов под управлением Deckhouse в модуле `admission-policy-engine` предусмотрена встроенная политика `D8DenyExecHeritage`, которая запрещает выполнение операций `kubectl exec` и `kubectl attach` во все поды с лейблом `heritage: deckhouse`.
+
+Политика не распространяется на следующих пользователей, которым разрешены операции `kubectl exec` и `kubectl attach` в поды с лейблом `heritage: deckhouse`:
+
+- `system:sudouser`;
+- сервисные аккаунты из пространств имён `d8-*` (`system:serviceaccount:d8-*`);
+- сервисные аккаунты из пространств имён `kube-*` (`system:serviceaccount:kube-*`).
+
+### Пример пользовательской политики
+
+Вы можете создать собственную политику Gatekeeper для запрета операций `kubectl exec` и `kubectl attach` в определённых пространствах имён. В примере ниже используются `input.review.operation` и `input.review.resource.resource` для проверки операций `CONNECT`:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customdenyexec
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomDenyExec
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            forbiddenNamespaces:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_connect {
+          input.review.operation == "CONNECT"
+        }
+
+        # requestSubResource предпочтительнее, но на всякий случай падаем в subResource
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", input.review.subResource)
+          sr == sub
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("exec")
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("attach")
+        }
+
+        is_forbidden_namespace {
+          ns := input.review.namespace
+          ns == input.parameters.forbiddenNamespaces[_]
+        }
+
+        violation[{"msg": msg}] {
+          is_connect
+          is_exec_or_attach
+          is_forbidden_namespace
+          msg := sprintf("Exec/attach запрещён в пространстве имён %q", [input.review.namespace])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomDenyExec
+metadata:
+  name: deny-exec-in-namespaces
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["*"]
+        kinds: ["*"]
+    scope: Namespaced
+  parameters:
+    forbiddenNamespaces:
+      - production
+      - staging
+```
+
+Ключевые данные и проверки, доступные при валидации операций `CONNECT`:
+
+- Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
+- Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
+- Пространство имён доступно в `input.review.namespace`.

@@ -1,0 +1,24 @@
+# Test fixture: CONNECT to pods/exec on heritage pod from system:sudouser
+# Expected: ALLOWED (sudouser is in the allow-list)
+#
+# Note: gator v3.9.0 cannot simulate custom AdmissionReview fields.
+# This fixture documents the expected behavior for manual testing.
+#
+# AdmissionReview context (simulated):
+#   operation: CONNECT
+#   resource.resource: pods/exec
+#   namespace: default
+#   name: test-pod
+#   userInfo.username: system:sudouser
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: default
+  labels:
+    heritage: deckhouse
+spec:
+  containers:
+    - name: test
+      image: debian:stable-slim
+

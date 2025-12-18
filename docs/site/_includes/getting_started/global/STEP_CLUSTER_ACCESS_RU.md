@@ -27,6 +27,14 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" %}
+Чтобы увеличить количество worker-узлов, измените параметр [maxPerZone](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) в NodeGroup `worker` с помощью CLI (`d8 k edit ng worker`) или веб-интерфейса администратора. Чтобы добавить дополнительные узлы, воспользуйтесь [инструкцией по масштабированию кластера](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
 ```shell
@@ -66,14 +74,14 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
-- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 *Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
-На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
+На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
 
 {% raw %}

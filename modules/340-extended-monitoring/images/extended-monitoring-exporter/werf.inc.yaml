@@ -1,37 +1,51 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-git:
-- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
-  to: /app/extended-monitoring.py
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/libc.so
 imageSpec:
   config:
-    entrypoint: ["python3"]
+    entrypoint: ["/extended-monitoring-exporter"]
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /extended-monitoring-exporter
+    after: setup
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-fromImage: base/python
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
-import:
-- image: common/wheel-artifact
-  add: /wheels
-  to: /wheels
-  before: install
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - 'go.mod'
+        - 'go.sum'
 shell:
   install:
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  {{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go build -ldflags="-s -w" -o /extended-monitoring-exporter /src
+    - chown 64535:64535 /extended-monitoring-exporter
+    - chmod 0700 /extended-monitoring-exporter

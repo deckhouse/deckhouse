@@ -4465,6 +4465,7 @@
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
           "selected": false,
           "text": "All",
@@ -4478,7 +4479,7 @@
         "hide": 0,
         "includeAll": true,
         "label": "Queue",
-        "multi": false,
+        "multi": true,
         "name": "queue",
         "options": [],
         "query": {

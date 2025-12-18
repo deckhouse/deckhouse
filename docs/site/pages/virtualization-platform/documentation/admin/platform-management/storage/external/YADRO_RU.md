@@ -1,50 +1,51 @@
 ---
-title: "Хранилище YADRO"
+title: "Унифицированное хранилище TATLIN.UNIFIED (Yadro)"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
 lang: ru
 d8Revision: ee
 ---
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов YadroStorageClass.
+Deckhouse Virtualization Platform (DVP) поддерживает интеграцию с системой хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified), предоставляя возможность управления томами в Kubernetes. Это позволяет использовать централизованное хранилище для контейнеризированных рабочих нагрузок, обеспечивая высокую производительность и отказоустойчивость.
+
+На этой странице представлены инструкции по подключению [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) к DVP, настройке соединения, созданию StorageClass, а также проверке работоспособности системы.
 
 ## Включение модуля
 
-Чтобы включить модуль `csi-yadro`, выполните команду:
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в DVP используется модуль `csi-yadro-tatlin-unified`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass). Чтобы включить модуль, выполните команду:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: csi-yadro
+  name: csi-yadro-tatlin-unified
 spec:
   enabled: true
   version: 1
 EOF
 ```
 
-Дождитесь, когда модуль `csi-yadro` перейдет в состояние `Ready`.
-Проверить состояние модуля можно, выполнив следующую команду:
+Дождитесь, когда модуль `csi-yadro-tatlin-unified` перейдет в состояние `Ready`. Проверить состояние модуля можно, выполнив следующую команду:
 
 ```shell
-d8 k get module csi-yadro -w
+d8 k get module csi-yadro-tatlin-unified -w
 ```
 
 В результате будет выведена информация о модуле:
 
 ```console
-NAME        STAGE   SOURCE   PHASE       ENABLED   READY
-csi-yadro                    Available   True      True
+NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
+si-yadro-tatlin-unified            Embedded  Available   True       True
 ```
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать объекты StorageClass, примените следующий ресурс YadroStorageConnection:
+Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroTatlinUnifiedStorageConnection](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageconnection):
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
-kind: YadroStorageConnection
+kind: YadroTatlinUnifiedStorageConnection
 metadata:
   name: yad1
 spec:
@@ -63,15 +64,14 @@ EOF
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс YadroStorageClass.
-Ручное создание ресурса StorageClass без YadroStorageClass может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) может привести к ошибкам.
 
-Пример команды для создания класса хранения на основе системы хранения данных TATLIN.UNIFIED:
+Пример команды для создания класса хранения на основе системы хранения данных `TATLIN.UNIFIED`:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
-kind: YadroStorageClass
+kind: YadroTatlinUnifiedStorageClass
 metadata:
   name: yad1
 spec:
@@ -84,10 +84,10 @@ EOF
 
 ## Проверка работоспособности модуля
 
-Для того чтобы проверить работоспособность модуля `csi-yadro`, необходимо проверить состояние подов в пространстве имен `d8-csi-yadro`.
-Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-yadro` должны быть запущены на всех узлах.
+Для того чтобы проверить работоспособность модуля `csi-yadro-tatlin-unified`, необходимо проверить состояние подов в пространстве имён `d8-csi-yadro-tatlin-unified`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-yadro-tatlin-unified` должны быть запущены на всех узлах.
+
 Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
-d8 k -n d8-csi-yadro get pod -owide -w
+d8 k -n d8-csi-yadro-tatlin-unified get pod -owide -w
 ```

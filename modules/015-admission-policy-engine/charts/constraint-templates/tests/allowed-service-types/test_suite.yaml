@@ -3,25 +3,25 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-volume-types
 tests:
-  - name: security-policy
-    template: ../../templates/security/allowed-service-types.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: example-allowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/allowed.yaml
-        assertions:
-          - violations: no
-      - name: disallowed_loadbalancer
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed_loadbalancer.yaml
-        assertions:
-          - violations: yes
-      - name: disallowed_nodeport
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy/disallowed_nodeport.yaml
-        assertions:
-          - violations: yes          
+- name: security-policy
+  template: ../../templates/security/allowed-service-types.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 1-example-allowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy/001-allowed.yaml
+    assertions:
+    - violations: no
+  - name: 2-disallowed_loadbalancer
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy/002-disallowed_loadbalancer.yaml
+    assertions:
+    - violations: yes
+  - name: 3-disallowed_nodeport
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy/003-disallowed_nodeport.yaml
+    assertions:
+    - violations: yes

@@ -98,6 +98,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updStatusFilterMD,
 		},
 		{
+			Name:                   "capi_mds",
+			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			Kind:                   "MachineDeployment",
+			WaitForSynchronization: ptr.To(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: updStatusFilterCapiMD,
+		},
+		{
 			Name:                   "instances",
 			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
@@ -161,6 +173,21 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		IsFrozen:            frozen,
 		NodeGroup:           md.Labels["node-group"],
 		LastMachineFailures: md.Status.FailedMachines,
+	}, nil
+}
+
+func updStatusFilterCapiMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var md capiv1beta1.MachineDeployment
+
+	err := sdk.FromUnstructured(obj, &md)
+	if err != nil {
+		return nil, err
+	}
+
+	return statusCapiMachineDeployment{
+		Name:      md.Name,
+		Replicas:  *md.Spec.Replicas,
+		NodeGroup: md.Labels["node-group"],
 	}, nil
 }
 
@@ -305,6 +332,22 @@ func handleUpdateNGStatus(_ context.Context, input *go_hook.HookInput) error {
 		input.MetricsCollector.Set("machine_deployment_node_group_info", 1, labels)
 	}
 
+	snaps = input.Snapshots.Get("capi_mds")
+	// capi machine deployments snapshot
+	mdCapiMap := make(map[string][]statusCapiMachineDeployment)
+	for md, err := range sdkobjectpatch.SnapshotIter[statusCapiMachineDeployment](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'mds' snapshots: %w", err)
+		}
+
+		if v, ok := mdCapiMap[md.NodeGroup]; ok {
+			v = append(v, md)
+			mdCapiMap[md.NodeGroup] = v
+		} else {
+			mdCapiMap[md.NodeGroup] = []statusCapiMachineDeployment{md}
+		}
+	}
+
 	// count instances of each node group
 	instances := make(map[string]int32)
 	snaps = input.Snapshots.Get("instances")
@@ -409,6 +452,11 @@ func handleUpdateNGStatus(_ context.Context, input *go_hook.HookInput) error {
 			if !hasFrozenMd {
 				hasFrozenMd = md.IsFrozen
 			}
+		}
+
+		capiMds := mdCapiMap[ngName]
+		for _, md := range capiMds {
+			desiredMax += md.Replicas
 		}
 
 		if minPerZone > desiredMax {
@@ -562,4 +610,10 @@ type statusMachineDeployment struct {
 	Replicas            int32
 	NodeGroup           string
 	LastMachineFailures []*v1alpha1.MachineSummary
+}
+
+type statusCapiMachineDeployment struct {
+	Name      string
+	Replicas  int32
+	NodeGroup string
 }

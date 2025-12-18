@@ -148,4 +148,83 @@ status:
 			})
 		})
 	})
+	Context("Etcd-arbiter node support", func() {
+		BeforeEach(func() {
+			reconcileEtcdMembersWithEtcdArbiter := []*etcdserverpb.Member{
+				{
+					ID:       111,
+					PeerURLs: []string{"https://192.168.1.1:2379"},
+					Name:     "main-master-0",
+				},
+				{
+					ID:       222,
+					PeerURLs: []string{"https://192.168.1.2:2379"},
+					Name:     "main-master-1",
+				},
+				{
+					ID:       333,
+					PeerURLs: []string{"https://10.10.10.10:2379"},
+					Name:     "etcd-arbiter-0",
+				},
+			}
+
+			testHelperSetETCDMembers(reconcileEtcdMembersWithEtcdArbiter)
+
+			f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-0
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.1
+      type: InternalIP
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-1
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.2
+      type: InternalIP
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: etcd-arbiter-0
+  labels:
+    node.deckhouse.io/etcd-arbiter: ""
+status:
+  addresses:
+    - address: 10.10.10.10
+      type: InternalIP
+`))
+
+			f.RunHook()
+		})
+
+		It("Hook should include etcd-arbiter node and keep it in cluster", func() {
+			Expect(f).Should(ExecuteSuccessfully())
+
+			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+
+			// all 3 members must remain
+			Expect(resp.Members).To(HaveLen(3))
+
+			var names []string
+			for _, m := range resp.Members {
+				names = append(names, m.Name)
+			}
+
+			Expect(names).To(ContainElement("main-master-0"))
+			Expect(names).To(ContainElement("main-master-1"))
+			Expect(names).To(ContainElement("etcd-arbiter-0"))
+		})
+	})
 })

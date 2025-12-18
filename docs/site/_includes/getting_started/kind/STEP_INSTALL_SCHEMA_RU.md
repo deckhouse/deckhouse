@@ -2,10 +2,10 @@
 
 Установка Deckhouse на kind, рассматриваемая далее, позволит вам за менее чем 15 минут получить локальный кластер Kubernetes с установленным Deckhouse. Такой вариант развертывания Deckhouse позволит вам быстро развернуть Deckhouse и познакомиться с основными его возможностями.
 
-Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/products/kubernetes-platform/documentation/v1/modules/prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/products/kubernetes-platform/documentation/v1/modules/node-manager/) и [управление control-plane](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io).
+Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/modules/prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/modules/node-manager/) и [управление control-plane](/modules/control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io).
 
 {% alert level="warning" %}
-Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).
 {% endalert %}
 
 {% comment %}
@@ -34,7 +34,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 ```
 - Либо выполните следующую команду для установки коммерческой редакции Deckhouse Kubernetes Platform, указав лицензионный ключ:
 ```shell
- echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
+ echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.ru
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
 

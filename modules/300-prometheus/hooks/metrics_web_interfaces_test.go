@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -123,7 +123,7 @@ spec:
 
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/public/img/unknown.png",
 					"name": "test-1",
@@ -134,7 +134,7 @@ spec:
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/custom/icon",
 					"name": "test-2",
@@ -145,7 +145,7 @@ spec:
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/public/img/unknown.png",
 					"name": "test 3",
@@ -156,7 +156,7 @@ spec:
 			}))
 			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "https://example.com/custom/icon",
 					"name": "test@4",
@@ -183,7 +183,7 @@ spec:
 
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/public/img/unknown.png",
 					"name": "test-1",
@@ -194,7 +194,7 @@ spec:
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/custom/icon",
 					"name": "test-2",
@@ -205,7 +205,7 @@ spec:
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "/public/img/unknown.png",
 					"name": "test 3",
@@ -216,7 +216,7 @@ spec:
 			}))
 			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "deckhouse_web_interfaces",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Labels: map[string]string{
 					"icon": "https://example.com/custom/icon",
 					"name": "test@4",

@@ -9,6 +9,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
   add: /src/ovpn-admin

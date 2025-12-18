@@ -17,15 +17,14 @@ limitations under the License.
 package releaseupdater
 
 import (
-	"github.com/flant/shell-operator/pkg/metric"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const D8ReleaseBlockedMetricName = "d8_release_info"
 const ModuleReleaseBlockedMetricName = "d8_module_release_info"
 
-func NewMetricsUpdater(metricStorage metric.Storage, metricName string) *MetricsUpdater {
+func NewMetricsUpdater(metricStorage metricsstorage.Storage, metricName string) *MetricsUpdater {
 	return &MetricsUpdater{
 		metricStorage: metricStorage,
 		metricName:    metricName,
@@ -33,7 +32,7 @@ func NewMetricsUpdater(metricStorage metric.Storage, metricName string) *Metrics
 }
 
 type MetricsUpdater struct {
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 	metricName    string
 }
 
@@ -53,11 +52,14 @@ const (
 	DisruptionApprovalRequired = "disruptionApproval"
 	RequirementsNotMet         = "requirementsNotMet"
 	ReleaseQueueDepth          = "releaseQueueDepth"
+	MajorReleaseDepth          = "majorReleaseDepth"
+	MajorReleaseName           = "majorReleaseName"
+	FromToName                 = "fromToName"
 	NotificationNotSent        = "notificationNotSent"
 )
 
 func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
-	labels := make(MetricLabels, 6)
+	labels := make(MetricLabels, 9)
 
 	labels["name"] = release.GetName()
 
@@ -67,6 +69,9 @@ func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
 	labels.SetFalse(NotificationNotSent)
 
 	labels[ReleaseQueueDepth] = "nil"
+	labels[MajorReleaseDepth] = "nil"
+	labels[MajorReleaseName] = "nil"
+	labels[FromToName] = "nil"
 
 	if _, ok := release.(*v1alpha1.ModuleRelease); ok {
 		labels["moduleName"] = release.GetModuleName()

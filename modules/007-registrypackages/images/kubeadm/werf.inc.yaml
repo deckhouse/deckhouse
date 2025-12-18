@@ -37,4 +37,7 @@ import:
   add: /src/_output/bin/kubeadm
   to: /kubeadm
   before: setup
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+
 {{- end }}

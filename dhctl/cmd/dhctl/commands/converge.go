@@ -16,29 +16,28 @@ package commands
 
 import (
 	"context"
-	"reflect"
 
+	"github.com/name212/govalue"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -46,14 +45,21 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
+
+		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
+
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          isDebug,
+		})
 
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient: sshClient,
@@ -67,8 +73,12 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
+			ProviderGetter: providerGetter,
+			TmpDir:         tmpDir,
+			Logger:         logger,
+			IsDebug:        isDebug,
 		})
-		_, err = converger.Converge(context.Background())
+		_, err = converger.Converge(ctx)
 
 		return err
 	})
@@ -77,11 +87,22 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
+
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          isDebug,
+		})
+
 		converger := converge.NewConverger(&converge.Params{
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				SkipChangesOnDeny: true,
@@ -93,22 +114,24 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
+			ProviderGetter: providerGetter,
+			TmpDir:         tmpDir,
+			Logger:         logger,
+			IsDebug:        isDebug,
 		})
-		return converger.AutoConverge()
+		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
 	return cmd
 }
 
 func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -116,18 +139,25 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		if reflect.ValueOf(sshClient).IsNil() {
+		if govalue.IsNil(sshClient) {
 			sshClient = nil
 		}
+
+		tmpDir := app.TmpDirName
+		loggerFor := log.GetDefaultLogger()
+		isDebug := app.IsDebug
+
+		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           loggerFor,
+			IsDebug:          isDebug,
+		})
 
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient: sshClient,
@@ -142,8 +172,12 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				SkipChangesOnDeny: true,
 			},
 			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
+			ProviderGetter:                        providersGetter,
+			TmpDir:                                tmpDir,
+			Logger:                                loggerFor,
+			IsDebug:                               isDebug,
 		})
-		return converger.ConvergeMigration(context.Background())
+		return converger.ConvergeMigration(ctx)
 	})
 	return cmd
 }

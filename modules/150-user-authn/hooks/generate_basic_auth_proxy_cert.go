@@ -33,6 +33,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -176,8 +177,12 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	digest := input.Values.Get("global.modulesImages.digests.userAuthn.selfSignedGenerator").String()
 	job := generateJob(registry, digest, base64.StdEncoding.EncodeToString(gcsr))
 
-	foreground := v1.DeletePropagationForeground
-	_ = kubeClient.BatchV1().Jobs(proxyJobNS).Delete(context.Background(), proxyJobName, v1.DeleteOptions{PropagationPolicy: &foreground})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err = kubeClient.BatchV1().Jobs(proxyJobNS).Delete(ctx, proxyJobName, v1.DeleteOptions{PropagationPolicy: ptr.To(v1.DeletePropagationForeground)})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
 	createdJob, err := kubeClient.BatchV1().Jobs(proxyJobNS).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
 		return err

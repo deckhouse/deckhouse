@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-multiple-volume-types
+spec:
+  volumes:
+    types:
+      allowedValues:
+      - hostPath
+      - nfs
+      - iscsi
+

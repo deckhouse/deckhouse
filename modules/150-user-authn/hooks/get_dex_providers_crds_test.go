@@ -64,6 +64,27 @@ spec:
     - profile
     - email
 `
+		oidcDisabledCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: oidc-disabled
+spec:
+  type: OIDC
+  displayName: disabled
+  enabled: false
+  oidc:
+    basicAuthUnsupported: true
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    insecureSkipEmailVerified: true
+    issuer: https://issue.example.com
+    scopes:
+    - profile
+    - email
+`
 	)
 
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -100,6 +121,7 @@ spec:
     ]
   },
   "displayName": "bitbucket",
+  "enabled": true,
   "id": "bitbucket",
   "type": "BitbucketCloud"
 }]`))
@@ -119,7 +141,7 @@ spec:
 			})
 			Context("With adding new provider object", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(bitbucketCR + oidcCR))
+					f.BindingContexts.Set(f.KubeStateSet(bitbucketCR + oidcCR + oidcDisabledCR))
 					f.RunHook()
 				})
 				It("Should update entry in internal values", func() {
@@ -139,11 +161,13 @@ spec:
     ]
   },
   "displayName": "bitbucket",
+  "enabled": true,
   "id": "bitbucket",
   "type": "BitbucketCloud"
 },
 {
   "displayName": "google",
+  "enabled": true,
   "id": "oidc-notslu-gif-ed",
   "oidc": {
     "basicAuthUnsupported": true,
@@ -191,6 +215,7 @@ spec:
   ]
 },
 "displayName": "bitbucket",
+"enabled": true,
 "id": "bitbucket",
 "type": "BitbucketCloud"
 }]`))

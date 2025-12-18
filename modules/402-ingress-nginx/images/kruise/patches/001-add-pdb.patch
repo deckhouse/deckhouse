@@ -22,7 +22,7 @@ index 2cce1650..9adc4575 100644
  // +kubebuilder:object:root=true
  // +kubebuilder:subresource:status
 diff --git a/apis/apps/v1alpha1/zz_generated.deepcopy.go b/apis/apps/v1alpha1/zz_generated.deepcopy.go
-index 7eb70819..b90aab37 100644
+index 077a84ac..923a82d7 100644
 --- a/apis/apps/v1alpha1/zz_generated.deepcopy.go
 +++ b/apis/apps/v1alpha1/zz_generated.deepcopy.go
 @@ -972,6 +972,11 @@ func (in *DaemonSetSpec) DeepCopyInto(out *DaemonSetSpec) {
@@ -38,7 +38,7 @@ index 7eb70819..b90aab37 100644
  		in, out := &in.RevisionHistoryLimit, &out.RevisionHistoryLimit
  		*out = new(int32)
 diff --git a/config/crd/bases/apps.kruise.io_daemonsets.yaml b/config/crd/bases/apps.kruise.io_daemonsets.yaml
-index 25b03606..0ab75bc9 100644
+index 2a0f1308..8b699606 100644
 --- a/config/crd/bases/apps.kruise.io_daemonsets.yaml
 +++ b/config/crd/bases/apps.kruise.io_daemonsets.yaml
 @@ -164,6 +164,11 @@ spec:
@@ -53,38 +53,46 @@ index 25b03606..0ab75bc9 100644
                revisionHistoryLimit:
                  description: |-
                    The number of old history to retain to allow rollback.
+@@ -463,4 +468,7 @@ spec:
+     served: true
+     storage: true
+     subresources:
++      scale:
++        specReplicasPath: .spec.replicas
++        statusReplicasPath: .status.currentNumberScheduled
+       status: {}
 diff --git a/pkg/client/clientset/versioned/typed/apps/v1alpha1/daemonset.go b/pkg/client/clientset/versioned/typed/apps/v1alpha1/daemonset.go
-index 4ebe457b..ad49ead4 100644
+index c9b33136..fce7fc43 100644
 --- a/pkg/client/clientset/versioned/typed/apps/v1alpha1/daemonset.go
 +++ b/pkg/client/clientset/versioned/typed/apps/v1alpha1/daemonset.go
-@@ -23,6 +23,7 @@ import (
+@@ -22,6 +22,7 @@ import (
  
- 	v1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
+ 	appsv1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
  	scheme "github.com/openkruise/kruise/pkg/client/clientset/versioned/scheme"
 +	autoscalingv1 "k8s.io/api/autoscaling/v1"
  	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  	types "k8s.io/apimachinery/pkg/types"
  	watch "k8s.io/apimachinery/pkg/watch"
 @@ -46,6 +47,9 @@ type DaemonSetInterface interface {
- 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.DaemonSetList, error)
+ 	List(ctx context.Context, opts v1.ListOptions) (*appsv1alpha1.DaemonSetList, error)
  	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
- 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.DaemonSet, err error)
+ 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *appsv1alpha1.DaemonSet, err error)
 +	GetScale(ctx context.Context, daemonSetName string, options v1.GetOptions) (*autoscalingv1.Scale, error)
 +	UpdateScale(ctx context.Context, daemonSetName string, scale *autoscalingv1.Scale, opts v1.UpdateOptions) (*autoscalingv1.Scale, error)
 +
  	DaemonSetExpansion
  }
  
-@@ -192,3 +196,32 @@ func (c *daemonSets) Patch(ctx context.Context, name string, pt types.PatchType,
- 		Into(result)
- 	return
+@@ -67,3 +71,32 @@ func newDaemonSets(c *AppsV1alpha1Client, namespace string) *daemonSets {
+ 		),
+ 	}
  }
 +
 +// GetScale takes name of the daemonSet, and returns the corresponding autoscalingv1.Scale object, and an error if there is any.
 +func (c *daemonSets) GetScale(ctx context.Context, daemonSetName string, options v1.GetOptions) (result *autoscalingv1.Scale, err error) {
 +	result = &autoscalingv1.Scale{}
-+	err = c.client.Get().
-+		Namespace(c.ns).
++	err = c.GetClient().Get().
++		Namespace(c.GetNamespace()).
 +		Resource("daemonsets").
 +		Name(daemonSetName).
 +		SubResource("scale").
@@ -97,8 +105,8 @@ index 4ebe457b..ad49ead4 100644
 +// UpdateScale takes the top resource name and the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
 +func (c *daemonSets) UpdateScale(ctx context.Context, daemonSetName string, scale *autoscalingv1.Scale, opts v1.UpdateOptions) (result *autoscalingv1.Scale, err error) {
 +	result = &autoscalingv1.Scale{}
-+	err = c.client.Put().
-+		Namespace(c.ns).
++	err = c.GetClient().Put().
++		Namespace(c.GetNamespace()).
 +		Resource("daemonsets").
 +		Name(daemonSetName).
 +		SubResource("scale").
@@ -109,57 +117,67 @@ index 4ebe457b..ad49ead4 100644
 +	return
 +}
 diff --git a/pkg/client/clientset/versioned/typed/apps/v1alpha1/fake/fake_daemonset.go b/pkg/client/clientset/versioned/typed/apps/v1alpha1/fake/fake_daemonset.go
-index 1dfee83a..c90de296 100644
+index 60df6c51..1ff11796 100644
 --- a/pkg/client/clientset/versioned/typed/apps/v1alpha1/fake/fake_daemonset.go
 +++ b/pkg/client/clientset/versioned/typed/apps/v1alpha1/fake/fake_daemonset.go
-@@ -21,6 +21,7 @@ import (
- 	"context"
+@@ -18,9 +18,14 @@ limitations under the License.
+ package fake
  
+ import (
++	context "context"
++
  	v1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
+ 	appsv1alpha1 "github.com/openkruise/kruise/pkg/client/clientset/versioned/typed/apps/v1alpha1"
 +	autoscalingv1 "k8s.io/api/autoscaling/v1"
- 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
- 	labels "k8s.io/apimachinery/pkg/labels"
- 	types "k8s.io/apimachinery/pkg/types"
-@@ -138,3 +139,25 @@ func (c *FakeDaemonSets) Patch(ctx context.Context, name string, pt types.PatchT
++	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	gentype "k8s.io/client-go/gentype"
++	testing "k8s.io/client-go/testing"
+ )
+ 
+ // fakeDaemonSets implements DaemonSetInterface
+@@ -47,3 +52,27 @@ func newFakeDaemonSets(fake *FakeAppsV1alpha1, namespace string) appsv1alpha1.Da
+ 		fake,
  	}
- 	return obj.(*v1alpha1.DaemonSet), err
  }
 +
 +// GetScale takes name of the daemonSet, and returns the corresponding scale object, and an error if there is any.
-+func (c *FakeDaemonSets) GetScale(ctx context.Context, daemonSetName string, options v1.GetOptions) (result *autoscalingv1.Scale, err error) {
++func (c *fakeDaemonSets) GetScale(ctx context.Context, daemonSetName string, options v1.GetOptions) (result *autoscalingv1.Scale, err error) {
++	emptyResult := &autoscalingv1.Scale{}
 +	obj, err := c.Fake.
-+		Invokes(testing.NewGetSubresourceAction(daemonsetsResource, c.ns, "scale", daemonSetName), &autoscalingv1.Scale{})
++		Invokes(testing.NewGetSubresourceActionWithOptions(c.Resource(), c.Namespace(), "scale", daemonSetName, options), emptyResult)
 +
 +	if obj == nil {
-+		return nil, err
++		return emptyResult, err
 +	}
 +	return obj.(*autoscalingv1.Scale), err
 +}
 +
 +// UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
-+func (c *FakeDaemonSets) UpdateScale(ctx context.Context, daemonSetName string, scale *autoscalingv1.Scale, opts v1.UpdateOptions) (result *autoscalingv1.Scale, err error) {
++func (c *fakeDaemonSets) UpdateScale(ctx context.Context, daemonSetName string, scale *autoscalingv1.Scale, opts v1.UpdateOptions) (result *autoscalingv1.Scale, err error) {
++	emptyResult := &autoscalingv1.Scale{}
 +	obj, err := c.Fake.
-+		Invokes(testing.NewUpdateSubresourceAction(daemonsetsResource, "scale", c.ns, scale), &autoscalingv1.Scale{})
++		Invokes(testing.NewUpdateSubresourceActionWithOptions(c.Resource(), "scale", c.Namespace(), scale, opts), &autoscalingv1.Scale{})
 +
 +	if obj == nil {
-+		return nil, err
++		return emptyResult, err
 +	}
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index d54e78cd..332a5de4 100644
+index a3cbd273..498208c8 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
-@@ -508,7 +508,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+@@ -507,9 +507,6 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
+ 	// no need to set nodeName
  	// newPod.Spec.NodeName = nodeName
  
- 	// Added default tolerations for DaemonSet pods.
+-	// Added default tolerations for DaemonSet pods.
 -	util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
-+	// util.AddOrUpdateDaemonPodTolerations(&newPod.Spec)
- 
+-
  	newPodForDSCache.Store(ds.UID, &newPodForDS{generation: ds.Generation, pod: newPod})
  	return newPod
-@@ -563,6 +563,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *ap
+ }
+@@ -563,6 +560,11 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *ap
  		return fmt.Errorf("error storing status for DaemonSet %v: %v", ds.Name, err)
  	}
  
@@ -171,12 +189,11 @@ index d54e78cd..332a5de4 100644
  	// Resync the DaemonSet after MinReadySeconds as a last line of defense to guard against clock-skew.
  	if ds.Spec.MinReadySeconds >= 0 && numberReady != numberAvailable {
  		durationStore.Push(keyFunc(ds), time.Duration(ds.Spec.MinReadySeconds)*time.Second)
-@@ -570,6 +575,93 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *ap
+@@ -570,6 +572,87 @@ func (dsc *ReconcileDaemonSet) updateDaemonSetStatus(ctx context.Context, ds *ap
  	return nil
  }
  
 +func (dsc *ReconcileDaemonSet) getEligibleNodesCount(ds *appsv1alpha1.DaemonSet) (int32, error) {
-+	// if the nodeSelector is set - use it to calculate the number of nodes possible to host the daemonset's pods
 +	if len(ds.Spec.Template.Spec.NodeSelector) > 0 {
 +		nodeCount, err := dsc.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(ds.Spec.Template.Spec.NodeSelector).String()})
 +		if err != nil {
@@ -185,7 +202,6 @@ index d54e78cd..332a5de4 100644
 +		return int32(len(nodeCount.Items)), nil
 +	}
 +
-+	// if there is no nodeSelector in the spec - count the number by using nodeShouldRunDaemonPod againts each node
 +	nodeList, err := dsc.nodeLister.List(labels.Everything())
 +	if err != nil {
 +		return 0, fmt.Errorf("couldn't get list of nodes when calculating the number of eligible nodes %#v: %v", ds, err)
@@ -194,22 +210,18 @@ index d54e78cd..332a5de4 100644
 +	var count int32
 +	for _, node := range nodeList {
 +		if shouldRun, _ := nodeShouldRunDaemonPod(node, ds, true); shouldRun {
-+			count += 1
++			count++
 +		}
 +	}
 +	return count, nil
 +}
 +
 +func (dsc *ReconcileDaemonSet) updateDaemonSetReplicas(ds *appsv1alpha1.DaemonSet, desiredNumberScheduled int) error {
-+	var nodeCount int32
-+	var err error
-+	nodeCount, err = dsc.getEligibleNodesCount(ds)
++	nodeCount, err := dsc.getEligibleNodesCount(ds)
 +	if err != nil {
 +		return err
 +	}
 +
-+	// if there are more nodes than Desired (cordoned and drained nodes)
-+	// we need to resync DaemonSet after some time in case the cordoned/drained nodes get deleted
 +	if nodeCount > int32(desiredNumberScheduled) {
 +		klog.Infof("Have to reconcile DaemonSet %s/%s in 60 seconds because there are more replicas available (possibly some nodes are cordoned or have intolerable taints) than desired: %d", ds.Namespace, ds.Name, nodeCount)
 +		durationStore.Push(keyFunc(ds), time.Duration(60)*time.Second)
@@ -228,16 +240,17 @@ index d54e78cd..332a5de4 100644
 +			klog.Errorf("Couldn't get scale for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
 +			return err
 +		}
-+		newScale := *scale
++		oldReplicas := scale.Spec.Replicas
++		newScale := scale.DeepCopy()
 +		newScale.Spec.Replicas = nodeCount
-+		_, err = dsClient.UpdateScale(context.TODO(), ds.Name, &newScale, metav1.UpdateOptions{})
++		_, err = dsClient.UpdateScale(context.TODO(), ds.Name, newScale, metav1.UpdateOptions{})
 +		if err != nil {
 +			klog.Errorf("Couldn't scale DaemonSet %s/%s to %d replicas: %v", ds.Namespace, ds.Name, nodeCount, err)
 +			return err
 +		}
-+		klog.Infof("Updated DaemonSet %s/%s replicas from %d to %d", ds.Namespace, ds.Name, *ds.Spec.Replicas, nodeCount)
++		klog.Infof("Updated DaemonSet %s/%s replicas from %d to %d", ds.Namespace, ds.Name, oldReplicas, nodeCount)
 +
-+		if *ds.Spec.Replicas > nodeCount {
++		if oldReplicas > nodeCount {
 +			pdb, err := policyClient.Get(context.TODO(), ds.Name, metav1.GetOptions{})
 +			if err != nil {
 +				klog.Errorf("Couldn't get relevant PodDisruptionBudget for DaemonSet %s/%s: %v", ds.Namespace, ds.Name, err)
@@ -255,7 +268,6 @@ index d54e78cd..332a5de4 100644
 +					return err
 +				}
 +				klog.Infof("Updated relevant PodDisruptionBudget %s/%s with expected pods %d", ds.Namespace, ds.Name, nodeCount)
-+				return nil
 +			}
 +		}
 +		return nil
@@ -265,25 +277,25 @@ index d54e78cd..332a5de4 100644
  func (dsc *ReconcileDaemonSet) storeDaemonSetStatus(
  	ctx context.Context,
  	ds *appsv1alpha1.DaemonSet,
-@@ -845,7 +937,9 @@ func (dsc *ReconcileDaemonSet) podsShouldBeOnNode(
+@@ -845,7 +928,9 @@ func (dsc *ReconcileDaemonSet) podsShouldBeOnNode(
  	hash string,
  ) (nodesNeedingDaemonPods, podsToDelete []string) {
  
 -	shouldRun, shouldContinueRunning := nodeShouldRunDaemonPod(node, ds)
-+	// a new for a not-ready pod shouln't be created, but a running one shoult stay on the node
++	// avoid creating new pods on nodes that cannot host them, but keep existing pods running if tolerations permit
 +	shouldRun, _ := nodeShouldRunDaemonPod(node, ds)
 +	_, shouldContinueRunning := nodeShouldRunDaemonPod(node, ds, true)
  	daemonPods, exists := nodeToDaemonPods[node.Name]
  
  	switch {
 diff --git a/pkg/controller/daemonset/daemonset_event_handler.go b/pkg/controller/daemonset/daemonset_event_handler.go
-index 961e2abd..de7796ad 100644
+index 45e13eaa..2f259397 100644
 --- a/pkg/controller/daemonset/daemonset_event_handler.go
 +++ b/pkg/controller/daemonset/daemonset_event_handler.go
 @@ -283,6 +283,23 @@ func (e *nodeEventHandler) Update(ctx context.Context, evt event.TypedUpdateEven
  }
  
- func (e *nodeEventHandler) Delete(ctx context.Context, evt event.TypedDeleteEvent[*v1.Node], q workqueue.RateLimitingInterface) {
+ func (e *nodeEventHandler) Delete(ctx context.Context, evt event.TypedDeleteEvent[*v1.Node], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 +	dsList := &appsv1alpha1.DaemonSetList{}
 +	err := e.reader.List(context.TODO(), dsList)
 +	if err != nil {
@@ -303,12 +315,12 @@ index 961e2abd..de7796ad 100644
 +	}
  }
  
- func (e *nodeEventHandler) Generic(ctx context.Context, evt event.TypedGenericEvent[*v1.Node], q workqueue.RateLimitingInterface) {
+ func (e *nodeEventHandler) Generic(ctx context.Context, evt event.TypedGenericEvent[*v1.Node], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 diff --git a/pkg/controller/daemonset/daemonset_util.go b/pkg/controller/daemonset/daemonset_util.go
-index 420188f0..fb72ddaa 100644
+index 0d8715c1..646778c8 100644
 --- a/pkg/controller/daemonset/daemonset_util.go
 +++ b/pkg/controller/daemonset/daemonset_util.go
-@@ -98,8 +98,16 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
+@@ -98,8 +98,15 @@ func nodeInSameCondition(old []corev1.NodeCondition, cur []corev1.NodeCondition)
  //   - shouldContinueRunning:
  //     Returns true when a daemonset should continue running on a node if a daemonset pod is already
  //     running on that node.
@@ -316,7 +328,6 @@ index 420188f0..fb72ddaa 100644
 -	pod := NewPod(ds, node.Name)
 +func nodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1alpha1.DaemonSet, addDefaultDSTolerations ...bool) (bool, bool) {
 +	var pod *corev1.Pod
-+	// add standard demonset tolerations if addDefaultDSTolerations isn't empty
 +	if len(addDefaultDSTolerations) > 0 {
 +		pod = &corev1.Pod{Spec: ds.Spec.Template.Spec, ObjectMeta: ds.Spec.Template.ObjectMeta}
 +		pod.Namespace = ds.Namespace
@@ -327,3 +338,20 @@ index 420188f0..fb72ddaa 100644
  
  	// If the daemon set specifies a node name, check that it matches with node.Name.
  	if !(ds.Spec.Template.Spec.NodeName == "" || ds.Spec.Template.Spec.NodeName == node.Name) {
+diff --git a/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go b/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
+index 3726aa9e..448c0c4a 100644
+--- a/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
++++ b/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
+@@ -50,10 +50,11 @@ func (h *DaemonSetCreateUpdateHandler) validateDaemonSetUpdate(ds, oldDs *appsv1
+ 	daemonset.Spec.Lifecycle = oldDs.Spec.Lifecycle
+ 	daemonset.Spec.BurstReplicas = oldDs.Spec.BurstReplicas
+ 	daemonset.Spec.MinReadySeconds = oldDs.Spec.MinReadySeconds
++	daemonset.Spec.Replicas = oldDs.Spec.Replicas
+ 	daemonset.Spec.RevisionHistoryLimit = oldDs.Spec.RevisionHistoryLimit
+ 
+ 	if !apiequality.Semantic.DeepEqual(daemonset.Spec, oldDs.Spec) {
+-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec"), "updates to daemonset spec for fields other than 'BurstReplicas', 'template', 'lifecycle',  'updateStrategy', 'minReadySeconds', and 'revisionHistoryLimit' are forbidden"))
++		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec"), "updates to daemonset spec for fields other than 'BurstReplicas', 'template', 'lifecycle',  'updateStrategy', 'minReadySeconds', 'replicas', and 'revisionHistoryLimit' are forbidden"))
+ 	}
+ 	allErrs = append(allErrs, validateDaemonSetSpec(&ds.Spec, field.NewPath("spec"))...)
+ 	return allErrs

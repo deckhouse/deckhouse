@@ -231,6 +231,10 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 		tlsConfig["ca"] = rw.Spec.Config.TLSConfig.CA
 	}
 
+	for k, v := range rw.Spec.Config.Headers {
+		headers[k] = v
+	}
+
 	return exportingConfig{
 		exporterConfig: &cortex.Config{
 			Name:        rw.Name,

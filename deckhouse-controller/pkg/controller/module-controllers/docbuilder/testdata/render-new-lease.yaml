@@ -6,7 +6,7 @@ metadata:
 spec:
   version: v1.1.1
   checksum: abc
-  path: /testmodule/v1.1.1
+  path: /modules/testmodule
 status:
   conditions:
     - address: http://10-222-222-22.d8-system.pod.cluster.local:8081

@@ -29,12 +29,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// Set to true to update golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
+// Set to true to update golden files with: `make FOCUS=ingress-nginx CGO_ENABLED=1 GOLDEN=true tests-modules`
 var (
 	golden             bool
 	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
@@ -44,6 +45,8 @@ func init() {
 	if env := os.Getenv("GOLDEN"); env != "" {
 		golden, _ = strconv.ParseBool(env)
 	}
+	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func Test(t *testing.T) {
@@ -55,7 +58,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.29.14")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.30.14")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -69,6 +72,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.namespaces", json.RawMessage("[]"))
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.ingresses", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.geoproxyReady", true)
 	})
 
 	table.DescribeTable("Render IngressNginx controllers",
@@ -105,6 +109,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
 			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 			// Assert DaemonSet exists
 			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)

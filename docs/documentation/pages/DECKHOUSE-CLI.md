@@ -1,6 +1,6 @@
 ---
 title: "Deckhouse CLI overview and installation"
-permalink: en/deckhouse-cli/
+permalink: en/cli/d8/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 
@@ -20,11 +20,15 @@ The `d8 dk` and `d8 mirror` command groups are not available for Community Editi
 * `d8 mirror` — the range of commands that allow you to copy DKP distribution images to a private container registry (previously the `dhctl mirror` tool was used for this purpose).
   For example, you can run `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` instead of `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
-  Usage scenario:
+  The `--only-extra-images` flag allows pulling only extra images for modules (such as vulnerability databases) without downloading the main module images.
 
-  - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry).
+  Usage scenarios:
 
-* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
+  - [Manually uploading images to an air-gapped registry](../../installing/#manual-loading-of-deckhouse-kubernetes-platform-images-vulnerability-scanner-db-and-dkp-modules-into-a-private-registry).
+  - Updating module extra images (such as vulnerability databases): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`.
+  - [Updating the platform, modules, and vulnerability databases in air-gapped environment](/products/kubernetes-platform/guides/airgapped-update.html#example-workflow-for-updating-the-platform-modules-and-vulnerability-databases).
+
+* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     For example, the `d8 virtualization console` command execs you into the VM console.
 
     <div markdown="0">

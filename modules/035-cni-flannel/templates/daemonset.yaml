@@ -2,6 +2,10 @@
 cpu: 25m
 memory: 50Mi
 {{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -61,8 +65,27 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: {{ .Chart.Name }}
       initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+        {{- end }}
       {{- if eq .Values.cniFlannel.internal.podNetworkMode "vxlan" }}
       - name: handle-vxlan-offload
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "vxlanOffloadingFixer") }}
         imagePullPolicy: IfNotPresent
         env:
@@ -74,18 +97,11 @@ spec:
         resources:
           requests:
           {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-            drop:
-            - ALL
-          privileged: false
         terminationMessagePolicy: FallbackToLogsOnError
       {{- end }}
       containers:
       - name: kube-flannel
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "flanneld") }}
         args:
         - --ip-masq
@@ -105,13 +121,18 @@ spec:
               fieldPath: metadata.namespace
         volumeMounts:
         - name: run
-          mountPath: /run
+          mountPath: /run/flannel
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
         - name: flannel-cfg
           mountPath: /etc/kube-flannel/
         - name: cni
           mountPath: /etc/cni/net.d
         - name: tmp
           mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -121,7 +142,11 @@ spec:
       volumes:
         - name: run
           hostPath:
-            path: /run
+            path: /run/flannel
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
         - name: cni
           hostPath:
             path: /etc/cni/net.d
@@ -130,3 +155,7 @@ spec:
             name: flannel
         - name: tmp
           emptyDir: {}
+        - name: sbin
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Mi

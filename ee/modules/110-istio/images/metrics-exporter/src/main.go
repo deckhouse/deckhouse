@@ -7,34 +7,35 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
-
 	reg := prometheus.NewRegistry()
 	cfg := LoadConfig()
 
 	// Kube client
 	restCfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatal("Failed to get cluster config: %v", err)
+		log.Fatal(fmt.Sprintf("Failed to get cluster config: %v", err))
 	}
 	clientSet, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
-		log.Fatal("Failed to create clientset: %v", err)
+		log.Fatal(fmt.Sprintf("Failed to create clientset: %v", err))
 	}
 
 	metrics := RegisterMetrics(clientSet, reg)
-	watcher := NewWatcher(clientSet)
+	watcher := NewWatcher(clientSet, metrics)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -69,7 +70,6 @@ func main() {
 				log.Info("Shutting down Istio monitor")
 				return
 			}
-
 		}
 	}()
 

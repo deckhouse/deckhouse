@@ -16,6 +16,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -71,7 +72,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -213,7 +214,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(configData)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider())
 	f := require.NoError
 	if hasErr {
 		f = require.Error

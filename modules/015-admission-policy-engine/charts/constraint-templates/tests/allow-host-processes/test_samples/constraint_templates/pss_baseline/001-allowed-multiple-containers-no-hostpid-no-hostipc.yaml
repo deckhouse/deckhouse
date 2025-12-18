@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-containers-no-hostpid-no-hostipc
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+    - name: redis
+      image: redis
+

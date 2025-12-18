@@ -82,7 +82,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	go rp.Serve()
+    go rp.Serve(&proxy.Config{SignCheck: config.SignCheck})
 
 	<-ctx.Done()
 

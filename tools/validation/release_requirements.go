@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -312,7 +313,7 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 	})
 
 	if len(errMsgs) > 0 {
-		err = fmt.Errorf(strings.Join(errMsgs, ", "))
+		err = errors.New(strings.Join(errMsgs, ", "))
 	}
 
 	return prematureChecks, eligibleChecks, err

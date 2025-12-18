@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"net/http"
 	"time"
 
@@ -18,6 +17,8 @@ import (
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type PrometheusExporterMetrics struct {
@@ -47,13 +48,21 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 	mux := http.NewServeMux()
 
 	// Health check endpoints
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, err := w.Write([]byte("ok"))
+		if err != nil {
+			log.Error(fmt.Sprintf("error writing healthz response: %v", err))
+			return
+		}
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, err := w.Write([]byte("ok"))
+		if err != nil {
+			log.Error(fmt.Sprintf("failed to write readyz response: %v", err))
+			return
+		}
 	})
 
 	// Metrics
@@ -86,7 +95,6 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 }
 
 func (p *PrometheusExporterMetrics) getToken(ctx context.Context, namespace, saName string) (string, error) {
-
 	if p.istiodToken == nil || p.istiodToken.Status.ExpirationTimestamp.Time.Before(time.Now()) {
 		log.Info("Generating new service account token for istiod communication")
 		newToken, err := p.newTokenRequest(ctx, namespace, saName)
@@ -108,7 +116,7 @@ func (p *PrometheusExporterMetrics) newTokenRequest(ctx context.Context, namespa
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		log.Error("Failed to create token: %v", err)
+		return nil, fmt.Errorf("failed to create token: %v", err)
 	}
 
 	return tokenResp, nil
@@ -130,7 +138,7 @@ func (p *PrometheusExporterMetrics) GetIstiodRemoteClustersStatus(ctx context.Co
 	for _, pod := range pods {
 		data, err := fetchClusterStatusFromIstiod(ctx, clientHTTP, token, pod.IP)
 		if err != nil {
-			log.Error("Failed to fetch cluster status from pod %s (%s): %v", pod.Name, pod.IP, err)
+			log.Error(fmt.Sprintf("Failed to fetch cluster status from pod %s (%s): %v", pod.Name, pod.IP, err))
 			continue
 		}
 
@@ -143,7 +151,7 @@ func (p *PrometheusExporterMetrics) GetIstiodRemoteClustersStatus(ctx context.Co
 func fetchClusterStatusFromIstiod(ctx context.Context, clientHTTP *http.Client, token, ip string) ([]ClusterDebugInfo, error) {
 	url := fmt.Sprintf("http://%s:15014/debug/clusterz", ip)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build request for %s: %w", ip, err)
 	}
@@ -173,4 +181,15 @@ func (p *PrometheusExporterMetrics) setClusterStatus(istiod, clusterID, secretNa
 		val = 1.0
 	}
 	p.clusterUp.WithLabelValues(istiod, clusterID, secretName).Set(val)
+}
+
+func (p *PrometheusExporterMetrics) DeleteIstiodMetrics(podName string) {
+	if podName == "" {
+		return
+	}
+
+	removed := p.clusterUp.DeletePartialMatch(prometheus.Labels{"istiod": podName})
+	if removed > 0 {
+		log.Info(fmt.Sprintf("Removed %d istio_remote_cluster_up series for pod %s", removed, podName))
+	}
 }

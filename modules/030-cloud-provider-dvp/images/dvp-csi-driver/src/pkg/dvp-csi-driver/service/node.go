@@ -18,7 +18,9 @@ package service
 
 import (
 	"context"
+	"crypto/md5"
 	"dvp-csi-driver/pkg/utils"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -145,7 +147,7 @@ func (n *NodeService) NodePublishVolume(
 func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (string, error) {
 	disk, err := n.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskName, err)
+		msg := fmt.Errorf("error from parent DVP cluster while finding disk %v by id, error: %v", diskName, err)
 		klog.Error(msg.Error())
 		return "", msg
 	}
@@ -161,33 +163,15 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (strin
 		return "", msg
 	}
 
-	vmName := disk.Status.AttachedToVirtualMachines[0].Name
-	vm, err := n.dvpCloudAPI.ComputeService.GetVMByName(ctx, vmName)
-	if err != nil {
-		msg := fmt.Errorf("error while finding virtual machine %v by name, error: %w", vmName, err)
-		klog.Error(msg.Error())
-		return "", msg
-	}
+	hash := md5.Sum([]byte(disk.UID))
+	target := hex.EncodeToString(hash[:])
 
-	target := ""
-	for _, attachedDiskRef := range vm.Status.BlockDeviceRefs {
-		if attachedDiskRef.Name == diskName {
-			target = attachedDiskRef.Target
-			break
-		}
-	}
-
-	if target == "" {
-		msg := fmt.Errorf("error while finding device path for disk %s on virtual machine %v, error: %w", diskName, vmName, err)
-		klog.Error(msg.Error())
-		return "", msg
-	}
-
-	device := fmt.Sprintf("/dev/%s", target)
+	device := fmt.Sprintf("/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_%s", target)
 	_, err = os.Stat(device)
 	if err != nil {
-		klog.Errorf("Device path for disk ID %v does not exists", diskName)
-		return "", errors.New("device was not found")
+		msg := fmt.Errorf("device path %s for disk ID %v does not exists", device, diskName)
+		klog.Errorf(msg.Error())
+		return "", msg
 	}
 
 	klog.Infof("Device path %s exists", device)
@@ -226,12 +210,20 @@ func (n *NodeService) NodeUnpublishVolume(
 	_ context.Context,
 	req *csi.NodeUnpublishVolumeRequest,
 ) (*csi.NodeUnpublishVolumeResponse, error) {
+	target := req.GetTargetPath()
+	if target == "" {
+		return nil, status.Error(codes.InvalidArgument, "targetpath not provided")
+	}
+
+	klog.Infof("NodeUnpublishVolume: unmounting %s", target)
+
 	mounter := mount.New("")
-	klog.Infof("Unmounting %s", req.GetTargetPath())
-	err := mounter.Unmount(req.GetTargetPath())
-	if err != nil {
-		klog.Infof("Failed to unmount")
-		return nil, err
+
+	err := mount.CleanupMountPoint(target, mounter, false)
+	if err == nil || strings.Contains(fmt.Sprint(err), "not mounted") {
+		klog.Infof("NodeUnpublishVolume: target %s already unmounted (or not a mount), ignoring: %v", target, err)
+	} else {
+		return nil, status.Errorf(codes.Internal, "failed to unmount target %s: %v", target, err)
 	}
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil

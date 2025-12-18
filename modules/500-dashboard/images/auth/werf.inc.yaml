@@ -1,7 +1,7 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/auth/Dockerfile
 # #####################################################################
-{{- $version := "1.2.3" }}
+{{- $version := "1.4.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

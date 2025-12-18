@@ -3,22 +3,42 @@ title: "Snapshots"
 permalink: en/virtualization-platform/documentation/user/resource-management/snapshots.html
 ---
 
-Snapshots are used to save the state of a resource at a specific point in time. Both disk and virtual machine snapshots are supported.
+Snapshots allow you to capture the current state of a resource for later recovery or cloning: a disk snapshot saves only the data from the selected disk, while a virtual machine snapshot includes the VM settings and the state of all its disks.
+
+## Consistent snapshots
+
+Snapshots can be consistent or inconsistent; this is controlled by the `requiredConsistency` parameter. By default, `requiredConsistency` is set to `true`, which means a consistent snapshot is required.
+
+A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
+
+- The virtual machine is turned off.
+- [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) is installed in the guest system, which temporarily suspends the file system at the time the snapshot is created to ensure its consistency.
+
+QEMU Guest Agent supports hook scripts that allow you to prepare applications for snapshot creation without stopping services, ensuring application-level consistency. For more information on configuring hooks scripts, see the [Guest OS agent](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) section.
+
+An inconsistent snapshot may not reflect a consistent state of the virtual machine's disks and its components. Such a snapshot is created in the following cases:
+
+- The VM is running, and `qemu-guest-agent` is not installed or not running in the guest OS.
+- The snapshot manifest explicitly specifies the `requiredConsistency: false` parameter, and you want to avoid suspending the file system.
+
+{% alert level="warning" %}
+When restoring from such a snapshot, file system integrity issues may occur, as the data state may be inconsistent.
+{% endalert %}
 
 ## Creating disk snapshots
 
-The [VirtualDiskSnapshot](../../../reference/cr/virtualdisksnapshot.html) resource is used to create snapshots of virtual disks. These snapshots can serve as a data source when creating new disks, such as for cloning or information recovery.
+The `VirtualDiskSnapshot` resource is used to create snapshots of virtual disks. These snapshots can serve as a data source when creating new disks, such as for cloning or information recovery.
 
 To ensure data integrity, a disk snapshot can be created in the following cases:
 
 - The disk is not attached to any virtual machine.
 - The VM is powered off.
 - The VM is running, but qemu-guest-agent is installed in the guest OS.
-The file system has been successfully “frozen” (fsfreeze operation).
+  The file system has been successfully "frozen" (fsfreeze operation).
 
 If data consistency is not required (for example, for test scenarios), a snapshot can be created:
 
-- On a running VM without “freezing” the file system.
+- On a running VM without "freezing" the file system.
 - Even if the disk is attached to an active VM.
 
 To do this, specify in the VirtualDiskSnapshot manifest:
@@ -28,40 +48,23 @@ spec:
   requiredConsistency: false
 ```
 
-When creating a snapshot, you need to specify the name of the `VolumeSnapshotClass` that will be used to create the snapshot.
-
-To get a list of supported `VolumeSnapshotClass` resources, run the following command:
-
-```shell
-d8 k get volumesnapshotclasses
-```
-
-Example output:
-
-```console
-NAME                     DRIVER                                DELETIONPOLICY   AGE
-csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
-```
-
-Here is an example manifest for creating a disk snapshot:
+An example manifest for creating a disk snapshot:
 
 ```yaml
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDiskSnapshot
 metadata:
-  name: linux-vm-root-snapshot
+  name: linux-vm-root-$(date +%s)
 spec:
   requiredConsistency: true
   virtualDiskName: linux-vm-root
-  volumeSnapshotClassName: sds-replicated-volume
 EOF
 ```
 
-To view the list of disk snapshots, run the following command:
+To view a list of disk snapshots, run the following command:
 
-```shell
+```bash
 d8 k get vdsnapshot
 ```
 
@@ -69,22 +72,35 @@ Example output:
 
 ```console
 NAME                     PHASE     CONSISTENT   AGE
-inux-vm-root-1728027905  Ready     true         3m2s
+linux-vm-root-1728027905   Ready                  3m2s
 ```
 
-After creation, the `VirtualDiskSnapshot` resource can be in the following states:
+After creation, `VirtualDiskSnapshot` can be in the following states (phases):
 
-- `Pending` — Waiting for the readiness of all dependent resources required to create the snapshot.
-- `InProgress` — The process of creating the virtual disk snapshot is ongoing.
-- `Ready` — The snapshot creation has been successfully completed, and the virtual disk snapshot is available for use.
-- `Failed` — An error occurred during the creation process of the virtual disk snapshot.
-- `Terminating` — The resource is in the process of being deleted.
+- `Pending`: Waiting for all dependent resources required for snapshot creation to be ready.
+- `InProgress`: The process of creating a virtual disk snapshot is in progress.
+- `Ready`: Snapshot creation has been successfully completed and the virtual disk snapshot is available for use.
+- `Failed`: An error occurred during the virtual disk snapshot creation process.
+- `Terminating`: The resource is in the process of being deleted.
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
 
-## Restoring disks from snapshots
+A full description of the `VirtualDiskSnapshot` resource configuration parameters for machines can be found at [link](/modules/virtualization/cr.html#virtualdisksnapshot).
 
-To restore a disk from a previously created disk snapshot, you need to specify the corresponding object as the `dataSource`:
+How to create a disk image in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Disk Snapshot".
+- In the "Disk Snapshot Name" field, enter a name for the snapshot.
+- On the "Configuration" tab, in the "Disk Name" field, select the disk from which the snapshot will be created.
+- Enable the "Consistency Guarantee" switch.
+- Click the "Create" button.
+- The image status is displayed at the top left, under the snapshot name.
+
+## Recovering disks from snapshots
+
+In order to restore a disk from a previously created disk snapshot, you must specify a corresponding object as `dataSource`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -93,18 +109,15 @@ kind: VirtualDisk
 metadata:
   name: linux-vm-root
 spec:
-  # Disk storage settings.
   persistentVolumeClaim:
-    # Specify a size greater than the snapshot size.
     size: 10Gi
-    # Replace with your StorageClass name.
+    # Substitute your StorageClass name.
     storageClassName: i-sds-replicated-thin-r2
-  # Data source from which the disk is created.
   dataSource:
     type: ObjectRef
     objectRef:
       kind: VirtualDiskSnapshot
-      name: linux-vm-root-snapshot
+      name: linux-vm-root-1728027905
 EOF
 ```
 
@@ -112,7 +125,7 @@ How to restore a disk from a previously created snapshot in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
 - Go to the "Virtualization" → "VM Disks" section.
-- Click "Create Disk".
+- Click "Create Disk""
 - In the form that opens, enter a name for the disk in the "Disk Name" field.
 - In the "Source" field, make sure the "Snapshots" checkbox is selected.
 - From the drop-down list, select the disk snapshot you want to restore from.
@@ -121,99 +134,35 @@ How to restore a disk from a previously created snapshot in the web interface:
 - Click the "Create" button.
 - The disk status is displayed at the top left, under the disk name.
 
-## Creating Virtual Machine Snapshots
+## Creating snapshots of virtual machines
 
-A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The [VirtualMachineSnapshot](../../../reference/cr/virtualmachinesnapshot.html) resource is used to create virtual machine snapshots.
-
-{% alert level="warning" %}
-It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a Pending state while waiting for the images to become available.
-{% endalert %}
-
-### Types of snapshots
-
-Snapshots can be consistent or inconsistent, which is determined by the `requiredConsistency` parameter. By default, the `requiredConsistency` parameter is set to `true`, which requires a consistent snapshot.
-
-A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
-
-- The virtual machine is turned off.
-- `qemu-guest-agent` is installed in the guest system, which temporarily suspends the file system at the time the snapshot is created to ensure its consistency.
-
-  An inconsistent snapshot may not reflect the consistent state of the virtual machine's disks and its components. Such a snapshot is created in the following cases:
-
-- The VM is running, and `qemu-guest-agent` is not installed or running in the guest OS.
-- The VM is running, and `qemu-guest-agent` is not installed in the guest OS, but the snapshot manifest specifies the `requiredConsistency: false` parameter, and you want to avoid suspending the file system.
+A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The `VirtualMachineSnapshot` resource is used to create virtual machine snapshots.
 
 {% alert level="warning" %}
-There is a risk of data loss or integrity violation when restoring from such a snapshot.
+It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a `Pending` state while waiting for the images to become available.
 {% endalert %}
 
-#### Scenarios for using snapshots
+### Creating snapshots
 
-Snapshots can be used to realize the following scenarios:
+Creating a virtual machine snapshot will fail if at least one of the following conditions is met:
 
-- [Creating disk snapshots](#creating-disk-snapshots)
-- [Restoring disks from snapshots](#restoring-disks-from-snapshots)
-- [Creating Virtual Machine Snapshots](#creating-virtual-machine-snapshots)
-  - [Types of snapshots](#types-of-snapshots)
-    - [Scenarios for using snapshots](#scenarios-for-using-snapshots)
-    - [Creating snapshots](#creating-snapshots)
-- [Restore from snapshots](#restore-from-snapshots)
-  - [Restore a virtual machine](#restore-a-virtual-machine)
-  - [Creating a VM clone / Using a VM snapshot as a template for creating a VM](#creating-a-vm-clone--using-a-vm-snapshot-as-a-template-for-creating-a-vm)
+- Not all dependencies of the virtual machine are ready.
+- There is a disk in the process of resizing among the dependent devices.
 
-![Creating Virtual Machine Snapshots](/../../../../images/virtualization-platform/vm-restore-clone.png)
-
-If you plan to use the snapshot as a template, perform the following steps in the guest OS before creating it:
-
-- Deleting personal data (files, passwords, command history).
-- Install critical OS updates.
-- Clearing system logs.
-- Reset network settings.
-- Removing unique identifiers (e.g. via `sysprep` for Windows).
-- Optimizing disk space.
-- Resetting initialization configurations (`cloud-init clean`).
-- Create a snapshot with a clear indication not to save the IP address: `keepIPAddress: Never`.
-
-When creating an image, follow these recommendations:
-
-- Disconnect all images if they were connected to the virtual machine.
-- Do not use a static IP address for VirtualMachineIPAddress. If a static address has been used, change it to automatic.
-- Create a snapshot with an explicit indication not to save the IP address: `keepIPAddress: Never`.
-
-#### Creating snapshots
-
-When creating a snapshot, you need to specify the names of the volume snapshot classes `VolumeSnapshotClass`, which will be used to create snapshots of the volumes attached to the virtual machine.
-
-To get a list of supported `VolumeSnapshotClass` resources, run the following command:
-
-```shell
-d8 k get volumesnapshotclasses
-```
-
-Example output:
-
-```console
-NAME                     DRIVER                                DELETIONPOLICY   AGE
-csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
-```
-
-A virtual machine snapshot will not be created if any of the following conditions are met:
-
-- Not all dependent devices of the virtual machine are ready.
-- There are changes waiting for a virtual machine restart.
-- One of the dependent devices is a disk that is in the process of resizing.
+{% alert level="warning" %}
+If there are pending VM changes awaiting a restart when the snapshot is created, the snapshot will include the updated VM configuration.
+{% endalert %}
 
 When a snapshot is created, the dynamic IP address of the VM is automatically converted to a static IP address and saved for recovery.
 
-If converting and using the old IP address of the virtual machine is not required, you can set the corresponding policy to `Never`. In this case, the address type without conversion (`Auto` or `Static`) will be used.
+If you do not want to convert and use the old IP address of the virtual machine, you can set the corresponding policy to `Never`. In this case, the address type without conversion (`Auto` or `Static`) will be used.
 
 ```yaml
 spec:
   keepIPAddress: Never
 ```
 
-Example manifest for creating a snapshot of a virtual machine:
+An example manifest to create a snapshot of a virtual machine:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -223,9 +172,6 @@ metadata:
   name: linux-vm-snapshot
 spec:
   virtualMachineName: linux-vm
-  volumeSnapshotClasses:
-    - storageClassName: i-sds-replicated-thin-r2 # Substitute your StorageClass name.
-      volumeSnapshotClassName: sds-replicated-volume # Replace with your VolumeSnapshotClass name.
   requiredConsistency: true
   keepIPAddress: Never
 EOF
@@ -233,7 +179,7 @@ EOF
 
 After successfully creating a snapshot, its status will show the list of resources saved in the snapshot.
 
-Example output:
+Output example:
 
 ```yaml
 status:
@@ -264,106 +210,194 @@ How to create a VM snapshot in the web interface:
 - Click the "Create" button.
 - The snapshot status is displayed at the top left, under the snapshot name.
 
-## Restore from snapshots
+Restore a virtual machine
 
-The [VirtualMachineRestore](../../../reference/cr/virtualmachinerestore.html) resource is used to restore a virtual machine from a snapshot. During the restore process, the following objects are automatically created in the cluster:
+To restore a VM from a snapshot, use the `VirtualMachineOperation` resource with the `restore` type.
 
-- VirtualMachine: The main VM resource with the configuration from the snapshot.
-- VirtualDisk: Disks connected to the VM at the moment of snapshot creation.
-- VirtualBlockDeviceAttachment: Disk connections to the VM (if they existed in the original configuration).
-- VirtualMachineIPAddress: The IP address of the virtual machine (if the `keepIPAddress: Always` parameter was specified at the time of snapshot creation).
-- Secret: Secrets with cloud-init or sysprep settings (if they were involved in the original VM).
-
-Important: resources are created only if they were present in the VM configuration at the time the snapshot was created. This ensures that an exact copy of the environment is restored, including all dependencies and settings.
-
-### Restore a virtual machine
-
-There are two modes used for restoring a virtual machine. They are defined by the restoreMode parameter of the VirtualMachineRestore resource:
+Example:
 
 ```yaml
+apiVersion: virtualisation.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: restore-vm
 spec:
-  restoreMode: Safe | Forced
+  type: Restore
+  virtualMachineName: <name of the VM to be restored>
+  restore:
+    mode: DryRun | Strict | BestEffort
+    virtualMachineSnapshotName: <name of the VM snapshot from which to restore>
 ```
 
-`Safe` is used by default.
+One of three modes can be used for this operation:
+
+- `DryRun`: Idle run of the restore operation, used to check for possible conflicts, which will be displayed in the resource status (`status.resources`).
+- `Strict`: Strict recovery mode, used when the VM must be restored exactly as captured in the snapshot; missing external dependencies may cause the VM to remain in `Pending` status after recovery.
+- `BestEffort`: Missing external dependencies (`ClusterVirtualImage`, `VirtualImage`) are ignored and removed from the VM configuration.
+
+Restoring a virtual machine from a snapshot is only possible if all the following conditions are met:
+
+- The VM to be restored exists in the cluster (the `VirtualMachine` resource exists and its `.metadata.uid` matches the identifier used when creating the snapshot).
+- The disks to be restored (identified by name) are either not attached to other VMs or do not exist in the cluster.
+- The IP address to be restored is either not used by any other VM or does not exist in the cluster.
+- The MAC addresses to be restored are either not used by any other VMs or do not exist in the cluster.
 
 {% alert level="warning" %}
-To restore a virtual machine in `Safe` mode, you must delete its current configuration and all associated disks. This is because the restoration process returns the virtual machine and its disks to the state recorded at the snapshot's creation time.
+If some resources on which the VM depends (for example, `VirtualMachineClass`, `VirtualImage`, `ClusterVirtualImage`) are missing from the cluster but existed when the snapshot was taken, the VM will remain in the `Pending` state after recovery.
+In this case, you must manually edit the VM configuration to update or remove the missing dependencies.
 {% endalert %}
 
-The `Forced` mode is used to bring an already existing virtual machine to the state at the time of the snapshot.
-
-{% alert level="warning" %}
-`Forced` may disrupt the operation of the existing virtual machine because it will be stopped during restoration, and `VirtualDisks` and `VirtualMachineBlockDeviceAttachments` resources will be deleted for subsequent restoration.
-{% endalert %}
-
-Example manifest for restoring a virtual machine from a snapshot in `Safe` mode:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualMachineRestore
-metadata:
-  name: <restore name>
-spec:
-  restoreMode: Safe
-  virtualMachineSnapshotName: <virtual machine snapshot name>
-EOF
-```
-
-### Creating a VM clone / Using a VM snapshot as a template for creating a VM
-
-A snapshot of a virtual machine can be used both to create its exact copy (clone) and as a template for deploying new VMs with a similar configuration.
-This requires creating a `VirtualMachineRestore` resource and setting the renaming parameters in the `.spec.nameReplacements` block to avoid name conflicts.
-
-The list of resources and their names are available in the VM snapshot status in the `status.resources` block.
-
-Example manifest for restoring a VM from a snapshot:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualMachineRestore
-metadata:
-  name: <name>
-spec:
-  virtualMachineSnapshotName: <virtual machine snapshot name>
-  nameReplacements:
-    - From:
-        kind: VirtualMachine
-        name: <old vm name>
-      to: <new vm name>
-    - from:
-        kind: VirtualDisk
-        name: <old disk name>
-      to: <new disk name>
-    - from:
-        kind: VirtualDisk
-        name: <old secondary disk name>
-      to: <new secondary disk name>
-    - from:
-        kind: VirtualMachineBlockDeviceAttachment
-        name: <old attachment name>
-      to: <new attachment name>
-EOF
-```
-
-When restoring a virtual machine from a snapshot, it is important to consider the following conditions:
-
-1. If the `VirtualMachineIPAddress` resource already exists in the cluster, it must not be assigned to another VM .
-2. For static IP addresses (`type: Static`) the value must be exactly the same as what was captured in the snapshot.
-3. Automation-related secrets (such as cloud-init or sysprep configuration) must exactly match the configuration being restored.
-
-Failure to do so will result in a restore error, and the VirtualMachineRestore resource will enter the `Failed` state. This is because the system checks the integrity of the configuration and the uniqueness of the resources to prevent conflicts in the cluster.
-
-When restoring or cloning a virtual machine, the operation may be successful, but the VM will remain in `Pending` state.
-
-This occurs if the VM depends on resources (such as disk images or virtual machine classes) or their configurations that have been changed or deleted at the time of restoration.
-
-Check the VM's conditions block using the command:
+You can view information about conflicts when restoring a VM from a snapshot in the resource status:
 
 ```bash
-d8 k vm get <vmname> -o json | jq ‘.status.conditions’
+d8 k get vmop <vmop-name> -o json | jq “.status.resources”
 ```
 
-Check the output for errors related to missing or changed resources. Manually update the VM configuration to remove dependencies that are no longer available in the cluster.
+{% alert level="warning" %}
+It is not recommended to cancel the restore operation (delete the `VirtualMachineOperation` resource in the `InProgress` phase) from a snapshot, which can result in an inconsistent state of the restored virtual machine.
+{% endalert %}
+
+{% alert level="info" %}
+When restoring a VM from a snapshot, the disks associated with it are also restored from the corresponding snapshots, so the disk specification will contain a `dataSource` parameter with a reference to the required disk snapshot.
+{% endalert %}
+
+## Creating a VM clone
+
+You can create a VM clone in two ways: from an existing VM or from a previously created snapshot of that VM.
+
+{% alert level="warning" %}
+The cloned VM will be assigned a new IP address for the cluster network and MAC addresses for additional network interfaces (if any), so you will need to reconfigure the guest OS network settings after cloning.
+{% endalert %}
+
+Cloning creates a copy of a VM, so the resources of the new VM must have unique names. To do this, use the `nameReplacements` and/or `customization` parameters:
+
+- `nameReplacements`: Allows you to replace the names of existing resources with new ones to avoid conflicts.
+- `customization`: Sets a prefix or suffix for the names of all cloned VM resources (disks, IP addresses, etc.).
+
+Configuration example:
+
+```yaml
+nameReplacements:
+  - from:
+      kind: <resource type>
+      name: <old name>
+    to:
+      name: <new name>
+customization:
+  namePrefix: <prefix>
+  nameSuffix: <suffix>
+```
+
+As a result, a VM named <prefix><new name><suffix> will be created.
+
+One of three modes can be used for the cloning operation:
+
+- `DryRun`: Test run to check for possible conflicts. The results are displayed in the `status.resources` field of the corresponding operation resource.
+- `Strict`: Strict mode, requiring all resources with new names and their dependencies (e.g., images) to be present in the cloned VM.
+- `BestEffort`: Mode in which missing external dependencies (e.g., ClusterVirtualImage, VirtualImage) are automatically removed from the configuration of the cloned VM.
+
+Information about conflicts that arose during cloning can be viewed in the operation resource status:
+
+```bash
+# For cloning from an existing VM.
+d8 k get vmop <vmop-name> -o json | jq '.status.resources'
+# For cloning from a VM snapshot.
+d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
+```
+
+### Creating a clone from an existing VM
+
+VM cloning is performed using the VirtualMachineOperation resource with the `Clone` operation type.
+
+{% alert level="warning" %}
+Before cloning, the source VM must be [powered off](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#virtual-machine-startup-policy-and-virtual-machine-state-management).
+
+It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
+{% endalert %}
+
+Before cloning, you need to prepare the guest OS to avoid conflicts with unique identifiers and network settings.
+
+Linux:
+
+- Clear the `machine-id` using `sudo truncate -s 0 /etc/machine-id` (for systemd) or delete the `/var/lib/dbus/machine-id` file.
+- Remove SSH host keys: `sudo rm -f /etc/ssh/ssh_host_*`.
+- Clear network interface configuration (if static settings are used).
+- Clear the Cloud-Init cache (if used): `sudo cloud-init clean`.
+
+Windows:
+
+- Run `sysprep` with the `/generalize` option, or use tools to reset unique identifiers (SID, hostname, etc.).
+
+Example of creating a VM clone:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: <vmop-name>
+spec:
+  type: Clone
+  virtualMachineName: <name of the VM to be cloned>
+  clone:
+    mode: DryRun | Strict | BestEffort
+    nameReplacements: []
+    customization: {}
+```
+
+The `nameReplacements` and `customization` parameters are configured in the `.spec.clone` block (see [general description](#creating-a-vm-clone) above).
+
+{% alert level="info" %}
+During cloning, temporary snapshots are automatically created for the virtual machine and all its disks. The new VM is then assembled from these snapshots. After cloning is complete, the temporary snapshots are automatically deleted, so they are not visible in the resource list. However, the specification of cloned disks still contains a reference (`dataSource`) to the corresponding snapshot, even if the snapshot itself no longer exists. This is expected behavior and does not indicate a problem: such references remain valid because, by the time the clone starts, all necessary data has already been transferred to the new disks.
+{% endalert %}
+
+### Creating a clone from a VM snapshot
+
+Cloning a VM from a snapshot is performed using the VirtualMachineSnapshotOperation resource with the `CreateVirtualMachine` operation type.
+
+Example of creating a VM clone from a snapshot:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: <vmsop-name>
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: <name of the VM snapshot from which to clone>
+  createVirtualMachine:
+    mode: DryRun | Strict | BestEffort
+    nameReplacements: []
+    customization: {}
+```
+
+The `nameReplacements` and `customization` parameters are configured in the `.spec.createVirtualMachine` block (see [general description](#creating-a-vm-clone) above).
+
+{% alert level="info" %}
+When cloning a VM from a snapshot, the disks associated with it are also created from the corresponding snapshots, so the disk specification will contain a `dataSource` parameter with a reference to the required disk snapshot.
+{% endalert %}
+
+## Data export
+
+You can export virtual machine disks and disk snapshots using the `d8` utility (version 0.20.7 and above). For this function to work, the module [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) must be enabled.
+
+{% alert level="warning" %}
+The disk must not be in use at the time of export. If it is attached to a VM, that VM must be stopped first.
+{% endalert %}
+
+Example: export a disk (run on a cluster node):
+
+```bash
+d8 data download -n <namespace> vd/<virtual-disk-name> -o file.img
+```
+
+Example: export a disk snapshot (run on a cluster node):
+
+```bash
+d8 data download -n <namespace> vds/<virtual-disksnapshot-name> -o file.img
+```
+
+If you are exporting data from a machine other than a cluster node (for example, from your local machine), use the `--publish` flag.
+
+{% alert level="warning" %}
+To import a downloaded disk back into the cluster, upload it as an [image](#load-an-image-from-the-command-line) or as a [disk](#upload-a-disk-from-the-command-line).
+{% endalert %}

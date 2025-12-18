@@ -34,6 +34,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -327,7 +331,7 @@ spec:
                         Enables basic authorization for the Kubernetes API server.
 
                         The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the [publishAPI](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
 
                         Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap
@@ -510,6 +514,12 @@ spec:
           name: Display Name
           description: 'Name that will be displayed on the providers selection screen.'
           type: string
+        - jsonPath: .spec.enabled
+          name: Enabled
+          type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
     - name: v1
       served: true
       storage: true
@@ -530,6 +540,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -560,7 +574,7 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-
+      
                         'name' will be used by default.
                     useLoginAsID:
                       type: boolean

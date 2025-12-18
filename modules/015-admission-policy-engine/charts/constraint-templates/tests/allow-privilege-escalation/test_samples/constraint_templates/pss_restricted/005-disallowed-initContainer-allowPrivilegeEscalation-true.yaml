@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-initContainer-allowPrivilegeEscalation-true
+  namespace: testns
+spec:
+  initContainers:
+    - name: init
+      image: busybox
+      securityContext:
+        allowPrivilegeEscalation: true
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        allowPrivilegeEscalation: false
+

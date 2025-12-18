@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disallowed-deployment-net-core-rmem-max
+  namespace: testns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      securityContext:
+        sysctls:
+        - name: net.core.rmem_max
+          value: "16777216"
+      containers:
+        - name: nginx
+          image: nginx

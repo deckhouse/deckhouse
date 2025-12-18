@@ -1,0 +1,37 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: cloud-provider-yandex CVE's was fixed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16611
+cni-cilium:
+  fixes:
+    - summary: The MTU configuration has been updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16751
+      impact: The MTU will be updated on all interfaces of all pods.
+deckhouse-controller:
+  fixes:
+    - summary: Fix "multiple readiness hooks found" error on hook registration retry after failure.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16776
+    - summary: Fix deprecated and experimental module metrics not being reset when module is disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16688
+dhctl:
+  fixes:
+    - summary: Fix panic during destroy. Change opentofu log level to INFO.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16726
+docs:
+  fixes:
+    - summary: The current editions are listed on the page about installation in a closed environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16786
+    - summary: Fixed links to the Getting Started in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16782
+prometheus:
+  fixes:
+    - summary: Fix namespace label value in the Ingress Nginx controller and several other metrics
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16720
+      impact: Ingress Nginx controller dashboards are fixed
+user-authn:
+  fixes:
+    - summary: Fix BadRequest after the change password redirect when password policy is enabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16744
+    - summary: Fix login error 500 with password policy enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16703
+

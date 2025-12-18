@@ -65,7 +65,7 @@ TODO нужна какая-то ссылка про cloud-controller-manager, н
 - **Upgrade или downgrade компонентов**. Поддерживает в кластере одинаковые версии компонентов.
 - **Управление конфигурацией etcd-кластера** и его узлов. Масштабирует etcd по количеству master-узлов, выполняет миграцию из конфигурации кластера с одним master-узлом в мультикластерный и наоборот.
 - **Настройка kubeconfig**. Обеспечивает всегда актуальную конфигурацию для работы kubectl. Генерирует, продлевает, обновляет kubeconfig с правами cluster-admin и создает ссылку (symlink) пользователю root, чтобы kubeconfig использовался по умолчанию.
-- **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
+- **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
   - размещение подов приложений организации хранилища данных ближе к самим данным,
   - приоретизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.),
   - разделение узлов на зоны, и т. п.
@@ -122,11 +122,11 @@ TODO нужна какая-то ссылка про cloud-controller-manager, н
 
 Обновление **patch-версии** компонентов управляющего слоя (то есть в рамках минорной версии, например с `1.27.3` на `1.27.5`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов управляющего слоя (например, с `1.26.*` на `1.28.*`) можно управлять с помощью параметра [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию. Версию, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/supported_versions.html#kubernetes).
+Обновлением **минорной-версии** компонентов управляющего слоя (например, с `1.26.*` на `1.28.*`) можно управлять с помощью параметра [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию. Версию, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/supported_versions.html#kubernetes).
 
 Обновление control plane выполняется безопасно как для конфигурации `multi-master`, так и для `single-master`. Во время обновления может быть кратковременно недоступен API-сервер. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
-Если указанная для обновления версия (параметр [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии управляющего слоя в кластере, запускается умная стратегия изменения версий компонентов:
+Если указанная для обновления версия (параметр [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии управляющего слоя в кластере, запускается умная стратегия изменения версий компонентов:
 
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NodeGroup узлы обновляются последовательно, по одному.
@@ -148,6 +148,6 @@ TODO нужна какая-то ссылка про cloud-controller-manager, н
 - логирование действий, совершаемых от имени сервисных аккаунтов из системных пространств имён: `kube-system`, `d8-*`;
 - логирование действий, совершаемых с ресурсами в системных пространствах имён: `kube-system`, `d8-*`.
 
-Отключить сбор логов по базовым политикам можно установив флаг [`basicAuditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
+Отключить сбор логов по базовым политикам можно установив флаг [`basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
 Настройка политик аудита подробно рассмотрена в разделе [Аудит](audit.html).

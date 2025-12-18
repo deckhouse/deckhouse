@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-containers-one-wrong-type
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seLinuxOptions:
+          type: container_t
+    - name: redis
+      image: redis
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+

@@ -110,30 +110,33 @@ func filterConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 	var policy audit.Policy
 
+	// Start with adding basic policies.
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
 		extraData, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.Snapshots, "configmaps_with_extra_audit_policy")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal configmaps_with_extra_audit_policy snapshot: %w", err)
 		}
 		appendBasicPolicyRules(&policy, extraData)
+		// Add policies for virtualization module.
+		appendVirtualizationPolicyRules(&policy)
 	}
-	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.Snapshots, "kube_audit_policy_secret")
+
+	// Append custom policies if secret is present.
+	auditPolicyDataSnaps, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.Snapshots, "kube_audit_policy_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal kube_audit_policy_secret snapshot: %w", err)
 	}
-	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(datas) > 0 {
-		data := datas[0]
-		err := appendAdditionalPolicyRules(&policy, &data)
+	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(auditPolicyDataSnaps) > 0 {
+		auditPolicyData := auditPolicyDataSnaps[0]
+		err := appendAdditionalPolicyRules(&policy, &auditPolicyData)
 		if err != nil {
 			return err
 		}
 	}
-
-	for _, module := range input.Values.Get("global.enabledModules").Array() {
-		if module.String() == "virtualization" {
-			appendVirtualizationPolicyRules(&policy)
-			break
-		}
+	// Unauthenticated requests are taken by directing all Metadata level requests with `UserGroups` with `system:authenticated` to None and then taking all remaining Metadata level logs
+	// There should always be a last rule
+	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
+		appendUnauthenticatedRules(&policy)
 	}
 
 	if len(policy.Rules) == 0 {
@@ -482,6 +485,24 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"create", "update", "patch", "delete"},
 			Resources: []audit.GroupResources{{Group: "deckhouse.io", Resources: []string{"moduleconfigs"}}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+}
+
+func appendUnauthenticatedRules(policy *audit.Policy) {
+	// A rule dropping all logs from authenticated users
+	{
+		rule := audit.PolicyRule{
+			Level:      audit.LevelNone,
+			UserGroups: []string{"system:authenticated"},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	//  A rule collecting all remaining logs (only from unauthenticated users)
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}

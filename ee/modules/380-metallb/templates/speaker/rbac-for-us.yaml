@@ -52,6 +52,8 @@ rules:
     resources:
       - servicel2statuses
       - servicel2statuses/status
+      - servicebgpstatuses
+      - servicebgpstatuses/status
     verbs:
       - create
       - delete

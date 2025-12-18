@@ -19,38 +19,38 @@ import (
 	"fmt"
 )
 
-func HandleOpenStackProvider(providerClusterConfig []byte) (CloudApiConfig, error) {
+func HandleOpenStackProvider(providerClusterConfig []byte) (*CloudApiConfig, error) {
 	var openStackConfig OpenStackProvider
 	err := json.Unmarshal(providerClusterConfig, &openStackConfig)
 	if err != nil {
-		return CloudApiConfig{}, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
 	}
 
 	url, err := urlParse(openStackConfig.AuthURL)
 	if err != nil {
-		return CloudApiConfig{}, err
+		return nil, err
 	}
 
-	return CloudApiConfig{
+	return &CloudApiConfig{
 		URL:      url,
 		CACert:   openStackConfig.CACert,
 		Insecure: false,
 	}, nil
 }
 
-func HandleVSphereProvider(providerClusterConfig []byte) (CloudApiConfig, error) {
+func HandleVSphereProvider(providerClusterConfig []byte) (*CloudApiConfig, error) {
 	var vsphereConfig VSphereProvider
 	err := json.Unmarshal(providerClusterConfig, &vsphereConfig)
 	if err != nil {
-		return CloudApiConfig{}, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
 	}
 
 	url, err := urlParse(vsphereConfig.Server)
 	if err != nil {
-		return CloudApiConfig{}, err
+		return nil, err
 	}
 
-	return CloudApiConfig{
+	return &CloudApiConfig{
 		URL:      url,
 		CACert:   "",
 		Insecure: vsphereConfig.Insecure,

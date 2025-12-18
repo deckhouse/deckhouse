@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-net-fake-sysctl
+  namespace: testns
+spec:
+  securityContext:
+    sysctls:
+    - name: net.fake.sysctl
+      value: "1"
+

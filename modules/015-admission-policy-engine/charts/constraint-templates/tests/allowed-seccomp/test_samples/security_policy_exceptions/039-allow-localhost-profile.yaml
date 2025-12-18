@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-localhost-profile
+spec:
+  securityContext:
+    seccompProfile:
+      allowedValues:
+      - Localhost
+      allowedLocalhostFiles:
+      - my-custom-profile.json
+

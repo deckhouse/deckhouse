@@ -22,14 +22,15 @@ import (
 )
 
 type Input struct {
-	User           string
-	Port           string
-	BastionHost    string
-	BastionPort    string
-	BastionUser    string
-	ExtraArgs      string
-	AvailableHosts []Host
-	BecomePass     string
+	User            string
+	Port            string
+	BastionHost     string
+	BastionPort     string
+	BastionUser     string
+	BastionPassword string
+	ExtraArgs       string
+	AvailableHosts  []Host
+	BecomePass      string
 }
 
 type AgentSettings struct {
@@ -62,13 +63,14 @@ func (s *AgentSettings) Clone() *AgentSettings {
 // Session is used to store ssh settings
 type Session struct {
 	// input
-	User        string
-	Port        string
-	BastionHost string
-	BastionPort string
-	BastionUser string
-	ExtraArgs   string
-	BecomePass  string
+	User            string
+	Port            string
+	BastionHost     string
+	BastionPort     string
+	BastionUser     string
+	BastionPassword string
+	ExtraArgs       string
+	BecomePass      string
 
 	AgentSettings *AgentSettings
 
@@ -97,13 +99,14 @@ func (h SortByName) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
 
 func NewSession(input Input) *Session {
 	s := &Session{
-		User:        input.User,
-		Port:        input.Port,
-		BastionHost: input.BastionHost,
-		BastionPort: input.BastionPort,
-		BastionUser: input.BastionUser,
-		ExtraArgs:   input.ExtraArgs,
-		BecomePass:  input.BecomePass,
+		User:            input.User,
+		Port:            input.Port,
+		BastionHost:     input.BastionHost,
+		BastionPort:     input.BastionPort,
+		BastionUser:     input.BastionUser,
+		ExtraArgs:       input.ExtraArgs,
+		BecomePass:      input.BecomePass,
+		BastionPassword: input.BastionPassword,
 	}
 
 	s.SetAvailableHosts(input.AvailableHosts)
@@ -262,6 +265,7 @@ func (s *Session) Copy() *Session {
 	ses.BastionHost = s.BastionHost
 	ses.BastionPort = s.BastionPort
 	ses.BastionUser = s.BastionUser
+	ses.BastionPassword = s.BastionPassword
 	ses.ExtraArgs = s.ExtraArgs
 	ses.host = s.host
 

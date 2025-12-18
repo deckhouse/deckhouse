@@ -85,7 +85,15 @@ metadata:
   name: kube-scheduler
   namespace: kube-system
 spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
+  containers:
+    - name: kube-scheduler
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL

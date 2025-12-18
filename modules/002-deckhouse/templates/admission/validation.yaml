@@ -7,6 +7,36 @@ metadata:
   name: deckhouse-webhook
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-webhook")) | nindent 2 }}
 webhooks:
+  - name: deckhouse-registry.deckhouse-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - "*"
+        resources:
+          - "secrets"
+        scope: "Namespaced"
+        operations:
+          - CREATE
+          - UPDATE
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: d8-system
+    objectSelector:
+      matchLabels:
+        name: deckhouse-registry
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    failurePolicy: Fail
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: deckhouse
+        namespace: d8-system
+        port: 4223
+        path: /validate/v1/deckhouse-registry-secret
   - name: modules.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

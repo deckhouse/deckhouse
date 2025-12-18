@@ -1,13 +1,2 @@
-{% capture asset_url %}
-{%- javascript_asset_tag clusterlocal %}
-- _assets/js/clusterlocal.js
-{% endjavascript_asset_tag -%}
-{% endcapture %}
-<script type="text/javascript" src='{{ asset_url | strip_newlines | true_relative_url }}'></script>
-
-{% capture asset_url %}
-{%- css_asset_tag clusterlocal %}
-- _assets/css/clusterlocal.css
-{% endcss_asset_tag -%}
-{% endcapture %}
-<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines | true_relative_url }}' />
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src="/assets/js/clusterlocal.js?v={{ assetHash }}"></script>

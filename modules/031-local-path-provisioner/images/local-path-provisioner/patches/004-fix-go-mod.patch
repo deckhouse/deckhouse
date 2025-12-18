@@ -1,0 +1,81 @@
+From 2a8bcd58744ceb87a24a08c797683d877f3d9585 Mon Sep 17 00:00:00 2001
+From: "v.oleynikov" <vasily.oleynikov@flant.com>
+Date: Thu, 16 Oct 2025 15:48:20 +0300
+Subject: [PATCH] Bump x/auth2 version to 0.27.0 (CVE fix)
+
+Signed-off-by: v.oleynikov <vasily.oleynikov@flant.com>
+---
+ go.mod                             | 2 +-
+ go.sum                             | 4 ++--
+ vendor/golang.org/x/oauth2/pkce.go | 4 ++--
+ vendor/modules.txt                 | 4 ++--
+ 4 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/go.mod b/go.mod
+index 9e2d393a..9dc398cd 100644
+--- a/go.mod
++++ b/go.mod
+@@ -51,7 +51,7 @@ require (
+ 	github.com/x448/float16 v0.8.4 // indirect
+ 	golang.org/x/mod v0.22.0 // indirect
+ 	golang.org/x/net v0.38.0 // indirect
+-	golang.org/x/oauth2 v0.25.0 // indirect
++	golang.org/x/oauth2 v0.27.0 // indirect
+ 	golang.org/x/sync v0.12.0 // indirect
+ 	golang.org/x/sys v0.31.0 // indirect
+ 	golang.org/x/term v0.30.0 // indirect
+diff --git a/go.sum b/go.sum
+index 15f248e5..be4401cf 100644
+--- a/go.sum
++++ b/go.sum
+@@ -124,8 +124,8 @@ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLL
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+ golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
+ golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
+-golang.org/x/oauth2 v0.25.0 h1:CY4y7XT9v0cRI9oupztF8AgiIu99L/ksR/Xp/6jrZ70=
+-golang.org/x/oauth2 v0.25.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
++golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+diff --git a/vendor/golang.org/x/oauth2/pkce.go b/vendor/golang.org/x/oauth2/pkce.go
+index 50593b6d..6a95da97 100644
+--- a/vendor/golang.org/x/oauth2/pkce.go
++++ b/vendor/golang.org/x/oauth2/pkce.go
+@@ -21,7 +21,7 @@ const (
+ //
+ // A fresh verifier should be generated for each authorization.
+ // S256ChallengeOption(verifier) should then be passed to Config.AuthCodeURL
+-// (or Config.DeviceAccess) and VerifierOption(verifier) to Config.Exchange
++// (or Config.DeviceAuth) and VerifierOption(verifier) to Config.Exchange
+ // (or Config.DeviceAccessToken).
+ func GenerateVerifier() string {
+ 	// "RECOMMENDED that the output of a suitable random number generator be
+@@ -51,7 +51,7 @@ func S256ChallengeFromVerifier(verifier string) string {
+ }
+ 
+ // S256ChallengeOption derives a PKCE code challenge derived from verifier with
+-// method S256. It should be passed to Config.AuthCodeURL or Config.DeviceAccess
++// method S256. It should be passed to Config.AuthCodeURL or Config.DeviceAuth
+ // only.
+ func S256ChallengeOption(verifier string) AuthCodeOption {
+ 	return challengeOption{
+diff --git a/vendor/modules.txt b/vendor/modules.txt
+index 9fbcd01b..7879834f 100644
+--- a/vendor/modules.txt
++++ b/vendor/modules.txt
+@@ -154,8 +154,8 @@ golang.org/x/net/internal/iana
+ golang.org/x/net/internal/socket
+ golang.org/x/net/ipv4
+ golang.org/x/net/ipv6
+-# golang.org/x/oauth2 v0.25.0
+-## explicit; go 1.18
++# golang.org/x/oauth2 v0.27.0
++## explicit; go 1.23.0
+ golang.org/x/oauth2
+ golang.org/x/oauth2/internal
+ # golang.org/x/sync v0.12.0
+-- 
+2.43.0
+

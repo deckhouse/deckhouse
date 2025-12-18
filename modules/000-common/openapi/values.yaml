@@ -25,4 +25,6 @@ properties:
           tls.crt:
             type: string
           tls.key:
-
+            type: string
+          ca.crt:
+            type: string
