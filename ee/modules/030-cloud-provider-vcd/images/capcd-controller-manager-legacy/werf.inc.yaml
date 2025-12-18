@@ -52,9 +52,10 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOFLAGS="-mod=mod" go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOFLAGS="-mod=mod" go mod tidy
   setup:
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOFLAGS="-mod=mod" go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
   - chown 64535:64535 /cluster-api-provider-cloud-director
   - chmod 0755 /cluster-api-provider-cloud-director
