@@ -6,11 +6,11 @@ description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in
 
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+See [the control-plane-manager module FAQ.](/modules/control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+See [the control-plane-manager module FAQ.](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
 ## Static nodes
 

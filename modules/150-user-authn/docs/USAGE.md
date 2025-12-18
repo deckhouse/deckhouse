@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
 
 {% raw %}
 
@@ -504,4 +504,4 @@ After enabling 2FA, each user must register in the authenticator application dur
 
 ## How to set permissions for a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+Parameters in the custom resource [`ClusterAuthorizationRule`](/modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.

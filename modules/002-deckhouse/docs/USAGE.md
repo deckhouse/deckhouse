@@ -7,14 +7,14 @@ title: "The deckhouse module: usage"
 You can manage DKP updates in the following ways:
 
 - Using the [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse` parameter;
-- Using the [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup parameters section.
+- Using the [disruptions](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup parameters section.
 
 ### Update windows configuration
 
 You can configure the time windows when Deckhouse will automatically install updates in the following ways:
 
 - in the [update.windows](configuration.html#parameters-update-windows) parameter of the `deckhouse` ModuleConfig for overall update management;
-- in the [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) and [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) parameters of NodeGroup, for managing disruptive updates.
+- in the [disruptions.automatic.windows](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) and [disruptions.rollingUpdate.windows](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) parameters of NodeGroup, for managing disruptive updates.
 
 An example of setting up two daily update windows — from 8 a.m. to 10 a.m. and from 8 p.m. to 10 p.m. (UTC):
 
@@ -72,7 +72,7 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
 
 - If automatic application of disruptive updates is disabled for a node group.
 
-  This means that the corresponding NodeGroup has the parameter [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) set to `Manual`.
+  This means that the corresponding NodeGroup has the parameter [spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) set to `Manual`.
 
   For updating **each** node in such a group, the node must have `update.node.deckhouse.io/disruption-approved=` annotation.
   Example:

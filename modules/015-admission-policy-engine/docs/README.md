@@ -12,7 +12,7 @@ The module does not apply policies to system namespaces.
 {% endalert %}
 
 {% alert level="info" %}
-Please note that when the [multitenancy-manager](/modules/multitenancy-manager) module is enabled, it creates its own OperationPolicy objects (e.g., in the "default" namespace). These are not affected by the [podSecurityStandards](../configuration.html#parameters-podsecuritystandards) settings. 
+Please note that when the [multitenancy-manager](/modules/multitenancy-manager/) module is enabled, it creates its own OperationPolicy objects (e.g., in the "default" namespace). These are not affected by the [podSecurityStandards](configuration.html#parameters-podsecuritystandards) settings.
 {% endalert %}
 
 List of policies available for use:
