@@ -477,3 +477,7 @@ func (c *ComputeService) WaitDiskAttaching(ctx context.Context, vmBDAName string
 		return vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
 	})
 }
+
+func (c *ComputeService) GetVMBDA(ctx context.Context, diskName, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	return c.getVMBDA(ctx, diskName, vmHostname)
+}
