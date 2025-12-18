@@ -91,6 +91,16 @@
       <ul>
       {{- range $property, $propertyData := $data.properties }}
         {{- if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
+        
+        {{/* Checking for x-doc-skip for TOP-level properties */}}
+        {{- if reflect.IsMap $propertyData }}
+          {{- $skipValue := index $propertyData "x-doc-skip" }}
+          {{- if eq $skipValue true }}
+            {{- /* Skip this parameter entirely */}}
+            {{- continue }}
+          {{- end }}
+        {{- end }}
+        
         {{- $propertyLangData := index $langData.properties $property }}
         {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters" "type" "module_configuration") }}
       {{- end }}

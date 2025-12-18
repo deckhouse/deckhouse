@@ -10,6 +10,16 @@
 {{ $required  := .required }} {{/* Array of the required parameters. */}}
 {{ $type := .type }}  {{/* A string. "module_configuration" for ModuleConfig schema or nil */}}
 
+{{/* Checking for x-doc-skip */}}
+{{- if reflect.IsMap $data }}
+  {{- $skipValue := index $data "x-doc-skip" }}
+  {{- if eq $skipValue true }}
+    {{- /* Parameter marked with x-doc-skip: true - skip rendering entirely */}}
+    {{- /* Just return without rendering anything */}}
+    {{- return }}
+  {{- end }}
+{{- end }}
+
 {{- $description :=  "" }}
 
 {{- if reflect.IsMap $data }}
@@ -98,6 +108,15 @@
   {{- range $subParameterName, $subParameterAttributes := $data.properties }}
     {{- $subParameterLangData := index $langData.properties $subParameterName }}
 
+    {{/* Checking for x-doc-skip into child properties */}}
+    {{- if reflect.IsMap $subParameterAttributes }}
+      {{- $skipValue := index $subParameterAttributes "x-doc-skip" }}
+      {{- if eq $skipValue true }}
+        {{- /* Skip this child parameter entirely */}}
+        {{- continue }}
+      {{- end }}
+    {{- end }}
+
     {{ partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $requiredParameters "type" $type) }}
   {{ end }}
   </ul>
@@ -107,6 +126,16 @@
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
       {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
+      
+      {{/* Checking for x-doc-skip for array items */}}
+      {{- if reflect.IsMap $subParameterAttributes }}
+        {{- $skipValue := index $subParameterAttributes "x-doc-skip" }}
+        {{- if eq $skipValue true }}
+          {{- /* Skip this array item property entirely */}}
+          {{- continue }}
+        {{- end }}
+      {{- end }}
+      
       {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
     {{- end }}
     </ul>
@@ -134,58 +163,75 @@
       {{- $additionalPropsLangData := index $langData "additionalProperties" }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
       
-      {{- /* Prepare the description with special text for additionalProperties object */}}
-      {{- $additionalPropertyName := "<KEY_NAME>" }}
-      {{- $additionalPropertyNameQuoted := printf "`%s`" $additionalPropertyName }}
-      {{- $mapKeyName := index $additionalPropsData "x-doc-map-key-name" }}
-      {{- $specialDescriptionText := "" }}
-      {{- if $mapKeyName }}
-        {{- if eq site.Language.Lang "ru" }}
-          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+      {{/* Checking for x-doc-skip for additionalProperties */}}
+      {{- if reflect.IsMap $additionalPropsData }}
+        {{- $skipValue := index $additionalPropsData "x-doc-skip" }}
+        {{- if eq $skipValue true }}
+          {{- /* Skip additionalProperties entirely */}}
         {{- else }}
-          {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+          {{- /* Prepare the description with special text for additionalProperties object */}}
+          {{- $additionalPropertyName := "<KEY_NAME>" }}
+          {{- $additionalPropertyNameQuoted := printf "`%s`" $additionalPropertyName }}
+          {{- $mapKeyName := index $additionalPropsData "x-doc-map-key-name" }}
+          {{- $specialDescriptionText := "" }}
+          {{- if $mapKeyName }}
+            {{- if eq site.Language.Lang "ru" }}
+              {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+            {{- else }}
+              {{- $specialDescriptionText = printf "%s — %s" $additionalPropertyNameQuoted $mapKeyName }}
+            {{- end }}
+          {{- else }}
+            {{- if eq site.Language.Lang "ru" }}
+              {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
+            {{- else }}
+              {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
+            {{- end }}
+          {{- end }}
+          
+          {{- /* Get existing description if any */}}
+          {{- $existingDescription := "" }}
+          {{- if $additionalPropsLangData.description }}
+            {{- $existingDescription = $additionalPropsLangData.description }}
+          {{- else if $additionalPropsData.description }}
+            {{- $existingDescription = $additionalPropsData.description }}
+          {{- end }}
+          
+          {{- /* Combine special text with existing description */}}
+          {{- $finalDescription := $specialDescriptionText }}
+          {{- if $existingDescription }}
+            {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
+          {{- end }}
+          
+          {{- /* Create modified data with updated description */}}
+          {{- $modifiedAdditionalPropsData := $additionalPropsData | merge (dict "description" $finalDescription) }}
+          {{- if $additionalPropsLangData }}
+            {{- $modifiedAdditionalPropsLangData := $additionalPropsLangData | merge (dict "description" $finalDescription) }}
+            {{- $additionalPropsLangData = $modifiedAdditionalPropsLangData }}
+          {{- else }}
+            {{- $additionalPropsLangData = dict "description" $finalDescription }}
+          {{- end }}
+          
+          <ul>
+            {{- partial "openapi/format-schema" ( dict "name" $additionalPropertyName "data" $modifiedAdditionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
+          </ul>
         {{- end }}
-      {{- else }}
-        {{- if eq site.Language.Lang "ru" }}
-          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
-        {{- else }}
-          {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
-        {{- end }}
       {{- end }}
-      
-      {{- /* Get existing description if any */}}
-      {{- $existingDescription := "" }}
-      {{- if $additionalPropsLangData.description }}
-        {{- $existingDescription = $additionalPropsLangData.description }}
-      {{- else if $additionalPropsData.description }}
-        {{- $existingDescription = $additionalPropsData.description }}
-      {{- end }}
-      
-      {{- /* Combine special text with existing description */}}
-      {{- $finalDescription := $specialDescriptionText }}
-      {{- if $existingDescription }}
-        {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
-      {{- end }}
-      
-      {{- /* Create modified data with updated description */}}
-      {{- $modifiedAdditionalPropsData := $additionalPropsData | merge (dict "description" $finalDescription) }}
-      {{- if $additionalPropsLangData }}
-        {{- $modifiedAdditionalPropsLangData := $additionalPropsLangData | merge (dict "description" $finalDescription) }}
-        {{- $additionalPropsLangData = $modifiedAdditionalPropsLangData }}
-      {{- else }}
-        {{- $additionalPropsLangData = dict "description" $finalDescription }}
-      {{- end }}
-      
-      <ul>
-        {{- partial "openapi/format-schema" ( dict "name" $additionalPropertyName "data" $modifiedAdditionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
-      </ul>
     {{- else if and (reflect.IsMap $data.additionalProperties) ($data.additionalProperties.properties) }} {{/* Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties) */}}
       {{- $additionalPropsData := $data.additionalProperties }}
       {{- $additionalPropsLangData := index $langData "additionalProperties" }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
-      <ul>
-        {{- partial "openapi/format-schema" ( dict "name" "additionalProperties" "data" $additionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
-      </ul>
+      
+      {{/* Checking for x-doc-skip for additionalProperties */}}
+      {{- if reflect.IsMap $additionalPropsData }}
+        {{- $skipValue := index $additionalPropsData "x-doc-skip" }}
+        {{- if eq $skipValue true }}
+          {{- /* Skip additionalProperties entirely */}}
+        {{- else }}
+          <ul>
+            {{- partial "openapi/format-schema" ( dict "name" "additionalProperties" "data" $additionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
+          </ul>
+        {{- end }}
+      {{- end }}
     {{- end }}
 
 {{- end }}
@@ -202,6 +248,13 @@
         {{- end }}
       {{- end }}
       {{- $patternRequired := $patternSchema.required }}
+      
+      {{/* Checking for x-doc-skip for patternProperties */}}
+      {{- $skipValue := index $patternSchema "x-doc-skip" }}
+      {{- if eq $skipValue true }}
+        {{- /* Skip this patternProperty entirely */}}
+        {{- continue }}
+      {{- end }}
       
       {{- /* Use pattern in path and display - ADD SLASHES FOR REGEX */}}
       {{- $patternName := $pattern }}
