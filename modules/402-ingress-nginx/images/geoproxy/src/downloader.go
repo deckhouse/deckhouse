@@ -515,11 +515,16 @@ func redactLicenseKey(s, licenseKey string) string {
 
 // isCurrentPodLeader returns true when the current pod is the lease holder.
 func (d *Downloader) isCurrentPodLeader() bool {
-	if d.leader == nil || d.leader.le == nil {
+	if d.leader == nil {
 		return false
 	}
 
-	return d.leader.le.IsLeader()
+	leaderPod := d.leaderPodName()
+	if leaderPod == "" {
+		return false
+	}
+
+	return leaderPod == d.leader.podName
 }
 
 // leaderPodName extracts pod name from the current leader identity.
