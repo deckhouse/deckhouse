@@ -905,6 +905,7 @@ auto_auth {
  Параметры `secret_id_num_uses` и `secret_id_ttl` задаются на Stronghold сервере при создании роли или генерации Secret ID. Agent просто использует уже созданный Secret ID.
 
 1. **Одноразовый (num_uses=1):**
+
    ```bash
    # На Stronghold сервере при создании роли:
    stronghold write auth/approle/role/myapp \
@@ -914,29 +915,34 @@ auto_auth {
    # Или при генерации конкретного Secret ID:
    stronghold write -f auth/approle/role/myapp/secret-id num_uses=1
    ```
+
    - Используется только один раз для аутентификации
    - После использования становится невалидным
    - Наиболее безопасный вариант для production
    - Agent должен иметь `remove_secret_id_file_after_reading = true` в конфиге
 
 2. **Многоразовый (num_uses=0):**
+
    ```bash
    # На Stronghold сервере:
    stronghold write auth/approle/role/myapp \
      secret_id_num_uses=0 \
      policies="myapp-policy"
    ```
+
    - Может использоваться множество раз
    - Удобен для тестирования и разработки
    - Менее безопасен (если скомпрометирован - требуется ручная ротация)
 
 3. **С ограниченным TTL:**
+
    ```bash
    # На Stronghold сервере:
    stronghold write auth/approle/role/myapp \
      secret_id_ttl=24h \
      policies="myapp-policy"
    ```
+
    - Истекает через указанное время (24 часа в примере)
    - Баланс между безопасностью и удобством
    - После истечения TTL требуется новый Secret ID
