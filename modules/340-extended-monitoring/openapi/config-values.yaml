@@ -16,12 +16,15 @@ properties:
         type: string 
         description: |
           Interval for checking container registries for image availability.
+          
           Supports Go-style duration format (e.g. "10s", "10m", "10h").
+          
           If not specified, the default value is "60s".
       defaultRegistry:
         type: string
         description: |
           Default registry to use when an image name is not fully qualified.
+          
           If not set, index.docker.io is used by default.
       ignoredImages:
         type: array
