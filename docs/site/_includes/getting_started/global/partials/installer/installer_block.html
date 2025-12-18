@@ -1,3 +1,4 @@
+{%- if page.lang == "ru" -%}
 <div class="installer_box">
   {% alert level="info" %}
   На текущий момент графический установщик поддерживает **не все платформы**. Установить DKP с его помощью возможно в следующие окружения:
@@ -43,7 +44,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {{ command | markdownify }}
             </div>
             <div id="tab-mac-content-trdl" class="tab-content">
-{%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}              
+{%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
               <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
               <ol>
                 <li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
@@ -240,3 +241,4 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
       document.getElementById("tab-buttons-mac-container").classList.add("active");
   }
 </script>
+{%- end -%}
