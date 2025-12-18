@@ -17,6 +17,8 @@ limitations under the License.
 package nodegroupbundle
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +26,7 @@ import (
 
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
@@ -45,13 +48,19 @@ type StorageWithK8sBundles struct {
 func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	ngBundleData, err := s.ngRenderer.Render(ng)
 	if err != nil {
-		return nil, err
+		var cnf *template.ContextNotFoundError
+		if errors.As(err, &cnf) {
+			return nil, fmt.Errorf("cannot get nodegroup bundle for nodeGroup %q: nodegroup not found", ng)
+		}
+		return nil, fmt.Errorf("cannot render nodegroup bundle for nodegroup '%s': %w", ng, err)
 	}
 
 	obj := bashible.NodeGroupBundle{}
 	obj.ObjectMeta.Name = ng
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = ngBundleData
+
+	util.SetConfigurationChecksumAnnotation(s.bashibleContext, ng, &obj.ObjectMeta)
 
 	return &obj, nil
 }
