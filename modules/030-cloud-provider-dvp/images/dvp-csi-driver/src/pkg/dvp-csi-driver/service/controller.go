@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 )
 
@@ -237,6 +238,10 @@ func (c *ControllerService) ControllerUnpublishVolume(
 
 	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
 	if err != nil {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
+			klog.Infof("VM %v not found in parent DVP cluster, assuming disk %v is already detached", req.NodeId, diskName)
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", req.NodeId, err)
 	}
 
