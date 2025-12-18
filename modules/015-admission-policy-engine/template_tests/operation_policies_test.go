@@ -36,6 +36,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"allowedRepos":["foo"],
 			"requiredResources":{"limits":["memory"],"requests":["cpu","memory"]},
 			"disallowedImageTags":["latest"],
+			"disallowedCustomResources":["gpu-vendor.example/.*"],
 			"requiredLabels": {
 				"labels": [
 					{ "key": "foo" },
@@ -97,6 +98,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8DisallowedCustomResources", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

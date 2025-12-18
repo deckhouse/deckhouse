@@ -48,6 +48,9 @@
   {{- if hasKey $cr.spec.policies "disallowedTolerations" }}
     {{- include "disallowed_tolerations_policy" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "disallowedCustomResources" }}
+    {{- include "disallowed_custom_resources" (list $context $cr) }}
+  {{- end }}
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -378,4 +381,25 @@ spec:
     tolerations:
       {{- $tolerations | toYaml | nindent 6 }}
   {{- end }}
+{{- end }}
+
+{{- define "disallowed_custom_resources" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DisallowedCustomResources
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    resourcePatterns:
+      {{- $cr.spec.policies.disallowedCustomResources | toYaml | nindent 6 }}
 {{- end }}

@@ -492,3 +492,26 @@ spec:
 - Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Пространство имён доступно в `input.review.namespace`.
+
+## Как ограничить использование ресурсов GPU только в определённых пространствах имён?
+
+Для ограничения использования GPU можно создать [OperationPolicy](cr.html#operationpolicy) с политикой `D8DisallowedCustomResources`. В примере ниже запрещается указывать в контейнерах ресурсы в `resources.requests` и `resources.limits`, подпадающие под регулярное выражение `nvidia.com/.*`, во всех пространствах имён, где метка `gpu` задана и имеет значение, отличное от `enabled`. Таким образом, использование ресурсов GPU допускается только в пространствах имён с меткой `gpu: enabled` (если их не ограничивают другие политики).
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: allow-nvidia-by-label
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+        - key: gpu
+          operator: NotIn
+          values: ["enabled"]
+  enforcementAction: Deny
+  policies:
+    disallowedCustomResources:
+      - "nvidia.com/.*"
+```
