@@ -130,3 +130,56 @@
              ```shell
              d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
              ```
+
+    - alert: D8PrometheusConfigReloadFailed
+      expr: prometheus_config_last_reload_successful{job="prometheus", service="prometheus", namespace="d8-monitoring"} == 0
+      for: 10m
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: prometheus
+        d8_component: prometheus
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: >
+          Prometheus configuration reload failed for {{ $labels.pod }}.
+        description: |-
+          The Prometheus configuration reload has failed for `{{ $labels.pod }}` in the `{{ $labels.namespace }}` namespace.
+
+          This usually happens when:
+          - Invalid PromQL syntax in PrometheusRule resources
+          - Invalid configuration in ServiceMonitor resources
+          - Invalid RemoteWrite configuration
+
+          Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
+
+          Troubleshooting steps:
+
+          1. Check the prometheus-config-reloader container logs (it triggers reloads):
+
+             ```shell
+             d8 k -n d8-monitoring logs {{ $labels.pod }} -c prometheus-config-reloader
+             ```
+
+          2. Check the Prometheus container logs for configuration errors:
+
+             ```shell
+             d8 k -n d8-monitoring logs {{ $labels.pod }} -c prometheus
+             ```
+
+          3. Find recently created PrometheusRule resources that might contain errors:
+
+             ```shell
+             d8 k get prometheusrule --all-namespaces --sort-by=".metadata.creationTimestamp"
+             ```
+
+          4. Check for recently modified ServiceMonitor resources:
+
+             ```shell
+             d8 k get servicemonitor --all-namespaces --sort-by=".metadata.creationTimestamp"
+             ```
+
+          5. If using remote write, check the prometheus module configuration for errors.
