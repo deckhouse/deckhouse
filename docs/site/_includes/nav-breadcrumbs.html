@@ -1,6 +1,6 @@
 <div class="navigation__container">
   {%- if page.product_code == 'kubernetes-platform' %}
-  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
+  <div class="navigation__container--versions">
     <div>
       {%- if site.mode == 'module' %}
         <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
@@ -22,7 +22,7 @@
       </div>
   </div>
   {%- else %}
-  <div style="width: 25em;"> </div>
+  <div class="navigation__container--versions"></div>
   {%- endif %}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
