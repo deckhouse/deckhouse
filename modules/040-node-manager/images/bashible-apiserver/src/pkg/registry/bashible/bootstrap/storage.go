@@ -85,7 +85,7 @@ func (s Storage) getContext(ng string) (map[string]interface{}, error) {
 		if errors.As(err, &cnf) {
 			return nil, fmt.Errorf("cannot get bootstrap.bashible.deckhouse.io for nodeGroup %q: nodegroup not found", ng)
 		}
-		return nil, fmt.Errorf("cannot get context data: %w", err)
+		return nil, fmt.Errorf("cannot get bootstrap context data for nodegroup '%s', context key '%s': %w", ng, contextKey, err)
 	}
 
 	return context, nil
