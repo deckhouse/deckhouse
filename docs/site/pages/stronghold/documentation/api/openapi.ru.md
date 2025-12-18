@@ -7,6 +7,7 @@ description: Описание методов API
 lang: ru
 ---
 {% raw %}
+
 ## auth
 
 ### GET /auth/token/accessors

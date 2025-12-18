@@ -7,6 +7,7 @@ description: API reference
 lang: en
 ---
 {% raw %}
+
 ## auth
 
 ### GET /auth/token/accessors

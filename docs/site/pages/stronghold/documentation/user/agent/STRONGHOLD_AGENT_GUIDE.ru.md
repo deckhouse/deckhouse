@@ -1768,4 +1768,3 @@ sudo systemctl stop stronghold-agent
 ```
 
 {% endraw %}
-
