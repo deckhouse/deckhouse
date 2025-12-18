@@ -167,7 +167,7 @@ func (f *SSHFile) DownloadBytes(ctx context.Context, remotePath string) ([]byte,
 	defer func() {
 		err := os.Remove(dstPath)
 		if err != nil {
-			log.InfoF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
+			log.DebugF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
 		}
 	}()
 
