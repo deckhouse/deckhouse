@@ -16,7 +16,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      summary: Configuration test failed on NGINX Ingress `{{ $labels.controller_namespace }}/{{ $labels.controller }}`.
+      summary: Configuration test failed on Ingress NGINX `{{ $labels.controller_namespace }}/{{ $labels.controller }}`.
       description: |-
         The configuration test (`nginx -t`) for the `{{ $labels.controller }}` Ingress controller in the `{{ $labels.controller_namespace }}` namespace has failed.
 
@@ -96,11 +96,11 @@
     labels:
       severity_level: "4"
     annotations:
-      summary: Too many NGINX Ingress restarts detected.
+      summary: Too many Ingress NGINX restarts detected.
       description: |-
-        {{ $value }} NGINX Ingress controller restarts detected in the last hour.
+        {{ $value }} Ingress NGINX Controller restarts detected in the last hour.
 
-        Excessive NGINX Ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
@@ -153,9 +153,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        Some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
+        Some replicas of Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
       description: |-
-        Deckhouse has detected that some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
+        Deckhouse has detected that some replicas of Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
 
         Current number: {{ .Value }} unavailable replica(s).
 
@@ -183,9 +183,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        No available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
+        No available replicas remaining in Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
       description: |-
-        Deckhouse has detected that there are no available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
+        Deckhouse has detected that there are no available replicas remaining in Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
 
         List of unavailable pods:
 
@@ -211,9 +211,9 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        There were {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
+        There were {{ .Value }} outdated pods in Ingress NGINX DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
       description: |-
-        Deckhouse has detected {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
+        Deckhouse has detected {{ .Value }} outdated pods in Ingress NGINX DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
 
         Steps to resolve:
 
@@ -230,7 +230,7 @@
            ```
 
         3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
-        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding NGINX Ingress Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
+        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding Ingress NGINX Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
 
   - alert: NginxIngressValidationIsDisabled
     expr: |
@@ -242,7 +242,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: |-
-        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+        Warning: Ingress resource validation in the Ingress NGINX Controller is currently disabled.
       description: |-
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
@@ -263,9 +263,9 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: |-
-        Warning: Profiling mode is enabled in the NGINX Ingress Controller "{{ $labels.controller_name }}".
+        Warning: Profiling mode is enabled in the Ingress NGINX Controller "{{ $labels.controller_name }}".
       description: |-
-        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        Profiling mode is enabled for the Ingress NGINX Controller **"{{ $labels.controller_name }}"**.
         This may increase memory consumption, slow down request processing, and the process may run as root.
         It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
         To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
