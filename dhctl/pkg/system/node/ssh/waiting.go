@@ -50,7 +50,7 @@ func (c *Check) WithDelaySeconds(seconds int) node.Check {
 
 func (c *Check) AwaitAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
-		return fmt.Errorf("empty host for connection received")
+		return fmt.Errorf("Empty host for connection received")
 	}
 
 	select {
@@ -81,7 +81,7 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 
 func (c *Check) CheckAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
-		return fmt.Errorf("empty host for connection received")
+		return fmt.Errorf("Empty host for connection received")
 	}
 
 	log.InfoF("Try to connect to %v host\n", c.Session.Host())
