@@ -221,5 +221,5 @@ spec:
 ```
 
 {% alert level="info" %}
-An example of creating a self-signed certificate manually, without using the `cert-manager`, is available in [FAQ](../../deckhouse-faq.html#how-to-generate-a-self-signed-certificate).
+An example of creating a self-signed certificate manually, without using the `cert-manager`, is available in [FAQ](/products/kubernetes-platform/documentation/v1/user/security/tls.html).
 {% endalert %}

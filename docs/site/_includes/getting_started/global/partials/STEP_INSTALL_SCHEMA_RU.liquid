@@ -85,7 +85,7 @@
    - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
      - на компьютерах с процессорами семейства Apple Silicon включите опцию «Use Rosetta for x86_64/amd64 emulation on Apple Silicon» в настройках Docker Desktop, чтобы избежать возможных проблем с запуском `ssh-agent` во время установки;
 {% if page.platform_code == "bm-private" %}
-   - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
 {%- endif %}
@@ -166,7 +166,7 @@
    - установленный Python;
    {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
-   - при использовании частного хранилища образов необходимо предварительно [загрузить образы](../../documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry)
+   - при использовании частного хранилища образов необходимо предварительно [загрузить образы](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
      Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в частное хранилище;
    - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
    {%- else %}

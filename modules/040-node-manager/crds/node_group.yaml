@@ -476,7 +476,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1109,7 +1109,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -2000,7 +2000,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
