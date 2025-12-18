@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fencing-controller/internal/gossip"
-	"fencing-controller/internal/swarm"
 	"fmt"
 	"net"
 	"net/http"
@@ -27,7 +26,6 @@ import (
 
 	"fencing-controller/internal/watchdog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -161,7 +159,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	peers, err := fa.discoverNodePeers(ctx)
 	err = fa.gs.Start(peers)
 	if err != nil {
-		// retry policy
+		fa.logger.Error("Unable to start memberlist", zap.Error(err))
 	}
 	fa.gs.PrintNodes()
 	for {
@@ -224,6 +222,26 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 				err = fa.watchDog.Feed()
 				if err != nil {
 					fa.logger.Error("Unable to feed watchdog", zap.Error(err))
+				}
+			}
+
+			if !APIIsAvailable && !MaintenanceMode {
+				// except this node
+				num := fa.gs.NumMembers() - 1
+
+				if num == 0 && fa.gs.IsAlone() {
+					fa.logger.Debug("Feeding the watchdog from gossip check (alone node)")
+					err = fa.watchDog.Feed()
+					if err != nil {
+						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
+					}
+				}
+				if num > 0 {
+					fa.logger.Debug("Feeding the watchdog from gossip check (not alone node)")
+					err = fa.watchDog.Feed()
+					if err != nil {
+						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
+					}
 				}
 			}
 

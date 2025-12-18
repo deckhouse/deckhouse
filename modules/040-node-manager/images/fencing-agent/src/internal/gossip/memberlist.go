@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 
@@ -10,12 +9,16 @@ import (
 )
 
 type Memberlist struct {
-	logger *zap.Logger
-	list   *memberlist.Memberlist
+	logger      *zap.Logger
+	list        *memberlist.Memberlist
+	isAlone     bool
+	isConnected bool
 }
 
 func NewMemberList(logger *zap.Logger) (Gossip, error) {
 	config := memberlist.DefaultLocalConfig()
+	eventHandler := NewEventHandler(logger, nil)
+	config.Events = eventHandler
 	if portStr := os.Getenv("MEMBERLIST_PORT"); portStr != "" {
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
@@ -30,27 +33,49 @@ func NewMemberList(logger *zap.Logger) (Gossip, error) {
 	}
 
 	return &Memberlist{
-		logger: logger,
-		list:   list,
+		logger:  logger,
+		list:    list,
+		isAlone: true,
 	}, nil
 }
 
 func (ml *Memberlist) Start(peers []string) error {
 	if len(peers) == 0 {
 		ml.logger.Info("No peers found, starting as a single node")
+		ml.SetAlone(true)
+		ml.isConnected = true
 		return nil
 	}
 	numJoined, err := ml.list.Join(peers)
 	if err != nil {
 		ml.logger.Error("Unable to join to memberlist cluster", zap.Error(err))
+		ml.isConnected = false
 		return err
 	}
 	ml.logger.Info("Joined to memberlist cluster", zap.Int("numJoined", numJoined), zap.Int("peersAttemted", len(peers)))
+	ml.SetAlone(false)
+	ml.isConnected = true
 	return nil
 }
 
 func (ml *Memberlist) PrintNodes() {
 	for _, member := range ml.list.Members() {
-		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
+		ml.logger.Info("Member info", zap.String("name", member.Name), zap.Any("addr", member.Addr))
 	}
+}
+
+func (ml *Memberlist) IsAlone() bool {
+	return ml.isAlone
+}
+
+func (ml *Memberlist) SetAlone(status bool) {
+	ml.isAlone = status
+}
+
+func (ml *Memberlist) IsConnected() bool {
+	return ml.isConnected
+}
+
+func (ml *Memberlist) NumMembers() int {
+	return ml.list.NumMembers()
 }

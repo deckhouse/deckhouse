@@ -18,7 +18,7 @@ package main
 
 import (
 	"context"
-	"fencing-controller/internal/swarm"
+	"fencing-controller/internal/gossip"
 	"os"
 	"os/signal"
 	"syscall"
@@ -66,7 +66,7 @@ func main() {
 	}
 
 	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	sw, err := swarm.NewMemberList(logger)
+	sw, err := gossip.NewMemberList(logger)
 	if err != nil {
 		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
 	}
