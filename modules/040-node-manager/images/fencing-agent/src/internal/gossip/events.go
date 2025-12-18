@@ -8,18 +8,21 @@ import (
 type EventHandler struct {
 	logger        *zap.Logger
 	onNodeFailure func(nodeName string, nodeAddr string)
+	onNodeJoin    func(status bool)
 }
 
 
-func NewEventHandler(logger *zap.Logger, onNodeFailure func(nodeName string, nodeAddr string)) *EventHandler {
+func NewEventHandler(logger *zap.Logger, onNodeFailure func(nodeName string, nodeAddr string), onNodeJoin func(status bool)) *EventHandler {
 	return &EventHandler{
 		logger:        logger,
 		onNodeFailure: onNodeFailure,
+		onNodeJoin:    onNodeJoin,
 	}
 }
 
 func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 	d.logger.Info("Node joined", zap.String("node", node.Name))
+	d.onNodeJoin(false)
 	// mean that node is not alone in cluster
 	//if d.memberlist.NumMembers() > 1 {
 	//	d.memberlist.SetAlone(false)

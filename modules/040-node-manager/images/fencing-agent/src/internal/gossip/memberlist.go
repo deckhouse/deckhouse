@@ -17,8 +17,7 @@ type Memberlist struct {
 
 func NewMemberList(logger *zap.Logger) (Gossip, error) {
 	config := memberlist.DefaultLocalConfig()
-	eventHandler := NewEventHandler(logger, nil)
-	config.Events = eventHandler
+
 	if portStr := os.Getenv("MEMBERLIST_PORT"); portStr != "" {
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
@@ -31,12 +30,14 @@ func NewMemberList(logger *zap.Logger) (Gossip, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &Memberlist{
+	memList := Memberlist{
 		logger:  logger,
 		list:    list,
 		isAlone: true,
-	}, nil
+	}
+	eventHandler := NewEventHandler(logger, nil, memList.SetAlone)
+	config.Events = eventHandler
+	return &memList, nil
 }
 
 func (ml *Memberlist) Start(peers []string) error {
