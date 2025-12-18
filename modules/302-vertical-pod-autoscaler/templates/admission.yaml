@@ -13,6 +13,12 @@ spec:
         apiVersions: ["v1", "v2beta2"]
         operations: ["CREATE", "UPDATE"]
         resources: ["verticalpodautoscalers"]
+  matchConditions:
+    - name: 'exclude-users'
+      expression: |
+        !(
+          request.userInfo.username.startsWith("system:serviceaccount:d8-system")
+        )
   validations:
     - expression: >-
         !has(object.spec.updatePolicy) ||
