@@ -109,3 +109,39 @@ lang: ru
 {% endalert %}
 
 Подробнее с шаблонами проектов и их созданием можно ознакомиться [в разделе администрирования](/products/virtualization-platform/documentation/admin/platform-management/access-control/projects.html).
+
+### Исключение ресурсов из квоты
+
+Платформа предусматривает возможность исключения ресурсов (requests, limits) пода или PVC из подсчёта в квоте проекта. Например, служебные поды или PVC могут занимать ресурсы, которые не должны учитываться в доступной квоте проекта.
+
+Для этого предусмотрены специальные лейблы, только для подов:
+
+- `resources.k8s.io/discount-memory` — уменьшает учитываемую оперативную память (memory) пода в квоте на указанную величину;
+- `resources.k8s.io/discount-cpu` — уменьшает учитываемый CPU пода в квоте на указанную величину;
+- `resources.k8s.io/discount-storage` — уменьшает учитываемое хранилище (ephemeral-storage) для подов в квоте на указанную величину;
+- `resources.deckhouse.io/cap-cpu` — ограничивает максимальное значение CPU, учитываемого в квоте проекта, до указанного значения;
+- `resources.deckhouse.io/cap-memory` — ограничивает максимальное значение оперативной памяти (memory), учитываемой в квоте проекта, до указанного значения;
+
+Для подов и PVC:
+- `resources.k8s.io/ignore` — при значении `true` полностью исключает ресурсы пода или PVC из подсчёта в квоте проекта;
+
+Лейблы можно использовать совместно. Однако если у пода есть лейбл `resources.k8s.io/ignore="true"`, остальные лейблы игнорируются.
+
+Пример использования:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-quota-example
+  labels:
+    resources.k8s.io/discount-cpu: "500m"
+    resources.k8s.io/cap-cpu: "1"
+    resources.k8s.io/discount-memory: "512Mi"
+    resources.k8s.io/cap-memory: "1Gi"
+    resources.k8s.io/discount-storage: "1Gi"
+    resources.k8s.io/cap-storage: "2Gi"
+spec:
+  containers:
+...
+```
