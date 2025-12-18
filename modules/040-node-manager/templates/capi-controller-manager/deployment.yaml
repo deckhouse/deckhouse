@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: capi-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "capi-controller-manager"

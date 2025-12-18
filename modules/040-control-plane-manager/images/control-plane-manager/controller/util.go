@@ -261,7 +261,7 @@ func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Con
 		if err == nil {
 			return true, nil
 		}
-		log.Err(err)
+		log.Error(err.Error())
 		if errors.Is(err, ErrNonRetryable) {
 			return false, err
 		}

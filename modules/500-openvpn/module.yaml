@@ -1,5 +1,8 @@
 name: openvpn
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - networking
 namespace: d8-openvpn
+descriptions:
+  en: Provides access to cluster resources via OpenVPN with certificate-based authentication. Includes a web interface for managing certificates and generating configuration files.
+  ru: Предоставляет доступ к ресурсам кластера через OpenVPN с аутентификацией по сертификатам. Включает веб-интерфейс для управления сертификатами и генерации конфигурационных файлов.

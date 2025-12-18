@@ -45,6 +45,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 fields := ["hostPID", "hostIPC"]
                 field := fields[_]
                 msg := check_violations(input.review.object, field)

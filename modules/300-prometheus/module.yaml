@@ -1,14 +1,11 @@
 name: prometheus
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-description: |
-  The Prometheus monitoring module
 descriptions:
-  en: |
-    The Prometheus monitoring module
-
+  en: Deploys monitoring stack with preset configuration for platform and applications. Includes ready-made alerts and dashboards.
+  ru: Разворачивает стек мониторинга с предустановленной конфигурацией для платформы и приложений. Включает готовые алерты и дашборды.
 requirements:
   modules:
     operator-prometheus: ">= 0.0.0"

@@ -1,17 +1,17 @@
 ---
-title: "ALB with NGINX Ingress controller"
+title: "ALB with Ingress NGINX Controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
-description: "Configure Application Load Balancer with NGINX Ingress controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
+description: "Configure Application Load Balancer with Ingress NGINX Controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
 ---
 
-The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
+The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
 
-The `ingress-nginx` module installs the NGINX Ingress controller and manages it with custom resources.
+The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
 If there is more than one node available for hosting the Ingress controller,
 it is deployed in the HA mode, taking into account the infrastructure specifics of both cloud and bare-metal environments,
 as well as various Kubernetes cluster types.
 
-The module supports running and configuring several NGINX Ingress controllers simultaneously
+The module supports running and configuring several Ingress NGINX controllers simultaneously
 (one of the controllers is the **primary** one; you can create as many **additional** controllers as you want).
 This approach allows you to separate extranet and intranet Ingress resources of applications.
 
@@ -31,13 +31,13 @@ Traffic to `ingress-nginx` can be routed in several ways:
 
 ## HTTPS termination
 
-The module allows you to manage HTTPS security policies for each of the NGINX Ingress controllers, including:
+The module allows you to manage HTTPS security policies for each of the Ingress NGINX controllers, including:
 
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
 The module is integrated with the [`cert-manager`](/modules/cert-manager/) module.
-Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
+Thus, it can get SSL certificates automatically and pass them to Ingress NGINX controllers for further use.
 
 ## Monitoring and statistics
 

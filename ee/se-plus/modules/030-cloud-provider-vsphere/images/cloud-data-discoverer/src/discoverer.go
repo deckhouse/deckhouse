@@ -175,6 +175,11 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		}
 	}
 
+	err := d.vsphereClient.RefreshClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh vSphere client: %v", err)
+	}
+
 	zonesDatastores, err := d.vsphereClient.GetZonesDatastores()
 	if err != nil {
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)

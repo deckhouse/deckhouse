@@ -29,6 +29,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: testmodule
@@ -36,7 +37,7 @@ metadata:
     source: test-source
     status: deployed
   name: testmodule-0.25.0
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: testmodule
   version: 0.25.0
@@ -54,6 +55,7 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: testmodule
@@ -61,7 +63,7 @@ metadata:
     source: test-source
     status: superseded
   name: testmodule-0.5.0
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: testmodule
   version: 0.5.0

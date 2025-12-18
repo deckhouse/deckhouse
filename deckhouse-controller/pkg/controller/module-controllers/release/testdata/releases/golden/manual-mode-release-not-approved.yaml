@@ -28,13 +28,15 @@ metadata:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: echo
     modules.deckhouse.io/update-policy: echo
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: echo-v0.4.69
-  resourceVersion: "1004"
+  resourceVersion: "1006"
 spec:
   moduleName: echo
   version: 0.4.69

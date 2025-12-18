@@ -3,214 +3,187 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-sysctls
 tests:
-  - name: pss-baseline
-    template: ../../templates/security/allowed-sysctls.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-kernel-shm-rmid-forced
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-kernel-shm-rmid-forced.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-net-ipv4-tcp-syncookies
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-net-ipv4-tcp-syncookies.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-multiple-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-multiple-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-net-core-rmem-max
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-net-core-rmem-max.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-kernel-msgmax
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-kernel-msgmax.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-sysctls-one-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-multiple-sysctls-one-disallowed.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-deployment-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-deployment-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-deployment-net-core-rmem-max
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-deployment-net-core-rmem-max.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/allowed-daemonset-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-daemonset-net-core-rmem-max
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_baseline/disallowed-daemonset-net-core-rmem-max.yaml
-        assertions:
-          - violations: no
-
-  - name: security-policy
-    template: ../../templates/security/allowed-sysctls.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: allowed-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-kernel-shm-rmid-forced
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-kernel-shm-rmid-forced.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-net-core-rmem-max
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-net-core-rmem-max.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-net-fake-sysctl
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/disallowed-net-fake-sysctl.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-sysctls-one-forbidden
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/disallowed-multiple-sysctls-one-forbidden.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-deployment-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-deployment-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-deployment-net-fake-sysctl
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/disallowed-deployment-net-fake-sysctl.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-daemonset-no-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-daemonset-net-fake-sysctl
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/disallowed-daemonset-net-fake-sysctl.yaml
-        assertions:
-          - violations: no
-
-  - name: pss-baseline-with-exception
-    template: ../../templates/security/allowed-sysctls.yaml
-    constraint: constraint_pss_baseline.yaml
-    cases:
-      - name: allowed-by-exception-net-core-rmem-max
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-core-rmem-max.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-net-core-rmem-max.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-sysctls
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-multiple-sysctls.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-sysctls.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-sysctl-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-core-rmem-max.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-sysctl-mismatch.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-no-exception-label
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-by-exception-mismatch-but-constraint-allows
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-core-rmem-max.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-multiple-sysctls-one-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-core-rmem-max.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-sysctls-one-mismatch.yaml
-        assertions:
-          - violations: yes
-
-  - name: security-policy-with-exception
-    template: ../../templates/security/allowed-sysctls.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: allowed-by-exception-forbidden-sysctl
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-net-fake-sysctl.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-forbidden-sysctl.yaml
-        assertions:
-          - violations: no
-
+- name: pss-baseline
+  template: ../../templates/security/allowed-sysctls.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 6-allowed-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/006-allowed-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 3-allowed-kernel-shm-rmid-forced
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/003-allowed-kernel-shm-rmid-forced.yaml
+    assertions:
+    - violations: no
+  - name: 5-allowed-net-ipv4-tcp-syncookies
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/005-allowed-net-ipv4-tcp-syncookies.yaml
+    assertions:
+    - violations: no
+  - name: 4-allowed-multiple-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/004-allowed-multiple-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 11-disallowed-net-core-rmem-max
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/011-disallowed-net-core-rmem-max.yaml
+    assertions:
+    - violations: yes
+  - name: 9-disallowed-kernel-msgmax
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/009-disallowed-kernel-msgmax.yaml
+    assertions:
+    - violations: yes
+  - name: 10-disallowed-multiple-sysctls-one-disallowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/010-disallowed-multiple-sysctls-one-disallowed.yaml
+    assertions:
+    - violations: yes
+  - name: 2-allowed-deployment-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/002-allowed-deployment-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 8-disallowed-deployment-net-core-rmem-max
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/008-disallowed-deployment-net-core-rmem-max.yaml
+    assertions:
+    - violations: no
+  - name: 1-allowed-daemonset-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/001-allowed-daemonset-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 7-disallowed-daemonset-net-core-rmem-max
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/007-disallowed-daemonset-net-core-rmem-max.yaml
+    assertions:
+    - violations: no
+- name: security-policy
+  template: ../../templates/security/allowed-sysctls.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 16-allowed-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/016-allowed-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 14-allowed-kernel-shm-rmid-forced
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/014-allowed-kernel-shm-rmid-forced.yaml
+    assertions:
+    - violations: no
+  - name: 15-allowed-net-core-rmem-max
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/015-allowed-net-core-rmem-max.yaml
+    assertions:
+    - violations: no
+  - name: 20-disallowed-net-fake-sysctl
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/020-disallowed-net-fake-sysctl.yaml
+    assertions:
+    - violations: yes
+  - name: 19-disallowed-multiple-sysctls-one-forbidden
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/019-disallowed-multiple-sysctls-one-forbidden.yaml
+    assertions:
+    - violations: yes
+  - name: 13-allowed-deployment-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/013-allowed-deployment-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 18-disallowed-deployment-net-fake-sysctl
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/018-disallowed-deployment-net-fake-sysctl.yaml
+    assertions:
+    - violations: no
+  - name: 12-allowed-daemonset-no-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/012-allowed-daemonset-no-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 17-disallowed-daemonset-net-fake-sysctl
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/017-disallowed-daemonset-net-fake-sysctl.yaml
+    assertions:
+    - violations: no
+- name: pss-baseline-with-exception
+  template: ../../templates/security/allowed-sysctls.yaml
+  constraint: constraint_pss_baseline.yaml
+  cases:
+  - name: 32-37-allowed-by-exception-net-core-rmem-max
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/032-allow-net-core-rmem-max.yaml
+    object: test_samples/security_policy_exceptions/pods/037-allowed-by-exception-net-core-rmem-max.yaml
+    assertions:
+    - violations: no
+  - name: 31-36-allowed-by-exception-multiple-sysctls
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/031-allow-multiple-sysctls.yaml
+    object: test_samples/security_policy_exceptions/pods/036-allowed-by-exception-multiple-sysctls.yaml
+    assertions:
+    - violations: no
+  - name: 32-39-disallowed-by-exception-sysctl-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/032-allow-net-core-rmem-max.yaml
+    object: test_samples/security_policy_exceptions/pods/039-disallowed-by-exception-sysctl-mismatch.yaml
+    assertions:
+    - violations: yes
+  - name: 40-disallowed-no-exception-label
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/040-disallowed-no-exception-label.yaml
+    assertions:
+    - violations: yes
+  - name: 32-35-allowed-by-exception-mismatch-but-constraint-allows
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/032-allow-net-core-rmem-max.yaml
+    object: test_samples/security_policy_exceptions/pods/035-allowed-by-exception-mismatch-but-constraint-allows.yaml
+    assertions:
+    - violations: no
+  - name: 32-38-disallowed-by-exception-multiple-sysctls-one-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/032-allow-net-core-rmem-max.yaml
+    object: test_samples/security_policy_exceptions/pods/038-disallowed-by-exception-multiple-sysctls-one-mismatch.yaml
+    assertions:
+    - violations: yes
+- name: security-policy-with-exception
+  template: ../../templates/security/allowed-sysctls.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 33-34-allowed-by-exception-forbidden-sysctl
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/033-allow-net-fake-sysctl.yaml
+    object: test_samples/security_policy_exceptions/pods/034-allowed-by-exception-forbidden-sysctl.yaml
+    assertions:
+    - violations: no
