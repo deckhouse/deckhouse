@@ -50,7 +50,7 @@ func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	if err != nil {
 		var cnf *template.ContextNotFoundError
 		if errors.As(err, &cnf) {
-			return nil, fmt.Errorf("cannot get nodegroupbundles for nodeGroup %q: nodegroup not found", ng)
+			return nil, fmt.Errorf("cannot get nodegroup bundle for nodeGroup %q: nodegroup not found", ng)
 		}
 		return nil, fmt.Errorf("cannot render nodegroup bundle for nodegroup '%s': %w", ng, err)
 	}
