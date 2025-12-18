@@ -18,4 +18,4 @@ lang: ru
 
 ## Балансировка на прикладном уровне (ALB)
 
-Для балансировки трафика на уровне приложений используется [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)).
+Для балансировки трафика на уровне приложений используется [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)).
