@@ -95,7 +95,7 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 		if errors.As(err, &cnf) {
 			return nil, fmt.Errorf("cannot get bashibles.bashible.deckhouse.io for nodeGroup %q: nodegroup not found", name)
 		}
-		return nil, fmt.Errorf("cannot get context data: %w", err)
+		return nil, fmt.Errorf("cannot get context data for nodegroup '%s': %w", name, err)
 	}
 
 	return context, nil
