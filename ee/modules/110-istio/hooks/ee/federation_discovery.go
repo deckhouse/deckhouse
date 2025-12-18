@@ -228,6 +228,9 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 		if err != nil {
 			return err
 		}
+		if privateMetadata.PublicServices == nil || len(*privateMetadata.PublicServices) == 0 {
+			input.Logger.Warn("Connection to the cluster %s is successful, but there are no published services", slog.String("name", federationInfo.Name))
+		}
 	}
 	return nil
 }
