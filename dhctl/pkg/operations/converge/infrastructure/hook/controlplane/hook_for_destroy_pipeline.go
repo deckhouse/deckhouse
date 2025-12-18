@@ -69,23 +69,17 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
 
+	err = deleteNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	if err != nil {
+		return false, fmt.Errorf("Failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
+	}
+
 	return false, nil
 }
 
 func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
-	}
-
-	kubeCl := h.getter.KubeClient()
-	if kubeCl == nil {
-		log.DebugLn("Kube client is nil, skip node deletion")
-		return nil
-	}
-
-	err := deleteNode(ctx, kubeCl, h.nodeToDestroy)
-	if err != nil {
-		log.WarnF("Failed to delete node '%s': %v\n", h.nodeToDestroy, err)
 	}
 
 	cl := h.getter.KubeClient().NodeInterfaceAsSSHClient()
