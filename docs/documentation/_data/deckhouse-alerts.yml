@@ -2670,8 +2670,8 @@ alerts:
         The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
 
         This usually happens when:
-        - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources)
-        - Invalid RemoteWrite configuration
+        - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
+        - Invalid RemoteWrite configuration.
 
         Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
         Troubleshooting steps:
