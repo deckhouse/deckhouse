@@ -4,7 +4,7 @@ apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: grafana-dex-auth
-  namespace: istio-ingress
+  namespace: d8-ingress-istio
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-dex-auth")) | nindent 2 }}
 spec:
   workloadSelector: {}
@@ -49,4 +49,3 @@ spec:
                     - exact: x-auth-request-email
                     - exact: x-auth-request-user
 {{- end }}
-
