@@ -15,10 +15,11 @@ spec:
       name: cert-manager-letsencrypt-private-key
     solvers:
     - http01:
+      {{- if or (hasKey .Values.certManager "ingressClassHttp01") (hasKey .Values.global.modules "ingressClass") }}
         ingress:
           {{- if hasKey .Values.certManager "ingressClassHttp01" }}
           ingressClassName: {{ .Values.certManager.ingressClassHttp01 }}
-          {{- else if hasKey .Values.global.modules "ingressClass" }}
+          {{- else }}
           ingressClassName: {{ .Values.global.modules.ingressClass }}
           {{- end }}
           podTemplate:
@@ -37,5 +38,11 @@ spec:
                 - key: "dedicated.deckhouse.io"
                   operator: "Equal"
                   value: "cert-manager"
+      {{- else }}
+        gatewayHTTPRoute:
+          parentRefs:
+            - name: dex-grafana
+              namespace: istio-ingress
+              kind: Gateway
+      {{- end }}
 {{- end }}
-

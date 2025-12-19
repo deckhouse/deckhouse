@@ -53,6 +53,14 @@ properties:
           If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      gatewayClass:
+        type: string
+        default: null
+        description: |
+          The name of the GatewayClass used by Deckhouse modules that rely on the Gateway API.
+
+          Optional. When not set, modules will not configure Gateway resources by default.
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
         type: string
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'

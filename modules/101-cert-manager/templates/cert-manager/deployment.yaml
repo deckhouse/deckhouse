@@ -63,6 +63,7 @@ spec:
           - --v=1
           - --cluster-resource-namespace=$(POD_NAMESPACE)
           - --leader-election-namespace=$(POD_NAMESPACE)
+          - --enable-gateway-api
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
