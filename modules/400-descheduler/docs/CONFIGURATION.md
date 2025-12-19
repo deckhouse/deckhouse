@@ -6,4 +6,6 @@ title: "The descheduler module: configuration"
 
 {% include module-bundle.liquid %}
 
+{% include module-requirements.liquid %}
+
 The module does not have any mandatory parameters.

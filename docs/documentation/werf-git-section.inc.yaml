@@ -59,7 +59,9 @@
   excludePaths:
     - docs
     - candi
+    - deckhouse-controller/crds/
   includePaths:
     - '**/docs/README.md'
     - '**/docs/readme.md'
     - '**/oss.yaml'
+    - '**/module.yaml'
