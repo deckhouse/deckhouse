@@ -43,7 +43,11 @@ In most cases, we recommend opting for the automatic selection of the Kubernetes
 In the platform, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
 Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](/modules/control-plane-manager/#version-control).
 
-If automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster when updating the platform release (when upgrading a minor version). If the Kubernetes version is explicitly specified in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter, the platform update may fail if the Kubernetes version used in the cluster is no longer supported.
+If automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster when updating the platform release (when upgrading a minor version).
+
+{% alert level="warning" %}
+If the Kubernetes version is explicitly specified in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter, the platform update may fail if the Kubernetes version used in the cluster is no longer supported.
+{% endalert %}
 
 If your application uses outdated resource versions or depends on a particular version of Kubernetes for some other reason,
 check whether it's [supported](/products/virtualization-platform/documentation/about/requirements.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
@@ -179,8 +183,8 @@ Fast disks are recommended for platform components (the [storageClass](/products
 Configure one or more storage systems for virtual machine disks:
 
 - **Software-defined storage (SDS)**:
-  - `sds-local-volume`: Local storage based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
-  - `sds-replicated-volume`: Replicated storage based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
+  - `[sds-local-volume](../../../modules/sds-local-volume/stable/)`: Local storage based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
+  - `[sds-replicated-volume](../../../modules/sds-replicated-volume/stable/)`: Replicated storage based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
 
 - **External storage**: Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, HPE 3par, iSCSI. Connected via corresponding CSI drivers.
 
