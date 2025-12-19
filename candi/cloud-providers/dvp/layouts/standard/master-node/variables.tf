@@ -73,6 +73,7 @@ locals {
   memory_size                = local.instance_class.virtualMachine.memory.size
   virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
   bootloader                 = lookup(local.instance_class.virtualMachine, "bootloader", null)
+  live_migration_policy      = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
 
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 
@@ -97,4 +98,3 @@ locals {
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
   user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
-

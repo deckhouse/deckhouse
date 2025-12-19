@@ -206,6 +206,17 @@ apiVersions:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
+                    liveMigrationPolicy:
+                      type: string
+                      enum:
+                        - AlwaysForced
+                        - PreferForced
+                      default: PreferForced
+                      description: |
+                        Live migration policy for the virtual machine.
+
+                        * `AlwaysForced`: Always use forced migration.
+                        * `PreferForced`: Prefer forced migration.
                     ipAddresses:
                       type: array
                       description: |
