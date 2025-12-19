@@ -62,6 +62,7 @@ module_alert_experimental_long: Экспериментальная версия.
 module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
 module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
 module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
+related_additional_resources: Дополнительные ресурсы
 reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
