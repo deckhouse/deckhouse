@@ -150,7 +150,9 @@ function modify_user() {
   local extra_groups="$2"
   local password_hash="$3"
 
-  usermod -G "$extra_groups" "$user_name"
+  if id -nG "$user_name" | grep -qvw "$extra_group"; then
+    usermod -G "$extra_groups" "$user_name"
+  fi
 
   local current_hash="$(getent shadow "$user_name" | awk -F ":" '{print $2}')"
   if [ "$password_hash" != "$current_hash" ]; then
