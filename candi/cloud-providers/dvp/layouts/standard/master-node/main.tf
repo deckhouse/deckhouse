@@ -79,6 +79,7 @@ module "master" {
   memory_size                = local.memory_size
   virtual_machine_class_name = local.virtual_machine_class_name
   live_migration_policy      = local.live_migration_policy
+  run_policy                 = local.run_policy
   bootloader                 = local.bootloader
   cpu                        = local.cpu
   ssh_public_key             = local.ssh_public_key

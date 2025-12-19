@@ -9,9 +9,20 @@ spec:
                 virtualMachine:
                   description: |
                     Настройки виртуальной машины для созданного узла.
+
                     > Для виртуальных машин узлов используется `runPolicy: AlwaysOnUnlessStoppedManually`.
                     > Это позволяет вручную останавливать ВМ (например, для обслуживания), не вызывая принудительный автозапуск.
                   properties:
+                    runPolicy:
+                      description: |
+                        Политика запуска виртуальной машины.
+
+                        * `AlwaysOn` — виртуальная машина всегда должна быть запущена;
+                        * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания).
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOnUnlessStoppedManually
+                      example: AlwaysOnUnlessStoppedManually
                     cpu:
                       description: |
                         Настройки процессора для виртуальной машины.

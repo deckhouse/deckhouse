@@ -74,6 +74,11 @@ locals {
   virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
   bootloader                 = lookup(local.instance_class.virtualMachine, "bootloader", null)
   live_migration_policy      = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
+  run_policy = lookup(
+  local.instance_class.virtualMachine,
+  "runPolicy",
+  "AlwaysOnUnlessStoppedManually",
+)
 
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 
