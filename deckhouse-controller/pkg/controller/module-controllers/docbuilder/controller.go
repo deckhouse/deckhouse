@@ -365,6 +365,8 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		return fmt.Errorf("%s isn't a directory", moduleDir)
 	}
 
+	r.logger.Debug("getting documentation from module dir", slog.String("clean_path", cleanPath), slog.String("module_dir", moduleDir))
+
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
