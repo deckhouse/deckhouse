@@ -385,6 +385,27 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  requirements_title:
+    en: Requirements
+    ru: Требования
+  requirements_kubernetes_title:
+    en: To the Kubernetes version
+    ru: К версии Kubernetes
+  requirements_deckhouse_title:
+    en: To the Deckhouse version
+    ru: К версии Deckhouse
+  requirements_modules_title:
+    en: To the versions of other modules
+    ru: К версиям других модулей
+  requirements_modules_any_version:
+    en: any version
+    ru: любая версия
+  requirements_version_and_above:
+    en: and above
+    ru: и выше
+  requirements_version_above:
+    en: above
+    ru: выше
 
 comparison:
   except_parameters:
@@ -398,6 +419,9 @@ comparison:
     ru: "с ограничениями"
 
 features:
+  module_lifecycle_stage:
+    en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
+    ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"
