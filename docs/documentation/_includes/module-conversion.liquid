@@ -1,55 +1,5 @@
 {%- assign moduleName = page['module-kebab-name'] %}
 
-{%- assign moduleMetadata = site.data.modules.metadata.modules[moduleName] %}
-{%- if moduleMetadata %}
-  {%- assign moduleRequirements = moduleMetadata['requirements'] %}
-{%- endif %}
-
-{%- comment -%}
-Show module requirements.
-{%- endcomment -%}
-{%- if moduleRequirements and moduleRequirements.size > 0 %}
-## {{ site.data.i18n.common.requirements_title[page.lang] }}
-<div markdown="0">
-  {%- if moduleRequirements.kubernetes %}
-    {%- capture formattedVersion -%}
-      {%- include format-version-requirement.liquid version=moduleRequirements.kubernetes -%}
-    {%- endcapture -%}
-    <p>{{ site.data.i18n.common.requirements_kubernetes_title[page.lang] }}: {{ formattedVersion | strip }}.</p>
-  {%- endif %}
-
-  {%- if moduleRequirements.deckhouse %}
-    {%- capture formattedVersion -%}
-      {%- include format-version-requirement.liquid version=moduleRequirements.deckhouse -%}
-    {%- endcapture -%}
-    <p>{{ site.data.i18n.common.requirements_deckhouse_title[page.lang] }}: {{ formattedVersion | strip }}.</p>
-  {%- endif %}
-
-  {%- if moduleRequirements.modules and moduleRequirements.modules.size > 0 %}
-  <p>{{ site.data.i18n.common.requirements_modules_title[page.lang] }}:
-    <ul>
-      {%- for moduleReq in moduleRequirements.modules %}
-        {%- assign moduleName = moduleReq[0] %}
-        {%- assign moduleVersion = moduleReq[1] %}
-        {%- if moduleVersion == ">= 0.0.0" %}
-          {%- assign formattedValue = site.data.i18n.common.requirements_modules_any_version[page.lang] | append: "." %}
-        {%- else %}
-          {%- capture formattedValue -%}
-            {%- include format-version-requirement.liquid version=moduleVersion -%}
-          {%- endcapture -%}
-          {%- assign formattedValue = formattedValue | strip | append: "." %}
-        {%- endif %}
-        <li class="module-requirements__item">
-          <code>{{ moduleName }}</code>: {{ formattedValue }}
-        </li>
-      {%- endfor %}
-    </ul>
-  </p>
-  {%- endif %}
-</div>
-
-{%- endif %}
-
 {%- comment -%}
 Show module conversions.
 
