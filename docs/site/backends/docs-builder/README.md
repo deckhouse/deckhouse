@@ -131,8 +131,10 @@ module-archive.tar
 ├── openapi/                   # API specs → data/modules/{module}/{channel}/
 │   ├── config-values.yaml     # Configuration schema
 │   └── doc-*-config-values.yaml # Generated config docs
-└── crds/                      # CRDs → data/modules/{module}/{channel}/
-    └── *.yaml                 # Custom Resource Definitions
+├── crds/                      # CRDs → data/modules/{module}/{channel}/
+│   └── *.yaml                 # Custom Resource Definitions
+├── module.yaml                # Module metadata → data/modules/{module}/{channel}/
+└── oss.yaml                   # OSS metadata → data/modules/{module}/{channel}/
 ```
 
 ### Language Support
