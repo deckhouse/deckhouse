@@ -1,0 +1,52 @@
+{{- if and .Values.prometheus.internal.grafana.enabled .Values.global.modules.publicDomainTemplate (hasKey .Values.global.modules "gatewayClass") .Values.global.modules.gatewayClass }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: grafana-dex-auth
+  namespace: istio-ingress
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-dex-auth")) | nindent 2 }}
+spec:
+  workloadSelector: {}
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.ext_authz
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            transport_api_version: V3
+            with_request_body:
+              max_request_bytes: 8192
+              allow_partial_message: true
+            http_service:
+              server_uri:
+                uri: https://grafana-dex-authenticator.d8-monitoring.svc.cluster.local
+                cluster: outbound|443||grafana-dex-authenticator.d8-monitoring.svc.cluster.local
+                timeout: 5s
+              authorization_request:
+                allowed_headers:
+                  patterns:
+                    - exact: cookie
+                    - exact: x-forwarded-for
+                    - exact: x-forwarded-host
+                    - exact: x-forwarded-proto
+                    - exact: x-request-id
+                    - exact: x-envoy-external-address
+                    - exact: x-envoy-internal
+              authorization_response:
+                allowed_upstream_headers:
+                  patterns:
+                    - exact: x-auth-request-email
+                    - exact: x-auth-request-user
+{{- end }}
+

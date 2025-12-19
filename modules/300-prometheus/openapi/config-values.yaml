@@ -93,6 +93,35 @@ properties:
           Enables single authentication.
 
           If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
+  gatewayHTTPRoute:
+    type: object
+    description: |
+      Parameters for using the Gateway API to expose Grafana and Prometheus via HTTPRoute.
+    properties:
+      parentRefs:
+        type: array
+        description: |
+          List of parentRefs that will be set on HTTPRoutes created for module web interfaces. Usually they reference Gateway resources.
+        items:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: Name of the parent resource (usually a Gateway).
+            namespace:
+              type: string
+              description: Namespace of the parent resource.
+            group:
+              type: string
+              description: API group of the parent resource.
+            kind:
+              type: string
+              description: Kind of the parent resource.
+            sectionName:
+              type: string
+              description: Optional section name within the parent resource (for example, a listener name in a Gateway).
   grafana:
     type: object
     default: {}

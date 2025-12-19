@@ -59,6 +59,13 @@ properties:
           Разрешает пройти только одну из аутентификаций.
 
           В комбинации с опцией `whitelistSourceRanges` позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
+  gatewayHTTPRoute:
+    description: |
+      Параметры использования Gateway API для публикации Grafana и Prometheus через HTTPRoute.
+    properties:
+      parentRefs:
+        description: |
+          Список parentRefs, которые будут указаны в HTTPRoute, создаваемых для веб-интерфейсов модуля. Обычно ссылаются на ресурсы Gateway.
   grafana:
     description: Настройки для инсталляции Grafana.
     properties:
