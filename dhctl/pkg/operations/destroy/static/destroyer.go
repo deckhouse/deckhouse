@@ -396,6 +396,7 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 
 	if d.params.State.IsNodeUserExists() {
 		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
+		return nil
 	}
 
 	return d.params.PhasedActionProvider().Run(phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
