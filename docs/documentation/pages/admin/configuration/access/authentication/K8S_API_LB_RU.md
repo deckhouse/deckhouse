@@ -67,15 +67,15 @@ lang: ru
 
 ## Доступ с использованием Basic Authentication (LDAP)
 
-Помимо OIDC, вы можете настроить прямой доступ к API с использованием Basic Authentication (логин и пароль). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
+Помимо OIDC можно настроить прямой доступ к Kubernetes API с использованием Basic Authentication (логин и пароль). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
 
 Для настройки:
 
-1. Включите публикацию API (параметр `publishAPI`).
-2. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию `enableBasicAuth: true`.
+1. Включите публикацию API (параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi)).
+1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
 {% alert level="warning" %}
-В кластере может быть только один провайдер с включенным `enableBasicAuth`.
+В кластере может быть только один провайдер с включенным [`enableBasicAuth`]((/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth)).
 {% endalert %}
 
 После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:

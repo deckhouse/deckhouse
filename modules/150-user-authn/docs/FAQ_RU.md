@@ -163,16 +163,16 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ## Как настроить Basic Auth для доступа к Kubernetes API через LDAP?
 
-1. Включите параметр [publishAPI](configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
-2. Создайте [DexProvider](cr.html#dexprovider) типа `LDAP` с полем `enableBasicAuth: true`.
-3. Настройте [RBAC](../../modules/user-authz/cr.html#clusterauthorizationrule) для групп пользователей из LDAP.
-4. Раздайте пользователям `kubeconfig` с настроенным Basic Auth.
+1. Включите параметр [`publishAPI`](configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
+1. Создайте ресурс [DexProvider](cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
+1. Передайте пользователям `kubeconfig` с настроенными параметрами Basic Authentication (логин и пароль LDAP).
 
 {% alert level="warning" %}
-В кластере может быть только один провайдер с включенным `enableBasicAuth`.
+В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 {% endalert %}
 
-Подробный пример настройки см. в разделе [Примеры конфигурации](usage.html#настройка-basic-authentication).
+Подробный пример настройки в разделе [Примеры конфигурации](usage.html#настройка-basic-authentication).
 
 ## Как Dex защищен от подбора логина и пароля?
 

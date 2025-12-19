@@ -164,14 +164,15 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 ## How to configure Basic Auth for accessing Kubernetes API via LDAP?
 
-1. Enable the [publishAPI](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
-2. Create a [DexProvider](cr.html#dexprovider) of type `LDAP` with the `enableBasicAuth: true` field.
-3. Configure [RBAC](../../modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
-4. Distribute the `kubeconfig` with configured Basic Auth to users.
+1. Enable the [`publishAPI`](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+1. Create a [DexProvider](cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) field.
+1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
+1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
 
 {% alert level="warning" %}
-Only one provider in the cluster can have `enableBasicAuth` enabled.
+Only one provider in the cluster can have `enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
 {% endalert %}
+
 For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
 
 ## How secure is Dex from brute-forcing my credentials?

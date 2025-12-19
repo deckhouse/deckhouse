@@ -477,12 +477,15 @@ spec:
                     enableBasicAuth:
                       type: boolean
                       description: |
-                        Enables basic authorization for the Kubernetes API server using this LDAP provider.
+                        Enables Basic Authentication for access to the Kubernetes API server.
 
-                        User's LDAP login and password are used as credentials for basic authorization. This feature is not available if there are multiple providers of the `OIDC`, `Crowd` or `LDAP` type in the cluster.
-                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        The credentials are the Crowd user's username and password (from the application configured for this provider). 
+                        
+                        Limitations:
+                        - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
+                        - can be enabled for only one OIDC or Crowd provider in the cluster.
 
-                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
+                        Authentication data and group membership obtained from the IdP are cached for 10 seconds.
               oneOf:
                 - properties:
                     inlet:

@@ -331,11 +331,13 @@ spec:
 Чтобы включить доступ к Kubernetes API по Basic Authentication с использованием учетных записей LDAP:
 
 1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
-2. Установите `enableBasicAuth: true` в ресурсе `DexProvider` для LDAP.
+1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
 
-> **Важно:** Опция `enableBasicAuth` может быть включена только у одного провайдера в кластере (LDAP или Crowd).
+{% alert level="warning" %}
+В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
 
-После настройки пользователи смогут обращаться к Kubernetes API с помощью kubectl, используя свой LDAP логин и пароль.
+После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой LDAP логин и пароль.
 
 Пример `kubeconfig` для пользователя:
 
@@ -363,9 +365,9 @@ current-context: default
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider).
-1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+
+Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 

@@ -239,7 +239,7 @@ spec:
 
 Для настройки аутентификации создайте в LDAP учетную запись с правами только на чтение (service account). Эта учетная запись будет использоваться для выполнения поисковых запросов в каталоге LDAP.
 
-В [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider) укажите следующие параметры:​
+В ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) укажите следующие параметры:​
 
 - `bindDN`: Полный DN (Distinguished Name) созданного service account. Например: `cn=readonly,dc=example,dc=org`.
 - `bindPW`: Пароль для указанного `bindDN`.
@@ -250,7 +250,7 @@ spec:
 В параметре `bindPW` укажите пароль в открытом виде (plain text). Dex не поддерживает передачу хэшированных паролей в этом параметре.
 {% endalert %}
 
-Также вы можете включить поддержку Basic Authentication для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе `DexProvider`. Подробнее см. в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
+Также вы можете включить поддержку Basic Authentication для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
 
 Пример настройки провайдера для интеграции с Active Directory:
 

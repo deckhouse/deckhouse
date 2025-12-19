@@ -81,11 +81,11 @@ In addition to OIDC, you can configure direct access to the API using Basic Auth
 
 To configure:
 
-1. Enable API publishing (`publishAPI` parameter).
-2. Configure an LDAP provider in the `user-authn` module and enable the `enableBasicAuth: true` option.
+1. Enable API publishing ([`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter).
+1. Configure an LDAP provider in the `user-authn` module and enable the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) option.
 
 {% alert level="warning" %}
-Only one provider in the cluster can have `enableBasicAuth` enabled.
+Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
 {% endalert %}
 
 After this, users can configure their `kubeconfig` by specifying their LDAP username and password:
