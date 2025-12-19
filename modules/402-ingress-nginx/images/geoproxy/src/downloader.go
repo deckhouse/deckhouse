@@ -88,7 +88,7 @@ func (d *Downloader) Download(ctx context.Context, dstPathRoot string, cfg *Conf
 		for _, edition := range account.Editions {
 			if err := d.downloadEdition(ctx, dstPathRoot, licenseKey, edition, account, client, clientInitialized, cfg); err != nil {
 				errs = append(errs, fmt.Errorf("edition %s: %w", edition, err))
-				log.Error(redactLicenseKey(err.Error(), licenseKey))
+				log.Error(fmt.Sprintf("Failed to download GeoIP database edition %s: %v", edition, err))
 			}
 		}
 	}
@@ -103,7 +103,7 @@ func (d *Downloader) initMaxMindClient(accountID int, licenseKey string) (maxmin
 
 	client, err := maxmindClient.New(accountID, licenseKey)
 	if err != nil {
-		log.Error(redactLicenseKey(fmt.Sprintf("Failed init MaxMind client: %v", err), licenseKey))
+		log.Error(fmt.Sprintf("Failed to initialize MaxMind client: %v", err))
 		return maxmindClient.Client{}, false
 	}
 
@@ -137,7 +137,7 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 		}
 		if err != nil {
 			maxmindErr = err
-			log.Error(redactLicenseKey(fmt.Sprintf("Failed download GeoIP DB by MaxMind client: %v", err), licenseKey))
+			log.Error(fmt.Sprintf("Failed to download GeoIP database via MaxMind client: %v", err))
 		}
 	}
 
@@ -504,13 +504,6 @@ func (d *Downloader) LockFileIsExpired(cfg *Config) (bool, error) {
 	}
 
 	return time.Since(lastTimeUpdate) >= cfg.MaxmindIntervalUpdate, nil
-}
-
-func redactLicenseKey(s, licenseKey string) string {
-	if licenseKey == "" {
-		return s
-	}
-	return strings.ReplaceAll(s, licenseKey, "***")
 }
 
 // isCurrentPodLeader returns true when the current pod is the lease holder.
