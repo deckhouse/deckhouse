@@ -39,6 +39,12 @@ spec:
                         * `BIOS` — используется BIOS;
                         * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
                         * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                    liveMigrationPolicy:
+                      description: |
+                        Политика live-миграции виртуальной машины.
+
+                        * `AlwaysForced` — всегда использовать forced migration;
+                        * `PreferForced` — предпочитать forced migration.
                 additionalDisks:
                   description: |
                     Параметры дополнительных дисков виртуальной машины.
