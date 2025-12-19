@@ -75,6 +75,12 @@ apiVersions:
                         * `BIOS` — используется BIOS;
                         * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
                         * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                    liveMigrationPolicy:
+                      description: |
+                        Политика live-миграции виртуальной машины.
+
+                        * `AlwaysForced` — всегда использовать forced migration;
+                        * `PreferForced` — предпочитать forced migration.
                     ipAddresses:
                       description: |
                         Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
