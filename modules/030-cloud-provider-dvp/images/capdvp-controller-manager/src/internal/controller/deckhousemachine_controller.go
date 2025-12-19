@@ -431,7 +431,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
-			RunPolicy:                "AlwaysOnUnlessStoppedManually",
+			RunPolicy:                v1alpha2.AlwaysOnUnlessStoppedManually,
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
