@@ -1,10 +1,14 @@
 {{/* Renders a module configuration.
 
   Context:
+  .name — module name
+  .channel — module channel
   .data — a map, containing the JSON schema.
   .langData — map, containing the preferable language data. Can be empty.
   */}}
 
+  {{- $moduleName := .name }}
+  {{- $moduleChannel := .channel }}
   {{- $data := .data }}
   {{- $conversions := .conversions }}
   {{- $langData := .langData }}
@@ -15,6 +19,9 @@
   {{- end }}
 
   {{/* TODO: format_examples $data */}}
+
+  {{/* Show module requirements */}}
+  {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}
 
   {{/* Reading all conversions files */}}
 

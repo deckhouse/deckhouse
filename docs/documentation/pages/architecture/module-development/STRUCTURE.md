@@ -114,6 +114,8 @@ Deckhouse Kubernetes Platform (DKP) has its own library for working with templat
 
 This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
 
+Subfolders in the `/crds` folder are ignored.
+
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
 * create a translation file with a structure identical to the original resource file:
   - in it, keep only the `description` parameters containing the translation text;
