@@ -83,7 +83,7 @@ func handleSetPriorities(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		if ng.Priority != nil {
-			key := fmt.Sprintf("^%s-%s-[0-9a-zA-Z]+$", prefix, ng.Name)
+			key := fmt.Sprintf(".*%s-%s-[0-9a-zA-Z]+$", prefix, ng.Name)
 			priorities[*ng.Priority] = append(priorities[*ng.Priority], key)
 		}
 	}
