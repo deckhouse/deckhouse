@@ -28,9 +28,10 @@ type SSHCredentialsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	User          string `json:"user"`
-	PrivateSSHKey string `json:"privateSSHKey"`
-	SudoPassword  string `json:"sudoPassword,omitempty"`
+	User                    string `json:"user"`
+	PrivateSSHKey           string `json:"privateSSHKey"`
+	PrivateSSHKeyPassphrase string `json:"privateSSHKeyPassphrase,omitempty"`
+	SudoPassword            string `json:"sudoPassword,omitempty"`
 
 	//+kubebuilder:default:=22
 	//+kubebuilder:validation:Minimum=1
