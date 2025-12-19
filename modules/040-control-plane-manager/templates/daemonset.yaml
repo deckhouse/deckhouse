@@ -137,8 +137,11 @@ kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tp
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
-  {{- if $tpl_context.apiserver.webhookCA }}
+  {{- if $tpl_context.apiserver.webhookURL }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.apiserver.webhookURL }}
+extra-file-authorization-config.yaml: {{ include "authorizationConfigTemplate" dict | b64enc }}
   {{- end }}
 
   {{- if $tpl_context.apiserver.auditWebhookURL }}
