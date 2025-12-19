@@ -214,11 +214,11 @@ index 8c3cb87b82a..499e454a207 100644
  	LabelMetadataName = "kubernetes.io/metadata.name"
 +
 +	// Resource quota control labels
-+	LabelResourceQuotaIgnore          = "resources.k8s.io/ignore"
-+	LabelResourceQuotaDiscountStorage = "resources.k8s.io/discount-storage"
-+	LabelResourceQuotaCapStorage      = "resources.k8s.io/cap-storage"
-+	LabelResourceQuotaDiscountCPU     = "resources.k8s.io/discount-cpu"
-+	LabelResourceQuotaCapCPU          = "resources.k8s.io/cap-cpu"
-+	LabelResourceQuotaDiscountMemory  = "resources.k8s.io/discount-memory"
-+	LabelResourceQuotaCapMemory       = "resources.k8s.io/cap-memory"
++	LabelResourceQuotaIgnore          = "resource-quota-overrides.deckhouse.io/ignore"
++	LabelResourceQuotaDiscountStorage = "resource-quota-overrides.deckhouse.io/discount-storage"
++	LabelResourceQuotaCapStorage      = "resource-quota-overrides.deckhouse.io/cap-storage"
++	LabelResourceQuotaDiscountCPU     = "resource-quota-overrides.deckhouse.io/discount-cpu"
++	LabelResourceQuotaCapCPU          = "resource-quota-overrides.deckhouse.io/cap-cpu"
++	LabelResourceQuotaDiscountMemory  = "resource-quota-overrides.deckhouse.io/discount-memory"
++	LabelResourceQuotaCapMemory       = "resource-quota-overrides.deckhouse.io/cap-memory"
  )
