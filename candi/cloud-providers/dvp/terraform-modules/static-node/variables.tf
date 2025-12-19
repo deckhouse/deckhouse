@@ -138,8 +138,22 @@ variable "timeouts" {
     delete = string
   })
 }
+variable "live_migration_policy" {
+  type        = string
+  default     = null
+  description = "Live migration policy for VirtualMachine."
+
+  validation {
+    condition     = var.live_migration_policy == null || contains(["AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: AlwaysForced, PreferForced."
+  }
+}
+
 
 locals {
+  additional_disks_hashes = [
+    for d in var.additional_disks : d.hash
+  ]
   vm_merged_node_selector = merge(
     {
       for k, v in {

@@ -138,6 +138,17 @@ variable "virtual_machine_class_name" {
   default = "generic"
 }
 
+variable "live_migration_policy" {
+  type        = string
+  default     = null
+  description = "Live migration policy for VirtualMachine (masters only)."
+
+  validation {
+    condition     = var.live_migration_policy == null || contains(["AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: AlwaysForced, PreferForced."
+  }
+}
+
 variable "timeouts" {
   default = { "create" = "30m", "update" = "5m", "delete" = "5m" }
   type = object({
