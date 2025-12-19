@@ -138,6 +138,7 @@ variable "timeouts" {
     delete = string
   })
 }
+
 variable "live_migration_policy" {
   type        = string
   default     = null
@@ -149,6 +150,16 @@ variable "live_migration_policy" {
   }
 }
 
+variable "run_policy" {
+  type        = string
+  default     = null
+  description = "Run policy for VirtualMachine."
+
+  validation {
+    condition     = var.run_policy == null || contains(["AlwaysOn", "AlwaysOnUnlessStoppedManually"], var.run_policy)
+    error_message = "run_policy must be one of: AlwaysOn, AlwaysOnUnlessStoppedManually."
+  }
+}
 
 locals {
   additional_disks_hashes = [
@@ -182,7 +193,7 @@ locals {
       }
     },
     {
-      "rootDiskHash" = var.root_disk.hash,
+      "rootDiskHash"        = var.root_disk.hash,
       "additionalDisksHash" = local.additional_disks_hashes
     },
   )

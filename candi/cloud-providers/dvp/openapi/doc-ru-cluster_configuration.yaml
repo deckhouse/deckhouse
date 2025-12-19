@@ -70,6 +70,17 @@ apiVersions:
                         Имя VirtualMachineClass.
 
                         Предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Ресурс позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
+                    runPolicy:
+                      description: |
+                        Политика запуска виртуальной машины.
+
+                        * `AlwaysOn` — виртуальная машина всегда должна быть запущена;
+                        * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания).
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      example: AlwaysOnUnlessStoppedManually
                     bootloader:
                       description: |
                         Определяет загрузчик для виртуальной машины.

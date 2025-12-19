@@ -93,9 +93,9 @@ variable "kubernetes_data_disk" {
 
 variable "additional_disks" {
   type = list(object({
-    name          = string
-    hash          = string
-    md5_id        = string
+    name   = string
+    hash   = string
+    md5_id = string
   }))
   default = []
 }
@@ -148,6 +148,16 @@ variable "live_migration_policy" {
     error_message = "live_migration_policy must be one of: AlwaysForced, PreferForced."
   }
 }
+variable "run_policy" {
+  type        = string
+  default     = null
+  description = "Run policy for VirtualMachine."
+
+  validation {
+    condition     = var.run_policy == null || contains(["AlwaysOn", "AlwaysOnUnlessStoppedManually"], var.run_policy)
+    error_message = "run_policy must be one of: AlwaysOn, AlwaysOnUnlessStoppedManually."
+  }
+}
 
 variable "timeouts" {
   default = { "create" = "30m", "update" = "5m", "delete" = "5m" }
@@ -187,8 +197,8 @@ locals {
       }
     },
     {
-      "rootDiskHash" = var.root_disk.hash,
-      "etcDiskHash"  = var.kubernetes_data_disk.hash
+      "rootDiskHash"        = var.root_disk.hash,
+      "etcDiskHash"         = var.kubernetes_data_disk.hash
       "additionalDisksHash" = local.additional_disks_hashes
     },
   )

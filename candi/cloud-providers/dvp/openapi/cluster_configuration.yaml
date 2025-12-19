@@ -206,6 +206,17 @@ apiVersions:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
+                    runPolicy:
+                      type: string
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      description: |
+                        Run policy for the virtual machine.
+
+                        * `AlwaysOn`: The virtual machine should always be running.
+                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (e.g., for maintenance).
                     liveMigrationPolicy:
                       type: string
                       enum:
