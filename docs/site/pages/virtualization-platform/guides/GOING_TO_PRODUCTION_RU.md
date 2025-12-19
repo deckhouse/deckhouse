@@ -222,7 +222,6 @@ Frontend-узлы балансируют входящий трафик. На н�
 
 Дополнительная информация о настройке проектов и ролевой модели приведена в разделах [Проекты](/products/virtualization-platform/documentation/admin/platform-management/access-control/projects.html) и [Ролевая модель](/products/virtualization-platform/documentation/admin/platform-management/access-control/role-model.html).
 
-
 ## Уведомление о событиях мониторинга
 
 {% alert level="info" %}

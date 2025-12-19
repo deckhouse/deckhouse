@@ -232,7 +232,6 @@ Access control is configured through a role model using the standard Kubernetes 
 
 See also the [Projects](/products/virtualization-platform/documentation/admin/platform-management/access-control/projects.html) and [Role model](/products/virtualization-platform/documentation/admin/platform-management/access-control/role-model.html) sections.
 
-
 ## Monitoring event notifications
 
 {% alert level="info" %}
