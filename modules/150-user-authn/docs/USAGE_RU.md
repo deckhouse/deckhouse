@@ -333,9 +333,7 @@ spec:
 1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
 1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
 
-{% alert level="warning" %}
-В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
-{% endalert %}
+> **Внимание**. В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
 После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой LDAP логин и пароль.
 

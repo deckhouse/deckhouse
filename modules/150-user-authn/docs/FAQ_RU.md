@@ -168,9 +168,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
 1. Передайте пользователям `kubeconfig` с настроенными параметрами Basic Authentication (логин и пароль LDAP).
 
-{% alert level="warning" %}
-В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
-{% endalert %}
+> **Внимание**. В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
 Подробный пример настройки в разделе [Примеры конфигурации](usage.html#настройка-basic-authentication).
 

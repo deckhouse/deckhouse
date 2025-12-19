@@ -169,9 +169,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
 1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
 
-{% alert level="warning" %}
-Only one provider in the cluster can have `enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
-{% endalert %}
+> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
 
 For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
 
