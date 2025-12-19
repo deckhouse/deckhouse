@@ -243,14 +243,14 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	case v1alpha2.MachineStopped:
 		// VM is stopped. With "AlwaysOnUnlessStoppedManually" run policy this can be expected
 		// (e.g., manual stop for maintenance). We do not force-start the VM here.
-		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
+		logger.Info("VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start", "state", vm.Status.Phase)
 		dvpMachine.Status.Ready = false
 		conditions.MarkFalse(
 			dvpMachine,
 			infrastructurev1a1.VMReadyCondition,
 			infrastructurev1a1.VMInStoppedStateReason,
 			clusterv1b1.ConditionSeverityWarning,
-			"VM is in Stopped state, waiting for DVP to bring it back up",
+			"VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start",
 		)
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	case v1alpha2.MachineDegraded:

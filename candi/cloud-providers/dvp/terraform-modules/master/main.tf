@@ -52,7 +52,7 @@ locals {
       "enableParavirtualization" = true
       "osType"                   = "Generic"
       "runPolicy"                = "AlwaysOnUnlessStoppedManually"
-      "liveMigrationPolicy"      = "PreferForced"
+
       "virtualMachineClassName"  = var.virtual_machine_class_name
 
       "disruptions" = {
@@ -90,6 +90,7 @@ locals {
         }
       }
     },
+    var.live_migration_policy != null ? { "liveMigrationPolicy" = var.live_migration_policy } : {},
     var.ipv4_address != null && var.ipv4_address.name != "" ? { "virtualMachineIPAddressName" = var.ipv4_address.name } : null,
     var.priority_class_name != null ? { "priorityClassName" = var.priority_class_name } : null,
     var.tolerations != null ? { "tolerations" = var.tolerations } : null,

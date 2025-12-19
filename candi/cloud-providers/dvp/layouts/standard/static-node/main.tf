@@ -68,6 +68,7 @@ module "static-node" {
   memory_size                = local.memory_size
   virtual_machine_class_name = local.virtual_machine_class_name
   bootloader                 = local.bootloader
+  live_migration_policy      = local.live_migration_policy
   cpu                        = local.cpu
   ssh_public_key             = local.ssh_public_key
   hostname                   = local.hostname
