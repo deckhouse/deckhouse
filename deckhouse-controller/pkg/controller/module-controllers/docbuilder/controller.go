@@ -388,6 +388,7 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		// Convert to forward slashes for IsDocsPath check (it expects Unix-style paths)
 		relPathUnix := filepath.ToSlash(relPath)
 		if !module.IsDocsPath(relPathUnix) {
+			r.logger.Debug("skip non-docs path", slog.String("path", relPathUnix))
 			return nil
 		}
 
@@ -404,6 +405,7 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		}
 
 		if info.IsDir() {
+			r.logger.Debug("skip directory", slog.String("path", file))
 			return nil
 		}
 
