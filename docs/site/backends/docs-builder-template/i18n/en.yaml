@@ -28,6 +28,7 @@ requirements_modules_title: To the versions of other modules
 requirements_modules_any_version: any version
 requirements_version_and_above: and above
 requirements_version_above: above
+module_lifecycle_stage: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
 conversion_global_action_message: Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
