@@ -184,14 +184,9 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 
-				if !strings.Contains(result, "authorization-mode") {
-					t.Error("Expected authorization-mode not found")
-				}
-				if !strings.Contains(result, "Node,Webhook,RBAC") {
-					t.Error("Expected webhook authorization mode not found")
-				}
-				if !strings.Contains(result, "authorization-webhook-config-file") {
-					t.Error("Expected webhook config file not found")
+				// For Kubernetes >= 1.30, authorization-config is used instead of authorization-mode
+				if !strings.Contains(result, "authorization-config") {
+					t.Error("Expected authorization-config not found")
 				}
 			})
 
@@ -905,7 +900,7 @@ func testEdgeCases(t *testing.T) {
 			}
 
 			expectedStrings := []string{
-				"Node,Webhook,RBAC",
+				"authorization-config", // For Kubernetes >= 1.30, authorization-config is used instead of Node,Webhook,RBAC
 				"authentication-token-webhook-config-file",
 				"audit-webhook-config-file",
 				"authentication-config",
