@@ -1,4 +1,4 @@
-{{ define "main" }}
+{{- define "main" }}
 <div class="navigation__container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
@@ -45,116 +45,149 @@
 
     {{.Content}}
 
-{{ $lang := .Site.Language.Lang }}
-{{ $modulesChannelsData := .Site.Data.modules.channels }}
-{{ $channelsInfo := .Site.Data.channels.info }}
-{{ $modulesList := slice }}
-{{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
-{{ $modulesEditions := .Site.Data.modules_all }}
-{{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
-{{ $ctx := $ }}
+{{- $lang := .Site.Language.Lang }}
+{{- $modulesChannelsData := .Site.Data.modules.channels }}
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $modulesList := slice }}
+{{- $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
+{{- $embeddedModulesMetadata := .Site.Data.dkp.embedded_modules_metadata.modules }}
+{{- $modulesEditions := .Site.Data.modules_all }}
+{{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{- $ctx := $ }}
 
-{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
-{{ $currentModuleName := index $_pathElements 1 }}
-{{ $currentModuleChannel := index $_pathElements 2 }}
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
 
-{{ range $module, $data := $modulesChannelsData }}
-  {{ $moduleTitle := "" }}
-  {{ $moduleChannel := "" }}
-  {{ $moduleDescription := "" }}
-  {{ $moduleTags := slice }}
+{{- range $module, $data := $modulesChannelsData }}
+  {{- $moduleTitle := "" }}
+  {{- $moduleChannel := "" }}
+  {{- $moduleDescription := "" }}
+  {{- $moduleTags := slice }}
 
   {{/* Skip the embedded module if there is external module with the same name */}}
-  {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
-  {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
-    {{ warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
-  {{ end }}
+  {{- $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
+  {{- if gt ($embeddedModuleWithTheSameName | len) 0 }}
+    {{- warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
+  {{- end }}
 
-  {{ $moduleTags = index (index $modulesEditions $module) "tags" }}
+  {{- $moduleTags = index (index $modulesEditions $module) "tags" }}
 
-  {{ range sort $channelsInfo "stability" "desc" }}
+  {{- range sort $channelsInfo "stability" "desc" }}
     {{/* Skip rock-solid channel */}}
-    {{ if eq .code "rock-solid"  }}{{ continue }}{{ end }}
-    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
-    {{ $code := .code }}
-    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
-      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
-      {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
-      {{ end }}
-      {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
-      {{ if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
-    {{ end}}
-  {{ end}}
+    {{- if eq .code "rock-solid"  }}{{ continue }}{{ end }}
 
-  {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
-  {{ if (not $moduleChannel ) }}{{ continue }}{{ end }}
-  {{ $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
-{{ end}}
+    {{/* The condition to select the data from the available stablest module channel */}}
+    {{- if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
 
-{{ warnf "Found %d modules from sources." ($modulesList | len) }}
-{{ if $embeddedModulesList }}
-  {{ warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
-  {{ $filteredEmbeddedModules := slice }}
-  {{ range $embeddedModulesList }}
-    {{ $externalModuleWithSameName := (where $modulesList "module" .module) }}
-    {{ if eq ($externalModuleWithSameName | len) 0 }}
-      {{ $filteredEmbeddedModules = $filteredEmbeddedModules | append . }}
-    {{ else }}
-      {{ warnf "Skipping embedded module %s because external module with same name exists." .module }}
-    {{ end }}
-  {{ end }}
-  {{ $modulesList = $modulesList | append $filteredEmbeddedModules }}
-{{ else }}
-  {{ warnf "No embedded modules found!" }}
-{{ end }}
+    {{- $channel := .code }}
+    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $channel ) }}
+      {{- if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
+      {{- else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
+      {{- end }}
+      {{- if not $moduleChannel }}{{ $moduleChannel = $channel }}{{ end }}
+      {{- if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
+    {{- end}}
+  {{- end}}
+
+  {{- $moduleData := index (index $ctx.Site.Data.modules $module) $moduleChannel }}
+  {{- $moduleMetadata := index $moduleData "module" }}
+  {{- $moduleOss := index $moduleData "oss" }}
+  {{- if and $moduleMetadata $moduleOss }}
+    {{- $moduleMetadata = merge $moduleMetadata (dict "oss" $moduleOss) }}
+  {{- end }}
+
+  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{- if (not $moduleChannel ) }}{{ continue }}{{ end }}
+  {{- $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "metadata" $moduleMetadata "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
+{{- end}}
+
+{{- warnf "Found %d modules from sources." ($modulesList | len) }}
+{{- if $embeddedModulesList }}
+  {{- warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
+  {{- $filteredEmbeddedModules := slice }}
+  {{- range $embeddedModulesList }}
+    {{- $externalModuleWithSameName := (where $modulesList "module" .module) }}
+    {{- if eq ($externalModuleWithSameName | len) 0 }}
+      {{- $filteredEmbeddedModules = $filteredEmbeddedModules | append . }}
+    {{- else }}
+      {{- warnf "Skipping embedded module %s because external module with same name exists." .module }}
+    {{- end }}
+  {{- end }}
+  {{- $modulesList = $modulesList | append $filteredEmbeddedModules }}
+{{- else }}
+  {{- warnf "No embedded modules found!" }}
+{{- end }}
 
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
         <h2 class="button-tile__title">{{ .module }}</h2>
-        <p class="button-tile__descr">{{ if and (index . $lang) (index (index . $lang) "description") }}{{ (index (index . $lang) "description") }}{{ else }}{{ .description }}{{ end }}</p>
+        {{- $moduleStage := "" }}
+        {{- $moduleDescription := default "" .description }}
+
+        {{- if .metadata }}
+          {{- $moduleStage = .metadata.stage }}
+
+          {{/* Try to get description from module metadata (module.yaml) */}}
+          {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
+          {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
+            {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
+          {{- end }}
+        {{- end }}
+
+        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+          <span>
+            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
+              {{- $moduleStage }}
+            </span>
+          </span>
+        {{- end }}
+          <p class="button-tile__descr">
+            {{ $moduleDescription }}
+          </p>
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
 
               {{/* add commercial or community edition tag */}}
-              {{ $tags := .tags }}
+              {{- $tags := .tags }}
 
               {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
-              {{ $editionTagTitle := "" }}
+              {{- $editionTagTitle := "" }}
 
-              {{ $moduleEditionsData := slice }}
+              {{- $moduleEditionsData := slice }}
 
-              {{ if gt (where $embeddedModulesList "module" .module | len ) 0 }}
-                {{ $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
-                {{ if or
+              {{- if gt (where $embeddedModulesList "module" .module | len ) 0 }}
+                {{- $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
+                {{- if or
                    (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
                    (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
                    (in (index $moduleEditionsData "editions") "ce")
                 }}
-                  {{ $editionTagTitle = T "community_edition_en" }}
-                {{ else }}
-                  {{ $editionTagTitle = T "commercial_editions_en" }}
-                {{ end }}
-              {{ else if isset $modulesEditions .module }}
-                {{ $moduleEditionsData := index $modulesEditions .module }}
-                {{ if or
+                  {{- $editionTagTitle = T "community_edition_en" }}
+                {{- else }}
+                  {{- $editionTagTitle = T "commercial_editions_en" }}
+                {{- end }}
+              {{- else if isset $modulesEditions .module }}
+                {{- $moduleEditionsData := index $modulesEditions .module }}
+                {{- if or
                      (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
                      (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
                      (in (index $moduleEditionsData "editions") "ce")
                 }}
-                  {{ $editionTagTitle = T "community_edition_en" }}
-                {{ else }}
-                  {{ $editionTagTitle = T "commercial_editions_en" }}
-                {{ end }}
-              {{ end }}
+                  {{- $editionTagTitle = T "community_edition_en" }}
+                {{- else }}
+                  {{- $editionTagTitle = T "commercial_editions_en" }}
+                {{- end }}
+              {{- end }}
 
-              {{ if gt ($editionTagTitle | len ) 0 }}
-                {{ $tags = $tags | append $editionTagTitle }}
-              {{ end }}
+              {{- if gt ($editionTagTitle | len ) 0 }}
+                {{- $tags = $tags | append $editionTagTitle }}
+              {{- end }}
 
-              {{ range $tags }}
+              {{- range $tags }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
-              {{end}}
+              {{- end }}
 
             </div>
             {{/* <div class="button-tile__time">
@@ -182,8 +215,8 @@
     </script>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
-    {{ end }}
+    {{- end }}
 
   </div>
 </div>
-{{ end }}
+{{- end }}

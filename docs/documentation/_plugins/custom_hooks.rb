@@ -1,5 +1,7 @@
 require 'json'
 
+$modules_data = nil
+
 def doc_links_for_module(moduleName)
     data = {
       'overview' => {
@@ -55,14 +57,16 @@ def find_in_entries(entries, item_name, item_value)
   nil
 end
 
-# Inserts a block with the warnings about module stage.
-def insert_module_stage_block(sidebar, page)
-    return if !sidebar
-    moduleData = find_in_entries(sidebar, 'moduleName', page.data['module-kebab-name'])
-    if moduleData and moduleData['featureStatus']
-        additional_content = "\n{% include warning-version.liquid stage=\"#{moduleData['featureStatus']}\" %}\n\n"
-        page.content.prepend(additional_content)
-    end
+# Inserts information about the module stage.
+def insert_module_stage_block(page)
+    return if page.data['module-kebab-name'] == nil or page.data['module-kebab-name'] == 'global'
+    moduleMetaData = $modules_data.dig('metadata', 'modules', page.data['module-kebab-name'])
+    moduleStage = moduleMetaData.dig('stage') if moduleMetaData
+    return if not moduleStage.is_a?(String) or moduleStage.empty?
+    return if not moduleStage in modulesAllowedStages
+
+    additional_content = "\n{% include module-stage-badge.liquid stage=\"#{moduleStage}\" %}\n\n"
+    page.content.prepend(additional_content)
 end
 
 ##
@@ -70,6 +74,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesByModule = Hash.new()
   bundlesModules = Hash.new()
   bundleNames = []
+  $modules_data = site.data['modules']
 
   puts "Custom hook: pre_render"
 
@@ -143,6 +148,13 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     'FAQ_RU.md', 'FAQ.md'
   ]
 
+  moduleAllowedStages = [
+    'Experimental',
+    'Preview',
+    'General Availability',
+    'Deprecated'
+  ]
+
   # Set the following data for each module page:
   # - module-kebab-name: module name in kebab case
   # - module-snake-name: module name in snake case
@@ -167,8 +179,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     end
 
     if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
-      # TODO Fix it
-      # insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
+      insert_module_stage_block(page)
 
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
