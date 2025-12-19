@@ -148,10 +148,24 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return result, nil
 		}
 
-		return r.deleteReconcile(ctx, md)
+		res, err := r.deleteReconcile(ctx, md)
+		if err != nil {
+			r.logger.Warn("delete reconcile", log.Err(err))
+
+			return res, err
+		}
+
+		return res, nil
 	}
 
-	return r.createOrUpdateReconcile(ctx, md)
+	res, err := r.createOrUpdateReconcile(ctx, md)
+	if err != nil {
+		r.logger.Warn("create or update reconcile", log.Err(err))
+
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (r *reconciler) deleteReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
