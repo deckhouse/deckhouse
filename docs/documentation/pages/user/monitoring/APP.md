@@ -154,7 +154,7 @@ you can specify additional annotations for the Pod or Service for which monitori
   You can specify several such annotations.
   For example, `prometheus.deckhouse.io/query-param-foo=bar` and `prometheus.deckhouse.io/query-param-bar=zxc` will be converted to a request like `http://...?foo=bar&bar=zxc`.
 - `prometheus.deckhouse.io/allow-unready-pod`: Allows metrics collection from pods in any state
-   (by default, metrics are collected only from pods in Ready state). This option is useful in rare cases.
+   (by default, metrics are collected only from pods in `Ready` state). This option is useful in rare cases.
    For example, if your application starts very slowly (data is loaded into the database or caches are warmed up at startup),
    but useful metrics are already provided during startup that help monitor the application startup.
 - `prometheus.deckhouse.io/sample-limit`: How many samples are allowed to be collected from a pod (`5000` by default).
