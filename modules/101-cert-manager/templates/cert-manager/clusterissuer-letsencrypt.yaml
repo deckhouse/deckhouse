@@ -41,8 +41,26 @@ spec:
       {{- else }}
         gatewayHTTPRoute:
           parentRefs:
+          {{- if and (hasKey .Values.certManager "http01Gateway") (hasKey .Values.certManager.http01Gateway "parentRefs") }}
+          {{- range .Values.certManager.http01Gateway.parentRefs }}
+            - name: {{ .name }}
+              {{- if .namespace }}
+              namespace: {{ .namespace }}
+              {{- end }}
+              {{- if .group }}
+              group: {{ .group }}
+              {{- end }}
+              {{- if .kind }}
+              kind: {{ .kind }}
+              {{- end }}
+              {{- if .sectionName }}
+              sectionName: {{ .sectionName }}
+              {{- end }}
+          {{- end }}
+          {{- else }}
             - name: dex-grafana
               namespace: istio-ingress
               kind: Gateway
+          {{- end }}
       {{- end }}
 {{- end }}

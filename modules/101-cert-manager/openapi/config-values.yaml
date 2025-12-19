@@ -138,6 +138,36 @@ properties:
       The name of the `ingressClass` used to confirm ownership of domain using the [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenges method.
       If the parameter is omitted, the default `ingressClass` is used.
 
+  http01Gateway:
+    type: object
+    description: |
+      Parameters for using the Gateway API based HTTP-01 solver when both `ingressClassHttp01` and `global.modules.ingressClass` are not set.
+    properties:
+      parentRefs:
+        type: array
+        description: |
+          List of parentRefs that will be set on HTTPRoutes created by the Gateway API HTTP-01 solver. Usually they reference Gateway resources.
+        items:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: Name of the parent resource (usually a Gateway).
+            namespace:
+              type: string
+              description: Namespace of the parent resource.
+            group:
+              type: string
+              description: API group of the parent resource.
+            kind:
+              type: string
+              description: Kind of the parent resource.
+            sectionName:
+              type: string
+              description: Optional section name within the parent resource (for example, a listener name in a Gateway).
+
   recursiveSettings:
     type: object
     description: |
