@@ -140,14 +140,14 @@ resource "openstack_compute_instance_v2" "bastion" {
   metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
 }
 
-resource "openstack_compute_floatingip_v2" "bastion" {
+resource "openstack_networking_floatingip_v2" "bastion" {
   count = local.bastion_instance != {} ? 1 : 0
   pool  = data.openstack_networking_network_v2.external.name
 }
 
 resource "openstack_compute_floatingip_associate_v2" "bastion" {
   count                 = local.bastion_instance != {} ? 1 : 0
-  floating_ip           = openstack_compute_floatingip_v2.bastion[0].address
+  floating_ip           = openstack_networking_floatingip_v2.bastion[0].address
   instance_id           = openstack_compute_instance_v2.bastion[0].id
   wait_until_associated = true
   lifecycle {
