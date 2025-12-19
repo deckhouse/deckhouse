@@ -150,7 +150,7 @@ For more precise application monitoring configuration,
 you can specify additional annotations for the Pod or Service for which monitoring is configured:
 
 - `prometheus.deckhouse.io/path`: Path for metrics collection (default: `/metrics`).
-- `prometheus.deckhouse.io/query-param-$name`: GET parameters that will be converted to a map of the form `$name=$value` (default: '').
+- `prometheus.deckhouse.io/query-param-$name`: GET parameters that will be converted to a map of the form `$name=$value` (default: `''`).
   You can specify several such annotations.
   For example, `prometheus.deckhouse.io/query-param-foo=bar` and `prometheus.deckhouse.io/query-param-bar=zxc` will be converted to a request like `http://...?foo=bar&bar=zxc`.
 - `prometheus.deckhouse.io/allow-unready-pod`: Allows metrics collection from pods in any state
@@ -258,7 +258,9 @@ To connect an application to the monitoring system, follow these steps:
      labels:
        prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
    ```
-  
+
+{% raw %}
+
 1. Create a [ScrapeConfig](/modules/operator-prometheus/cr.html#scrapeconfig) resource
    with the required `prometheus: main` label:
 
@@ -283,6 +285,8 @@ To connect an application to the monitoring system, follow these steps:
          replacement: kube-state-metrics
      metricsPath: '/metrics'
    ```
+
+{% endraw %}
 
    If necessary, configure additional settings using the [reference](/modules/operator-prometheus/cr.html#scrapeconfig)
    for available resource parameters.
