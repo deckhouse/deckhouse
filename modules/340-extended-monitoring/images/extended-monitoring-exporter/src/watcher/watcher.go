@@ -32,17 +32,19 @@ import (
 )
 
 type Watcher struct {
-	clientSet  *kubernetes.Clientset
-	mu         sync.Mutex
-	nsWatchers map[string]context.CancelFunc
-	metrics    *met.ExporterMetrics
+	clientSet    *kubernetes.Clientset
+	mu           sync.Mutex
+	nsWatchers   map[string]context.CancelFunc
+	nsThresholds map[string]map[string]float64
+	metrics      *met.ExporterMetrics
 }
 
 func NewWatcher(clientSet *kubernetes.Clientset, metrics *met.ExporterMetrics) *Watcher {
 	return &Watcher{
-		clientSet:  clientSet,
-		nsWatchers: make(map[string]context.CancelFunc),
-		metrics:    metrics,
+		clientSet:    clientSet,
+		nsWatchers:   make(map[string]context.CancelFunc),
+		nsThresholds: make(map[string]map[string]float64),
+		metrics:      metrics,
 	}
 }
 
@@ -65,6 +67,7 @@ func (w *Watcher) updateNode(node *v1.Node, deleted bool) {
 		labels,
 		nodeThresholdMap,
 		prometheus.Labels{"node": node.Name},
+		"",
 	)
 	met.UpdateIsPopulated()
 }
@@ -90,6 +93,11 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 
 func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledOnNamespace(ns.Labels)
+
+	w.mu.Lock()
+	w.nsThresholds[ns.Name] = extractThresholds(ns.Labels)
+	w.mu.Unlock()
+
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NAMESPACE ADDED] %s", ns.Name)
 
@@ -111,17 +119,20 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	enabled := enabledLabel(ns.Labels)
-	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
-	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
 	w.mu.Lock()
+	w.nsThresholds[ns.Name] = extractThresholds(ns.Labels)
 	cancel, exists := w.nsWatchers[ns.Name]
 	w.mu.Unlock()
+
+	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
+	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
 	if !enabled && exists {
 		cancel()
 		w.mu.Lock()
 		delete(w.nsWatchers, ns.Name)
+		delete(w.nsThresholds, ns.Name)
 		w.mu.Unlock()
 
 		w.cleanupNamespaceResources(ns.Name)
@@ -153,10 +164,12 @@ func (w *Watcher) deleteNamespace(ns *v1.Namespace) {
 	if cancel, exists := w.nsWatchers[ns.Name]; exists {
 		cancel()
 		delete(w.nsWatchers, ns.Name)
-		log.Printf("[NAMESPACE DELETED] %s watchers stopped", ns.Name)
-		met.UpdateLastObserved()
 	}
+	delete(w.nsThresholds, ns.Name)
 	w.mu.Unlock()
+
+	log.Printf("[NAMESPACE DELETED] %s watchers stopped", ns.Name)
+	met.UpdateLastObserved()
 }
 
 // ---------------- Pod Watcher ----------------
@@ -180,6 +193,7 @@ func (w *Watcher) updatePod(pod *v1.Pod, deleted bool) {
 		labels,
 		podThresholdMap,
 		prometheus.Labels{"namespace": pod.Namespace, "pod": pod.Name},
+		pod.Namespace,
 	)
 }
 
@@ -204,6 +218,7 @@ func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet, deleted bool) {
 		labels,
 		daemonSetThresholdMap,
 		prometheus.Labels{"namespace": ds.Namespace, "daemonset": ds.Name},
+		ds.Namespace,
 	)
 }
 
@@ -227,6 +242,7 @@ func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet, deleted bool) {
 		labels,
 		statefulSetThresholdMap,
 		prometheus.Labels{"namespace": sts.Namespace, "statefulset": sts.Name},
+		sts.Namespace,
 	)
 }
 
@@ -250,6 +266,7 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
 		labels,
 		deploymentThresholdMap,
 		prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name},
+		dep.Namespace,
 	)
 }
 
@@ -273,6 +290,7 @@ func (w *Watcher) updateIngress(ing *networkingv1.Ingress, deleted bool) {
 		labels,
 		ingressThresholdMap,
 		prometheus.Labels{"namespace": ing.Namespace, "ingress": ing.Name},
+		ing.Namespace,
 	)
 }
 

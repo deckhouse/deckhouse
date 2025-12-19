@@ -17,6 +17,7 @@ import (
 	"context"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -39,7 +40,6 @@ func enabledOnNamespace(labels map[string]string) bool {
 
 func enabledLabel(labels map[string]string) bool {
 	val, ok := labels[namespacesEnabledLabel]
-
 	if !ok {
 		return true
 	}
@@ -51,12 +51,43 @@ func enabledLabel(labels map[string]string) bool {
 	return true
 }
 
-func thresholdValue(labels map[string]string, threshold string, def float64) float64 {
-	if val, ok := labels[labelThresholdPrefix+threshold]; ok {
+func extractThresholds(labels map[string]string) map[string]float64 {
+	out := make(map[string]float64)
+
+	for k, v := range labels {
+		if !strings.HasPrefix(k, labelThresholdPrefix) {
+			continue
+		}
+		name := strings.TrimPrefix(k, labelThresholdPrefix)
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			out[name] = f
+		} else {
+			log.Printf("[thresholdLabel] could not parse %s=%s", k, v)
+		}
+	}
+
+	return out
+}
+
+func thresholdValueWithNamespace(
+	resourceLabels map[string]string,
+	namespace string,
+	threshold string,
+	def float64,
+	nsThresholds map[string]map[string]float64,
+) float64 {
+	if val, ok := resourceLabels[labelThresholdPrefix+threshold]; ok {
 		if f, err := strconv.ParseFloat(val, 64); err == nil {
 			return f
 		}
 		log.Printf("[thresholdLabel] could not parse %s=%s", threshold, val)
+	}
+	if namespace != "" {
+		if nsMap, ok := nsThresholds[namespace]; ok {
+			if v, ok := nsMap[threshold]; ok {
+				return v
+			}
+		}
 	}
 	return def
 }
@@ -96,6 +127,7 @@ func (w *Watcher) updateMetrics(
 	resourceLabels map[string]string,
 	thresholds map[string]float64,
 	labels prometheus.Labels,
+	namespace string,
 ) {
 	enabled := enabledLabel(resourceLabels)
 	enabledVec.With(labels).Set(boolToFloat64(enabled))
@@ -103,7 +135,14 @@ func (w *Watcher) updateMetrics(
 	if enabled {
 		for key, defaultValue := range thresholds {
 			labels["threshold"] = key
-			thresholdVec.With(labels).Set(thresholdValue(resourceLabels, key, defaultValue))
+			value := thresholdValueWithNamespace(
+				resourceLabels,
+				namespace,
+				key,
+				defaultValue,
+				w.nsThresholds,
+			)
+			thresholdVec.With(labels).Set(value)
 		}
 	} else {
 		thresholdVec.DeletePartialMatch(labels)
