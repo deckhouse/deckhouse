@@ -241,9 +241,14 @@ import:
   add: /scripts/entrypoint.sh
   to: /opt/entrypoint.sh
   before: install
+- image: tools/util-linux
+  add: /usr/bin/nsenter
+  to: /usr/bin/nsenter
+  before: install
 shell:
   install:
   - ln -s /var/run /run
+  - ln -s /bin/bash /bin/sh
 imageSpec:
   config:
     env: { "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8", "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }

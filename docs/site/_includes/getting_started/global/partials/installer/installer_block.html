@@ -1,3 +1,4 @@
+{%- if page.lang == "ru" -%}
 <div class="installer_box">
   {% alert level="info" %}
   На текущий момент графический установщик поддерживает **не все платформы**. Установить DKP с его помощью возможно в следующие окружения:
@@ -33,24 +34,17 @@
               <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
             </div>
             <div id="tab-mac-content-container" class="tab-content active">
-{% alert level="info" %}
-Если у вас компьютер на базе Apple Silicon, то перед запуском контейнера убедитесь, что в настройках Docker Desktop включена Rosetta.
-{% offtopic title="Как включить Rosetta..." %}
-1. Перейдите в настройки Docker Desktop, нажав на значок шестерёнки в правом верхнем углу главного окна программы.
-1. На вкладке «General» найдите раздел «Virtual Machine Options».
-1. Включите пункт «Use Rosetta for x86_64/amd64 emulation on Apple Silicon».
-   <img src="/images/gs/installer/enable-rosetta.png" alt="Включение Rosetta в настройках Docker Desktop">
-{% endofftopic %}
-{% endalert %}
+{%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
             </div>
             <div id="tab-mac-content-trdl" class="tab-content">
+{%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
               <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
               <ol>
                 <li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
@@ -79,6 +73,7 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
               </ol>
             </div>
             <div id="tab-mac-content-file" class="tab-content">
+{%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
               <p>Скачайте установщик:
                 <a href="/downloads/installer/latest/darwin-arm64/d8install" class="download-btn">darwin-arm64</a>
                 <a href="/downloads/installer/latest/darwin-amd64/d8install" class="download-btn">darwin-amd64</a>
@@ -104,7 +99,7 @@ xattr -c d8install
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -156,14 +151,14 @@ chmod +x d8install
             <p>Выполните команду. Если вы работаете в командной строке:</p>
 {% capture command %}
 ```bash
-docker run --rm --pull always -v /mnt/host/c/Users/%USERNAME%/.d8installer:/mnt/host/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/%USERNAME%/.d8installer
+docker run --rm --pull always -v /mnt/host/c/Users/%USERNAME%/.d8installer:/mnt/host/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/%USERNAME%/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
             <p>Если вы работаете в Power Shell:</p>
 {% capture command %}
 ```bash
-docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/mnt/host/c/Users/$env:USERNAME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/$env:USERNAME/.d8installer
+docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/mnt/host/c/Users/$env:USERNAME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/$env:USERNAME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -246,3 +241,4 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
       document.getElementById("tab-buttons-mac-container").classList.add("active");
   }
 </script>
+{%- endif -%}

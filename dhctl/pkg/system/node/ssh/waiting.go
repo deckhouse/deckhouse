@@ -16,7 +16,9 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -58,22 +60,28 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 	}
 
 	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).RunContext(ctx, func() error {
-		log.InfoF("Try to connect to %v host\n", c.Session.Host())
+		host := c.Session.Host()
+		log.InfoF("Try to connect to host: %v\n", host)
+
 		output, err := c.ExpectAvailable(ctx)
 		if err == nil {
+			log.InfoF("Successfully connected to host: %v\n", host)
 			return nil
 		}
 
-		log.InfoF(string(output))
-		oldHost := c.Session.Host()
+		target := c.Session.Host()
+
+		log.InfoF("Connection attempt failed to host: %v\n", target)
+
 		c.Session.ChoiceNewHost()
-		return fmt.Errorf("host '%s' is not available", oldHost)
+
+		return fmt.Errorf("SSH error: %s\nSSH connect failed to %s: %s", err.Error(), target, string(output))
 	})
 }
 
 func (c *Check) CheckAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
-		return fmt.Errorf("empty host for connection received")
+		return fmt.Errorf("Empty host for connection received")
 	}
 
 	log.InfoF("Try to connect to %v host\n", c.Session.Host())
@@ -88,9 +96,21 @@ func (c *Check) CheckAvailability(ctx context.Context) error {
 func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	cmd := c.createCommand(c.Session, "echo SUCCESS")
 	cmd.Cmd(ctx)
+
 	output, _, err := cmd.Output(ctx)
 	if err != nil {
-		return output, err
+		var stderr []byte
+		if ee := errors.Unwrap(err); ee != nil {
+			var exitErr *exec.ExitError
+			if errors.As(ee, &exitErr) && len(exitErr.Stderr) > 0 {
+				stderr = exitErr.Stderr
+			}
+		}
+		if len(stderr) == 0 {
+			stderr = []byte(err.Error())
+		}
+
+		return stderr, err
 	}
 
 	if strings.Contains(string(output), "SUCCESS") {
