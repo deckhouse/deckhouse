@@ -371,6 +371,7 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 	defer tw.Close()
 
 	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
+		r.logger.Debug("walking file", slog.String("path", file))
 		if err != nil {
 			return err
 		}
