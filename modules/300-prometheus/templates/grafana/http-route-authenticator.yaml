@@ -47,7 +47,9 @@ spec:
       filters:
         - type: URLRewrite
           urlRewrite:
-            pathPrefix: /dex-authenticator/sign_out
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /dex-authenticator/sign_out
       backendRefs:
         - name: grafana-dex-authenticator
           port: 443
