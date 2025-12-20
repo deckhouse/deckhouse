@@ -1,4 +1,13 @@
-{{- if and .Values.global.modules.publicDomainTemplate (hasKey .Values.global.modules "gatewayClass") .Values.global.modules.gatewayClass (gt (len .Values.istio.internal.ingressControllers) 0) }}
+{{- $promParentRefs := list }}
+{{- if and (hasKey .Values "prometheus") (hasKey .Values.prometheus "gatewayHTTPRoute") (hasKey .Values.prometheus.gatewayHTTPRoute "parentRefs") }}
+  {{- $promParentRefs = .Values.prometheus.gatewayHTTPRoute.parentRefs }}
+{{- end }}
+{{- $certParentRefs := list }}
+{{- if and (hasKey .Values "certManager") (hasKey .Values.certManager "http01Gateway") (hasKey .Values.certManager.http01Gateway "parentRefs") }}
+  {{- $certParentRefs = .Values.certManager.http01Gateway.parentRefs }}
+{{- end }}
+{{- $useCustomGateway := or (gt (len $promParentRefs) 0) (gt (len $certParentRefs) 0) }}
+{{- if and .Values.global.modules.publicDomainTemplate (hasKey .Values.global.modules "gatewayClass") .Values.global.modules.gatewayClass (gt (len .Values.istio.internal.ingressControllers) 0) (not $useCustomGateway) }}
   {{- $tlsEnabled := include "helm_lib_module_https_ingress_tls_enabled" . }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
