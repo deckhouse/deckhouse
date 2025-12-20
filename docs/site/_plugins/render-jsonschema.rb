@@ -561,9 +561,9 @@ module JSONSchemaRenderer
         # Render additionalProperties if they exist
         if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
             additionalProps = attributes['additionalProperties']
-            
+
             # Render additionalProperties if it is a schema object with properties (not primitive type) AND parent has no properties
-            if additionalProps.is_a?(Hash) and 
+            if additionalProps.is_a?(Hash) and
                (not attributes.has_key?('properties') or attributes['properties'].nil?) and
                additionalProps.has_key?('properties') and
                (not additionalProps.has_key?('type') or additionalProps['type'] == 'object')
@@ -575,19 +575,19 @@ module JSONSchemaRenderer
                     additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
                     additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
                     additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
-                    
+
                     # Prepare the description with special text for additionalProperties object
-                additionalPropertyName = '<KEY_NAME>'.gsub('<', '&lt;').gsub('>', '&gt;')
+                additionalPropertyName = '&lt;KEY_NAME&gt;'
                 additionalPropertyNameQuoted = '`<KEY_NAME>`'
                 mapKeyName = get_hash_value(additionalPropsData, 'x-doc-map-key-name')
                 additionalPropertyNameLang = get_i18n_term('additional_property_name')
-                
+
                 if mapKeyName
                     specialDescriptionText = "#{additionalPropertyNameQuoted} — #{mapKeyName}"
                 else
                     specialDescriptionText = "#{additionalPropertyNameQuoted} — #{additionalPropertyNameLang}."
                 end
-                
+
                 # Get existing description if any
                 existingDescription = ''
                 if get_hash_value(additionalPropsLangData, 'description')
@@ -595,13 +595,13 @@ module JSONSchemaRenderer
                 elsif get_hash_value(additionalPropsData, 'description')
                     existingDescription = additionalPropsData['description']
                 end
-                
+
                 # Combine special text with existing description
                 finalDescription = specialDescriptionText
                 if existingDescription and existingDescription.length > 0
                     finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
                 end
-                
+
                 # Create modified data with updated description
                 additionalPropsData['description'] = finalDescription
                 if additionalPropsLangData
@@ -610,7 +610,7 @@ module JSONSchemaRenderer
                 else
                     additionalPropsLangData = { 'description' => finalDescription }
                 end
-                
+
                     result.push('<ul>')
                     result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
                     result.push('</ul>')
@@ -630,7 +630,7 @@ module JSONSchemaRenderer
                     result.push('</ul>')
                 end
             end
-            
+
         end
 
         # Render patternProperties if they exist
@@ -642,7 +642,7 @@ module JSONSchemaRenderer
                         # Skip this patternProperty entirely
                         next
                     end
-                    
+
                     # Get language data for pattern
                     patternLangData = {}
                     if primaryLanguage and primaryLanguage.is_a?(Hash) and primaryLanguage.has_key?('patternProperties')
@@ -659,24 +659,24 @@ module JSONSchemaRenderer
                         end
                     end
                     patternRequired = get_hash_value(patternSchema, 'required')
-                    
+
                     # Use pattern in path and display - ADD SLASHES FOR REGEX
                     patternName = pattern
                     patternNameQuoted = "`/#{pattern}/`"
                     patternNameForPath = "/#{pattern}/"
-                    
+
                     # Handle objects with properties
                     if patternSchema.has_key?('properties') and (not patternSchema.has_key?('type') or patternSchema['type'] == 'object')
                         # Prepare the description with special text for patternProperties object
                         mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
                         patternPropertyNameLang = get_i18n_term('pattern_property_name')
-                        
+
                         if mapKeyName
                             specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
                         else
                             specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
                         end
-                        
+
                         # Get existing description if any
                         existingDescription = ''
                         if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
@@ -684,13 +684,13 @@ module JSONSchemaRenderer
                         elsif patternSchema.has_key?('description')
                             existingDescription = patternSchema['description']
                         end
-                        
+
                         # Combine special text with existing description
                         finalDescription = specialDescriptionText
                         if existingDescription and existingDescription.length > 0
                             finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
                         end
-                        
+
                         # Create modified data with updated description
                         modifiedPatternSchema = patternSchema.dup
                         modifiedPatternSchema['description'] = finalDescription
@@ -701,7 +701,7 @@ module JSONSchemaRenderer
                         else
                             patternLangData = { 'description' => finalDescription }
                         end
-                        
+
                         result.push('<ul>')
                         result.push(format_schema(patternNameForPath, modifiedPatternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
                         result.push('</ul>')
@@ -715,13 +715,13 @@ module JSONSchemaRenderer
                         # Prepare the description with special text for patternProperties primitive
                         mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
                         patternPropertyNameLang = get_i18n_term('pattern_property_name')
-                        
+
                         if mapKeyName
                             specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
                         else
                             specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
                         end
-                        
+
                         # Get existing description if any
                         existingDescription = ''
                         if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
@@ -729,13 +729,13 @@ module JSONSchemaRenderer
                         elsif patternSchema.has_key?('description')
                             existingDescription = patternSchema['description']
                         end
-                        
+
                         # Combine special text with existing description
                         finalDescription = specialDescriptionText
                         if existingDescription and existingDescription.length > 0
                             finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
                         end
-                        
+
                         # Create modified data with updated description
                         modifiedPatternSchema = patternSchema.dup
                         modifiedPatternSchema['description'] = finalDescription
@@ -746,7 +746,7 @@ module JSONSchemaRenderer
                         else
                             patternLangData = { 'description' => finalDescription }
                         end
-                        
+
                         keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'x-doc-examples', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength', 'type']
                         if (modifiedPatternSchema.keys & keysToShow).length > 0
                             result.push('<ul>')
@@ -830,7 +830,7 @@ module JSONSchemaRenderer
                         # Skip this parameter entirely
                         next
                     end
-                    
+
                     _primaryLanguage = nil
                     _fallbackLanguage = nil
 
@@ -953,13 +953,13 @@ module JSONSchemaRenderer
                         _fallbackLanguage = nil
                         # skip status object
                         next if key == 'status'
-                        
+
                         # Checking for x-doc-skip for TOP-level properties
                         if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
                             # Skip this parameter entirely
                             next
                         end
-                        
+
                         if header != '' then
                             result.push(header)
                             header = ''
@@ -1066,7 +1066,7 @@ module JSONSchemaRenderer
                     # Skip this parameter entirely
                     next
                 end
-                
+
                 _primaryLanguage = nil
                 _fallbackLanguage = nil
 

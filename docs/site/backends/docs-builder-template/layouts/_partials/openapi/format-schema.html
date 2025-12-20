@@ -54,7 +54,7 @@
 {{/*  Processing linkAnchor: replace problematic characters with -, collapse minuses, remove the first minus  */}}
 
 {{- if $fullPath }}
-  {{- $linkAnchor = ((printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower)) | replaceRE "[^a-zA-Z0-9_-]" "-" | replaceRE "-+" "-" | replaceRE "^-|-$" "") -}}
+  {{- $linkAnchor = ((printf "%s-%s" $linkAnchor (delimit $fullPath "-" | lower)) | replaceRE "<" "-lt-" | replaceRE ">" "-gt-" | replaceRE "[^a-zA-Z0-9_-]" "-" | replaceRE "-+" "-" | replaceRE "^-|-$" "") -}}
 {{- end }}
 
 {{- if gt ($parameterTitle | len ) 0 }}
@@ -126,7 +126,7 @@
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
       {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
-      
+
       {{/* Checking for x-doc-skip for array items */}}
       {{- if reflect.IsMap $subParameterAttributes }}
         {{- $skipValue := index $subParameterAttributes "x-doc-skip" }}
@@ -135,7 +135,7 @@
           {{- continue }}
         {{- end }}
       {{- end }}
-      
+
       {{- partial "openapi/format-schema" ( dict "name" $subParameterName "data" $subParameterAttributes "langData" $subParameterLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
     {{- end }}
     </ul>
@@ -162,7 +162,7 @@
       {{- $additionalPropsData := $data.additionalProperties }}
       {{- $additionalPropsLangData := index $langData "additionalProperties" }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
-      
+
       {{/* Checking for x-doc-skip for additionalProperties */}}
       {{- if reflect.IsMap $additionalPropsData }}
         {{- $skipValue := index $additionalPropsData "x-doc-skip" }}
@@ -187,7 +187,7 @@
               {{- $specialDescriptionText = printf "%s — %s." $additionalPropertyNameQuoted (T "additional_property_name") }}
             {{- end }}
           {{- end }}
-          
+
           {{- /* Get existing description if any */}}
           {{- $existingDescription := "" }}
           {{- if $additionalPropsLangData.description }}
@@ -195,13 +195,13 @@
           {{- else if $additionalPropsData.description }}
             {{- $existingDescription = $additionalPropsData.description }}
           {{- end }}
-          
+
           {{- /* Combine special text with existing description */}}
           {{- $finalDescription := $specialDescriptionText }}
           {{- if $existingDescription }}
             {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
           {{- end }}
-          
+
           {{- /* Create modified data with updated description */}}
           {{- $modifiedAdditionalPropsData := $additionalPropsData | merge (dict "description" $finalDescription) }}
           {{- if $additionalPropsLangData }}
@@ -210,7 +210,7 @@
           {{- else }}
             {{- $additionalPropsLangData = dict "description" $finalDescription }}
           {{- end }}
-          
+
           <ul>
             {{- partial "openapi/format-schema" ( dict "name" $additionalPropertyName "data" $modifiedAdditionalPropsData "langData" $additionalPropsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $additionalPropsRequired "type" $type) }}
           </ul>
@@ -220,7 +220,7 @@
       {{- $additionalPropsData := $data.additionalProperties }}
       {{- $additionalPropsLangData := index $langData "additionalProperties" }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
-      
+
       {{/* Checking for x-doc-skip for additionalProperties */}}
       {{- if reflect.IsMap $additionalPropsData }}
         {{- $skipValue := index $additionalPropsData "x-doc-skip" }}
@@ -248,19 +248,19 @@
         {{- end }}
       {{- end }}
       {{- $patternRequired := $patternSchema.required }}
-      
+
       {{/* Checking for x-doc-skip for patternProperties */}}
       {{- $skipValue := index $patternSchema "x-doc-skip" }}
       {{- if eq $skipValue true }}
         {{- /* Skip this patternProperty entirely */}}
         {{- continue }}
       {{- end }}
-      
+
       {{- /* Use pattern in path and display - ADD SLASHES FOR REGEX */}}
       {{- $patternName := $pattern }}
       {{- $patternNameQuoted := printf "`/%s/`" $pattern }}
       {{- $patternNameForPath := printf "/%s/" $pattern }}
-      
+
       {{- /* Handle objects with properties */}}
       {{- if and ($patternSchema.properties) (or (not $patternSchema.type) (eq $patternSchema.type "object")) }}
         {{- /* Prepare the description with special text for patternProperties object */}}
@@ -279,7 +279,7 @@
             {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
           {{- end }}
         {{- end }}
-        
+
         {{- /* Get existing description if any */}}
         {{- $existingDescription := "" }}
         {{- if and (reflect.IsMap $patternLangData) $patternLangData.description }}
@@ -287,13 +287,13 @@
         {{- else if $patternSchema.description }}
           {{- $existingDescription = $patternSchema.description }}
         {{- end }}
-        
+
         {{- /* Combine special text with existing description */}}
         {{- $finalDescription := $specialDescriptionText }}
         {{- if $existingDescription }}
           {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
         {{- end }}
-        
+
         {{- /* Create modified data with updated description */}}
         {{- $modifiedPatternSchema := $patternSchema | merge (dict "description" $finalDescription) }}
         {{- if and (reflect.IsMap $patternLangData) (gt (len $patternLangData) 0) }}
@@ -302,7 +302,7 @@
         {{- else }}
           {{- $patternLangData = dict "description" $finalDescription }}
         {{- end }}
-        
+
         <ul>
           {{- partial "openapi/format-schema" ( dict "name" $patternNameForPath "data" $modifiedPatternSchema "langData" $patternLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "required" $patternRequired "type" $type) }}
         </ul>
@@ -329,7 +329,7 @@
             {{- $specialDescriptionText = printf "%s — %s." $patternNameQuoted (T "pattern_property_name") }}
           {{- end }}
         {{- end }}
-        
+
         {{- /* Get existing description if any */}}
         {{- $existingDescription := "" }}
         {{- if and (reflect.IsMap $patternLangData) $patternLangData.description }}
@@ -337,13 +337,13 @@
         {{- else if $patternSchema.description }}
           {{- $existingDescription = $patternSchema.description }}
         {{- end }}
-        
+
         {{- /* Combine special text with existing description */}}
         {{- $finalDescription := $specialDescriptionText }}
         {{- if $existingDescription }}
           {{- $finalDescription = printf "%s\n\n%s" $specialDescriptionText $existingDescription }}
         {{- end }}
-        
+
         {{- /* Create modified data with updated description */}}
         {{- $modifiedPatternSchema := $patternSchema | merge (dict "description" $finalDescription) }}
         {{- if and (reflect.IsMap $patternLangData) (gt (len $patternLangData) 0) }}
@@ -352,7 +352,7 @@
         {{- else }}
           {{- $patternLangData = dict "description" $finalDescription }}
         {{- end }}
-        
+
         {{- $keysToShow := slice "description" "example" "x-examples" "x-doc-example" "x-doc-examples" "enum" "default" "x-doc-default" "minimum" "maximum" "pattern" "minLength" "maxLength" "type" }}
         {{- $keysToShowIsExist := false }}
         {{- range $key, $val := $modifiedPatternSchema }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
