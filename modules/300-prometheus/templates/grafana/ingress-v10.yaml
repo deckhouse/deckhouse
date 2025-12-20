@@ -27,7 +27,7 @@ spec:
   {{- end }}
   {{- else }}
     - name: dex-grafana
-      namespace: istio-ingress
+      namespace: d8-ingress-istio
       kind: Gateway
   {{- end }}
   hostnames:
