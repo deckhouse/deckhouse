@@ -264,7 +264,7 @@
       {{- /* Handle objects with properties */}}
       {{- if and ($patternSchema.properties) (or (not $patternSchema.type) (eq $patternSchema.type "object")) }}
         {{- /* Prepare the description with special text for patternProperties object */}}
-        {{- $mapKeyName := index $patternSchema "x-doc-map-key-name" }}
+        {{- $mapKeyName := index $patternSchema "x-doc-pattern-name" }}
         {{- $specialDescriptionText := "" }}
         {{- if $mapKeyName }}
           {{- if eq site.Language.Lang "ru" }}
@@ -314,7 +314,7 @@
       {{- else }}
         {{- /* Handle primitive types and objects without properties */}}
         {{- /* Prepare the description with special text for patternProperties primitive */}}
-        {{- $mapKeyName := index $patternSchema "x-doc-map-key-name" }}
+        {{- $mapKeyName := index $patternSchema "x-doc-pattern-name" }}
         {{- $specialDescriptionText := "" }}
         {{- if $mapKeyName }}
           {{- if eq site.Language.Lang "ru" }}

@@ -731,7 +731,7 @@ module JSONSchemaRenderer
                     # Handle objects with properties
                     if patternSchema.has_key?('properties') and (not patternSchema.has_key?('type') or patternSchema['type'] == 'object')
                         # Prepare the description with special text for patternProperties object
-                        mapKeyName = get_hash_value(patternSchema, 'x-doc-map-key-name')
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
                         patternPropertyNameLang = get_i18n_term('pattern_property_name')
                         
                         if mapKeyName
@@ -776,7 +776,7 @@ module JSONSchemaRenderer
                     # Handle primitive types and objects without properties
                     else
                         # Prepare the description with special text for patternProperties primitive
-                        mapKeyName = get_hash_value(patternSchema, 'x-doc-map-key-name')
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
                         patternPropertyNameLang = get_i18n_term('pattern_property_name')
                         
                         if mapKeyName
