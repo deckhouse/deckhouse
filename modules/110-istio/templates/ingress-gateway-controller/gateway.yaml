@@ -11,7 +11,6 @@ spec:
   gatewayClassName: {{ .Values.global.modules.gatewayClass }}
   listeners:
   - name: http
-    hostname: "*"
     protocol: HTTP
     port: 80
     allowedRoutes:
@@ -21,7 +20,6 @@ spec:
       - kind: HTTPRoute
   {{- if $tlsEnabled }}
   - name: https
-    hostname: "*"
     protocol: HTTPS
     port: 443
     tls:

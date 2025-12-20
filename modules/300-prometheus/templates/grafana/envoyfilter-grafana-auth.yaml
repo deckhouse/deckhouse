@@ -30,8 +30,8 @@ spec:
               allow_partial_message: true
             http_service:
               server_uri:
-                uri: https://grafana-dex-authenticator.d8-monitoring.svc.cluster.local
-                cluster: outbound|443||grafana-dex-authenticator.d8-monitoring.svc.cluster.local
+                uri: https://grafana-dex-authenticator.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
+                cluster: outbound|443||grafana-dex-authenticator.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
                 timeout: 5s
               authorization_request:
                 allowed_headers:
