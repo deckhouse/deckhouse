@@ -3,8 +3,8 @@ common:
     en: item (key) name
     ru: имя параметра (ключ объекта)
   pattern_property_name:
-    en: template for parameter name (RegExp)
-    ru: паттерн для имени параметра (RegExp)
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
   of:
     en: of
     ru: ""
