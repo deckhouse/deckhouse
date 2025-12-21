@@ -156,44 +156,7 @@
 
       </div>
 
-{{ if .Params.relatedLinks }}
-  <h2>{{ T "related_additional_resources" }}</h2>
-  <ul>
-    {{- $module := T "module" | humanize | title}}
-    {{ $count := 0 }}
-    {{ range .Params.relatedLinks }}
-    {{/*  Render no more than 6 links    */}}
-    {{ if and (lt $count 6) .url }}
-        {{ $title := .title }}
-        {{ $url := .url }}
-        
-        {{/*  Processing links without title  */}}
-        {{ if not $title }}
-          {{/*  Processing links without titles only for modules  */}}
-          {{ if hasPrefix $url "/modules/" }}
-            {{ $moduleName := $url }}
-            {{ $moduleName = replaceRE "^/modules/([^/]+).*" "$1" $moduleName }}
-            {{ $moduleName = trim $moduleName "/" }}
-            {{ $title = printf "%s %s" $module $moduleName }}
-          {{ else }}
-            {{/*  If the link without a title is not for the module, skip it.  */}}
-            {{ continue }}
-          {{ end }}
-        {{ end }}
-
-        {{/*  Rendering links  */}}
-        {{ if $title }}
-          <li>
-            <a href="{{ $url }}" title="{{ $title }}">
-              {{ $title }}
-            </a>
-          </li>
-          {{ $count = add $count 1 }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
-  </ul>
-{{ end }}
+      {{ partial "related-links" . }}
 
     </div>
     {{- if ne site.Params.mode "module" }}
