@@ -42,6 +42,7 @@ import (
 type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
+	InitParams *ParamsState            `json:"init_params,omitempty"`
 
 	PKI             pki.State              `json:"pki,omitempty"`
 	Secrets         secrets.State          `json:"secrets,omitempty"`

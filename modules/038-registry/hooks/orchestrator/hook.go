@@ -296,12 +296,32 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Load checker params
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
-	// Process the state with init config
-	if initSecret.IsExist && !initSecret.Applied {
-		err = values.State.initialize(input.Logger, inputs)
-		if err != nil {
-			return fmt.Errorf("cannot initialize state from init secret: %w", err)
+	// Process the state with init secret
+	if initSecret.IsExist {
+		if !initSecret.Applied {
+			err = values.State.initialize(input.Logger, inputs)
+			if err != nil {
+				return fmt.Errorf("cannot initialize state from init secret: %w", err)
+			}
 		}
+
+		// Ensure we have frozen params
+		if values.State.InitParams == nil {
+			state := inputs.Params.toState()
+			values.State.InitParams = &state
+		}
+
+		// Try to use frozen params
+		if params, err := values.State.InitParams.toParams(); err != nil {
+			// Regenerate frozen params from current inputs
+			input.Logger.Warn("cannot get params from state, update state params from input", "error", err)
+			state := inputs.Params.toState()
+			values.State.InitParams = &state
+		} else {
+			inputs.Params = params
+		}
+	} else {
+		values.State.InitParams = nil
 	}
 
 	// Process the state and update internal values
