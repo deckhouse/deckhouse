@@ -36,7 +36,7 @@ type Watcher struct {
 	clientSet  *kubernetes.Clientset
 	mu         sync.Mutex
 	nsWatchers map[string]context.CancelFunc
-	nsLabels   map[string]map[string]string // namespace -> labels mapping
+	nsLabels   map[string]map[string]string
 	metrics    *met.ExporterMetrics
 }
 
@@ -66,7 +66,7 @@ func (w *Watcher) updateNode(node *v1.Node, deleted bool) {
 		w.metrics.NodeEnabled,
 		w.metrics.NodeThreshold,
 		labels,
-		nil, // nodes don't have namespace override
+		nil,
 		nodeThresholdMap,
 		prometheus.Labels{"node": node.Name},
 	)
@@ -97,7 +97,6 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NAMESPACE ADDED] %s", ns.Name)
 
-	// Store namespace labels for threshold override
 	w.mu.Lock()
 	w.nsLabels[ns.Name] = ns.Labels
 	w.mu.Unlock()
@@ -123,7 +122,6 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
-	// Check if threshold labels have changed for specific resource types
 	w.mu.Lock()
 	oldLabels := w.nsLabels[ns.Name]
 	podThresholdsChanged := thresholdLabelsChangedForMap(oldLabels, ns.Labels, podThresholdMap)
@@ -162,7 +160,6 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 		log.Printf("[NAMESPACE ENABLED] %s watchers started", ns.Name)
 	}
 
-	// Refresh only the resources whose threshold labels have changed
 	if enabled && exists {
 		if podThresholdsChanged {
 			log.Printf("[NAMESPACE UPDATE] %s pod threshold labels changed, refreshing pods", ns.Name)
