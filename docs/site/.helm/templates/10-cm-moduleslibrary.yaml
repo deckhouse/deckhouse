@@ -80,6 +80,9 @@ data:
         charset utf-8;
         access_log     /dev/stdout json_combined;
 
+        rewrite ^/modules$ /modules/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)$ /modules/$module/ redirect;
+
         location /link_test_report.txt {
             deny all;
         }
