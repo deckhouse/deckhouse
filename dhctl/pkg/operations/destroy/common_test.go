@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,52 @@ import (
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
+
+const (
+	metaConfigKey = "cluster-config"
+
+	cloudClusterGenericConfigYAML = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Yandex
+  prefix: "test"
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`
+	providerConfigYAML = `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+    externalIPAddresses:
+      - Auto
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+	clusterStateKey = "cluster-state"
+	nodesStateKey   = "nodes-state"
+	uuidKey         = "uuid"
+	baseInfraKey    = "base-infrastructure"
 )
 
 type testCreatedResource struct {
@@ -514,6 +561,21 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 	require.NoError(t, err)
 }
 
+func testCreateSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string][]byte) {
+	t.Helper()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: global.D8SystemNamespace,
+		},
+		Data: data,
+	}
+
+	_, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
 func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string]string) {
 	t.Helper()
 
@@ -529,13 +591,83 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 	require.NoError(t, err)
 }
 
-func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) {
+func createAssertError(shouldReturnError bool, noErrorMSg, errorMsg string) func(t *testing.T, err error) {
 	errorAssert := require.NoError
-	errorAssertMsg := "should destroyed"
+	errorAssertMsg := noErrorMSg
 	if shouldReturnError {
 		errorAssert = require.Error
-		errorAssertMsg = "should not destroyed"
+		errorAssertMsg = errorMsg
 	}
 
-	errorAssert(t, err, errorAssertMsg)
+	return func(t *testing.T, err error) {
+		errorAssert(t, err, errorAssertMsg)
+	}
+}
+
+func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) {
+	errorAssert := createAssertError(shouldReturnError, "should not destroyed", "should destroyed")
+	errorAssert(t, err)
+}
+
+type childTest interface {
+	getStateCache() dhctlstate.Cache
+}
+
+type baseTest struct {
+	childTest childTest
+}
+
+func (ts *baseTest) stateCacheKeys(t *testing.T) []string {
+	stateCache := ts.childTest.getStateCache()
+	require.False(t, govalue.IsNil(stateCache))
+
+	keys := make([]string, 0)
+
+	err := stateCache.Iterate(func(k string, _ []byte) error {
+		keys = append(keys, k)
+		return nil
+	})
+	require.NoError(t, err, "state cache keys getting")
+
+	return keys
+}
+
+func (ts *baseTest) assertStateCacheIsEmpty(t *testing.T) {
+	keys := ts.stateCacheKeys(t)
+	require.Empty(t, keys, fmt.Sprintf("has keys %v", keys))
+}
+
+func (ts *baseTest) assertStateCacheNotEmpty(t *testing.T) {
+	keys := ts.stateCacheKeys(t)
+	require.NotEmpty(t, keys, "has not keys")
+}
+
+func (ts *baseTest) assertStateCache(t *testing.T, empty bool) {
+	if empty {
+		ts.assertStateCacheIsEmpty(t)
+		return
+	}
+
+	ts.assertStateCacheNotEmpty(t)
+}
+
+const (
+	nodeStateKey       = "test-master-0.tfstate"
+	nodeBackupStateKey = "test-master-0.tfstate.backup"
+)
+
+func testAddCloudStatesToCache(t *testing.T, stateCache dhctlstate.Cache, uuid string) {
+	require.False(t, govalue.IsNil(stateCache))
+
+	err := stateCache.Save(uuidKey, []byte(uuid))
+	require.NoError(t, err, "uuid should save")
+
+	err = stateCache.Save(baseInfraKey, []byte(`{}`))
+	require.NoError(t, err, "base infra should save")
+
+	err = stateCache.Save(nodeBackupStateKey, []byte(`{"a": "b"}`))
+	require.NoError(t, err, "backup should save")
+
+	err = stateCache.Save(nodeStateKey, []byte(`{}`))
+	require.NoError(t, err, "master state should save")
 }
