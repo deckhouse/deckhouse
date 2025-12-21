@@ -326,16 +326,16 @@ spec:
       nameAttr: cn
 ```
 
-#### Настройка Basic Authentication
+#### Настройка базовой аутентификации
 
-Чтобы включить доступ к Kubernetes API по Basic Authentication с использованием учетных записей LDAP:
+Чтобы включить доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication) по учетным записям LDAP:
 
 1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
 1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
 
-> **Внимание**. В кластере может быть только один провайдер с включенным [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+> **Внимание**. В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
-После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой LDAP логин и пароль.
+После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP .
 
 Пример `kubeconfig` для пользователя:
 
@@ -363,7 +363,7 @@ current-context: default
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в открытом виде (plain text). Стратегии с передачей хешированных паролей не предусмотрены.
 
 Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 

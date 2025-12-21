@@ -65,9 +65,9 @@ lang: ru
 - будет сгенерирован сертификат CA и добавлен в kubeconfig;
 - будет настроен вход через Dex с поддержкой OIDC.
 
-## Доступ с использованием Basic Authentication (LDAP)
+## Доступ с использованием базовой аутентификации (LDAP)
 
-Помимо OIDC можно настроить прямой доступ к Kubernetes API с использованием Basic Authentication (логин и пароль). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
+Помимо OIDC можно настроить прямой доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication, по логину и паролю). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
 
 Для настройки:
 
@@ -75,7 +75,7 @@ lang: ru
 1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 
 {% alert level="warning" %}
-В кластере может быть только один провайдер с включенным [`enableBasicAuth`]((/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth)).
+В кластере может быть только один провайдер с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 {% endalert %}
 
 После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:

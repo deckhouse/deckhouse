@@ -247,10 +247,10 @@ spec:
 {% alert level="info" %}
 Если ваш LDAP-сервер позволяет анонимный доступ для выполнения поисковых запросов, параметры `bindDN` и `bindPW` можно опустить. Однако, рекомендуется использовать аутентифицированный доступ для повышения безопасности.
 
-В параметре `bindPW` укажите пароль в открытом виде (plain text). Dex не поддерживает передачу хэшированных паролей в этом параметре.
+В параметре `bindPW` укажите пароль в открытом виде (plain text). Dex не поддерживает передачу хешированных паролей в этом параметре.
 {% endalert %}
 
-Также вы можете включить поддержку Basic Authentication для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
+Также вы можете включить поддержку базовой аутентификации (Basic Authentication) для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
 
 Пример настройки провайдера для интеграции с Active Directory:
 

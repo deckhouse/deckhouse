@@ -358,7 +358,7 @@ current-context: default
 
 To configure authentication, create a read-only user (service account) in LDAP.
 
-Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in the plain text format. Strategies involving the passing of hashed passwords are not supported.
+Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain text format (unencrypted)). Strategies involving the passing of hashed passwords are not supported.
 
 You can omit these settings of anonymous read access is configured for LDAP.
 
