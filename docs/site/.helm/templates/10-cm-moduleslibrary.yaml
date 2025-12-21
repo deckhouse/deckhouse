@@ -82,6 +82,7 @@ data:
 
         rewrite ^/modules$ /modules/ redirect;
         rewrite ^/modules/(?<module>[^/.]+)$ /modules/$module/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /modules/$module/$channel/ redirect;
 
         location /link_test_report.txt {
             deny all;
