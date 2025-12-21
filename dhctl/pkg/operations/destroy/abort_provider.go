@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -29,7 +31,6 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/name212/govalue"
 )
 
 type GetAbortDestroyerParams struct {
@@ -44,6 +45,9 @@ type GetAbortDestroyerParams struct {
 	TmpDir        string
 	IsDebug       bool
 	CommanderMode bool
+
+	overridePhaseProvider phases.DefaultActionProvider
+	staticLoopsParams     static.LoopsParams
 }
 
 func GetAbortDestroyer(ctx context.Context, params *GetAbortDestroyerParams) (Destroyer, error) {
@@ -118,14 +122,13 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 }
 
 func (a *abortDestroyerProvider) Static(context.Context, *config.MetaConfig) (Destroyer, error) {
-	phaseProvider := phases.NewDefaultPhaseActionProviderWithStateCache(a.params.PhasedExecutionContext, a.params.StateCache)
-
 	return static.NewDestroyer(&static.DestroyerParams{
 		SSHClientProvider:    a.params.SSHClientProvider,
 		State:                static.NewDestroyState(a.params.StateCache),
 		KubeProvider:         a.kubeProvider(),
 		LoggerProvider:       a.params.LoggerProvider,
-		PhasedActionProvider: phaseProvider,
+		PhasedActionProvider: a.phaseProvider(),
+		Loops:                a.params.staticLoopsParams,
 
 		TmpDir: a.params.TmpDir,
 	}), nil
@@ -133,6 +136,16 @@ func (a *abortDestroyerProvider) Static(context.Context, *config.MetaConfig) (De
 
 func (a *abortDestroyerProvider) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (Destroyer, error) {
 	return nil, config.UnsupportedClusterTypeErr(metaConfig)
+}
+
+func (a *abortDestroyerProvider) phaseProvider() phases.DefaultActionProvider {
+	// todo pass pipeline provider
+
+	if !govalue.IsNil(a.params.overridePhaseProvider) {
+		return a.params.overridePhaseProvider
+	}
+
+	return phases.NewDefaultPhaseActionProviderWithStateCache(a.params.PhasedExecutionContext, a.params.StateCache)
 }
 
 func (a *abortDestroyerProvider) kubeProvider() kube.ClientProviderWithCleanup {

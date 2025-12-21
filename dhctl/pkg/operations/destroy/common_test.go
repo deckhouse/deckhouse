@@ -17,6 +17,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/name212/govalue"
@@ -43,11 +44,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 )
 
 const (
-	metaConfigKey = "cluster-config"
-
+	staticClusterGeneralConfig = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "1.33"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`
 	cloudClusterGenericConfigYAML = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
@@ -84,10 +97,20 @@ provider:
   folderID: folderId
   serviceAccountJSON: "{}"
 `
+	metaConfigKey   = "cluster-config"
 	clusterStateKey = "cluster-state"
 	nodesStateKey   = "nodes-state"
 	uuidKey         = "uuid"
 	baseInfraKey    = "base-infrastructure"
+
+	bastionHost = "127.0.0.1"
+	bastionUser = "notexistsb"
+	bastionPort = "23"
+	inputPort   = "22"
+)
+
+var (
+	inputPrivateKeys = []string{"/tmp/fake_ssh/input_private_key_1", "/tmp/fake_ssh/input_private_key_2"}
 )
 
 type testCreatedResource struct {
@@ -670,4 +693,29 @@ func testAddCloudStatesToCache(t *testing.T, stateCache dhctlstate.Cache, uuid s
 
 	err = stateCache.Save(nodeStateKey, []byte(`{}`))
 	require.NoError(t, err, "master state should save")
+}
+
+func testCreateDefaultTestSSHProvider(destroyOverHost session.Host) *testssh.SSHProvider {
+	initKeys := make([]session.AgentPrivateKey, 0, len(inputPrivateKeys))
+	for _, key := range inputPrivateKeys {
+		initKeys = append(initKeys, session.AgentPrivateKey{
+			Key: key,
+		})
+	}
+
+	return testssh.NewSSHProvider(session.NewSession(session.Input{
+		User:        "notexists",
+		Port:        inputPort,
+		BastionHost: bastionHost,
+		BastionUser: bastionUser,
+		BastionPort: bastionPort,
+		BecomePass:  "",
+		AvailableHosts: []session.Host{
+			destroyOverHost,
+		},
+	}), true).WithInitPrivateKeys(initKeys)
+}
+
+func testIsCleanCommand(scriptPath string) bool {
+	return strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh")
 }

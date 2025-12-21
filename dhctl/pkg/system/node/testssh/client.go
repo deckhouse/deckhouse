@@ -138,6 +138,14 @@ func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, pri
 	return p.newClient(sess, privateKeys), nil
 }
 
+func (p *SSHProvider) InitSession() *session.Session {
+	c := p.initSession.Copy()
+	// copy reset current host
+	c.ChoiceNewHost()
+
+	return c
+}
+
 func (p *SSHProvider) newClient(session *session.Session, k []session.AgentPrivateKey) *Client {
 	c := NewClient(session, k)
 

@@ -1396,17 +1396,6 @@ func (ts *testStaticDestroyTest) assertMasterIPsSavedInCache(t *testing.T, ips [
 	}
 }
 
-const (
-	bastionHost = "127.0.0.1"
-	bastionUser = "notexistsb"
-	bastionPort = "23"
-	inputPort   = "22"
-)
-
-var (
-	inputPrivateKeys = []string{"/tmp/fake_ssh/input_private_key_1", "/tmp/fake_ssh/input_private_key_2"}
-)
-
 func (ts *testStaticDestroyTest) assertClientSwitches(t *testing.T, hosts []session.Host) {
 	require.False(t, govalue.IsNil(ts.sshProvider))
 
@@ -1562,7 +1551,7 @@ func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh
 
 func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
 	sshProvider.AddCommandProvider(forHost.Host, func(scriptPath string, args ...string) *testssh.Command {
-		if !strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") {
+		if !testIsCleanCommand(scriptPath) {
 			return nil
 		}
 
@@ -1595,20 +1584,8 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 	clusterUUID := uuid.Must(uuid.NewRandom())
 
-	clusterGenericConfig := `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-kubernetesVersion: "1.33"
-podSubnetCIDR: 10.222.0.0/16
-serviceSubnetCIDR: 10.111.0.0/16
-encryptionAlgorithm: RSA-2048
-defaultCRI: Containerd
-clusterDomain: cluster.local
-podSubnetNodeCIDRPrefix: "24"
-`
 	testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{
-		"cluster-configuration.yaml": []byte(clusterGenericConfig),
+		"cluster-configuration.yaml": []byte(staticClusterGeneralConfig),
 	})
 
 	testCreateKubeSystemCM(t, kubeCl, "d8-cluster-uuid", map[string]string{
@@ -1653,28 +1630,10 @@ podSubnetNodeCIDRPrefix: "24"
 		PhasedActionProvider: phaseActionProvider,
 	})
 
-	initKeys := make([]session.AgentPrivateKey, 0, len(inputPrivateKeys))
-	for _, key := range inputPrivateKeys {
-		initKeys = append(initKeys, session.AgentPrivateKey{
-			Key: key,
-		})
-	}
-
-	sshProvider := testssh.NewSSHProvider(session.NewSession(session.Input{
-		User:        "notexists",
-		Port:        inputPort,
-		BastionHost: bastionHost,
-		BastionUser: bastionUser,
-		BastionPort: bastionPort,
-		BecomePass:  "",
-		AvailableHosts: []session.Host{
-			params.destroyOverHost,
-		},
-	}), true).WithInitPrivateKeys(initKeys)
+	sshProvider := testCreateDefaultTestSSHProvider(params.destroyOverHost)
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	tmpDir, err := fs.RandomTmpDirWith10Runes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
+	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
 
 	logger.LogInfoF("Tmp dir: '%s'\n", tmpDir)
