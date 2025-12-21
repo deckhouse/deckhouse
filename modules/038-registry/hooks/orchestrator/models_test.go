@@ -173,7 +173,7 @@ func TestParams_Validate(t *testing.T) {
 	}
 }
 
-func TestParamsState_ToStateAndToParams(t *testing.T) {
+func TestParams_ToStateAndToParams(t *testing.T) {
 	certKey, err := registry_pki.GenerateCACertificate("test")
 	require.NoError(t, err)
 	certEncoded := string(registry_pki.EncodeCertificate(certKey.Cert))

@@ -49,6 +49,24 @@ type Params struct {
 	CheckMode registry_const.CheckModeType
 }
 
+func (p Params) toState() ParamsState {
+	var ca []byte
+	if p.CA != nil {
+		ca = registry_pki.EncodeCertificate(p.CA)
+	}
+	return ParamsState{
+		Generation: p.Generation,
+		Mode:       p.Mode,
+		ImagesRepo: p.ImagesRepo,
+		UserName:   p.UserName,
+		Password:   p.Password,
+		TTL:        p.TTL,
+		Scheme:     p.Scheme,
+		CheckMode:  p.CheckMode,
+		CA:         string(ca),
+	}
+}
+
 type ParamsState struct {
 	Generation int64                   `json:"generation,omitempty"`
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
@@ -82,24 +100,6 @@ func (p ParamsState) toParams() (Params, error) {
 		CheckMode:  p.CheckMode,
 		CA:         ca,
 	}, nil
-}
-
-func (p Params) toState() ParamsState {
-	var ca []byte
-	if p.CA != nil {
-		ca = registry_pki.EncodeCertificate(p.CA)
-	}
-	return ParamsState{
-		Generation: p.Generation,
-		Mode:       p.Mode,
-		ImagesRepo: p.ImagesRepo,
-		UserName:   p.UserName,
-		Password:   p.Password,
-		TTL:        p.TTL,
-		Scheme:     p.Scheme,
-		CheckMode:  p.CheckMode,
-		CA:         string(ca),
-	}
 }
 
 type Inputs struct {
