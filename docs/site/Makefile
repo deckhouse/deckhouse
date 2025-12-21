@@ -6,7 +6,7 @@ endif
 .DEFAULT_GOAL := help
 
 registry: ## Start local Docker registry
-		@if ! docker ps | grep -q registry ; then \
+		@if [ -z "$$(docker ps --filter name=registry --format '{{.Names}}')" ]; then \
 			docker rm -f registry 2>/dev/null 1>/dev/null; \
 			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2 ; \
 		fi
