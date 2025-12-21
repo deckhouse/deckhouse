@@ -27,7 +27,6 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
@@ -316,7 +315,7 @@ func (c *Client) UploadScript(scriptPath string, args ...string) node.Script {
 // UploadScript is used to upload script and execute it on remote server
 func (c *Client) Check() node.Check {
 	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
-		return frontend.NewCommand(sess, cmd)
+		return NewCommand([]byte("ok"))
 	}, c.Settings)
 }
 
