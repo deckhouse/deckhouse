@@ -334,7 +334,7 @@
     "path": "/modules/operator-trivy/",
     "tags": [
       "security"
-    ],
+    ]
   },
   "pod-reloader": {
     "tags": [
