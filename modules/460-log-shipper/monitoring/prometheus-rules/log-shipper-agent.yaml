@@ -159,7 +159,7 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: Vector config is invalid in the cluster.
+      summary: Vector configuration is invalid in the cluster.
       description: |
         At least one Vector DaemonSet pod has been reporting an invalid configuration.
         
