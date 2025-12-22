@@ -190,8 +190,6 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	initSecret, err := helpers.SnapshotToSingle[InitSecretSnap](input, initSnapName)
 	if err == nil {
-		input.Logger.Info("Init secret snapshot found, trying to load init config")
-
 		var config init_secret.Config
 
 		if err = yaml.Unmarshal(initSecret.Config, &config); err != nil {
@@ -300,6 +298,8 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Process the state with init secret
 	if initSecret.IsExist {
 		if !initSecret.Applied {
+			input.Logger.Info("initializing state from init configuration")
+
 			err = values.State.initialize(input.Logger, inputs)
 			if err != nil {
 				return fmt.Errorf("cannot initialize state from init secret: %w", err)
@@ -314,8 +314,9 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 		// Try to use frozen params
 		if params, err := values.State.InitParams.toParams(); err != nil {
-			// Regenerate frozen params from current inputs
 			input.Logger.Warn("cannot get params from state, update state params from input", "error", err)
+
+			// Regenerate frozen params from current inputs
 			state := inputs.Params.toState()
 			values.State.InitParams = &state
 		} else {
