@@ -81,7 +81,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed procMount types: %v", [allowed_procMount])
               }
 
-              get_exception_allowed_proc_mount(c) := ""
+              get_exception_allowed_proc_mount(_) := ""
 
               build_proc_mount_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

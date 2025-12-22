@@ -69,7 +69,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: readOnlyRootFilesystem: %v", [exception.spec.securityContext.readOnlyRootFilesystem.allowedValue])
               }
 
-              get_exception_allowed(c) := ""
+              get_exception_allowed(_) := ""
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

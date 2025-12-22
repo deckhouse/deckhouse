@@ -89,7 +89,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: %v", [allowed_add, allowed_drop])
               }
 
-              get_exception_allowed_capabilities(container) := ""
+              get_exception_allowed_capabilities(_) := ""
 
               build_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
@@ -179,7 +179,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: capabilities.drop: %v", [allowed_drop])
               }
 
-              get_exception_allowed_drop_capabilities(container) := ""
+              get_exception_allowed_drop_capabilities(_) := ""
 
               build_drop_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
