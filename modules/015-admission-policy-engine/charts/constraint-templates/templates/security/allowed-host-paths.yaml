@@ -170,14 +170,37 @@ spec:
               input_hostpath_allowed_exact(allowedPaths, volume) if {
                 allowedHostPath := allowedPaths[_]
                 allowedHostPath.path == volume.hostPath.path
-                volume_mount_matches_read_only(allowedHostPath.readOnly, volume.name)
+                volume_mount_readonly_matches(allowedHostPath.readOnly, volume.name)
               }
 
-              volume_mount_matches_read_only(expectedReadOnly, volume_name) if {
+              volume_mount_readonly_matches(expectedReadOnly, volume_name) if {
+                actualReadOnly := get_volume_mount_readonly(volume_name)
+                actualReadOnly == expectedReadOnly
+              }
+
+              get_volume_mount_readonly(volume_name) := readOnly if {
                 container := input_containers[_]
                 mount := container.volumeMounts[_]
                 mount.name == volume_name
-                mount.readOnly == expectedReadOnly
+                has_field(mount, "readOnly")
+                readOnly := mount.readOnly
+              }
+
+              get_volume_mount_readonly(volume_name) := false if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
+                not has_field(mount, "readOnly")
+              }
+
+              get_volume_mount_readonly(volume_name) := false if {
+                not volume_mount_exists(volume_name)
+              }
+
+              volume_mount_exists(volume_name) if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
               }
 
               ### Common logic
