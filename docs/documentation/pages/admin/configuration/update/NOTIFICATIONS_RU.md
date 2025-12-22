@@ -67,6 +67,7 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
+  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -179,10 +180,11 @@ spec:
 При выполнении условий отправки уведомления
 DKP отправляет на указанный вебхук POST-запрос с заголовком `Content-Type: application/json`.
 
-Пример тела запроса:
+Пример тела запроса для релиза Deckhouse:
 
 ```json
 {
+  "subject": "Deckhouse",
   "version": "1.68",
   "requirements":  {"k8s": "1.29.0"},
   "changelogLink": "https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md",
@@ -191,10 +193,26 @@ DKP отправляет на указанный вебхук POST-запрос 
 }
 ```
 
+Пример тела запроса для релиза модуля:
+
+```json
+{
+  "subject": "observability",
+  "moduleName": "observability",
+  "version": "0.7.14",
+  "requirements": {"deckhouse": ">= 1.69"},
+  "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-observability-v0.7.14.md",
+  "applyTime": "2025-12-17T12:32:24Z",
+  "message": "New observability Release 0.7.14 is available. Release will be applied at: Wednesday, 17-Dec-25 12:32:24 UTC"
+}
+```
+
 Описание полей в формате уведомлений:
 
+- `subject` — субъект релиза ("Deckhouse" для релизов Deckhouse или имя модуля для релизов модулей);
+- `moduleName` — имя модуля (присутствует только для релизов модулей);
 - `version` — номер минорной версии (строка);
-- `requirements` — объект с требованиями к новой версии (например, минимальная версия Kubernetes);
+- `requirements` — объект с требованиями к новой версии (например, минимальная версия Kubernetes или Deckhouse);
 - `changelogLink` — ссылка на changelog с описанием изменений в новой минорной версии;
 - `applyTime` — дата и время планируемого обновления в формате RFC3339. Учитывает заданные окна обновлений;
 - `message` — короткое текстовое уведомление о доступной минорной версии и запланированном времени её установки.

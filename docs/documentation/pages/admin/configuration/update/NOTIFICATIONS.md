@@ -71,6 +71,7 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
+  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -194,10 +195,11 @@ spec:
 When the conditions for sending notifications are met,
 DKP sends a POST request to the specified webhook with the header `Content-Type: application/json`.
 
-Example request body:
+Example request body for Deckhouse release:
 
 ```json
 {
+  "subject": "Deckhouse",
   "version": "1.68",
   "requirements":  {"k8s": "1.29.0"},
   "changelogLink": "https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md",
@@ -206,10 +208,26 @@ Example request body:
 }
 ```
 
+Example request body for module release:
+
+```json
+{
+  "subject": "observability",
+  "moduleName": "observability",
+  "version": "0.7.14",
+  "requirements": {"deckhouse": ">= 1.69"},
+  "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-observability-v0.7.14.md",
+  "applyTime": "2025-12-17T12:32:24Z",
+  "message": "New observability Release 0.7.14 is available. Release will be applied at: Wednesday, 17-Dec-25 12:32:24 UTC"
+}
+```
+
 Field descriptions:
 
+- `subject`: Release subject ("Deckhouse" for Deckhouse releases or module name for module releases).
+- `moduleName`: Module name (present only for module releases).
 - `version`: Minor version number (a string).
-- `requirements`: Object with requirements for the new version (for example, the minimum Kubernetes version).
+- `requirements`: Object with requirements for the new version (for example, the minimum Kubernetes or Deckhouse version).
 - `changelogLink`: Link to the changelog describing changes in the new minor version.
 - `applyTime`: Scheduled update date and time in RFC3339 format with the configured update windows considered.
 - `message`: A short text notification about the available minor version and its scheduled installation time.
