@@ -107,6 +107,7 @@ provider:
 	bastionUser = "notexistsb"
 	bastionPort = "23"
 	inputPort   = "22"
+	inputUser   = "notexists"
 )
 
 var (
@@ -153,6 +154,23 @@ func assertResourceExists(t *testing.T, kubeCl *client.KubernetesClient, resourc
 	for _, r := range resources {
 		err := r.getFunc(t, ctx, kubeCl)
 		require.NoError(t, err, r.Name(), "resource should not delete", r.Name())
+	}
+}
+
+func testAddDeckhouseStorageClass(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient, gvr schema.GroupVersionResource, resourceYAML string) testCreatedResource {
+	sc := testYAMLToUnstructured(t, resourceYAML)
+	name := sc.GetName()
+
+	_, err := kubeCl.Dynamic().Resource(gvr).Create(ctx, sc, metav1.CreateOptions{})
+	require.NoError(t, err)
+	return testCreatedResource{
+		name: name,
+		ns:   sc.GetNamespace(),
+		kind: sc.GetKind(),
+		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
+			_, err := kubeCl.Dynamic().Resource(gvr).Get(ctx, name, metav1.GetOptions{})
+			return err
+		},
 	}
 }
 
@@ -287,7 +305,13 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 		shouldExists: true,
 	})
 
-	scLocal := testYAMLToUnstructured(t, `
+	deckhouseSC := []struct {
+		gvr          schema.GroupVersionResource
+		resourceYAML string
+	}{
+		{
+			gvr: v1alpha1.LocalStorageClassGRV,
+			resourceYAML: `
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
 metadata:
@@ -301,19 +325,62 @@ spec:
     type: Thin
   reclaimPolicy: Delete
   volumeBindingMode: WaitForFirstConsumer
-`)
-
-	_, err = kubeCl.Dynamic().Resource(v1alpha1.LocalStorageClassGRV).Create(ctx, scLocal, metav1.CreateOptions{})
-	require.NoError(t, err)
-	createdResources = append(createdResources, testCreatedResource{
-		name: scLocal.GetName(),
-		ns:   scLocal.GetNamespace(),
-		kind: "LocalStorageClass",
-		getFunc: func(t *testing.T, ctx context.Context, kubeCl *client.KubernetesClient) error {
-			_, err := kubeCl.Dynamic().Resource(v1alpha1.LocalStorageClassGRV).Get(ctx, scLocal.GetName(), metav1.GetOptions{})
-			return err
+`,
 		},
-	})
+		{
+			gvr: v1alpha1.ReplicateStorageClassGRV,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStorageClass
+metadata:
+  name: replicated-storage-class
+spec:
+  storagePool: thick-pool
+  reclaimPolicy: Delete
+  topology: Ignored
+  replication: ConsistencyAndAvailability
+`,
+		},
+		{
+			gvr: v1alpha1.NFSStorageClassGRV,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: NFSStorageClass
+metadata:
+  name: nfs-storage-class
+spec:
+  connection:
+    host: 10.223.187.3
+    share: /
+    nfsVersion: "4.1"
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+  workloadNodes:
+    nodeSelector:
+      matchLabels:
+        storage: "true"
+`,
+		},
+		{
+			gvr: v1alpha1.CephStorageClassGRV,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephStorageClass
+metadata:
+  name: ceph-fs-sc
+spec:
+  clusterConnectionName: ceph-cluster-1
+  reclaimPolicy: Delete
+  type: CephFS
+  cephFS:
+    fsName: cephfs
+`,
+		},
+	}
+
+	for _, sc := range deckhouseSC {
+		createdResources = append(createdResources, testAddDeckhouseStorageClass(t, ctx, kubeCl, sc.gvr, sc.resourceYAML))
+	}
 
 	reclame := corev1.PersistentVolumeReclaimDelete
 	scDefault := storagev1.StorageClass{
@@ -695,7 +762,7 @@ func testAddCloudStatesToCache(t *testing.T, stateCache dhctlstate.Cache, uuid s
 	require.NoError(t, err, "master state should save")
 }
 
-func testCreateDefaultTestSSHProvider(destroyOverHost session.Host) *testssh.SSHProvider {
+func testCreateDefaultTestSSHProvider(destroyOverHost session.Host, overBastion bool) *testssh.SSHProvider {
 	initKeys := make([]session.AgentPrivateKey, 0, len(inputPrivateKeys))
 	for _, key := range inputPrivateKeys {
 		initKeys = append(initKeys, session.AgentPrivateKey{
@@ -703,17 +770,40 @@ func testCreateDefaultTestSSHProvider(destroyOverHost session.Host) *testssh.SSH
 		})
 	}
 
-	return testssh.NewSSHProvider(session.NewSession(session.Input{
-		User:        "notexists",
-		Port:        inputPort,
-		BastionHost: bastionHost,
-		BastionUser: bastionUser,
-		BastionPort: bastionPort,
-		BecomePass:  "",
+	input := session.Input{
+		User:       inputUser,
+		Port:       inputPort,
+		BecomePass: "",
 		AvailableHosts: []session.Host{
 			destroyOverHost,
 		},
-	}), true).WithInitPrivateKeys(initKeys)
+	}
+
+	if overBastion {
+		input.BastionHost = bastionHost
+		input.BastionUser = bastionUser
+		input.BastionPort = bastionPort
+	}
+
+	return testssh.NewSSHProvider(session.NewSession(input), true).WithInitPrivateKeys(initKeys)
+}
+
+func assertOverDefaultBastion(t *testing.T, overBastion bool, bastion testssh.Bastion, tp string) {
+	require.False(t, bastion.NoSession, "bastion should have session")
+
+	assert := func(t *testing.T, expected, actual string) {
+		require.Empty(t, actual, fmt.Sprintf("call '%s' should not over bastion", tp))
+	}
+
+	if overBastion {
+		assert = func(t *testing.T, expected, actual string) {
+			require.Equal(t, expected, actual, fmt.Sprintf("call '%s' should over bastion", tp))
+		}
+	}
+
+	assert(t, bastionHost, bastion.Host)
+	assert(t, bastionPort, bastion.Port)
+	assert(t, bastionUser, bastion.User)
 }
 
 func testIsCleanCommand(scriptPath string) bool {

@@ -68,12 +68,18 @@ func TestStaticDestroy(t *testing.T) {
 		logger.LogInfoF("Tmp dir '%s' removed\n", rootTmpDirStatic)
 	}()
 
-	assertStateHasMetaConfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
-		tst.assertResourcesDestroyed(t, true)
-		tst.assertHasMetaConfigInCache(t, true)
+	defaultHostBastion := testssh.Bastion{
+		Host: bastionHost,
+		Port: bastionPort,
+		User: bastionUser,
 	}
 
 	t.Run("single-master", func(t *testing.T) {
+		assertStateHasMetaConfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
+			tst.assertResourcesDestroyed(t, true)
+			tst.assertHasMetaConfigInCache(t, true)
+		}
+
 		t.Run("skip resources returns errors because metaconfig not in cache", func(t *testing.T) {
 			hosts := []session.Host{
 				{Host: "127.0.0.2", Name: "master-1"},
@@ -117,6 +123,8 @@ func TestStaticDestroy(t *testing.T) {
 			skipResources         bool
 			skipResourcesCreating bool
 
+			notOverBastion bool
+
 			before func(t *testing.T, tst *testStaticDestroyTest)
 			assert func(t *testing.T, tst *testStaticDestroyTest)
 		}{
@@ -132,6 +140,25 @@ func TestStaticDestroy(t *testing.T) {
 				kubeProviderShouldCleaned: true,
 
 				destroyClusterShouldReturnsError: false,
+
+				before: noBeforeFunc,
+				assert: noAdditionalAssertFunc,
+			},
+
+			{
+				name: "happy case without bastion",
+
+				sshOut: "ok",
+				sshErr: nil,
+
+				cleanScriptShouldRun:      true,
+				stateCacheShouldEmpty:     true,
+				resourcesShouldDeleted:    true,
+				kubeProviderShouldCleaned: true,
+
+				destroyClusterShouldReturnsError: false,
+
+				notOverBastion: true,
 
 				before: noBeforeFunc,
 				assert: noAdditionalAssertFunc,
@@ -242,6 +269,12 @@ func TestStaticDestroy(t *testing.T) {
 
 		for _, tt := range singleMasterTests {
 			t.Run(tt.name, func(t *testing.T) {
+				overBastion := !tt.notOverBastion
+				runCleanCommandOverBastion := defaultHostBastion
+				if !overBastion {
+					runCleanCommandOverBastion = testssh.Bastion{}
+				}
+
 				hosts := []session.Host{
 					{Host: "127.0.0.2", Name: "master-1"},
 				}
@@ -249,6 +282,7 @@ func TestStaticDestroy(t *testing.T) {
 					skipResources:   tt.skipResources,
 					destroyOverHost: hosts[0],
 					hosts:           hosts,
+					overBastion:     overBastion,
 				}
 
 				tst := createTestStaticDestroyTest(t, params)
@@ -273,12 +307,22 @@ func TestStaticDestroy(t *testing.T) {
 				tst.assertDownloadDiscoveryIP(t, make([]session.Host, 0))
 				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
 
+				assertOverBastion := func(t *testing.T) {}
 				cleanScriptRunOnHosts := make([]session.Host, 0)
 				if tt.cleanScriptShouldRun {
 					cleanScriptRunOnHosts = append(cleanScriptRunOnHosts, hosts[0])
+					assertOverBastion = func(t *testing.T) {
+						hostIP := hosts[0].Host
+						require.Contains(t, tst.cleanCommandsRanOverBastion, hostIP, "contains host in ran over bastion")
+						bastions := tst.cleanCommandsRanOverBastion[hostIP]
+						require.Len(t, bastions, 1, "should one bastion")
+						require.Equal(t, bastions[0], runCleanCommandOverBastion, "should use or not bastion")
+					}
 				}
 				tst.assertCleanCommandRan(t, cleanScriptRunOnHosts)
-				switchedHosts := make([]session.Host, 0)
+				assertOverBastion(t)
+
+				switchedHosts := make([]testHostWithBastion, 0)
 				tst.assertClientSwitches(t, switchedHosts)
 				tst.assertPrivateKeyWritten(t, len(switchedHosts))
 				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned)
@@ -302,6 +346,7 @@ func TestStaticDestroy(t *testing.T) {
 			cleanScriptShouldRun bool
 
 			switchToConvergerUser bool
+			useBastion            testssh.Bastion
 
 			notCreateNodeUser  bool
 			notSavedAsMasterIP bool
@@ -352,10 +397,17 @@ func TestStaticDestroy(t *testing.T) {
 			tst.assertKubeProviderIsErrorProvider(t)
 		}
 
+		firstHostBastion := testssh.Bastion{
+			Host: "127.0.0.2",
+			Port: inputPort,
+			User: inputUser,
+		}
+
 		multimasterMasterTests := []struct {
 			name string
 
-			hosts []host
+			hosts          []host
+			notOverBastion bool
 
 			resourcesShouldDeleted           bool
 			stateCacheShouldEmpty            bool
@@ -383,6 +435,7 @@ func TestStaticDestroy(t *testing.T) {
 						discoveryIPFile:       true,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -391,6 +444,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -399,6 +453,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -408,6 +463,54 @@ func TestStaticDestroy(t *testing.T) {
 				kubeProviderShouldCleaned: true,
 
 				destroyClusterShouldReturnsError: false,
+
+				before: noBeforeFunc,
+				assert: noAdditionalAssertFunc,
+			},
+
+			{
+				name: "happy case 3 masters without bastion",
+				hosts: []host{
+					{
+						ip:                    "127.0.0.2",
+						name:                  "master-1",
+						sshOut:                "ok",
+						sshErr:                nil,
+						discoveryIPFile:       true,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+						// not use bastion
+						useBastion: testssh.Bastion{},
+					},
+					{
+						ip:                    "127.0.0.3",
+						name:                  "master-2",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+						// over destroyer (first) host
+						useBastion: firstHostBastion,
+					},
+					{
+						ip:                    "127.0.0.4",
+						name:                  "master-3",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+						// over destroyer (first) host
+						useBastion: firstHostBastion,
+					},
+				},
+
+				stateCacheShouldEmpty:     true,
+				nodeUserShouldCreated:     true,
+				resourcesShouldDeleted:    true,
+				kubeProviderShouldCleaned: true,
+
+				destroyClusterShouldReturnsError: false,
+				notOverBastion:                   true,
 
 				before: noBeforeFunc,
 				assert: noAdditionalAssertFunc,
@@ -424,6 +527,7 @@ func TestStaticDestroy(t *testing.T) {
 						discoveryIPFile:       true,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -432,6 +536,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -445,6 +550,45 @@ func TestStaticDestroy(t *testing.T) {
 				before: noBeforeFunc,
 				assert: noAdditionalAssertFunc,
 			},
+
+			{
+				name: "happy case 2 masters without bastion",
+				hosts: []host{
+					{
+						ip:                    "127.0.0.2",
+						name:                  "master-1",
+						sshOut:                "ok",
+						sshErr:                nil,
+						discoveryIPFile:       true,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+						// not use bastion
+						useBastion: testssh.Bastion{},
+					},
+					{
+						ip:                    "127.0.0.3",
+						name:                  "master-2",
+						sshOut:                "ok",
+						sshErr:                nil,
+						cleanScriptShouldRun:  true,
+						switchToConvergerUser: true,
+						// over destroyer (first) host
+						useBastion: firstHostBastion,
+					},
+				},
+
+				stateCacheShouldEmpty:     true,
+				nodeUserShouldCreated:     true,
+				resourcesShouldDeleted:    true,
+				kubeProviderShouldCleaned: true,
+
+				destroyClusterShouldReturnsError: false,
+				notOverBastion:                   true,
+
+				before: noBeforeFunc,
+				assert: noAdditionalAssertFunc,
+			},
+
 			{
 				name: "user cannot create on same nodes",
 				hosts: []host{
@@ -456,6 +600,7 @@ func TestStaticDestroy(t *testing.T) {
 						discoveryIPFile:       false,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -465,6 +610,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -473,6 +619,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -503,6 +650,7 @@ func TestStaticDestroy(t *testing.T) {
 						discoveryIPFileErr:    fmt.Errorf("error"),
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -511,6 +659,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -519,6 +668,7 @@ func TestStaticDestroy(t *testing.T) {
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -549,6 +699,7 @@ func TestStaticDestroy(t *testing.T) {
 						discoveryIPFile:       true,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.3",
@@ -558,6 +709,7 @@ func TestStaticDestroy(t *testing.T) {
 						// second master return error because we save in cache sorted ips
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.4",
@@ -567,6 +719,7 @@ func TestStaticDestroy(t *testing.T) {
 						// third master not run because we save in cache sorted ips
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -611,6 +764,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.3",
@@ -622,6 +776,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.4",
@@ -633,6 +788,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 				},
 
@@ -672,6 +828,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.3",
@@ -683,6 +840,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.4",
@@ -694,6 +852,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 				},
 
@@ -736,6 +895,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.3",
@@ -747,6 +907,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 					{
 						ip:     "127.0.0.4",
@@ -758,6 +919,7 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						// node user saved in cache
 						notCreateNodeUser: true,
+						useBastion:        defaultHostBastion,
 					},
 				},
 
@@ -799,6 +961,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -808,6 +971,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -817,6 +981,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -851,6 +1016,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -860,6 +1026,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -869,6 +1036,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -902,6 +1070,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -911,6 +1080,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -920,6 +1090,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -957,6 +1128,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.3",
@@ -966,6 +1138,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 					{
 						ip:                    "127.0.0.4",
@@ -975,6 +1148,7 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
+						useBastion:            defaultHostBastion,
 					},
 				},
 
@@ -1004,9 +1178,11 @@ func TestStaticDestroy(t *testing.T) {
 
 		for _, tt := range multimasterMasterTests {
 			t.Run(tt.name, func(t *testing.T) {
+				overBastion := !tt.notOverBastion
+
 				hosts := make([]session.Host, 0, len(tt.hosts))
 				hostsToCreateNodeUser := make([]session.Host, 0, len(tt.hosts))
-				hostsToSwitchToConverger := make([]session.Host, 0, len(tt.hosts))
+				hostsToSwitchToConverger := make([]testHostWithBastion, 0, len(tt.hosts))
 				mastersIPSInCache := make([]string, 0, len(tt.hosts))
 				sessionHosts := make(map[string]session.Host, len(tt.hosts))
 
@@ -1023,7 +1199,10 @@ func TestStaticDestroy(t *testing.T) {
 					}
 
 					if h.switchToConvergerUser {
-						hostsToSwitchToConverger = append(hostsToSwitchToConverger, sh)
+						hostsToSwitchToConverger = append(hostsToSwitchToConverger, testHostWithBastion{
+							host:    sh,
+							bastion: h.useBastion,
+						})
 					}
 
 					if !h.notSavedAsMasterIP {
@@ -1035,6 +1214,7 @@ func TestStaticDestroy(t *testing.T) {
 					skipResources:   tt.skipResources,
 					destroyOverHost: hosts[0],
 					hosts:           hosts,
+					overBastion:     overBastion,
 				}
 
 				tst := createTestStaticDestroyTest(t, params)
@@ -1104,6 +1284,7 @@ func TestStaticDestroy(t *testing.T) {
 
 type testStaticDestroyTestParams struct {
 	skipResources bool
+	overBastion   bool
 
 	destroyOverHost session.Host
 
@@ -1193,8 +1374,11 @@ type testStaticDestroyTest struct {
 	d8State    *deckhouse.State
 	metaConfig *config.MetaConfig
 
-	cleanCommandsRanOnHosts       map[string]struct{}
-	downloadDiscoveryIPRanOnHosts map[string]struct{}
+	cleanCommandsRanOnHosts     map[string][]struct{}
+	cleanCommandsRanOverBastion map[string][]testssh.Bastion
+
+	downloadDiscoveryIPRanOnHosts     map[string][]struct{}
+	downloadDiscoveryIPRanOverBastion map[string][]testssh.Bastion
 
 	nodeUser      *v1.NodeUser
 	nodeUserCreds *static.NodesWithCredentials
@@ -1396,7 +1580,12 @@ func (ts *testStaticDestroyTest) assertMasterIPsSavedInCache(t *testing.T, ips [
 	}
 }
 
-func (ts *testStaticDestroyTest) assertClientSwitches(t *testing.T, hosts []session.Host) {
+type testHostWithBastion struct {
+	host    session.Host
+	bastion testssh.Bastion
+}
+
+func (ts *testStaticDestroyTest) assertClientSwitches(t *testing.T, hosts []testHostWithBastion) {
 	require.False(t, govalue.IsNil(ts.sshProvider))
 
 	switches := ts.sshProvider.Switches()
@@ -1407,21 +1596,26 @@ func (ts *testStaticDestroyTest) assertClientSwitches(t *testing.T, hosts []sess
 	}
 
 	privateKeys := make(map[string]struct{})
-	hostsMap := make(map[string]struct{})
+	hostsMap := make(map[string]testssh.Bastion)
 
 	for _, h := range hosts {
-		hostsMap[h.Host] = struct{}{}
+		hostsMap[h.host.Host] = h.bastion
 	}
 
 	for _, s := range switches {
 		require.NotNil(t, s.Session, "session")
-		require.Equal(t, bastionHost, s.Session.BastionHost, "bastion host")
-		require.Equal(t, bastionUser, s.Session.BastionUser, "bastion user")
-		require.Equal(t, bastionPort, s.Session.BastionPort, "bastion port")
+
+		hostIP := s.Session.Host()
+		require.Contains(t, hostsMap, hostIP, "host should present")
+		bastion := hostsMap[hostIP]
+		require.False(t, bastion.NoSession, "bastion should not have session")
+
+		require.Equal(t, bastion.Host, s.Session.BastionHost, "bastion host")
+		require.Equal(t, bastion.User, s.Session.BastionUser, "bastion user")
+		require.Equal(t, bastion.Port, s.Session.BastionPort, "bastion port")
 		require.Equal(t, global.ConvergeNodeUserName, s.Session.User, "user name")
 		require.Equal(t, inputPort, s.Session.Port, "input port")
 
-		require.Contains(t, hostsMap, s.Session.Host())
 		for _, pk := range s.PrivateKeys {
 			privateKeys[pk.Key] = struct{}{}
 		}
@@ -1505,7 +1699,16 @@ func (ts *testStaticDestroyTest) assertKubeProviderIsErrorProvider(t *testing.T)
 	require.IsType(t, &kubeClientErrorProvider{}, ts.kubeProvider, "kube provider should be error provider")
 }
 
-func assertHostsMap(t *testing.T, expectedHosts []session.Host, hostsMap map[string]struct{}, msg string) {
+func testAddRunToMap[T any](hostsMap map[string][]T, hostIP string, val T) {
+	list, ok := hostsMap[hostIP]
+	if !ok || len(list) == 0 {
+		list = make([]T, 0, 1)
+	}
+	list = append(list, val)
+	hostsMap[hostIP] = list
+}
+
+func assertHostsMapRunOnce[T any](t *testing.T, expectedHosts []session.Host, hostsMap map[string][]T, msg string) {
 	require.Len(t, expectedHosts, len(hostsMap), msg)
 
 	if len(expectedHosts) == 0 {
@@ -1514,25 +1717,29 @@ func assertHostsMap(t *testing.T, expectedHosts []session.Host, hostsMap map[str
 
 	for _, h := range expectedHosts {
 		require.Contains(t, hostsMap, h.Host, msg, h.Host)
+		require.Len(t, hostsMap[h.Host], 1, msg)
 	}
 }
 
 func (ts *testStaticDestroyTest) assertCleanCommandRan(t *testing.T, hosts []session.Host) {
-	assertHostsMap(t, hosts, ts.cleanCommandsRanOnHosts, "clean command")
+	assertHostsMapRunOnce(t, hosts, ts.cleanCommandsRanOnHosts, "clean command")
 }
 
 func (ts *testStaticDestroyTest) assertDownloadDiscoveryIP(t *testing.T, hosts []session.Host) {
-	assertHostsMap(t, hosts, ts.downloadDiscoveryIPRanOnHosts, "download discovery api")
+	assertHostsMapRunOnce(t, hosts, ts.downloadDiscoveryIPRanOnHosts, "download discovery api")
 }
 
 func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh.SSHProvider, forHost session.Host, returnErr error) {
-	sshProvider.SetFileProvider(forHost.Host, func() *testssh.File {
+	sshProvider.SetFileProvider(forHost.Host, func(bastion testssh.Bastion) *testssh.File {
 		download := func(srcPath string) ([]byte, error) {
 			if srcPath != "/var/lib/bashible/discovered-node-ip" {
 				return nil, fmt.Errorf("'%s' file not found", srcPath)
 			}
 
-			ts.downloadDiscoveryIPRanOnHosts[forHost.Host] = struct{}{}
+			hostIP := forHost.Host
+
+			testAddRunToMap(ts.downloadDiscoveryIPRanOnHosts, hostIP, struct{}{})
+			testAddRunToMap(ts.downloadDiscoveryIPRanOverBastion, hostIP, bastion)
 
 			if returnErr != nil {
 				return nil, returnErr
@@ -1549,25 +1756,31 @@ func (ts *testStaticDestroyTest) addDiscoveryIPFileDownload(sshProvider *testssh
 	})
 }
 
+func (ts *testStaticDestroyTest) runCleanCommand(hostIP string, bastion testssh.Bastion, msg string, logger log.Logger) {
+	testAddRunToMap(ts.cleanCommandsRanOnHosts, hostIP, struct{}{})
+	testAddRunToMap(ts.cleanCommandsRanOverBastion, hostIP, bastion)
+	logger.LogInfoLn(msg)
+}
+
 func (ts *testStaticDestroyTest) addCleanCommand(sshProvider *testssh.SSHProvider, forHost session.Host, out string, err error, logger log.Logger) {
-	sshProvider.AddCommandProvider(forHost.Host, func(scriptPath string, args ...string) *testssh.Command {
+	sshProvider.AddCommandProvider(forHost.Host, func(bastion testssh.Bastion, scriptPath string, args ...string) *testssh.Command {
 		if !testIsCleanCommand(scriptPath) {
 			return nil
 		}
 
+		hostIP := forHost.Host
+
 		cmd := testssh.NewCommand([]byte(out))
 		if err != nil {
 			cmd.WithErr(err).WithRun(func() {
-				ts.cleanCommandsRanOnHosts[forHost.Host] = struct{}{}
-				logger.LogWarnLn("Clean command failed")
+				ts.runCleanCommand(hostIP, bastion, "Clean command error", logger)
 			})
 
 			return cmd
 		}
 
 		return cmd.WithErr(nil).WithRun(func() {
-			ts.cleanCommandsRanOnHosts[forHost.Host] = struct{}{}
-			logger.LogInfoLn("Clean command success")
+			ts.runCleanCommand(hostIP, bastion, "Clean command success", logger)
 		})
 	})
 }
@@ -1630,7 +1843,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		PhasedActionProvider: phaseActionProvider,
 	})
 
-	sshProvider := testCreateDefaultTestSSHProvider(params.destroyOverHost)
+	sshProvider := testCreateDefaultTestSSHProvider(params.destroyOverHost, params.overBastion)
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
@@ -1689,8 +1902,11 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		sshProvider:  sshProvider,
 		kubeProvider: kubeProviderForInfraDestroyer,
 
-		cleanCommandsRanOnHosts:       make(map[string]struct{}),
-		downloadDiscoveryIPRanOnHosts: make(map[string]struct{}),
+		cleanCommandsRanOnHosts:     make(map[string][]struct{}),
+		cleanCommandsRanOverBastion: make(map[string][]testssh.Bastion),
+
+		downloadDiscoveryIPRanOnHosts:     make(map[string][]struct{}),
+		downloadDiscoveryIPRanOverBastion: make(map[string][]testssh.Bastion),
 
 		tmpDir: tmpDir,
 	}

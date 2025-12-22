@@ -49,6 +49,15 @@ var (
 type NodeIP struct {
 	InternalIP string
 	ExternalIP string
+	NodeName   string
+}
+
+func (i *NodeIP) Name() string {
+	if i.NodeName != "" {
+		return i.NodeName
+	}
+
+	return i.InternalIP
 }
 
 func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
@@ -477,7 +486,9 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 	var nodeIPs []NodeIP
 
 	for _, node := range nodes.Items {
-		var ip NodeIP
+		ip := NodeIP{
+			NodeName: node.GetName(),
+		}
 
 		for _, addr := range node.Status.Addresses {
 			if addr.Type == "InternalIP" {

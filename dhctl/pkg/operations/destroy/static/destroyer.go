@@ -181,7 +181,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		if ip.InternalIP == hostToExclude {
 			ok = false
 		}
-		h := session.Host{Name: ip.InternalIP, Host: ip.InternalIP}
+		h := session.Host{Name: ip.Name(), Host: ip.InternalIP}
 		for _, host := range masterHosts {
 			if host.Host == ip.ExternalIP || host.Host == ip.InternalIP {
 				ok = false
@@ -195,12 +195,17 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 
+	userPassedSSHSetting := sshClient.Session().Copy()
+
 	if len(additionalMastersHosts) > 0 {
-		logger.LogDebugF("Found %d additional masters, destroying\n", len(additionalMastersHosts))
-		settings := sshClient.Session().Copy()
+		logger.LogDebugF("Found %d additional masters, destroying them\n", len(additionalMastersHosts))
+		settings := userPassedSSHSetting.Copy()
+		// if bastion passed - use user bastion, because master passed by user and another masters in one network
+		// else connect over passed host, because additional masters will have private network address
 		if settings.BastionHost == "" {
-			settings.BastionHost = settings.AvailableHosts()[0].Host
-			settings.BastionPort = settings.Port
+			settings.BastionHost = userPassedSSHSetting.AvailableHosts()[0].Host
+			settings.BastionPort = userPassedSSHSetting.Port
+			settings.BastionUser = userPassedSSHSetting.User
 		}
 
 		for _, host := range additionalMastersHosts {
@@ -230,12 +235,11 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		// because it was created
 		// else we will process with setting passed by user because we did not switch above
 		if len(additionalMastersHosts) > 0 {
-			settings := sshClient.Session().Copy()
-			if settings.BastionHost == settings.AvailableHosts()[0].Host {
-				settings.BastionHost = ""
-				settings.BastionPort = ""
-			}
-
+			// for last master (it master was user connected in destroy/abort)
+			// revert to passed settings and switch to node user for reconnect to last host
+			// node user was created for all master hosts and we can switch save to it
+			// without use passed user
+			settings := userPassedSSHSetting.Copy()
 			settings.SetAvailableHosts([]session.Host{host})
 
 			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
@@ -336,14 +340,20 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 	}
 
 	sess := session.NewSession(session.Input{
-		User:        d.nodesWithCredentials.NodeUser.Name,
-		Port:        settings.Port,
+		User: d.nodesWithCredentials.NodeUser.Name,
+		// use input because we cannot discovery sshd port for another hosts
+		// and we hope that user use same port for all nodes
+		Port: settings.Port,
+		// use passed bastion host because if we do not have bastion
+		// for additional master nodes we connect over first master
+		// because additional master will have private network address
+		// this will set in setting before run switchToNodeUser
 		BastionHost: settings.BastionHost,
 		BastionPort: settings.BastionPort,
-		// we should connect over bastion because bastion host can not have converger user
-		// because bastion can be not in cluster
-		BastionUser:    settings.BastionUser,
-		ExtraArgs:      settings.ExtraArgs,
+		BastionUser: settings.BastionUser,
+
+		ExtraArgs: settings.ExtraArgs,
+		// input setting have one host to connect
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     d.nodesWithCredentials.NodeUser.Password,
 	})

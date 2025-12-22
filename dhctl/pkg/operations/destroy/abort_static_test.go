@@ -63,6 +63,15 @@ func TestStaticAbort(t *testing.T) {
 			host:                     host,
 			cleanOut:                 "ok",
 			destroyShouldReturnError: false,
+			overBastion:              true,
+		},
+
+		{
+			name:                     "without bastion",
+			host:                     host,
+			cleanOut:                 "ok",
+			destroyShouldReturnError: false,
+			overBastion:              false,
 		},
 
 		{
@@ -71,6 +80,7 @@ func TestStaticAbort(t *testing.T) {
 			cleanOut:                 "error",
 			cleanErr:                 errors.New("error"),
 			destroyShouldReturnError: true,
+			overBastion:              true,
 		},
 	}
 
@@ -87,6 +97,8 @@ func TestStaticAbort(t *testing.T) {
 
 			require.Equal(t, 1, ts.sshProvider.cleanCommandCalled, "should clean command ran once")
 			ts.assertStateCacheIsEmpty(t)
+
+			assertOverDefaultBastion(t, tst.overBastion, ts.sshProvider.bastion, "clean script")
 		})
 	}
 }
@@ -94,9 +106,10 @@ func TestStaticAbort(t *testing.T) {
 type testAbortStaticTestParams struct {
 	name string
 
-	host     session.Host
-	cleanOut string
-	cleanErr error
+	host        session.Host
+	cleanOut    string
+	cleanErr    error
+	overBastion bool
 
 	destroyShouldReturnError bool
 }
@@ -135,7 +148,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 		phases.WithPipelineLoggerProvider(loggerProvider),
 	)()
 
-	sshProvider := testCreateAbortSSHProvider(params.host, params.cleanOut, params.cleanErr, logger)
+	sshProvider := testCreateAbortSSHProvider(params, logger)
 
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,
@@ -166,33 +179,42 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 }
 
 type testAbortSSHProvider struct {
-	provider           *testssh.SSHProvider
+	provider *testssh.SSHProvider
+	logger   log.Logger
+
 	cleanCommandCalled int
+	bastion            testssh.Bastion
 }
 
-func testCreateAbortSSHProvider(host session.Host, out string, err error, logger log.Logger) *testAbortSSHProvider {
+func (t *testAbortSSHProvider) runCommand(bastion testssh.Bastion, msg string) {
+	t.bastion = bastion
+	t.cleanCommandCalled++
+
+	t.logger.LogInfoLn(msg)
+}
+
+func testCreateAbortSSHProvider(params testAbortStaticTestParams, logger log.Logger) *testAbortSSHProvider {
 	result := &testAbortSSHProvider{
-		provider: testCreateDefaultTestSSHProvider(host),
+		provider: testCreateDefaultTestSSHProvider(params.host, params.overBastion),
+		logger:   logger,
 	}
 
-	result.provider.AddCommandProvider(host.Host, func(scriptPath string, args ...string) *testssh.Command {
+	result.provider.AddCommandProvider(params.host.Host, func(bastion testssh.Bastion, scriptPath string, args ...string) *testssh.Command {
 		if !testIsCleanCommand(scriptPath) {
 			return nil
 		}
 
-		cmd := testssh.NewCommand([]byte(out))
-		if err != nil {
-			cmd.WithErr(err).WithRun(func() {
-				result.cleanCommandCalled++
-				logger.LogWarnLn("Clean command failed")
+		cmd := testssh.NewCommand([]byte(params.cleanOut))
+		if params.cleanErr != nil {
+			cmd.WithErr(params.cleanErr).WithRun(func() {
+				result.runCommand(bastion, "Clean command failed")
 			})
 
 			return cmd
 		}
 
 		return cmd.WithErr(nil).WithRun(func() {
-			result.cleanCommandCalled++
-			logger.LogInfoLn("Clean command success")
+			result.runCommand(bastion, "Clean command success")
 		})
 	})
 

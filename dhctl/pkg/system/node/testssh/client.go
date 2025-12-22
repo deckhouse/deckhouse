@@ -17,10 +17,12 @@ package testssh
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,12 +34,20 @@ import (
 )
 
 type (
-	UploadScriptProvider func(scriptPath string, args ...string) *Script
-	CommandProvider      func(scriptPath string, args ...string) *Command
-	FileProvider         func() *File
+	Bastion struct {
+		Host string
+		Port string
+		User string
+
+		NoSession bool
+	}
+	UploadScriptProvider func(withBastion Bastion, scriptPath string, args ...string) *Script
+	CommandProvider      func(withBastion Bastion, scriptPath string, args ...string) *Command
+	FileProvider         func(bastion Bastion) *File
 	SwitchHandler        func(s Switch)
 
 	Switch struct {
+		Bastion     Bastion
 		Session     *session.Session
 		PrivateKeys []session.AgentPrivateKey
 	}
@@ -107,13 +117,17 @@ func (p *SSHProvider) Client() (node.SSHClient, error) {
 
 	if p.once {
 		if p.client == nil {
-			p.client = p.newClient(p.initSession, p.initPrivateKeys)
+			client, err := p.newClient(p.initSession, p.initPrivateKeys)
+			if err != nil {
+				return nil, err
+			}
+			p.client = client
 		}
 
 		return p.client, nil
 	}
 
-	return p.newClient(p.initSession, p.initPrivateKeys), nil
+	return p.newClient(p.initSession, p.initPrivateKeys)
 }
 func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error) {
 	privateKeysCpy := make([]session.AgentPrivateKey, len(privateKeys))
@@ -123,7 +137,10 @@ func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, pri
 	// copy reset current host
 	sessCopy.ChoiceNewHost()
 
+	bastion := getBastion(sessCopy)
+
 	s := Switch{
+		Bastion:     bastion,
 		Session:     sessCopy,
 		PrivateKeys: privateKeysCpy,
 	}
@@ -134,7 +151,7 @@ func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, pri
 
 	p.switches = append(p.switches, s)
 
-	return p.newClient(sess, privateKeys), nil
+	return p.newClient(sess, privateKeys)
 }
 
 func (p *SSHProvider) InitSession() *session.Session {
@@ -145,14 +162,15 @@ func (p *SSHProvider) InitSession() *session.Session {
 	return c
 }
 
-func (p *SSHProvider) newClient(session *session.Session, k []session.AgentPrivateKey) *Client {
+func (p *SSHProvider) newClient(session *session.Session, k []session.AgentPrivateKey) (*Client, error) {
 	c := NewClient(session, k)
 
 	p.scriptProviders.copyTo(p.scriptProviders)
 	p.commandProviders.copyTo(c.commandProviders)
 	p.fileProviders.copyTo(c.fileProviders)
 
-	return c
+	err := c.Start()
+	return c, err
 }
 
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
@@ -234,14 +252,20 @@ func errorCommand(name, errStr string) node.Command {
 
 // Command is used to run commands on remote server
 func (c *Client) Command(name string, arg ...string) node.Command {
+	if err := c.checkClient(); err != nil {
+		return errorCommand(name, err.Error())
+	}
+
 	host := c.Settings.Host()
 	providers, err := c.commandProviders.get(host)
 	if err != nil {
 		return errorCommand(name, err.Error())
 	}
 
+	bastion := getBastion(c.Settings)
+
 	for _, provider := range providers {
-		cmd := provider(name, arg...)
+		cmd := provider(bastion, name, arg...)
 		if !govalue.IsNil(cmd) {
 			return cmd
 		}
@@ -273,15 +297,20 @@ func errorFile(errStr string) node.File {
 
 // File is used to upload and download files and directories
 func (c *Client) File() node.File {
-	host := c.Settings.Host()
+	if err := c.checkClient(); err != nil {
+		return errorFile(err.Error())
+	}
 
+	host := c.Settings.Host()
 	provider, err := c.fileProviders.get(host)
 	if err != nil {
 		return errorFile(err.Error())
 	}
 
+	bastion := getBastion(c.Settings)
+
 	// get returns error if not found
-	file := provider[0]()
+	file := provider[0](bastion)
 	if govalue.IsNil(file) {
 		return errorFile(fmt.Sprintf("File provider returns nil File for host: %s", host))
 	}
@@ -293,8 +322,31 @@ func errorScript(path, errStr string) node.Script {
 	return NewScript(nil).WithError(fmt.Errorf("%s: %s", errStr, path))
 }
 
+func (c *Client) checkClient() error {
+	var errs []string
+	if c.Settings == nil {
+		errs = append(errs, "Settings is nil")
+	}
+	if c.isStopped() {
+		errs = append(errs, "Already stopped")
+	}
+	if !c.isStarted() {
+		errs = append(errs, "Client not started")
+	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, ","))
+	}
+
+	return nil
+}
+
 // UploadScript is used to upload script and execute it on remote server
 func (c *Client) UploadScript(scriptPath string, args ...string) node.Script {
+	if err := c.checkClient(); err != nil {
+		return errorScript(scriptPath, err.Error())
+	}
+
 	host := c.Settings.Host()
 
 	providers, err := c.scriptProviders.get(host)
@@ -302,8 +354,10 @@ func (c *Client) UploadScript(scriptPath string, args ...string) node.Script {
 		return errorScript(scriptPath, err.Error())
 	}
 
+	bastion := getBastion(c.Settings)
+
 	for _, provider := range providers {
-		s := provider(scriptPath, args...)
+		s := provider(bastion, scriptPath, args...)
 		if !govalue.IsNil(s) {
 			return s
 		}
@@ -704,4 +758,17 @@ func (m *providersMap[T]) get(host string) ([]T, error) {
 	}
 
 	return providers, nil
+}
+
+func getBastion(s *session.Session) Bastion {
+	if s == nil {
+		return Bastion{NoSession: true}
+	}
+	return Bastion{
+		Host: s.BastionHost,
+		Port: s.BastionPort,
+		User: s.BastionUser,
+
+		NoSession: false,
+	}
 }
