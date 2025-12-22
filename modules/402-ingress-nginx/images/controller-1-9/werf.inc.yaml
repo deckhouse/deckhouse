@@ -67,7 +67,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/007-geoip.patch
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve.patch
+  - patch -p1 < /patches/ingress-nginx/010-cve-22122025.patch
   - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
