@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"strconv"
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -13,12 +14,16 @@ type Memberlist struct {
 	isConnected bool
 }
 
-func NewMemberList(logger *zap.Logger, memberListPort int, nodeName string, nodeIP string) (Gossip, error) {
+func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, nodeIP string) (Gossip, error) {
 	configML := memberlist.DefaultLocalConfig()
 
-	if memberListPort != 0 {
-		configML.BindPort = memberListPort
-		configML.AdvertisePort = memberListPort
+	if memberListPort != "" {
+		memberListPortInt, err := strconv.Atoi(memberListPort)
+		if err != nil {
+			return nil, err
+		}
+		configML.BindPort = memberListPortInt
+		configML.AdvertisePort = memberListPortInt
 	}
 	if nodeName != "" {
 		configML.Name = nodeName

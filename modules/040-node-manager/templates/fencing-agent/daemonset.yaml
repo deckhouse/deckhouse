@@ -74,7 +74,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: MEMBERLIST_PORT
-              value: 8500
+              value: "8500"
             - name: NODE_GROUP
               value: {{ $ng.name }}
             - name: LOG_LEVEL
