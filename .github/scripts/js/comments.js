@@ -114,8 +114,21 @@ module.exports.renderWorkflowStatusFinal = (status, name, ref, build_url, starte
 };
 
 module.exports.renderDocumentationComments = () => {
-  let statusComment = `\n<details><summary>Environment URLS</summary>\n<ul><li>Stage: <a href="https://deckhouse.stage.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.stage.flant.dev</a></li><li>Test: <a href="https://deckhouse.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.test.flant.dev</a></li><li>Test2: <a href="https://deckhouse.2.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.2.test.flant.dev</a></li><li>Test3: <a href="https://deckhouse.3.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.3.test.flant.dev</a></li><li>Test4: <a href="https://deckhouse.4.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.4.test.flant.dev</a></li><li>Test5: <a href="https://deckhouse.5.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.5.test.flant.dev</a></li><li>Test6: <a href="https://deckhouse.6.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.6.test.flant.dev</a></li><li>Test7: <a href="https://deckhouse.7.test.flant.dev/products/kubernetes-platform/documentation/v1/">deckhouse.7.test.flant.dev</a></li></ul></details>`;
-  return `${statusComment}`;
+  const environments = [
+    { name: 'Stage', host: 'deckhouse.stage.flant.dev' },
+    { name: 'Test', host: 'deckhouse.test.flant.dev' },
+    ...Array.from({ length: 6 }, (_, i) => ({
+      name: `Test ${i + 2}`,
+      host: `deckhouse-${i + 2}.test.flant.dev`
+    }))
+  ];
+
+  const basePath = '/products/kubernetes-platform/documentation/v1/';
+  const listItems = environments
+    .map(env => `<li>${env.name}: <a href="https://${env.host}${basePath}">${env.host}</a></li>`)
+    .join('');
+
+  return `\n<details><summary>Environment URLS</summary>\n<ul>${listItems}</ul></details>`;
 };
 
 /**
