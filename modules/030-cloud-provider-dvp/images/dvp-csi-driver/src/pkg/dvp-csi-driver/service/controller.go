@@ -213,6 +213,23 @@ func (c *ControllerService) ControllerPublishVolume(
 
 	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, vmHostname)
 	if err != nil {
+		sExists, sAttached, sErr := c.getDiskAttachState(ctx, diskName, vmHostname)
+		if sErr != nil {
+			klog.Errorf("Publish: failed to get vmBDA state after attach error: disk=%s vm=%s: %v", diskName, vmHostname, sErr)
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			klog.Errorf(
+				"Publish: timeout while attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t: %v",
+				diskName, vmHostname, sExists, sAttached, err,
+			)
+			return nil, status.Errorf(
+				codes.DeadlineExceeded,
+				"timeout attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t",
+				diskName, vmHostname, sExists, sAttached,
+			)
+		}
+
 		msg := fmt.Errorf("error from parent DVP cluster while creating disk attachment: %v", err)
 		klog.Error(msg.Error())
 		return nil, msg
