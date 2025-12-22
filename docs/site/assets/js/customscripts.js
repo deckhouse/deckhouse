@@ -14,22 +14,22 @@ $(document).ready(function () {
     } else {
       switch (pageDomain) {
         case 'deckhouse.io':
-          $(this).attr('href', window.location.href.replace('deckhouse.io', 'deckhouse.ru'))
+          $(this).attr('href', window.location.hostname.replace('deckhouse.io', 'deckhouse.ru'))
           break;
         case 'deckhouse.ru':
-          $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
+          $(this).attr('href', window.location.hostname.replace('deckhouse.ru', 'deckhouse.io'))
           break;
         case 'ru.localhost':
-          $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
+          $(this).attr('href', window.location.hostname.replace('ru.localhost', 'localhost'))
           break;
         case 'localhost':
-          $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
+          $(this).attr('href', window.location.hostname.replace('localhost', 'ru.localhost'))
           break;
         default:
-          if (pageDomain.includes('deckhouse.ru.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
-          } else if (pageDomain.includes('deckhouse.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.', 'deckhouse.ru.'))
+          if (pageDomain.includes('deckhouse-ru')) {
+            $(this).attr('href', window.location.hostname.replace('deckhouse-ru', 'deckhouse'))
+          } else if (pageDomain.includes('deckhouse')) {
+            $(this).attr('href', window.location.hostname.replace('deckhouse', 'deckhouse-ru'))
           }
       }
     }
