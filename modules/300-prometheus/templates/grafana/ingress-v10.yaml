@@ -1,47 +1,4 @@
 {{- if and .Values.prometheus.internal.grafana.enabled .Values.global.modules.publicDomainTemplate }}
-  {{- if and (hasKey .Values.global.modules "gatewayClass") .Values.global.modules.gatewayClass }}
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: grafana
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
-spec:
-  parentRefs:
-  {{- if and (hasKey .Values.prometheus "gatewayHTTPRoute") (hasKey .Values.prometheus.gatewayHTTPRoute "parentRefs") }}
-  {{- range .Values.prometheus.gatewayHTTPRoute.parentRefs }}
-    - name: {{ .name }}
-      {{- if .namespace }}
-      namespace: {{ .namespace }}
-      {{- end }}
-      {{- if .group }}
-      group: {{ .group }}
-      {{- end }}
-      {{- if .kind }}
-      kind: {{ .kind }}
-      {{- end }}
-      {{- if .sectionName }}
-      sectionName: {{ .sectionName }}
-      {{- end }}
-  {{- end }}
-  {{- else }}
-    - name: dex-grafana
-      namespace: d8-ingress-istio
-      kind: Gateway
-  {{- end }}
-  hostnames:
-    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
-    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: grafana-v10
-          port: 443
-  {{- else }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -113,5 +70,4 @@ spec:
               name: grafana
               port:
                 name: https
-  {{- end }}
 {{- end }}

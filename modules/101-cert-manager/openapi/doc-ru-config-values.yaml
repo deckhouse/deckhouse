@@ -69,14 +69,6 @@ properties:
       Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).
       Если параметр не указан, то используется `ingressClass` по умолчанию.
 
-  http01Gateway:
-    description: |
-      Параметры использования Gateway API для подтверждения владения доменом методом HTTP-01, когда параметры `ingressClassHttp01` и `global.modules.ingressClass` не заданы.
-    properties:
-      parentRefs:
-        description: |
-          Список parentRefs, которые будут указаны в HTTPRoute, создаваемых HTTP-01 solver'ом на основе Gateway API. Обычно ссылаются на ресурсы Gateway.
-
   recursiveSettings:
     description: |
       Параметры использования рекурсивных DNS-серверов, которые применяются для проверки существования записи в DNS, перед запуском процесса подтверждения владения доменом методом [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/).
