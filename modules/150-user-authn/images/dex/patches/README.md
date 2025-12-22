@@ -43,3 +43,16 @@ This patch changes the Internal Error message to a human-readable 'Access Denied
 In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
 
 Upstream PR: https://github.com/dexidp/dex/pull/4363
+
+### 008-hide-internal-500-error-details.patch
+
+This patch prevents internal server error details from being exposed to end users in HTTP responses.
+It replaces detailed error messages (including stack traces, database errors, and internal implementation details)
+with safe, user-friendly messages while ensuring all error details are properly logged server-side.
+
+Key changes:
+- Centralized safe error messages in `server/errors.go`
+- Replaced `err.Error()` calls in HTTP responses with generic messages
+- Added proper logging for all internal errors
+- Added comprehensive tests to prevent future regressions
+- Maintained OAuth2/OIDC protocol compliance

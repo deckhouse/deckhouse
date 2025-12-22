@@ -1,5 +1,8 @@
 name: loki
-stage: "Preview"
+stage: Preview
 subsystems:
   - infrastructure
 namespace: d8-monitoring
+descriptions:
+  en: Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.
+  ru: Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения.

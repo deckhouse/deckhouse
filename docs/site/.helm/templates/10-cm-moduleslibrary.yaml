@@ -18,6 +18,11 @@ data:
       include       /usr/conf/mime.types;
       default_type  application/octet-stream;
 
+      # Add MIME type for ES modules (.mjs files)
+      types {
+        application/javascript mjs;
+      }
+
       client_body_temp_path /tmp/client_temp;
       proxy_temp_path       /tmp/proxy_temp;
       fastcgi_temp_path     /tmp/fastcgi_temp;
@@ -74,6 +79,10 @@ data:
 
         charset utf-8;
         access_log     /dev/stdout json_combined;
+
+        rewrite ^/modules$ /modules/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)$ /modules/$module/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /modules/$module/$channel/ redirect;
 
         location /link_test_report.txt {
             deny all;

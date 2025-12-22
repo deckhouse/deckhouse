@@ -170,7 +170,7 @@ spec:
     kind: Deployment
     name: frontend
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Auto"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

@@ -1,3 +1,6 @@
 name: namespace-configurator
-stage: "General Availability"
+stage: General Availability
 namespace: d8-system
+descriptions:
+  en: Automatically assigns annotations and labels to namespaces based on configuration patterns. Monitors namespaces and applies labels and annotations from configuration to matching namespaces.
+  ru: Автоматически назначает аннотации и лейблы пространствам имён на основе шаблонов конфигурации. Отслеживает пространства имён и применяет лейблы и аннотации из конфигурации к соответствующим пространствам имён.

@@ -110,7 +110,7 @@ spec:
     kind: Deployment
     name: registry-modules-watcher
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Auto"
 ---
 {{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
 apiVersion: deckhouse.io/v1

@@ -1454,7 +1454,7 @@ const startWorkflow = async ({ github, context, core, workflow_id, ref, inputs }
   core.debug(`status: ${response.status}`);
   core.debug(`workflow dispatch response: ${JSON.stringify(response)}`);
 
-  if (response.status !== 204) {
+  if (response.status !== 200 && response.status !== 204) {
     return core.setFailed(
       `Error triggering workflow_dispatch event for '${workflow_id}'. createWorkflowDispatch response: ${JSON.stringify(
         response

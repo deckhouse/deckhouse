@@ -6,4 +6,6 @@ title: "Модуль descheduler: настройки"
 
 {% include module-bundle.liquid %}
 
+{% include module-requirements.liquid %}
+
 У модуля нет обязательных настроек.

@@ -324,6 +324,18 @@
     "external": "true",
     "path": "/modules/operator-argo/stable/"
   },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/",
+    "tags": [
+      "security"
+    ]
+  },
   "pod-reloader": {
     "tags": [
       "core"

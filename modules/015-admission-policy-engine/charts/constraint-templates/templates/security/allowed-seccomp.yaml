@@ -85,6 +85,7 @@ spec:
               }
 
               violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
                 not input_wildcard_allowed_profiles
                 allowed_profiles := get_allowed_profiles
                 container := input_containers[name]

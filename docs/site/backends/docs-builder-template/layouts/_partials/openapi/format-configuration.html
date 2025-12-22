@@ -1,10 +1,14 @@
 {{/* Renders a module configuration.
 
   Context:
+  .name — module name
+  .channel — module channel
   .data — a map, containing the JSON schema.
   .langData — map, containing the preferable language data. Can be empty.
   */}}
 
+  {{- $moduleName := .name }}
+  {{- $moduleChannel := .channel }}
   {{- $data := .data }}
   {{- $conversions := .conversions }}
   {{- $langData := .langData }}
@@ -15,6 +19,9 @@
   {{- end }}
 
   {{/* TODO: format_examples $data */}}
+
+  {{/* Show module requirements */}}
+  {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}
 
   {{/* Reading all conversions files */}}
 
@@ -91,6 +98,16 @@
       <ul>
       {{- range $property, $propertyData := $data.properties }}
         {{- if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
+        
+        {{/* Checking for x-doc-skip for TOP-level properties */}}
+        {{- if reflect.IsMap $propertyData }}
+          {{- $skipValue := index $propertyData "x-doc-skip" }}
+          {{- if eq $skipValue true }}
+            {{- /* Skip this parameter entirely */}}
+            {{- continue }}
+          {{- end }}
+        {{- end }}
+        
         {{- $propertyLangData := index $langData.properties $property }}
         {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters" "type" "module_configuration") }}
       {{- end }}

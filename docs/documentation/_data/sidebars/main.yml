@@ -570,8 +570,8 @@ entries:
                         ru: ALB
                       folders:
                         - title:
-                            en: ALB with NGINX Ingress controller
-                            ru: ALB средствами NGINX Ingress controller
+                            en: ALB with Ingress NGINX Controller
+                            ru: ALB средствами Ingress NGINX Controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
                             en: ALB with Istio
