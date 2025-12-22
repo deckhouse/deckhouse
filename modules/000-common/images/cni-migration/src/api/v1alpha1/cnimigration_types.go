@@ -22,14 +22,23 @@ import (
 
 // CNIMigrationSpec defines the desired state of CNIMigration.
 type CNIMigrationSpec struct {
-	// TargetCNI is the CNI to switch to.
-	// Set by the d8 cli utility when starting Phase 1.
+	// TargetCNI is the CNI to switch to (e.g., cilium, flannel).
 	TargetCNI string `json:"targetCNI"`
-
-	// Phase is the phase controlled by the d8 cli to command the agents.
-	// Possible values: Prepare, Migrate, Cleanup, Abort.
-	Phase string `json:"phase"`
 }
+
+const (
+	ConditionValidated        = "Validated"
+	ConditionNamespaceReady   = "NamespaceReady"
+	ConditionComponentsReady  = "ComponentsReady"
+	ConditionPodsAnnotated    = "PodsAnnotated"
+	ConditionTargetCNIEnabled = "TargetCNIEnabled"
+	ConditionOldCNIDisabled   = "OldCNIDisabled"
+	ConditionNodesCleaned     = "NodesCleaned"
+	ConditionTargetCNIReady   = "TargetCNIReady"
+	ConditionWebhookDeleted   = "WebhookDeleted"
+	ConditionPodsRestarted    = "PodsRestarted"
+	ConditionSucceeded        = "Succeeded"
+)
 
 // CNIMigrationStatus defines the observed state of CNIMigration.
 type CNIMigrationStatus struct {

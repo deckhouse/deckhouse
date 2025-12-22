@@ -19,20 +19,22 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
+	cnimigrationv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
 )
 
 const (
@@ -45,124 +47,154 @@ type CNIMigrationReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
+// Reconcile is the main manager loop
 func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
-	// 1. Fetch the CNIMigration object
-	cniMigration := &cniswitcherv1alpha1.CNIMigration{}
+	// Fetch the CNIMigration object
+	cniMigration := &cnimigrationv1alpha1.CNIMigration{}
 	if err := r.Get(ctx, req.NamespacedName, cniMigration); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("CNIMigration resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
-		logger.Error(err, "Failed to get CNIMigration")
 		return ctrl.Result{}, err
 	}
 
-	// 2. Get the current node name from the NODE_NAME environment variable
-	nodeName := os.Getenv("NODE_NAME")
-	if nodeName == "" {
-		err := fmt.Errorf("NODE_NAME environment variable not set")
-		logger.Error(err, "Unable to determine current node name. This must be set in the Pod spec.")
-		// Do not requeue, as this is a configuration error
+	// Safety check: Ensure only one migration is active at a time.
+	// We pick the oldest one as the "winner".
+	allMigrations := &cnimigrationv1alpha1.CNIMigrationList{}
+	if err := r.List(ctx, allMigrations); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// 3. Fetch or create CNINodeMigration for the current node
-	cniNodeMigration := &cniswitcherv1alpha1.CNINodeMigration{}
-	err := r.Get(ctx, types.NamespacedName{Name: nodeName}, cniNodeMigration)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// CNINodeMigration for this node not found, create it.
-			logger.Info("CNINodeMigration for this node not found, creating a new one", "Node", nodeName)
-			cniNodeMigration = &cniswitcherv1alpha1.CNINodeMigration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
-					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(cniMigration, cniswitcherv1alpha1.GroupVersion.WithKind("CNIMigration")),
-					},
-				},
-				Spec: cniswitcherv1alpha1.CNINodeMigrationSpec{},
-				Status: cniswitcherv1alpha1.CNINodeMigrationStatus{
-					Phase: "Pending", // Initial phase
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Initialized",
-							Status:             metav1.ConditionTrue,
-							LastTransitionTime: metav1.Now(),
-							Reason:             "CNINodeMigrationCreated",
-							Message:            "CNINodeMigration resource created for this node.",
-						},
-					},
-				},
-			}
-			if createErr := r.Create(ctx, cniNodeMigration); createErr != nil {
-				logger.Error(createErr, "Failed to create CNINodeMigration resource", "Node", nodeName)
-				return ctrl.Result{}, createErr
-			}
-			logger.Info("Created CNINodeMigration for node", "Node", nodeName)
-			// Requeue immediately to process the newly created object
-			return ctrl.Result{Requeue: true}, nil
+	for _, m := range allMigrations.Items {
+		if m.Name == cniMigration.Name {
+			continue
 		}
-		// Error reading the object - requeue the request.
-		logger.Error(err, "Failed to get CNINodeMigration for node", "Node", nodeName)
-		return ctrl.Result{}, err
+		// If there is an older migration that is not Succeeded/Failed, we wait.
+		if m.CreationTimestamp.Before(&cniMigration.CreationTimestamp) {
+			isFinished := false
+			for _, cond := range m.Status.Conditions {
+				if (cond.Type == cnimigrationv1alpha1.ConditionSucceeded) && cond.Status == metav1.ConditionTrue {
+					isFinished = true
+					break
+				}
+			}
+			if !isFinished {
+				return ctrl.Result{RequeueAfter: 30 * time.Second}, r.setCondition(ctx, cniMigration, "Conflict", metav1.ConditionTrue, "AnotherMigrationActive", fmt.Sprintf("Migration '%s' is already in progress. Waiting...", m.Name))
+			}
+		}
 	}
 
-	// 4. Handle phase-specific logic
-	switch cniMigration.Spec.Phase {
-	case "Prepare":
-		return r.reconcilePrepare(ctx, cniMigration, cniNodeMigration)
-	case "Migrate":
-		return r.reconcileMigrate(ctx, cniMigration, cniNodeMigration)
-	default:
-		logger.Info("Unknown or unhandled CNIMigration phase, no action taken",
-			"Phase", cniMigration.Spec.Phase)
+	// State machine steps
+	steps := []struct {
+		condition string
+		handler   func(context.Context, *cnimigrationv1alpha1.CNIMigration) (bool, error)
+	}{
+		{cnimigrationv1alpha1.ConditionValidated, r.ensureValidated},
+		{cnimigrationv1alpha1.ConditionNamespaceReady, r.ensureNamespaceReady},
+		{cnimigrationv1alpha1.ConditionComponentsReady, r.ensureComponentsReady},
+		{cnimigrationv1alpha1.ConditionPodsAnnotated, r.ensurePodsAnnotated},
+		{cnimigrationv1alpha1.ConditionTargetCNIEnabled, r.ensureTargetCNIEnabled},
+		{cnimigrationv1alpha1.ConditionOldCNIDisabled, r.ensureOldCNIDisabled},
+		{cnimigrationv1alpha1.ConditionNodesCleaned, r.ensureNodesCleaned},
+		{cnimigrationv1alpha1.ConditionTargetCNIReady, r.ensureTargetCNIReady},
+		{cnimigrationv1alpha1.ConditionWebhookDeleted, r.ensureWebhookDeleted},
+		{cnimigrationv1alpha1.ConditionPodsRestarted, r.ensurePodsRestarted},
+		{cnimigrationv1alpha1.ConditionSucceeded, r.ensureSucceeded},
+	}
+
+	for _, step := range steps {
+		if r.hasCondition(cniMigration, step.condition) {
+			continue
+		}
+
+		completed, err := step.handler(ctx, cniMigration)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !completed {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
+
+		if err := r.setCondition(ctx, cniMigration, step.condition, metav1.ConditionTrue, "StepCompleted", "Migration step completed successfully"); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *CNIMigrationReconciler) reconcilePrepare(
-	ctx context.Context,
-	cniMigration *cniswitcherv1alpha1.CNIMigration,
-	cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration,
-) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+func (r *CNIMigrationReconciler) hasCondition(m *cnimigrationv1alpha1.CNIMigration, condType string) bool {
+	for _, c := range m.Status.Conditions {
+		if c.Type == condType && c.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
 
-	// If the node is already prepared or failed, skip this phase.
-	if cniNodeMigration.Status.Phase == "Prepared" || cniNodeMigration.Status.Phase == "Failed" {
-		logger.Info("CNINodeMigration is already in its final state for the preparation phase.",
-			"Phase", cniNodeMigration.Status.Phase)
-		return ctrl.Result{}, nil
+func (r *CNIMigrationReconciler) setCondition(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration, condType string, status metav1.ConditionStatus, reason, message string) error {
+	newCond := metav1.Condition{
+		Type:               condType,
+		Status:             status,
+		LastTransitionTime: metav1.Now(),
+		Reason:             reason,
+		Message:            message,
 	}
 
-	logger.Info("Starting Prepare phase for node")
+	found := false
+	for i, c := range m.Status.Conditions {
+		if c.Type == condType {
+			m.Status.Conditions[i] = newCond
+			found = true
+			break
+		}
+	}
+	if !found {
+		m.Status.Conditions = append(m.Status.Conditions, newCond)
+	}
 
-	// Get all pods running on this node
+	return r.Status().Update(ctx, m)
+}
+
+func (r *CNIMigrationReconciler) ensureValidated(_ context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	if m.Spec.TargetCNI == "" {
+		return false, fmt.Errorf("targetCNI is not set")
+	}
+	// TODO: Add more validation (e.g., target CNI is supported)
+	return true, nil
+}
+
+func (r *CNIMigrationReconciler) ensureNamespaceReady(_ context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	return true, nil
+}
+
+func (r *CNIMigrationReconciler) ensureComponentsReady(_ context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	return true, nil
+}
+
+func (r *CNIMigrationReconciler) ensurePodsAnnotated(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
 	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, client.MatchingFields{"spec.nodeName": cniNodeMigration.Name}); err != nil {
-		logger.Error(err, "Failed to list pods on node")
-		return ctrl.Result{}, err
+	if err := r.List(ctx, podList); err != nil {
+		return false, err
 	}
 
-	podsAnnotated := 0
-	totalPodsToProcess := 0
-	var patchErrors []error
+	currentCNI := m.Status.CurrentCNI
+	if currentCNI == "" {
+		// We need to know current CNI to annotate.
+		// TODO: Implement current CNI detection if not set
+		return false, fmt.Errorf("currentCNI is not set in status")
+	}
 
+	podsToPatch := 0
 	for _, pod := range podList.Items {
 		if pod.Spec.HostNetwork {
 			continue
 		}
-		// Skip terminal pods as they don't need migration
 		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		totalPodsToProcess++
-
-		if pod.Annotations[EffectiveCNIAnnotation] == cniMigration.Status.CurrentCNI {
+		if pod.Annotations[EffectiveCNIAnnotation] == currentCNI {
 			continue
 		}
 
@@ -170,251 +202,184 @@ func (r *CNIMigrationReconciler) reconcilePrepare(
 		if patchedPod.Annotations == nil {
 			patchedPod.Annotations = make(map[string]string)
 		}
-		patchedPod.Annotations[EffectiveCNIAnnotation] = cniMigration.Status.CurrentCNI
+		patchedPod.Annotations[EffectiveCNIAnnotation] = currentCNI
 
 		if err := r.Patch(ctx, patchedPod, client.MergeFrom(&pod)); err != nil {
-			logger.Error(err, "Failed to annotate pod", "Pod", pod.Name)
-			patchErrors = append(patchErrors, err)
-			continue // Continue trying other pods
-		}
-		podsAnnotated++
-	}
-
-	if len(patchErrors) > 0 {
-		logger.Error(fmt.Errorf("encountered %d errors while annotating pods",
-			len(patchErrors)), "Partial failure during pod annotation")
-		// Return an error to trigger requeue, but do NOT update status to Failed immediately.
-		// This allows the controller to keep retrying without alarming the user or CLI prematurely.
-		// The CLI will see that the node is not "PreparationSucceeded" yet and keep waiting.
-		return ctrl.Result{}, fmt.Errorf("failed to annotate some pods: %v", patchErrors[0])
-	}
-
-	logger.Info("Finished annotating pods", "AnnotatedCount", podsAnnotated)
-
-	// Update status to reflect completion using RetryOnConflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Refetch the object inside the retry loop
-		if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-			return err
-		}
-
-		cniNodeMigration.Status.Phase = "Prepared"
-		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-			Type:               "PreparationSucceeded",
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             "PodsAnnotated",
-			Message: fmt.Sprintf("%d pods on the node received annotation.",
-				totalPodsToProcess),
-		})
-
-		return r.Status().Update(ctx, cniNodeMigration)
-	})
-	if err != nil {
-		logger.Error(err, "Failed to update CNINodeMigration status with retry")
-		return ctrl.Result{}, err
-	}
-
-	logger.Info("Successfully completed Prepare phase for node")
-	return ctrl.Result{}, nil
-}
-
-func (r *CNIMigrationReconciler) reconcileMigrate(
-	ctx context.Context,
-	cniMigration *cniswitcherv1alpha1.CNIMigration,
-	cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration,
-) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
-	// If the node is already succeeded or failed, skip this phase.
-	if cniNodeMigration.Status.Phase == "Succeeded" || cniNodeMigration.Status.Phase == "Failed" {
-		logger.Info("CNINodeMigration is already in a terminal state for Migrate phase",
-			"Phase", cniNodeMigration.Status.Phase)
-		return ctrl.Result{}, nil
-	}
-
-	// 1. Run node cleanup
-	cleanupCompleted := false
-	for _, cond := range cniNodeMigration.Status.Conditions {
-		if cond.Type == "CleanupSucceeded" && cond.Status == metav1.ConditionTrue {
-			cleanupCompleted = true
-			break
-		}
-	}
-
-	if !cleanupCompleted {
-		logger.Info("Starting node cleanup", "cni", cniMigration.Status.CurrentCNI)
-		if err := RunCleanup(ctx, cniMigration.Status.CurrentCNI); err != nil {
-			logger.Error(err, "Node cleanup failed")
-			return r.updateNodeStatusWithError(ctx, cniNodeMigration, "CleanupFailed", err)
-		}
-
-		logger.Info("Node cleanup successful")
-		// Update status to reflect completion using RetryOnConflict
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-				return err
-			}
-			cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-				Type:               "CleanupSucceeded",
-				Status:             metav1.ConditionTrue,
-				LastTransitionTime: metav1.Now(),
-				Reason:             "OldCNIArtifactsRemoved",
-				Message: fmt.Sprintf("Artifacts for CNI '%s' were successfully removed.",
-					cniMigration.Status.CurrentCNI),
-			})
-			return r.Status().Update(ctx, cniNodeMigration)
-		})
-		if err != nil {
-			logger.Error(err, "Failed to update CNINodeMigration status after cleanup with retry")
-			return ctrl.Result{}, err
-		}
-		// Requeue to proceed to the next (pod restart)
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// 2. Restart Pods
-	// We must wait until the new CNI is enabled and ready before restarting pods.
-	newCNIEnabled := false
-	for _, cond := range cniMigration.Status.Conditions {
-		if cond.Type == "NewCNIEnabled" && cond.Status == metav1.ConditionTrue {
-			newCNIEnabled = true
-			break
-		}
-	}
-
-	if !newCNIEnabled {
-		logger.Info("Waiting for NewCNIEnabled condition before restarting pods")
-		// Requeue to check again later
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-
-	// Check if pods have already been restarted
-	for _, cond := range cniNodeMigration.Status.Conditions {
-		if cond.Type == "PodsRestarted" && cond.Status == metav1.ConditionTrue {
-			logger.Info("Pods have already been restarted on this node")
-			// Update status to reflect completion using RetryOnConflict
-			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-					return err
-				}
-				// Final step, migration on this node is complete
-				cniNodeMigration.Status.Phase = "Succeeded"
-				return r.Status().Update(ctx, cniNodeMigration)
-			})
-			if err != nil {
-				logger.Error(err, "Failed to update CNINodeMigration status to Succeeded with retry")
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
-		}
-	}
-
-	logger.Info("Starting Pod restart for node")
-
-	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, client.MatchingFields{"spec.nodeName": cniNodeMigration.Name}); err != nil {
-		logger.Error(err, "Failed to list pods on node for restart")
-		return r.updateNodeStatusWithError(ctx, cniNodeMigration, "PodListFailed", err)
-	}
-
-	podsDeleted := 0
-	for _, pod := range podList.Items {
-		if pod.Annotations[EffectiveCNIAnnotation] == cniMigration.Status.CurrentCNI {
-			// If pod is already marked for deletion, skip it.
-			if pod.DeletionTimestamp != nil {
+			if errors.IsNotFound(err) {
 				continue
 			}
-
-			if err := r.Delete(ctx, &pod); err != nil {
-				if !errors.IsNotFound(err) {
-					logger.Error(err, "Failed to delete pod for restart", "Pod", pod.Name)
-					return r.updateNodeStatusWithError(ctx, cniNodeMigration, "PodDeletionFailed", err)
-				}
-				// If not found, it's already deleted, which is what we want.
-			}
-			podsDeleted++
+			return false, err
 		}
+		podsToPatch++
 	}
 
-	logger.Info("Finished deleting pods", "DeletedCount", podsDeleted)
-
-	// Update status to reflect pod restart completion using RetryOnConflict
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); err != nil {
-			return err
-		}
-		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-			Type:               "PodsRestarted",
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             "OldPodsDeleted",
-			Message:            fmt.Sprintf("%d pods with old CNI annotation were deleted.", podsDeleted),
-		})
-		cniNodeMigration.Status.Phase = "Succeeded"
-		return r.Status().Update(ctx, cniNodeMigration)
-	})
-	if err != nil {
-		logger.Error(err, "Failed to update CNINodeMigration status after pod deletion with retry")
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, nil
+	return podsToPatch == 0, nil
 }
 
-func (r *CNIMigrationReconciler) updateNodeStatusWithError(
-	ctx context.Context,
-	cniNodeMigration *cniswitcherv1alpha1.CNINodeMigration,
-	reason string,
-	err error,
-) (ctrl.Result, error) {
-	updateErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Refetch the object inside the retry loop
-		if getErr := r.Get(ctx, client.ObjectKeyFromObject(cniNodeMigration), cniNodeMigration); getErr != nil {
-			logger := log.FromContext(ctx)
-			logger.Error(getErr, "Failed to re-fetch CNINodeMigration before error status update in retry loop")
-			return getErr
-		}
+func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	moduleName := "cni-" + strings.ToLower(m.Spec.TargetCNI)
+	return r.toggleModule(ctx, moduleName, true)
+}
 
-		cniNodeMigration.Status.Phase = "Failed"
-		cniNodeMigration.Status.Conditions = append(cniNodeMigration.Status.Conditions, metav1.Condition{
-			Type:               "Failed",
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             reason,
-			Message:            err.Error(),
-		})
-		return r.Status().Update(ctx, cniNodeMigration)
+func (r *CNIMigrationReconciler) ensureOldCNIDisabled(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	moduleName := "cni-" + strings.ToLower(m.Status.CurrentCNI)
+	return r.toggleModule(ctx, moduleName, false)
+}
+
+func (r *CNIMigrationReconciler) toggleModule(ctx context.Context, moduleName string, enabled bool) (bool, error) {
+	mc := &unstructured.Unstructured{}
+	mc.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1alpha1",
+		Kind:    "ModuleConfig",
 	})
 
-	if updateErr != nil {
-		logger := log.FromContext(ctx)
-		logger.Error(updateErr, "Failed to update CNINodeMigration status with error using retry")
-		// Return the original error and the update error
-		return ctrl.Result{}, fmt.Errorf("original error: %w, update error: %w", err, updateErr)
+	err := r.Get(ctx, types.NamespacedName{Name: moduleName}, mc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// If we are enabling and it's not found, maybe it's not supposed to be there or handled differently
+			// In Deckhouse, modules might not have ModuleConfig if they are using defaults.
+			// But for CNI we usually have them.
+			return false, fmt.Errorf("ModuleConfig %s not found", moduleName)
+		}
+		return false, err
 	}
 
-	// Return the original error to trigger a requeue with backoff
-	return ctrl.Result{}, err
+	spec, found, err := unstructured.NestedMap(mc.Object, "spec")
+	if err != nil {
+		return false, err
+	}
+	if !found {
+		spec = make(map[string]any)
+	}
+
+	if currentEnabled, ok := spec["enabled"].(bool); ok && currentEnabled == enabled {
+		return true, nil
+	}
+
+	spec["enabled"] = enabled
+	if err := unstructured.SetNestedMap(mc.Object, spec, "spec"); err != nil {
+		return false, err
+	}
+
+	if err := r.Update(ctx, mc); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *CNIMigrationReconciler) ensureNodesCleaned(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	nodeMigrations := &cnimigrationv1alpha1.CNINodeMigrationList{}
+	if err := r.List(ctx, nodeMigrations); err != nil {
+		return false, err
+	}
+
+	// Get total nodes in cluster
+	nodes := &corev1.NodeList{}
+	if err := r.List(ctx, nodes); err != nil {
+		return false, err
+	}
+
+	if len(nodeMigrations.Items) < len(nodes.Items) {
+		// Not all nodes have started migration yet
+		return false, nil
+	}
+
+	cleanedNodes := 0
+	for _, nm := range nodeMigrations.Items {
+		for _, cond := range nm.Status.Conditions {
+			if cond.Type == cnimigrationv1alpha1.NodeConditionCleanupDone && cond.Status == metav1.ConditionTrue {
+				cleanedNodes++
+				break
+			}
+		}
+	}
+
+	// Update stats in status
+	m.Status.NodesTotal = len(nodes.Items)
+	m.Status.NodesSucceeded = cleanedNodes
+	// TODO: Handle failed nodes
+
+	return cleanedNodes >= len(nodes.Items), nil
+}
+
+func (r *CNIMigrationReconciler) ensureTargetCNIReady(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	moduleName := "cni-" + strings.ToLower(m.Spec.TargetCNI)
+	dsName := ""
+	switch moduleName {
+	case "cni-cilium":
+		dsName = "agent"
+	case "cni-flannel":
+		dsName = "flannel"
+	case "cni-simple-bridge":
+		dsName = "simple-bridge"
+	default:
+		return false, fmt.Errorf("unknown module name: %s", moduleName)
+	}
+
+	ds := &appsv1.DaemonSet{}
+	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: "d8-" + moduleName}, ds)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if ds.Status.DesiredNumberScheduled == 0 {
+		return false, nil
+	}
+
+	return ds.Status.NumberReady >= ds.Status.DesiredNumberScheduled, nil
+}
+
+func (r *CNIMigrationReconciler) ensureWebhookDeleted(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
+	webhook.Name = "cni-migration-webhook"
+
+	if err := r.Delete(ctx, webhook); err != nil {
+		if errors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *CNIMigrationReconciler) ensurePodsRestarted(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	nodeMigrations := &cnimigrationv1alpha1.CNINodeMigrationList{}
+	if err := r.List(ctx, nodeMigrations); err != nil {
+		return false, err
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := r.List(ctx, nodes); err != nil {
+		return false, err
+	}
+
+	restartedNodes := 0
+	for _, nm := range nodeMigrations.Items {
+		for _, cond := range nm.Status.Conditions {
+			if cond.Type == "PodsRestarted" && cond.Status == metav1.ConditionTrue {
+				restartedNodes++
+				break
+			}
+		}
+	}
+
+	return restartedNodes >= len(nodes.Items), nil
+}
+
+func (r *CNIMigrationReconciler) ensureSucceeded(_ context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, error) {
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CNIMigrationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Index pods by node name for efficient listing
-	err := mgr.GetFieldIndexer().IndexField(
-		context.Background(),
-		&corev1.Pod{},
-		"spec.nodeName",
-		func(rawObj client.Object) []string {
-			pod := rawObj.(*corev1.Pod)
-			return []string{pod.Spec.NodeName}
-		},
-	)
-	if err != nil {
-		return err
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cniswitcherv1alpha1.CNIMigration{}).      // Watch CNIMigration resources
-		Owns(&cniswitcherv1alpha1.CNINodeMigration{}). // Watch owned CNINodeMigration resources
+		For(&cnimigrationv1alpha1.CNIMigration{}).
+		Owns(&cnimigrationv1alpha1.CNINodeMigration{}).
 		Complete(r)
 }

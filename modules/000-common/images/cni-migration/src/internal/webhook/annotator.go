@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cniswitcherv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
+	cnimigrationv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
 )
 
 const (
@@ -99,7 +99,7 @@ func (a *PodAnnotator) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *PodAnnotator) getCurrentCNI(ctx context.Context) (string, error) {
-	migrations := &cniswitcherv1alpha1.CNIMigrationList{}
+	migrations := &cnimigrationv1alpha1.CNIMigrationList{}
 	err := a.Client.List(ctx, migrations, &client.ListOptions{
 		LabelSelector: labels.Everything(),
 	})

@@ -25,6 +25,10 @@ type CNINodeMigrationSpec struct {
 	// The spec can be empty, as all configuration is taken from the parent CNIMigration resource.
 }
 
+const (
+	NodeConditionCleanupDone = "CleanupDone"
+)
+
 // CNINodeMigrationStatus defines the observed state of CNINodeMigration.
 type CNINodeMigrationStatus struct {
 	// Phase is the phase of this particular node.

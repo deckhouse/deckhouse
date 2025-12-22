@@ -17,13 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -34,9 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	networkv1alpha1 "deckhouse.io/cni-switch-helper/api/v1alpha1"
-	"deckhouse.io/cni-switch-helper/internal/controller"
-	"deckhouse.io/cni-switch-helper/internal/webhook"
+	networkv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
+	"deckhouse.io/cni-migration/internal/controller"
+	"deckhouse.io/cni-migration/internal/webhook"
 )
 
 var (
@@ -57,7 +58,7 @@ func main() {
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&mode, "mode", "controller", "Mode to run the application in: 'controller' or 'webhook'")
+	flag.StringVar(&mode, "mode", "manager", "Mode to run the application in: 'manager' or 'agent'")
 
 	opts := zap.Options{
 		Development: false,
@@ -67,102 +68,133 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	config := ctrl.GetConfigOrDie()
-	setupLog.Info("Kubernetes connection details",
-		"Host", config.Host,
-		"KUBERNETES_SERVICE_HOST", os.Getenv("KUBERNETES_SERVICE_HOST"),
-		"KUBERNETES_SERVICE_PORT", os.Getenv("KUBERNETES_SERVICE_PORT"))
+	setupLog.Info("Kubernetes connection details", "Host", config.Host)
 
-	if mode == "webhook" {
-		setupLog.Info("Starting in webhook mode")
-		if err := startWebhookServer(probeAddr); err != nil {
-			setupLog.Error(err, "problem running webhook server")
+	if mode == "manager" {
+		setupLog.Info("Starting in manager mode (controller + webhook)")
+
+		mgr, err := ctrl.NewManager(config, ctrl.Options{
+			Scheme:                 scheme,
+			Metrics:                metricsserver.Options{BindAddress: metricsAddr},
+			HealthProbeBindAddress: probeAddr,
+		})
+		if err != nil {
+			setupLog.Error(err, "unable to start manager")
+			os.Exit(1)
+		}
+
+		if err := (&controller.CNIMigrationReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create manager controller", "controller", "CNIMigration")
+			os.Exit(1)
+		}
+
+		// Add Webhook Server as a Runnable to the manager
+		if err := mgr.Add(&webhookServerRunnable{
+			scheme: scheme,
+			log:    setupLog.WithName("webhook"),
+		}); err != nil {
+			setupLog.Error(err, "unable to add webhook server to manager")
+			os.Exit(1)
+		}
+
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up health check")
+			os.Exit(1)
+		}
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up ready check")
+			os.Exit(1)
+		}
+
+		setupLog.Info("Starting manager")
+		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			setupLog.Error(err, "problem running manager")
 			os.Exit(1)
 		}
 		return
 	}
 
-	mgr, err := ctrl.NewManager(config, ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-		HealthProbeBindAddress: probeAddr,
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	if err := (&controller.CNIMigrationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CNIMigration")
-		os.Exit(1)
-	}
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
-
-	setupLog.Info("Starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
-}
-
-func newHealthzHandler(checker healthz.Checker) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := checker(r); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	}
-}
-
-func startWebhookServer(probeAddr string) error {
-	var eg errgroup.Group
-
-	// Goroutine for the health probe server
-	eg.Go(func() error {
-		healthMux := http.NewServeMux()
-		healthMux.HandleFunc("/healthz", newHealthzHandler(healthz.Ping))
-		healthMux.HandleFunc("/readyz", newHealthzHandler(healthz.Ping))
-		setupLog.Info("Starting health probe server", "addr", probeAddr)
-		return http.ListenAndServe(probeAddr, healthMux)
-	})
-
-	// Goroutine for the main webhook server
-	eg.Go(func() error {
-		webhookClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if mode == "agent" {
+		setupLog.Info("Starting in agent mode")
+		mgr, err := ctrl.NewManager(config, ctrl.Options{
+			Scheme:                 scheme,
+			Metrics:                metricsserver.Options{BindAddress: metricsAddr},
+			HealthProbeBindAddress: probeAddr,
+		})
 		if err != nil {
-			return fmt.Errorf("creating webhook client: %w", err)
+			setupLog.Error(err, "unable to start agent manager")
+			os.Exit(1)
 		}
 
-		podAnnotator := &webhook.PodAnnotator{
-			Client: webhookClient,
+		if err := (&controller.CNIAgentReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create agent controller", "controller", "CNIAgent")
+			os.Exit(1)
 		}
 
-		mux := http.NewServeMux()
-		mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
-
-		const webhookServerPort = 42443
-		server := &http.Server{
-			Addr:         fmt.Sprintf(":%d", webhookServerPort),
-			Handler:      mux,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up health check")
+			os.Exit(1)
 		}
-		setupLog.Info("Webhook server starting", "port", webhookServerPort)
-		return server.ListenAndServeTLS("/etc/tls/tls.crt", "/etc/tls/tls.key")
-	})
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+			setupLog.Error(err, "unable to set up ready check")
+			os.Exit(1)
+		}
 
-	// Wait for either server to return an error
-	return eg.Wait()
+		setupLog.Info("Starting agent")
+		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			setupLog.Error(err, "problem running agent")
+			os.Exit(1)
+		}
+		return
+	}
+
+	setupLog.Error(fmt.Errorf("invalid mode: %s", mode), "supported modes: manager, agent")
+	os.Exit(1)
+}
+
+// webhookServerRunnable wraps the webhook server to run within the controller manager's context
+type webhookServerRunnable struct {
+	scheme *runtime.Scheme
+	log    logr.Logger
+}
+
+func (r *webhookServerRunnable) Start(ctx context.Context) error {
+	webhookClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: r.scheme})
+	if err != nil {
+		return fmt.Errorf("creating webhook client: %w", err)
+	}
+
+	podAnnotator := &webhook.PodAnnotator{
+		Client: webhookClient,
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mutate-pod", podAnnotator.Handle)
+
+	const webhookServerPort = 42443
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", webhookServerPort),
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	r.log.Info("Webhook server starting", "port", webhookServerPort)
+
+	// Shutdown the server when context is canceled
+	go func() {
+		<-ctx.Done()
+		r.log.Info("Shutting down webhook server")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+
+	return server.ListenAndServeTLS("/etc/tls/tls.crt", "/etc/tls/tls.key")
 }
