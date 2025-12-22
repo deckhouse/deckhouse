@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -375,12 +376,18 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
-	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
+	// Use WalkDir instead of Walk - more reliable in containers and avoids unnecessary stat() calls
+	err = filepath.WalkDir(moduleDir, func(file string, d fs.DirEntry, err error) error {
 		r.logger.Debug("walking file", slog.String("path", file))
+
+		// CRITICAL: Continue walking even if there's an error
+		// Don't let one bad file stop the entire walk (fixes container volume issues)
 		if err != nil {
-			return err
+			r.logger.Warn("walk encountered error", slog.String("path", file), log.Err(err))
+			return nil // Continue despite error
 		}
 
+		// Skip .go files
 		if filepath.Ext(file) == ".go" {
 			return nil
 		}
@@ -388,49 +395,84 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		// Get relative path from module directory
 		relPath, err := filepath.Rel(moduleDir, file)
 		if err != nil {
-			return err
+			r.logger.Error("failed to get relative path", slog.String("file", file), log.Err(err))
+			return nil // Continue
 		}
 
 		// Convert to forward slashes for IsDocsPath check (it expects Unix-style paths)
 		relPathUnix := filepath.ToSlash(relPath)
-		if !module.IsDocsPath(relPathUnix) {
-			r.logger.Debug("skip non-docs path", slog.String("path", relPathUnix))
+
+		// Handle root directory explicitly - don't add to tar but allow descent
+		if relPathUnix == "." {
+			r.logger.Debug("processing root directory, will descend into subdirectories")
 			return nil
 		}
 
+		// Skip non-docs paths efficiently
+		if !module.IsDocsPath(relPathUnix) {
+			r.logger.Debug("skip non-docs path",
+				slog.String("path", relPathUnix),
+				slog.Bool("isDir", d.IsDir()))
+
+			if d.IsDir() {
+				return filepath.SkipDir // Skip entire directory efficiently
+			}
+
+			return nil // Skip just this file
+		}
+
+		// This is a docs path - process it
+		r.logger.Debug("processing docs path",
+			slog.String("path", relPathUnix),
+			slog.Bool("isDir", d.IsDir()))
+
+		// Get FileInfo only when needed (WalkDir optimization)
+		info, err := d.Info()
+		if err != nil {
+			r.logger.Warn("failed to get file info, skipping", slog.String("path", file), log.Err(err))
+			return nil // Continue
+		}
+
+		// Create tar header
 		header, err := tar.FileInfoHeader(info, info.Name())
 		if err != nil {
-			return err
+			r.logger.Error("failed to create tar header", slog.String("path", file), log.Err(err))
+			return nil // Continue
 		}
 
 		// Use forward slashes in tar header (tar format uses forward slashes)
 		header.Name = relPathUnix
 
 		if err = tw.WriteHeader(header); err != nil {
-			return err
+			r.logger.Error("failed to write tar header", slog.String("path", file), log.Err(err))
+			return nil // Continue
 		}
 
 		if info.IsDir() {
-			r.logger.Debug("skip directory", slog.String("path", file))
+			r.logger.Debug("directory header written, will descend", slog.String("path", file))
 			return nil
 		}
 
+		// Copy file content
 		f, err := os.Open(file)
 		if err != nil {
-			return err
+			r.logger.Error("failed to open file", slog.String("path", file), log.Err(err))
+			return nil // Continue
 		}
 		defer f.Close()
 
-		r.logger.Debug("copy file", slog.String("path", file))
+		r.logger.Debug("copy file content to tar", slog.String("path", file))
 
 		if _, err = io.Copy(tw, f); err != nil {
-			return err
+			r.logger.Error("failed to copy file content", slog.String("path", file), log.Err(err))
+			return nil // Continue
 		}
 
 		return nil
 	})
+
 	if err != nil {
-		return fmt.Errorf("read to buffer: %w", err)
+		return fmt.Errorf("walk directory: %w", err)
 	}
 
 	return nil
