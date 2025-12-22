@@ -78,7 +78,7 @@ spec:
             - name: NODE_GROUP
               value: {{ $ng.name }}
             - name: LOG_LEVEL
-              value: info
+              value: debug
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: NODE_NAME
