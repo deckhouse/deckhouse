@@ -24,6 +24,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -100,6 +102,11 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 
 	lbName := defaultLoadBalancerName(service)
 
+	lbClass := api.ChooseLoadBalancerClass(service)
+	if err := c.ensureExternalLBClassAnnotation(ctx, service, lbClass); err != nil {
+		klog.ErrorS(err, "Failed to patch effective lb class annotation", "namespace", service.Namespace, "service", service.Name, "lbClass", lbClass)
+	}
+
 	lb := api.LoadBalancer{
 		Name:    lbName,
 		Service: service,
@@ -112,4 +119,29 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 		return nil, err
 	}
 	return &svc.Status.LoadBalancer, nil
+}
+
+func (c *Cloud) ensureExternalLBClassAnnotation(ctx context.Context, svc *corev1.Service, lbClass string) error {
+	if c.kubeClient == nil {
+		return nil
+	}
+
+	cur := ""
+	if svc.Annotations != nil {
+		cur = svc.Annotations[api.DVPExternalLBClassAnnotation]
+	}
+	if cur == lbClass {
+		return nil
+	}
+
+	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:%q}}}`, api.DVPExternalLBClassAnnotation, lbClass))
+
+	_, err := c.kubeClient.CoreV1().Services(svc.Namespace).Patch(
+		ctx,
+		svc.Name,
+		types.MergePatchType,
+		patch,
+		metav1.PatchOptions{},
+	)
+	return err
 }
