@@ -113,15 +113,31 @@ module.exports.renderWorkflowStatusFinal = (status, name, ref, build_url, starte
   return `${statusComment}${info}`;
 };
 
-module.exports.renderDocumentationComments = () => {
-  const environments = [
+module.exports.renderDocumentationComments = (workflowName) => {
+  const allEnvironments = [
     { name: 'Stage', host: 'deckhouse.stage.flant.dev' },
     { name: 'Test', host: 'deckhouse.test.flant.dev' },
     ...Array.from({ length: 6 }, (_, i) => ({
-      name: `Test ${i + 2}`,
+      name: `Test${i + 2}`,
       host: `deckhouse-${i + 2}.test.flant.dev`
     }))
-  ];
+  ].map(env => ({
+    ...env,
+    key: env.name.toLowerCase().replace(/\s+/g, '')
+  }));
+
+  // Extract environment from workflow name (e.g., "Deploy web to stage" -> "stage")
+  let environments = allEnvironments;
+  if (workflowName) {
+    const match = workflowName.match(/Deploy web to (.+)$/i);
+    if (match) {
+      const envKey = match[1].toLowerCase().replace(/\s+/g, '');
+      const found = allEnvironments.find(env => env.key === envKey);
+      if (found) {
+        environments = [found];
+      }
+    }
+  }
 
   const basePath = '/products/kubernetes-platform/documentation/v1/';
   const listItems = environments
