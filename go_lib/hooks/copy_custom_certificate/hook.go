@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -130,7 +131,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		}
 
 		if len(ca) > 0 {
-			vc.CA = string(ca)
+			vc.CA = strings.TrimSpace(string(ca))
 		}
 
 		tlsKey, err := base64.StdEncoding.DecodeString(c.TLSKey)
@@ -139,7 +140,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		}
 
 		if len(tlsKey) > 0 {
-			vc.TLSKey = string(tlsKey)
+			vc.TLSKey = strings.TrimSpace(string(tlsKey))
 		}
 
 		tlsCert, err := base64.StdEncoding.DecodeString(c.TLSCert)
@@ -148,7 +149,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 		}
 
 		if len(tlsCert) > 0 {
-			vc.TLSCert = string(tlsCert)
+			vc.TLSCert = strings.TrimSpace(string(tlsCert))
 		}
 
 		input.Values.Set(path, vc)
@@ -158,13 +159,13 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 }
 
 type dataCert struct {
-	CA      string `yaml:"ca.crt,omitempty"`
-	TLSKey  string `yaml:"tls.key,omitempty"`
-	TLSCert string `yaml:"tls.crt,omitempty"`
-}
-
-type valuesCert struct {
 	CA      string `json:"ca.crt,omitempty"`
 	TLSKey  string `json:"tls.key,omitempty"`
 	TLSCert string `json:"tls.crt,omitempty"`
+}
+
+type valuesCert struct {
+	CA      string `json:"ca.crt,omitempty" yaml:"ca.crt,omitempty"`
+	TLSKey  string `json:"tls.key,omitempty" yaml:"tls.key,omitempty"`
+	TLSCert string `json:"tls.crt,omitempty" yaml:"tls.crt,omitempty"`
 }
