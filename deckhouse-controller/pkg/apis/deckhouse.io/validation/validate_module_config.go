@@ -121,6 +121,8 @@ func moduleConfigValidationHandler(
 			}
 
 			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+				// Try to reject by spec.settings.allowExperimentalModules policy first
+				// using definition from the storage (when module is already downloaded)
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -131,6 +133,20 @@ func moduleConfigValidationHandler(
 
 				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
 					return rejectResult(err.Error())
+				}
+
+				// Second try to reject the module by spec.settings.allowExperimentalModules policy
+				// using definition from the API server (when module is not downloaded yet)
+				m := new(v1alpha1.Module)
+				err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m)
+				if apierrors.IsNotFound(err) {
+					return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+				}
+				if err != nil {
+					return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+				}
+				if m.IsExperimental() {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
 			}
 		case kwhmodel.OperationUpdate:

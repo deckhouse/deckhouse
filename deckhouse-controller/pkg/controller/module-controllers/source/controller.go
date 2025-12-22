@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
@@ -421,6 +422,16 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
+		// update module with its metadata after meta is fetched
+		if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition); err != nil {
+			logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
 		// check if release exists
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
@@ -577,4 +588,33 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
+func (r *reconciler) updateModulePropertiesFromDefinition(ctx context.Context, module *v1alpha1.Module, definition *moduletypes.Definition) error {
+	if definition == nil {
+		return nil
+	}
+
+	return ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		applyModuleDefinitionToProperties(&module.Properties, definition)
+		return nil
+	})
+}
+
+// applyModuleDefinitionToProperties maps fields from module definition to module properties.
+func applyModuleDefinitionToProperties(props *v1alpha1.ModuleProperties, def *moduletypes.Definition) {
+	if props == nil || def == nil {
+		return
+	}
+
+	props.Stage = def.Stage
+	props.Weight = def.Weight
+	props.Critical = def.Critical
+	props.Namespace = def.Namespace
+	props.Subsystems = def.Subsystems
+	props.ExclusiveGroup = def.ExclusiveGroup
+	props.Requirements = def.Requirements
+	props.DisableOptions = def.DisableOptions
+	props.Accessibility = def.Accessibility.ToV1Alpha1()
 }
