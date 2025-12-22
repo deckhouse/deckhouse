@@ -1,0 +1,37 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию для миграции CNI.
+          properties:
+            spec:
+              description: |
+                Определяет желаемое состояние миграции CNI.
+              properties:
+                targetCNI:
+                  description: |
+                    Целевой CNI для миграции.
+                phase:
+                  description: |
+                    Фаза, контролируемая d8 cli для управления агентами. Возможные значения: Prepare, Migrate, Cleanup, Abort.
+            status:
+              description: |
+                Определяет наблюдаемое состояние миграции CNI.
+              properties:
+                currentCNI:
+                  description: |
+                    Обнаруженный CNI, с которого выполняется переключение.
+                nodesTotal:
+                  description: |
+                    Общее количество узлов, участвующих в миграции.
+                nodesSucceeded:
+                  description: |
+                    Количество узлов, успешно завершивших текущую фазу.
+                nodesFailed:
+                  description: |
+                    Количество узлов, на которых произошла ошибка.
+                conditions:
+                  description: |
+                    Отражает состояние миграции в целом.
