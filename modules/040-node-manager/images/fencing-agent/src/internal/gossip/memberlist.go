@@ -1,8 +1,10 @@
 package gossip
 
 import (
+	"log"
 	"strconv"
 	"time"
+
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -17,6 +19,7 @@ type Memberlist struct {
 
 func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, nodeIP string) (Gossip, error) {
 	config := memberlist.DefaultLANConfig()
+	config.Logger = log.New(NewZapAdapter(logger), "[memberlist] ", 0)
 
 	config.ProbeInterval = 50 * time.Millisecond
 	config.ProbeTimeout = 25 * time.Millisecond
