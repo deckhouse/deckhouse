@@ -206,6 +206,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			"Cannot get init config, the state will be processed without it",
 			"error", err,
 		)
+		initSecret = InitSecretSnap{}
 	}
 
 	if values.State.Mode == "" {
