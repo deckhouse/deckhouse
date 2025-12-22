@@ -1,0 +1,13 @@
+{{ $moduleName := .ModuleName }}
+{{ $configVersion := .configVersion}}
+{{ $context := .Page }} 
+
+  <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight code__transfer"><code class="wrap"><span data-copy="ignore" class="line-number">1</span><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">deckhouse.io/v1alpha1</span>
+<span data-copy="ignore" class="line-number">2</span><span class="na">kind</span><span class="pi">:</span> <span class="s">ModuleConfig</span>
+<span data-copy="ignore" class="line-number">3</span><span class="na">metadata</span><span class="pi">:</span>
+<span data-copy="ignore" class="line-number">4</span>  <span class="na">name</span><span class="pi">:</span> <span class="s">{{$moduleName}}</span>
+<span data-copy="ignore" class="line-number">5</span><span class="na">spec</span><span class="pi">:</span>
+<span data-copy="ignore" class="line-number">6</span>  <span class="na">version</span><span class="pi">:</span> <span class="m">{{$configVersion}}</span>
+<span data-copy="ignore" class="line-number">7</span>  <span class="na">enabled</span><span class="pi">:</span> <span class="kc">true</span>
+<span data-copy="ignore" class="line-number">8</span>  <span class="na">settings</span><span class="pi">:</span> <span class="c1"># &lt;-- {{T "module_settings_example_comment"}}.</span>
+</code><button class="wrap__button"><img src="/images/wrap-button.svg" class="wrap__icon" style="display: none;"><img src="/images/unwrap-button.svg" class="wrap__icon"></button></pre></div></div>

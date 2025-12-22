@@ -8,6 +8,12 @@ search_context_only_product_docs: Поиск выполняется по все�
 modules: модули
 modules2: модулей
 module: модуль
+module_settings: Настройки
+module_settings_learn_more: подробнее о настройке Deckhouse…
+module_settings_message_first_part: Чтобы настроить модуль, используйте ресурс <code>ModuleConfig</code> с именем
+module_settings_message_second_part: Пример ресурса <code>ModuleConfig/
+module_settings_message_third_part: </code> для настройки модуля
+module_settings_example_comment: Параметры модуля из раздела "Параметры" ниже
 module_versions: Версии модуля
 module_version: Версия модуля
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.

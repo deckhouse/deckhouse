@@ -22,6 +22,13 @@
 
   {{/* Show module requirements */}}
   {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}
+  
+  {{/* Rendering ModuleConfig Example*/}}
+  <h2>{{ T "module_settings" }}</h2>
+  <p>{{ safeHTML (T "module_settings_message_first_part") }} <code>{{$moduleName}}</code> (<a href="/products/kubernetes-platform/documentation/v1/admin/configuration/">{{T "module_settings_learn_more"}}</a>)</p>
+  <p>{{ safeHTML (T "module_settings_message_second_part") }}{{$moduleName}}{{safeHTML (T "module_settings_message_third_part") }}:</p>
+
+  {{- partial "openapi/module-configuration-example" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
 
   {{/* Reading all conversions files */}}
 
