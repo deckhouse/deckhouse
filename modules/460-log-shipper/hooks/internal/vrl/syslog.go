@@ -36,7 +36,7 @@ pri = 1 * 8 + .syslog.severity;
 ., err = join([
   "<" + to_string(pri) + ">" + "1",     # <pri>version
   to_string!(.timestamp),
-  to_string!(.kubernetes.pod_name || .hostname || "${VECTOR_SELF_NODE_NAME}"),
+  to_string!(.kubernetes.pod_name || .hostname || "${VECTOR_HOSTNAME}"),
   to_string!(.app || .kubernetes.labels.app || .syslog.app || "-"),
   "-", # procid
   to_string!(.syslog.message_id || "-"), # msgid

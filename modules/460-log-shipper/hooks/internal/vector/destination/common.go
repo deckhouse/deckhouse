@@ -97,6 +97,12 @@ func ComposeName(n string) string {
 	return "destination/cluster/" + n
 }
 
+// ComposeNameWithSourceType creates a unique sink name by including the source type
+// This allows the same destination to have separate sink instances for different source types
+func ComposeNameWithSourceType(n string, sourceType string) string {
+	return "destination/cluster/" + n + "/" + sourceType
+}
+
 // buildVectorBuffer generates buffer config for vector if CRD buffer config is set
 func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
 	if buffer != nil {

@@ -75,7 +75,7 @@ type ElasticsearchBulk struct {
 	Index  string `json:"index,omitempty"`
 }
 
-func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
+func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
 	bulkAction := "index"
@@ -110,7 +110,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 	return &Elasticsearch{
 		APIVersion: apiVersion,
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "elasticsearch",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
