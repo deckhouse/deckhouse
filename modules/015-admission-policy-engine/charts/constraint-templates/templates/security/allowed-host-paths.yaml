@@ -46,10 +46,30 @@ spec:
                 volume := input_hostpath_volumes[_]
                 not allowed_by_any(volume)
                 allowedPaths := get_allowed_paths(input)
-                msg := sprintf(
-                  "HostPath volume %v is not allowed, pod: %v. Allowed paths: %v",
-                  [volume, input.review.object.metadata.name, allowedPaths],
-                )
+                actual_value := sprintf("Actual HostPath volume: %v", [volume])
+                allowed_by_policy := sprintf("Allowed paths: %v", [allowedPaths])
+                exception_allowed := get_exception_allowed_hostpaths(volume)
+                msg := build_hostpath_message(input.review.object.metadata.name, actual_value, allowed_by_policy, exception_allowed)
+              }
+
+              get_exception_allowed_hostpaths(volume) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                allowed_paths := exception.spec.volumes.hostPath.allowedValues
+                out := sprintf("SecurityPolicyException allowed paths: %v", [allowed_paths])
+              }
+
+              get_exception_allowed_hostpaths(volume) := ""
+
+              build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("HostPath volume is not allowed, pod: %v. %v. %v. %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("HostPath volume is not allowed, pod: %v. %v. %v", [pod_name, actual_value, allowed_by_policy])
               }
 
               ### SecurityPolicy logic
