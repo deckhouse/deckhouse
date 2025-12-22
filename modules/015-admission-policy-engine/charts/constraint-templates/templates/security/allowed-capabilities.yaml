@@ -50,10 +50,63 @@ spec:
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
                 not allowed_by_any(container)
-                msg := sprintf(
-                  "container <%v> has a disallowed capability. Allowed capabilities are %v",
-                  [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")],
-                )
+                allowed := get_default(input.parameters, "allowedCapabilities", "NONE")
+                allowed_by_policy := sprintf("Allowed capabilities: %v", [allowed])
+                actual_value := get_actual_capabilities(container)
+                exception_allowed := get_exception_allowed_capabilities(container)
+                msg := build_capabilities_message(container.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_capabilities(container) := out if {
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "capabilities")
+                has_field(container.securityContext.capabilities, "add")
+                add_caps := container.securityContext.capabilities.add
+                out := sprintf("Actual capabilities.add: %v", [add_caps])
+              }
+
+              get_actual_capabilities(container) := "Actual capabilities.add: [] (not set)" if {
+                not has_field(container, "securityContext")
+              }
+
+              get_actual_capabilities(container) := "Actual capabilities.add: [] (not set)" if {
+                has_field(container, "securityContext")
+                not has_field(container.securityContext, "capabilities")
+              }
+
+              get_actual_capabilities(container) := "Actual capabilities.add: [] (not set)" if {
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "capabilities")
+                not has_field(container.securityContext.capabilities, "add")
+              }
+
+              get_exception_allowed_capabilities(container) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                allowed_add := exception.spec.securityContext.capabilities.allowedValues.add
+                allowed_drop := exception.spec.securityContext.capabilities.allowedValues.drop
+                out := sprintf("SecurityPolicyException allowed: capabilities.add: %v, capabilities.drop: %v", [allowed_add, allowed_drop])
+              }
+
+              get_exception_allowed_capabilities(container) := ""
+
+              build_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("container <%v> has a disallowed capability. %v. %v. %v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("container <%v> has a disallowed capability. %v. %v", [name, actual_value, allowed_by_policy])
+              }
+
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
 
               allowed_by_any(container) if {
@@ -89,8 +142,53 @@ spec:
                   not input.review.operation == "DELETE"
                   container := input_containers[_]
                   not drops_required_capabilities_by_any(container)
-                  msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", 
-                  [container.name, input.parameters.requiredDropCapabilities])
+                  allowed_by_policy := sprintf("Required drop capabilities: %v or \"ALL\"", [input.parameters.requiredDropCapabilities])
+                  actual_value := get_actual_drop_capabilities(container)
+                  exception_allowed := get_exception_allowed_drop_capabilities(container)
+                  msg := build_drop_capabilities_message(container.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_drop_capabilities(container) := out if {
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "capabilities")
+                has_field(container.securityContext.capabilities, "drop")
+                drop_caps := container.securityContext.capabilities.drop
+                out := sprintf("Actual capabilities.drop: %v", [drop_caps])
+              }
+
+              get_actual_drop_capabilities(container) := "Actual capabilities.drop: [] (not set)" if {
+                not has_field(container, "securityContext")
+              }
+
+              get_actual_drop_capabilities(container) := "Actual capabilities.drop: [] (not set)" if {
+                has_field(container, "securityContext")
+                not has_field(container.securityContext, "capabilities")
+              }
+
+              get_actual_drop_capabilities(container) := "Actual capabilities.drop: [] (not set)" if {
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "capabilities")
+                not has_field(container.securityContext.capabilities, "drop")
+              }
+
+              get_exception_allowed_drop_capabilities(container) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                allowed_drop := exception.spec.securityContext.capabilities.allowedValues.drop
+                out := sprintf("SecurityPolicyException allowed: capabilities.drop: %v", [allowed_drop])
+              }
+
+              get_exception_allowed_drop_capabilities(container) := ""
+
+              build_drop_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("container <%v> is not dropping all required capabilities. %v. %v. %v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_drop_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("container <%v> is not dropping all required capabilities. %v. %v", [name, actual_value, allowed_by_policy])
               }
 
               drops_required_capabilities_by_any(container) if {

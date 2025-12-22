@@ -39,7 +39,52 @@ spec:
                 not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any(c)
-                msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])
+                allowed_by_policy := "privileged: false"
+                actual_value := get_actual_privileged(c)
+                exception_allowed := get_exception_allowed(c)
+                msg := build_message(c.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_privileged(c) := out if {
+                has_field(c, "securityContext")
+                has_field(c.securityContext, "privileged")
+                out := sprintf("privileged: %v", [c.securityContext.privileged])
+              }
+
+              get_actual_privileged(c) := "privileged: not set (defaults to false)" if {
+                not has_field(c, "securityContext")
+              }
+
+              get_actual_privileged(c) := "privileged: not set (defaults to false)" if {
+                has_field(c, "securityContext")
+                not has_field(c.securityContext, "privileged")
+              }
+
+              get_exception_allowed(c) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                out := sprintf("SecurityPolicyException allowed: privileged: %v", [exception.spec.securityContext.privileged.allowedValue])
+              }
+
+              get_exception_allowed(c) := ""
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("Privileged container is not allowed: %v. Actual value: %v. Allowed by policy: %v. %v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("Privileged container is not allowed: %v. Actual value: %v. Allowed by policy: %v", [name, actual_value, allowed_by_policy])
+              }
+
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
 
               allowed_by_any(c) if {

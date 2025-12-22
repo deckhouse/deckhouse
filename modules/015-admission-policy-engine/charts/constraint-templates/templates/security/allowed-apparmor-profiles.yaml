@@ -46,10 +46,35 @@ spec:
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
                 not allowed_by_any(input.review.object, container)
-                msg := sprintf(
-                  "AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v",
-                  [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles],
-                )
+                allowed_by_policy := sprintf("Allowed profiles: %v", [input.parameters.allowedProfiles])
+                actual_value := get_actual_apparmor_profile(input.review.object, container)
+                exception_allowed := get_exception_allowed_apparmor(input.review.object, container)
+                msg := build_apparmor_message(input.review.object.metadata.name, container.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_apparmor_profile(pod, container) := out if {
+                profile := get_apparmor_profile(pod, container)
+                out := sprintf("Actual AppArmor profile: %v", [profile])
+              }
+
+              get_exception_allowed_apparmor(pod, container) := out if {
+                label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := pod.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                allowed_profiles := exception.spec.securityContext.appArmorProfile.allowedValues
+                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
+              }
+
+              get_exception_allowed_apparmor(pod, container) := ""
+
+              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. %v. %v. %v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. %v. %v", [pod_name, container_name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any(pod, container) if {
