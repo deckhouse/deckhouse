@@ -18,6 +18,7 @@ package copy_custom_certificate
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -31,6 +32,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type CustomCertificate struct {
@@ -103,6 +105,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 
 		rawsecretName, _ := module.GetValuesFirstDefined(input, fmt.Sprintf("%s.https.customCertificate.secretName", moduleName), "global.modules.https.customCertificate.secretName")
 		secretName := rawsecretName.String()
+		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
 
 		if secretName == "" {
 			return nil
@@ -113,19 +116,54 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 			return fmt.Errorf("custom certificate secret name is configured, but secret with this name doesn't exist")
 		}
 
-		var c cert
+		var c dataCert
 		err := yaml.Unmarshal(secretData, &c)
 		if err != nil {
 			return err
 		}
 
-		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
-		input.Values.Set(path, c)
+		vc := valuesCert{}
+
+		ca, err := base64.StdEncoding.DecodeString(c.CA)
+		if err != nil {
+			input.Logger.Debug("decode ca", log.Err(err))
+		}
+
+		if len(ca) > 0 {
+			vc.CA = string(ca)
+		}
+
+		tlsKey, err := base64.StdEncoding.DecodeString(c.TLSKey)
+		if err != nil {
+			input.Logger.Warn("decode tls", log.Err(err))
+		}
+
+		if len(tlsKey) > 0 {
+			vc.TLSKey = string(tlsKey)
+		}
+
+		tlsCert, err := base64.StdEncoding.DecodeString(c.TLSCert)
+		if err != nil {
+			input.Logger.Warn("decode tls cert", log.Err(err))
+		}
+
+		if len(tlsCert) > 0 {
+			vc.TLSCert = string(tlsCert)
+		}
+
+		input.Values.Set(path, vc)
+
 		return nil
 	}
 }
 
-type cert struct {
+type dataCert struct {
+	CA      string `yaml:"ca.crt,omitempty"`
+	TLSKey  string `yaml:"tls.key,omitempty"`
+	TLSCert string `yaml:"tls.crt,omitempty"`
+}
+
+type valuesCert struct {
 	CA      string `json:"ca.crt,omitempty"`
 	TLSKey  string `json:"tls.key,omitempty"`
 	TLSCert string `json:"tls.crt,omitempty"`
