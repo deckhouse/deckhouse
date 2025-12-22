@@ -809,3 +809,11 @@ func assertOverDefaultBastion(t *testing.T, overBastion bool, bastion testssh.Ba
 func testIsCleanCommand(scriptPath string) bool {
 	return strings.HasPrefix(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh")
 }
+
+func assertStringSliceContainsUniqVals(t *testing.T, list []string, msg string) {
+	uniq := make(map[string]struct{})
+	for _, v := range list {
+		uniq[v] = struct{}{}
+	}
+	require.Len(t, uniq, len(list), msg)
+}

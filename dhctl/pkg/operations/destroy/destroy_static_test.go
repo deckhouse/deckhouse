@@ -80,10 +80,10 @@ func TestStaticDestroy(t *testing.T) {
 			tst.assertHasMetaConfigInCache(t, true)
 		}
 
+		destroyHost := session.Host{Host: "127.0.0.2", Name: "master-1"}
+
 		t.Run("skip resources returns errors because metaconfig not in cache", func(t *testing.T) {
-			hosts := []session.Host{
-				{Host: "127.0.0.2", Name: "master-1"},
-			}
+			hosts := []session.Host{destroyHost}
 			params := testStaticDestroyTestParams{
 				skipResources:   true,
 				destroyOverHost: hosts[0],
@@ -275,9 +275,7 @@ func TestStaticDestroy(t *testing.T) {
 					runCleanCommandOverBastion = testssh.Bastion{}
 				}
 
-				hosts := []session.Host{
-					{Host: "127.0.0.2", Name: "master-1"},
-				}
+				hosts := []session.Host{destroyHost}
 				params := testStaticDestroyTestParams{
 					skipResources:   tt.skipResources,
 					destroyOverHost: hosts[0],
@@ -367,6 +365,7 @@ func TestStaticDestroy(t *testing.T) {
 		saveNodeUserAndUserExistsInCache := func(t *testing.T, tst *testStaticDestroyTest, hosts []host, processedIPs []string) {
 			var processed []session.Host
 			if len(processedIPs) > 0 {
+				assertStringSliceContainsUniqVals(t, processedIPs, "should have uniq processed ips")
 				for _, ip := range processedIPs {
 					processed = append(processed, session.Host{Host: ip})
 				}
@@ -397,8 +396,35 @@ func TestStaticDestroy(t *testing.T) {
 			tst.assertKubeProviderIsErrorProvider(t)
 		}
 
+		const (
+			destroyOverHostIP  = "127.0.0.2"
+			secondMasterHostIP = "127.0.0.3"
+			thirdMasterHostIP  = "127.0.0.4"
+		)
+
+		destroyOverHost := func(h host) host {
+			h.ip = destroyOverHostIP
+			h.name = "master-1"
+
+			return h
+		}
+
+		secondMasterHost := func(h host) host {
+			h.ip = secondMasterHostIP
+			h.name = "master-2"
+
+			return h
+		}
+
+		thirdMasterHost := func(h host) host {
+			h.ip = thirdMasterHostIP
+			h.name = "master-3"
+
+			return h
+		}
+
 		firstHostBastion := testssh.Bastion{
-			Host: "127.0.0.2",
+			Host: destroyOverHostIP,
 			Port: inputPort,
 			User: inputUser,
 		}
@@ -427,34 +453,28 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "happy case 3 masters",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       true,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:     true,
@@ -471,9 +491,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "happy case 3 masters without bastion",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       true,
@@ -481,27 +499,23 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// not use bastion
 						useBastion: testssh.Bastion{},
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						// over destroyer (first) host
 						useBastion: firstHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						// over destroyer (first) host
 						useBastion: firstHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:     true,
@@ -519,25 +533,21 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "happy case 2 masters",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       true,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:     true,
@@ -554,9 +564,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "happy case 2 masters without bastion",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       true,
@@ -564,17 +572,15 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						// not use bastion
 						useBastion: testssh.Bastion{},
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						// over destroyer (first) host
 						useBastion: firstHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:     true,
@@ -592,35 +598,29 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "user cannot create on same nodes",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       false,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:      false,
@@ -641,9 +641,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "discovery ip returns error",
 				hosts: []host{
-					{
-						ip:                    "127.0.0.2",
-						name:                  "master-1",
+					destroyOverHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						discoveryIPFile:       true,
@@ -651,25 +649,21 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:       false,
@@ -690,9 +684,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "restart destroy after fix node user creating on same or all nodes but all clean errors",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// first master as last, but discovery ip ran
@@ -700,27 +692,23 @@ func TestStaticDestroy(t *testing.T) {
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.3",
-						name:   "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// second master return error because we save in cache sorted ips
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.4",
-						name:   "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// third master not run because we save in cache sorted ips
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:       false,
@@ -753,9 +741,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "restart destroy first additional master destroyed but second returns error",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// first master as last, but discovery ip ran
@@ -765,10 +751,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.3",
-						name:   "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// second master return error because we save in cache sorted ips
@@ -777,10 +761,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.4",
-						name:   "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// third master not run because we save in cache sorted ips
@@ -789,7 +771,7 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: false,
@@ -810,16 +792,14 @@ func TestStaticDestroy(t *testing.T) {
 					saveNodeUserResourceDestroyedAndUserExistsInCache(t, tst, hosts, nil)
 				},
 				assert: func(t *testing.T, tst *testStaticDestroyTest) {
-					tst.assertSetHostsAsProcessedInCache(t, []string{"127.0.0.3"})
+					tst.assertSetHostsAsProcessedInCache(t, []string{secondMasterHostIP})
 				},
 			},
 
 			{
 				name: "restart destroy first and second additional masters destroyed but third returns error",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// first master as last, but discovery ip ran
@@ -829,10 +809,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.3",
-						name:   "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not run script because it was saved as processed
@@ -841,10 +819,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.4",
-						name:   "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// third master not run because we save in cache sorted ips
@@ -853,7 +829,7 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: false,
@@ -871,12 +847,12 @@ func TestStaticDestroy(t *testing.T) {
 
 				before: func(t *testing.T, tst *testStaticDestroyTest, hosts []host) {
 					saveMetaConfigInCacheBeforeFunc(t, tst, hosts)
-					saveNodeUserResourceDestroyedAndUserExistsInCache(t, tst, hosts, []string{"127.0.0.3"})
+					saveNodeUserResourceDestroyedAndUserExistsInCache(t, tst, hosts, []string{secondMasterHostIP})
 				},
 				assert: func(t *testing.T, tst *testStaticDestroyTest) {
 					tst.assertSetHostsAsProcessedInCache(t, []string{
-						"127.0.0.3",
-						"127.0.0.4",
+						secondMasterHostIP,
+						thirdMasterHostIP,
 					})
 				},
 			},
@@ -884,9 +860,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "first and second additional masters destroyed and restart but third returns error",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "error",
 						sshErr: errors.New("error"),
 						// first master as last, but discovery ip ran
@@ -896,10 +870,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.3",
-						name:   "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not run script because it was saved as processed
@@ -908,10 +880,8 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
-					{
-						ip:     "127.0.0.4",
-						name:   "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not run script because it was saved as processed
@@ -920,7 +890,7 @@ func TestStaticDestroy(t *testing.T) {
 						// node user saved in cache
 						notCreateNodeUser: true,
 						useBastion:        defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: false,
@@ -938,12 +908,15 @@ func TestStaticDestroy(t *testing.T) {
 
 				before: func(t *testing.T, tst *testStaticDestroyTest, hosts []host) {
 					saveMetaConfigInCacheBeforeFunc(t, tst, hosts)
-					saveNodeUserResourceDestroyedAndUserExistsInCache(t, tst, hosts, []string{"127.0.0.3", "127.0.0.4"})
+					saveNodeUserResourceDestroyedAndUserExistsInCache(t, tst, hosts, []string{
+						secondMasterHostIP,
+						thirdMasterHostIP,
+					})
 				},
 				assert: func(t *testing.T, tst *testStaticDestroyTest) {
 					tst.assertSetHostsAsProcessedInCache(t, []string{
-						"127.0.0.3",
-						"127.0.0.4",
+						secondMasterHostIP,
+						thirdMasterHostIP,
 					})
 				},
 			},
@@ -951,9 +924,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "skip resources passed but any not getting from kube",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not ran discovery
@@ -962,27 +933,23 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: true,
@@ -1006,9 +973,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "skip resources passed but node user not created",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not ran discovery
@@ -1017,27 +982,23 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty:       false,
@@ -1060,9 +1021,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "skip resources passed but resources not deleted and not set in cache",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not ran discovery
@@ -1071,27 +1030,23 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  false,
 						switchToConvergerUser: false,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: false,
@@ -1118,9 +1073,7 @@ func TestStaticDestroy(t *testing.T) {
 			{
 				name: "skip resources passed resources deleted. normal destroy masters",
 				hosts: []host{
-					{
-						ip:     "127.0.0.2",
-						name:   "master-1",
+					destroyOverHost(host{
 						sshOut: "ok",
 						sshErr: nil,
 						// not ran discovery
@@ -1129,27 +1082,23 @@ func TestStaticDestroy(t *testing.T) {
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.3",
-						name:                  "master-2",
+					}),
+					secondMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
-					{
-						ip:                    "127.0.0.4",
-						name:                  "master-3",
+					}),
+					thirdMasterHost(host{
 						sshOut:                "ok",
 						sshErr:                nil,
 						cleanScriptShouldRun:  true,
 						switchToConvergerUser: true,
 						notCreateNodeUser:     true,
 						useBastion:            defaultHostBastion,
-					},
+					}),
 				},
 
 				stateCacheShouldEmpty: true,
@@ -1256,7 +1205,7 @@ func TestStaticDestroy(t *testing.T) {
 
 				if waiter != nil {
 					waiter.waitAll()
-					require.NoError(t, waiter.getErr(), "user should created set on nedes")
+					require.NoError(t, waiter.getErr(), "user should created set on nodes")
 				}
 
 				tst.assertNodeUserCreated(t, tt.nodeUserShouldCreated)
@@ -1549,6 +1498,8 @@ func (ts *testStaticDestroyTest) assertNodeUserSavedInCache(t *testing.T, saved 
 }
 
 func (ts *testStaticDestroyTest) assertSetHostsAsProcessedInCache(t *testing.T, hosts []string) {
+	assertStringSliceContainsUniqVals(t, hosts, "should have uniq hosts as processed")
+
 	nodeUser := ts.assertNodeUserSavedInCache(t, true)
 	require.NotNil(t, nodeUser)
 
