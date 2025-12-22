@@ -6,7 +6,7 @@ spec:
           description: |
             Определяет состояние и параметры применения релизов Deckhouse Kubernetes Platform (DKP) в кластере.
 
-            Актуальные версии DKP по каналам обновлений — [releases.deckhouse.ru](https://releases.deckhouse.ru).
+            Актуальные версии DKP и модулей по каналам обновлений — [releases.deckhouse.ru](https://releases.deckhouse.ru).
           properties:
             approved:
               description: |

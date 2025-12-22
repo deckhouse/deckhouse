@@ -104,7 +104,7 @@ spec:
             - `Suspended`: The release has been canceled (typically before it was applied).
             - `Skipped`: The release was skipped because the requirements were not satisfied.
             
-            For more information about DKP release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
+            For more information about DKP and modules release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date
