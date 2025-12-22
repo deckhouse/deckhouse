@@ -140,11 +140,17 @@ module.exports.renderDocumentationComments = (workflowName) => {
   }
 
   const basePath = '/products/kubernetes-platform/documentation/v1/';
+  
+  if (environments.length === 1) {
+    const env = environments[0];
+    return `\nEnvironment URL: <a href="https://${env.host}${basePath}">${env.host}</a>`;
+  }
+  
   const listItems = environments
     .map(env => `<li>${env.name}: <a href="https://${env.host}${basePath}">${env.host}</a></li>`)
     .join('');
-
-  return `\n<details><summary>Environment URLS</summary>\n<ul>${listItems}</ul></details>`;
+  
+  return `\nEnvironment URLS:\n<ul>${listItems}</ul>`;
 };
 
 /**
