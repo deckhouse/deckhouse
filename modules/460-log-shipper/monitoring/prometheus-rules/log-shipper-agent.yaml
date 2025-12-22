@@ -161,7 +161,7 @@
       plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Vector configuration is invalid in the cluster.
       description: |
-        At least one Vector DaemonSet pod has been reporting an invalid configuration.
+        At least one Vector DaemonSet Pod is reporting an invalid configuration.
         
         To resolve this, check the container logs or follow advanced instructions:
 

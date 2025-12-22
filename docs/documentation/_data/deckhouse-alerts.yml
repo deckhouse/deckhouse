@@ -1893,7 +1893,7 @@ alerts:
       module: log-shipper
       edition: ce
       description: |
-        At least one Vector DaemonSet pod has been reporting an invalid configuration.
+        At least one Vector DaemonSet Pod is reporting an invalid configuration.
 
         To resolve this, check the container logs or follow advanced instructions:
 
@@ -1901,7 +1901,7 @@ alerts:
         d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector-reloader
         ```
       summary: |
-        Vector config is invalid in the cluster.
+        Vector configuration is invalid in the cluster.
       severity: "4"
       markupFormat: markdown
     - name: D8LogShipperDestinationErrors
