@@ -330,7 +330,7 @@ To enable Basic Authentication for the Kubernetes API using LDAP credentials:
 
 > **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
 
-After configuration, users can access the Kubernetes API using kubectl, using their LDAP username and password.
+After configuration, users can access the Kubernetes API via `kubectl`, using their LDAP username and password.
 
 Example `kubeconfig` for the user:
 
@@ -358,9 +358,9 @@ current-context: default
 
 To configure authentication, create a read-only user (service account) in LDAP.
 
-Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain text format (unencrypted)). Strategies involving the passing of hashed passwords are not supported.
+Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain-text format (unencrypted). Strategies involving the passing of hashed passwords are not supported.
 
-You can omit these settings of anonymous read access is configured for LDAP.
+You can omit these settings if anonymous read access is configured for LDAP.
 
 ## Configuring the OAuth2 client in Dex for connecting an application
 

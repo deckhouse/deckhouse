@@ -162,7 +162,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration.
 
-## How to configure Basic Auth for accessing Kubernetes API via LDAP?
+## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
 
 1. Enable the [`publishAPI`](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
 1. Create a [DexProvider](cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) field.
