@@ -65,7 +65,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: allowPrivilegeEscalation: %v", [exception.spec.securityContext.allowPrivilegeEscalation.allowedValue])
               }
 
-              get_exception_allowed(c) := ""
+              get_exception_allowed(_) := ""
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

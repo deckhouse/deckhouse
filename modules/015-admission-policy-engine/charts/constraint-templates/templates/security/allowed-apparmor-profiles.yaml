@@ -65,7 +65,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
               }
 
-              get_exception_allowed_apparmor(pod, container) := ""
+              get_exception_allowed_apparmor(_, _) := ""
 
               build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

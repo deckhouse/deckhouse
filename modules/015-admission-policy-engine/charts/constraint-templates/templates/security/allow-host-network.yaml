@@ -89,7 +89,7 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: hostNetwork: %v, hostPorts: %v", [allowed_hostnetwork, allowed_hostports])
               }
 
-              get_exception_allowed_hostnetwork(obj) := ""
+              get_exception_allowed_hostnetwork(_) := ""
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
