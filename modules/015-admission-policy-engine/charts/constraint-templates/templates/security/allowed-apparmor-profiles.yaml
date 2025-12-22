@@ -65,7 +65,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
               }
 
-              get_exception_allowed_apparmor(_, _) := ""
+              get_exception_allowed_apparmor(_, _) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

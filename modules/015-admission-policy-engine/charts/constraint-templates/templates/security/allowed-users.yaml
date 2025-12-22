@@ -205,7 +205,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: runAsUser: %v, runAsNonRoot: %v", [allowed_users, run_as_non_root])
               }
 
-              exception_allowed_users_value := ""
+              exception_allowed_users_value := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""
@@ -287,7 +295,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
               }
 
-              get_exception_allowed_group(_) := ""
+              get_exception_allowed_group(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_group(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""

@@ -81,7 +81,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed procMount types: %v", [allowed_procMount])
               }
 
-              get_exception_allowed_proc_mount(_) := ""
+              get_exception_allowed_proc_mount(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_proc_mount_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
