@@ -285,7 +285,7 @@ module.exports.updateCommentOnFinish = async ({
   }
 
   if (statusConfig.includes(',docs')) {
-    comment = `${comment}\n${renderDocumentationComments()}`;
+    comment = `${comment}\n${renderDocumentationComments(name)}`;
   }
 
   const updateResponse = await github.rest.issues.updateComment({
