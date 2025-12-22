@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -15,21 +16,27 @@ type Memberlist struct {
 }
 
 func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, nodeIP string) (Gossip, error) {
-	configML := memberlist.DefaultLocalConfig()
+	config := memberlist.DefaultLANConfig()
 
+	config.ProbeInterval = 50 * time.Millisecond
+	config.ProbeTimeout = 25 * time.Millisecond
+	config.SuspicionMult = 1
+	config.IndirectChecks = 2 // TODO discuss with team, experiment
+	config.GossipInterval = 50 * time.Millisecond
+	config.RetransmitMult = 2
 	if memberListPort != "" {
 		memberListPortInt, err := strconv.Atoi(memberListPort)
 		if err != nil {
 			return nil, err
 		}
-		configML.BindPort = memberListPortInt
-		configML.AdvertisePort = memberListPortInt
+		config.BindPort = memberListPortInt
+		config.AdvertisePort = memberListPortInt
 	}
 	if nodeName != "" {
-		configML.Name = nodeName
+		config.Name = nodeName
 	}
-	configML.AdvertiseAddr = nodeIP
-	list, err := memberlist.Create(configML)
+	config.AdvertiseAddr = nodeIP
+	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +46,7 @@ func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, n
 		isAlone: true,
 	}
 	eventHandler := NewEventHandler(logger, nil, memList.SetAlone)
-	configML.Events = eventHandler
+	config.Events = eventHandler
 	return &memList, nil
 }
 
