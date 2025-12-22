@@ -222,6 +222,9 @@ apiVersions:
               volumeType:
                 description: |
                   Тип корневого диска.
+              externalIPAddress:
+                description: |
+                  Внешний IP-адрес инстанса.
               instanceClass:
                 description: |
                   Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).

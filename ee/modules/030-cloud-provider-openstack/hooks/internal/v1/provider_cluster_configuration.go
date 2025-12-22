@@ -25,9 +25,10 @@ type OpenstackProviderClusterConfiguration struct {
 	Layout   string `json:"layout,omitempty" yaml:"layout,omitempty"`
 	Standard struct {
 		Bastion struct {
-			Zone          string                 `json:"zone,omitempty" yaml:"zone,omitempty"`
-			VolumeType    string                 `json:"volumeType,omitempty" yaml:"volumeType,omitempty"`
-			InstanceClass OpenstackInstanceClass `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
+			Zone              string                 `json:"zone,omitempty" yaml:"zone,omitempty"`
+			VolumeType        string                 `json:"volumeType,omitempty" yaml:"volumeType,omitempty"`
+			ExternalIPAddress string                 `json:"externalIPAddress,omitempty" yaml:"externalIPAddress,omitempty"`
+			InstanceClass     OpenstackInstanceClass `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
 		} `json:"bastion,omitempty" yaml:"bastion,omitempty"`
 		ExternalNetworkName       string   `json:"externalNetworkName,omitempty" yaml:"externalNetworkName,omitempty"`
 		InternalNetworkCIDR       string   `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
