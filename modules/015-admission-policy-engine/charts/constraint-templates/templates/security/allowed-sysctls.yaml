@@ -81,7 +81,15 @@ spec:
                   out := sprintf("SecurityPolicyException allowed sysctls: %v", [allowed_sysctls])
               }
 
-              exception_allowed_sysctls_value := ""
+              exception_allowed_sysctls_value := "" if {
+                  not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                   exception_allowed != ""

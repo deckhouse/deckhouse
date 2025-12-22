@@ -88,7 +88,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed options: %v", [allowed_options])
               }
 
-              exception_allowed_selinux_value := ""
+              exception_allowed_selinux_value := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 container_name != ""

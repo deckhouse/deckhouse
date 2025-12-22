@@ -89,7 +89,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: hostNetwork: %v, hostPorts: %v", [allowed_hostnetwork, allowed_hostports])
               }
 
-              get_exception_allowed_hostnetwork(_) := ""
+              get_exception_allowed_hostnetwork(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_hostnetwork(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""

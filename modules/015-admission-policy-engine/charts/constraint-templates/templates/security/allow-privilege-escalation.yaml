@@ -65,7 +65,15 @@ spec:
                 out := sprintf("SecurityPolicyException allowed: allowPrivilegeEscalation: %v", [exception.spec.securityContext.allowPrivilegeEscalation.allowedValue])
               }
 
-              get_exception_allowed(_) := ""
+              get_exception_allowed(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
