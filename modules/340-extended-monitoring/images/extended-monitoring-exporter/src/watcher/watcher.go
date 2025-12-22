@@ -126,6 +126,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 	oldLabels := w.nsLabels[ns.Name]
 	podThresholdsChanged := thresholdLabelsChangedForMap(oldLabels, ns.Labels, podThresholdMap)
 	ingressThresholdsChanged := thresholdLabelsChangedForMap(oldLabels, ns.Labels, ingressThresholdMap)
+	replicasThresholdChanged := thresholdLabelsChangedForMap(oldLabels, ns.Labels, daemonSetThresholdMap)
 	w.nsLabels[ns.Name] = ns.Labels
 	w.mu.Unlock()
 
@@ -169,6 +170,12 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 			log.Printf("[NAMESPACE UPDATE] %s ingress threshold labels changed, refreshing ingresses", ns.Name)
 			w.refreshIngresses(ctx, ns.Name)
 		}
+		if replicasThresholdChanged {
+			log.Printf("[NAMESPACE UPDATE] %s replicas-not-ready threshold changed, refreshing workload resources", ns.Name)
+			w.refreshDaemonSets(ctx, ns.Name)
+			w.refreshStatefulSets(ctx, ns.Name)
+			w.refreshDeployments(ctx, ns.Name)
+		}
 	}
 
 	met.UpdateLastObserved()
@@ -211,6 +218,45 @@ func (w *Watcher) refreshIngresses(ctx context.Context, namespace string) {
 		w.updateIngress(&ingressList.Items[i], false)
 	}
 	log.Printf("[NAMESPACE REFRESH] Updated %d ingresses in %s", len(ingressList.Items), namespace)
+}
+
+func (w *Watcher) refreshDaemonSets(ctx context.Context, namespace string) {
+	dsList, err := w.clientSet.AppsV1().DaemonSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[NAMESPACE REFRESH] Failed to list daemonsets in %s: %v", namespace, err)
+		return
+	}
+
+	for i := range dsList.Items {
+		w.updateDaemonSet(&dsList.Items[i], false)
+	}
+	log.Printf("[NAMESPACE REFRESH] Updated %d daemonsets in %s", len(dsList.Items), namespace)
+}
+
+func (w *Watcher) refreshStatefulSets(ctx context.Context, namespace string) {
+	stsList, err := w.clientSet.AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[NAMESPACE REFRESH] Failed to list statefulsets in %s: %v", namespace, err)
+		return
+	}
+
+	for i := range stsList.Items {
+		w.updateStatefulSet(&stsList.Items[i], false)
+	}
+	log.Printf("[NAMESPACE REFRESH] Updated %d statefulsets in %s", len(stsList.Items), namespace)
+}
+
+func (w *Watcher) refreshDeployments(ctx context.Context, namespace string) {
+	depList, err := w.clientSet.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[NAMESPACE REFRESH] Failed to list deployments in %s: %v", namespace, err)
+		return
+	}
+
+	for i := range depList.Items {
+		w.updateDeployment(&depList.Items[i], false)
+	}
+	log.Printf("[NAMESPACE REFRESH] Updated %d deployments in %s", len(depList.Items), namespace)
 }
 
 // ---------------- Pod Watcher ----------------
@@ -257,11 +303,15 @@ func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet, deleted bool) {
 
 	log.Printf("[DAEMONSET %s] %s", logLabel, ds.Name)
 
+	w.mu.Lock()
+	nsLabels := w.nsLabels[ds.Namespace]
+	w.mu.Unlock()
+
 	w.updateMetrics(
 		w.metrics.DaemonSetEnabled,
 		w.metrics.DaemonSetThreshold,
 		labels,
-		nil,
+		nsLabels,
 		daemonSetThresholdMap,
 		prometheus.Labels{"namespace": ds.Namespace, "daemonset": ds.Name},
 	)
@@ -281,11 +331,16 @@ func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet, deleted bool) {
 	logLabel, labels := eventLabels(sts.Labels, deleted)
 
 	log.Printf("[STATEFULSET %s] %s", logLabel, sts.Name)
+
+	w.mu.Lock()
+	nsLabels := w.nsLabels[sts.Namespace]
+	w.mu.Unlock()
+
 	w.updateMetrics(
 		w.metrics.StatefulSetEnabled,
 		w.metrics.StatefulSetThreshold,
 		labels,
-		nil,
+		nsLabels,
 		statefulSetThresholdMap,
 		prometheus.Labels{"namespace": sts.Namespace, "statefulset": sts.Name},
 	)
@@ -305,11 +360,16 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
 	logLabel, labels := eventLabels(dep.Labels, deleted)
 
 	log.Printf("[DEPLOYMENT %s] %s", logLabel, dep.Name)
+
+	w.mu.Lock()
+	nsLabels := w.nsLabels[dep.Namespace]
+	w.mu.Unlock()
+
 	w.updateMetrics(
 		w.metrics.DeploymentEnabled,
 		w.metrics.DeploymentThreshold,
 		labels,
-		nil,
+		nsLabels,
 		deploymentThresholdMap,
 		prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name},
 	)
