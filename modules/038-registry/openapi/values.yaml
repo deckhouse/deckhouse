@@ -26,7 +26,6 @@ properties:
                 enum: [Unmanaged, Direct]
               init_params:
                 type: object
-                default: {}
                 properties:
                   generation:
                     type: string
