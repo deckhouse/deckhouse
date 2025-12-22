@@ -98,4 +98,4 @@ Adds a flag to disable TLS verification when downloading from the MaxMind mirror
 
 ### 020-ingress-update-status.patch
 
-This patch adds support for the --status-service-label flag, allowing the controller to aggregate addresses from Services matching the given label selector.
+This patch adds the --status-service-label flag, allowing the controller to define a label selector that is used to match related k8s services. Then, the ip addresses/hostnames from the services' statuses are used to fill in Ingress objects statuses with correct values.
