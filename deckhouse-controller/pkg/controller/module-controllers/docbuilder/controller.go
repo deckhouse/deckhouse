@@ -148,24 +148,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return result, nil
 		}
 
-		res, err := r.deleteReconcile(ctx, md)
-		if err != nil {
-			r.logger.Warn("delete reconcile", log.Err(err))
-
-			return res, err
-		}
-
-		return res, nil
+		return r.deleteReconcile(ctx, md)
 	}
 
-	res, err := r.createOrUpdateReconcile(ctx, md)
-	if err != nil {
-		r.logger.Warn("create or update reconcile", log.Err(err))
-
-		return res, err
-	}
-
-	return res, nil
+	return r.createOrUpdateReconcile(ctx, md)
 }
 
 func (r *reconciler) deleteReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
@@ -365,111 +351,63 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 		return fmt.Errorf("%s isn't a directory", moduleDir)
 	}
 
-	entries, err := os.ReadDir(moduleDir)
-	if err != nil {
-		return fmt.Errorf("read directory '%s': %w", moduleDir, err)
-	}
-
-	r.logger.Debug("get docs by module dir", slog.String("path", moduleDir), slog.Int("entries", len(entries)))
-
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
-	// Manual directory walking - filepath.Walk/WalkDir are broken on container mounted volumes
-	var walkDir func(string) error
-	walkDir = func(currentDir string) error {
-		dirEntries, err := os.ReadDir(currentDir)
+	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
-			r.logger.Warn("failed to read directory, continuing", slog.String("path", currentDir), log.Err(err))
-			return nil // Continue despite error
+			return err
 		}
 
-		r.logger.Debug("read directory", slog.String("path", currentDir), slog.Int("entries", len(dirEntries)))
+		if filepath.Ext(file) == ".go" {
+			return nil
+		}
 
-		for _, entry := range dirEntries {
-			fullPath := filepath.Join(currentDir, entry.Name())
+		// Get relative path from module directory
+		relPath, err := filepath.Rel(moduleDir, file)
+		if err != nil {
+			return err
+		}
 
-			r.logger.Debug("process entry", slog.String("name", entry.Name()), slog.Bool("isDir", entry.IsDir()))
+		// Convert to forward slashes for IsDocsPath check (it expects Unix-style paths)
+		relPathUnix := filepath.ToSlash(relPath)
+		if !module.IsDocsPath(relPathUnix) {
+			return nil
+		}
 
-			// Skip .go files
-			if filepath.Ext(entry.Name()) == ".go" {
-				r.logger.Debug("skip .go file", slog.String("name", entry.Name()))
-				continue
-			}
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
 
-			// Get relative path from module directory
-			relPath, err := filepath.Rel(moduleDir, fullPath)
-			if err != nil {
-				r.logger.Error("failed to get relative path", slog.String("file", fullPath), log.Err(err))
-				continue
-			}
+		// Use forward slashes in tar header (tar format uses forward slashes)
+		header.Name = relPathUnix
 
-			// Convert to forward slashes for IsDocsPath check
-			relPathUnix := filepath.ToSlash(relPath)
+		if err = tw.WriteHeader(header); err != nil {
+			return err
+		}
 
-			// Check if docs path
-			if !module.IsDocsPath(relPathUnix) {
-				r.logger.Debug("skip non-docs path", slog.String("path", relPathUnix))
-				continue // Skip entirely, don't recurse into non-docs directories
-			}
+		if info.IsDir() {
+			return nil
+		}
 
-			r.logger.Debug("process docs path", slog.String("path", relPathUnix), slog.Bool("isDir", entry.IsDir()))
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-			// Get file info
-			info, err := entry.Info()
-			if err != nil {
-				r.logger.Warn("failed to get file info", slog.String("path", fullPath), log.Err(err))
-				continue
-			}
+		r.logger.Debug("copy file", slog.String("path", file))
 
-			// Write tar header
-			header, err := tar.FileInfoHeader(info, info.Name())
-			if err != nil {
-				r.logger.Error("failed to create tar header", slog.String("path", fullPath), log.Err(err))
-				continue
-			}
-			header.Name = relPathUnix
-
-			if err = tw.WriteHeader(header); err != nil {
-				r.logger.Error("failed to write tar header", slog.String("path", fullPath), log.Err(err))
-				return err
-			}
-
-			// If directory, recurse
-			if entry.IsDir() {
-				r.logger.Debug("descend into directory", slog.String("path", relPathUnix))
-				if err = walkDir(fullPath); err != nil {
-					return err
-				}
-				continue
-			}
-
-			// Copy file content
-			f, err := os.Open(fullPath)
-			if err != nil {
-				r.logger.Error("failed to open file", slog.String("path", fullPath), log.Err(err))
-				continue
-			}
-
-			r.logger.Debug("copy file content to tar", slog.String("path", fullPath))
-
-			if _, err = io.Copy(tw, f); err != nil {
-				f.Close()
-				r.logger.Error("failed to copy file content", slog.String("path", fullPath), log.Err(err))
-				return err
-			}
-			f.Close()
+		if _, err = io.Copy(tw, f); err != nil {
+			return err
 		}
 
 		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("read to buffer: %w", err)
 	}
-
-	// Start manual walk from module directory
-	if err := walkDir(moduleDir); err != nil {
-		return fmt.Errorf("walk directory: %w", err)
-	}
-
-	r.logger.Debug("manual walk completed", slog.Int("tarArchiveSize", buf.Len()))
 
 	return nil
 }

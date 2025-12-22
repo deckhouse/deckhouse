@@ -119,8 +119,12 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		}
 	}
 
+	// Compute relative path: ../<module>/<version>
+	// IT IS VERY IMPORTANT TO USE RELATIVE
+	relativeTarget := filepath.Join("..", module, version)
+
 	// Create new symlink pointing to permanent location
-	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
+	if err := os.Symlink(relativeTarget, symlinkPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create symlink '%s': %w", symlinkPoint, err)
 	}
@@ -228,8 +232,12 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 		}
 	}
 
+	// Compute relative path: ../<module>/<version>
+	// IT IS VERY IMPORTANT TO USE RELATIVE
+	relativeTarget := filepath.Join("..", module, version)
+
 	// Create symlink pointing to permanent location
-	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
+	if err := os.Symlink(relativeTarget, symlinkPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create symlink '%s': %w", modulePath, err)
 	}
