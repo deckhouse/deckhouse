@@ -1,0 +1,9 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix stale session for cloud-data-discoverer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17089
+istio:
+  fixes:
+    - summary: fixing the CVE in Kiali
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17045
+

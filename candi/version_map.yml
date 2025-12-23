@@ -83,7 +83,7 @@ k8s:
     status: available
     patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '2'
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
@@ -152,7 +152,7 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.24.2
+  d8CliVersion: v0.25.0
 jq:
   version: 1.7.1
 yq:

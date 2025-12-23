@@ -311,6 +311,11 @@ func isDocumentationFile(filename string) bool {
 		return false
 	}
 
+	// Check for module.yaml and oss.yaml files
+	if filename == "module.yaml" || filename == "oss.yaml" {
+		return true
+	}
+
 	for _, dir := range documentationDirs {
 		if strings.Contains(filename, dir+"/") {
 			return true

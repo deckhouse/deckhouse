@@ -38,11 +38,13 @@ spec:
 
         import future.keywords.every
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           input.review.object.stdin == true
           msg :=  "Interactive exec is not permitted."
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           some command in input.review.object.command
             not command in input.parameters.allowedCommands
           msg := sprintf("Only %v commands are allowed.", [input.parameters.allowedCommands])

@@ -52,7 +52,6 @@ properties:
                       type: integer
                     max:
                       type: integer
-
   denyVulnerableImages:
     type: object
     default: {}

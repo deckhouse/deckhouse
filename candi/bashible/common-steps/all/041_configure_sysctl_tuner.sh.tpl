@@ -39,7 +39,7 @@ echo $(( $NF_CONNTRACK_MAX / 4 )) > /sys/module/nf_conntrack/parameters/hashsize
 sysctl -w net.ipv4.conf.all.forwarding=1
 
 # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
-sysctl -w vm.swappiness=0
+
 sysctl -w net.core.somaxconn=1000
 sysctl -w net.core.netdev_max_backlog=5000 # increase the backlog of packets taken from the ring buffer of the network card, but not yet transmitted up the network stack kernel
 sysctl -w net.core.rmem_max=16777216

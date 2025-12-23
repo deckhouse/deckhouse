@@ -443,6 +443,9 @@ check_e2e_labels:
 {!{- $provider := $ctx.provider -}!}
 {!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
+{!{- if or (eq $ctx.provider "static") (eq $ctx.provider "openstack") -}!}
+{!{-   $runsOnLabel = "regular" -}!}
+{!{- end -}!}
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
@@ -865,8 +868,8 @@ check_e2e_labels:
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
 {!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
-{!{- if eq $ctx.provider "vsphere"  -}!}
-{!{-   $runsOnLabel = "e2e-vsphere" -}!}
+{!{- if or (eq $ctx.provider "static") (eq $ctx.provider "openstack") -}!}
+{!{-   $runsOnLabel = "regular" -}!}
 {!{- end -}!}
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:

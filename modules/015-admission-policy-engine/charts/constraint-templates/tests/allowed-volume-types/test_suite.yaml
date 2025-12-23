@@ -3,244 +3,212 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-volume-types
 tests:
-  - name: pss-restricted
-    template: ../../templates/security/allowed-volume-types.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-configmap-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-configmap-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-secret-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-secret-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-emptyDir-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-emptyDir-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-persistentVolumeClaim-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-persistentVolumeClaim-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-downwardAPI-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-downwardAPI-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-projected-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-projected-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-csi-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-csi-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-ephemeral-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-ephemeral-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-multiple-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-multiple-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-hostPath-volume.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-nfs-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-nfs-volume.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-multiple-volumes-one-disallowed
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-multiple-volumes-one-disallowed.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-deployment-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-deployment-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-deployment-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-deployment-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/allowed-daemonset-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-daemonset-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/pss_restricted/disallowed-daemonset-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-  - name: security-policy
-    template: ../../templates/security/allowed-volume-types.yaml
-    constraint: constraint_security_policy.yaml
-    cases:
-      - name: allowed-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-nfs-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-nfs-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-configmap-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-configmap-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-multiple-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-multiple-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-deployment-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-deployment-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-deployment-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-deployment-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-no-volumes
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-daemonset-no-volumes.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-daemonset-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/constraint_templates/security_policy/allowed-daemonset-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-  - name: pss-restricted-with-exception
-    template: ../../templates/security/allowed-volume-types.yaml
-    constraint: constraint_pss_restricted.yaml
-    cases:
-      - name: allowed-by-exception-hostPath-volume
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-hostPath-volume.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-hostPath-volume.yaml
-        assertions:
-          - violations: no
-
-      - name: allowed-by-exception-multiple-volume-types
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-multiple-volume-types.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-multiple-volume-types.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-volume-type-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-hostPath-volume.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-volume-type-mismatch.yaml
-        assertions:
-          - violations: yes
-
-      - name: disallowed-no-exception-label
-        inventory:
-          - ../common/test_samples/ns.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-no-exception-label.yaml
-        assertions:
-          - violations: yes
-
-      - name: allowed-by-exception-mismatch-but-constraint-allows
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-hostPath-volume.yaml
-        object: test_samples/security_policy_exceptions/pods/allowed-by-exception-mismatch-but-constraint-allows.yaml
-        assertions:
-          - violations: no
-
-      - name: disallowed-by-exception-multiple-volumes-one-mismatch
-        inventory:
-          - ../common/test_samples/ns.yaml
-          - test_samples/security_policy_exceptions/exceptions/allow-hostPath-volume.yaml
-        object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-multiple-volumes-one-mismatch.yaml
-        assertions:
-          - violations: yes
-
+- name: pss-restricted
+  template: ../../templates/security/allowed-volume-types.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 9-allowed-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/009-allowed-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 1-allowed-configmap-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/001-allowed-configmap-volume.yaml
+    assertions:
+    - violations: no
+  - name: 12-allowed-secret-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/012-allowed-secret-volume.yaml
+    assertions:
+    - violations: no
+  - name: 6-allowed-emptyDir-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/006-allowed-emptyDir-volume.yaml
+    assertions:
+    - violations: no
+  - name: 10-allowed-persistentVolumeClaim-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/010-allowed-persistentVolumeClaim-volume.yaml
+    assertions:
+    - violations: no
+  - name: 5-allowed-downwardAPI-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/005-allowed-downwardAPI-volume.yaml
+    assertions:
+    - violations: no
+  - name: 11-allowed-projected-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/011-allowed-projected-volume.yaml
+    assertions:
+    - violations: no
+  - name: 2-allowed-csi-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/002-allowed-csi-volume.yaml
+    assertions:
+    - violations: no
+  - name: 7-allowed-ephemeral-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/007-allowed-ephemeral-volume.yaml
+    assertions:
+    - violations: no
+  - name: 8-allowed-multiple-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/008-allowed-multiple-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 15-disallowed-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/015-disallowed-hostPath-volume.yaml
+    assertions:
+    - violations: yes
+  - name: 17-disallowed-nfs-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/017-disallowed-nfs-volume.yaml
+    assertions:
+    - violations: yes
+  - name: 16-disallowed-multiple-volumes-one-disallowed
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/016-disallowed-multiple-volumes-one-disallowed.yaml
+    assertions:
+    - violations: yes
+  - name: 4-allowed-deployment-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/004-allowed-deployment-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 14-disallowed-deployment-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/014-disallowed-deployment-hostPath-volume.yaml
+    assertions:
+    - violations: no
+  - name: 3-allowed-daemonset-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/003-allowed-daemonset-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 13-disallowed-daemonset-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_restricted/013-disallowed-daemonset-hostPath-volume.yaml
+    assertions:
+    - violations: no
+- name: security-policy
+  template: ../../templates/security/allowed-volume-types.yaml
+  constraint: constraint_security_policy.yaml
+  cases:
+  - name: 26-allowed-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/026-allowed-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 23-allowed-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/023-allowed-hostPath-volume.yaml
+    assertions:
+    - violations: no
+  - name: 25-allowed-nfs-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/025-allowed-nfs-volume.yaml
+    assertions:
+    - violations: no
+  - name: 18-allowed-configmap-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/018-allowed-configmap-volume.yaml
+    assertions:
+    - violations: no
+  - name: 24-allowed-multiple-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/024-allowed-multiple-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 22-allowed-deployment-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/022-allowed-deployment-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 21-allowed-deployment-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/021-allowed-deployment-hostPath-volume.yaml
+    assertions:
+    - violations: no
+  - name: 20-allowed-daemonset-no-volumes
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/020-allowed-daemonset-no-volumes.yaml
+    assertions:
+    - violations: no
+  - name: 19-allowed-daemonset-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/security_policy/019-allowed-daemonset-hostPath-volume.yaml
+    assertions:
+    - violations: no
+- name: pss-restricted-with-exception
+  template: ../../templates/security/allowed-volume-types.yaml
+  constraint: constraint_pss_restricted.yaml
+  cases:
+  - name: 35-37-allowed-by-exception-hostPath-volume
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/035-allow-hostPath-volume.yaml
+    object: test_samples/security_policy_exceptions/pods/037-allowed-by-exception-hostPath-volume.yaml
+    assertions:
+    - violations: no
+  - name: 36-39-allowed-by-exception-multiple-volume-types
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/036-allow-multiple-volume-types.yaml
+    object: test_samples/security_policy_exceptions/pods/039-allowed-by-exception-multiple-volume-types.yaml
+    assertions:
+    - violations: no
+  - name: 35-41-disallowed-by-exception-volume-type-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/035-allow-hostPath-volume.yaml
+    object: test_samples/security_policy_exceptions/pods/041-disallowed-by-exception-volume-type-mismatch.yaml
+    assertions:
+    - violations: yes
+  - name: 42-disallowed-no-exception-label
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/042-disallowed-no-exception-label.yaml
+    assertions:
+    - violations: yes
+  - name: 35-38-allowed-by-exception-mismatch-but-constraint-allows
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/035-allow-hostPath-volume.yaml
+    object: test_samples/security_policy_exceptions/pods/038-allowed-by-exception-mismatch-but-constraint-allows.yaml
+    assertions:
+    - violations: no
+  - name: 35-40-disallowed-by-exception-multiple-volumes-one-mismatch
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/035-allow-hostPath-volume.yaml
+    object: test_samples/security_policy_exceptions/pods/040-disallowed-by-exception-multiple-volumes-one-mismatch.yaml
+    assertions:
+    - violations: yes

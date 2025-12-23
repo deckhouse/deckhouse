@@ -51,9 +51,9 @@ spec:
               number: 80
 ```
 
-## Example of an NGINX Ingress resource
+## Example of an Ingress NGINX resource
 
-To work with NGINX Ingress, the Deckhouse Kubernetes Platform administrator must configure
+To work with Ingress NGINX, the Deckhouse Kubernetes Platform administrator must configure
 the Ingress controller by adding an Istio sidecar to it.
 To do this,
 set the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter

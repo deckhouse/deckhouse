@@ -1,10 +1,9 @@
 name: istio
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - infrastructure
   - networking
 namespace: d8-istio
-description: |
-  Service Mesh
 descriptions:
-  en: Service Mesh
+  en: Implements Service Mesh for centralized management of network traffic in the cluster. Provides mutual TLS, authorization, traffic routing, load balancing, and observability.
+  ru: Реализует Service Mesh для централизованного управления сетевым трафиком в кластере. Обеспечивает mutual TLS, авторизацию, маршрутизацию трафика, балансировку нагрузки и наблюдаемость.

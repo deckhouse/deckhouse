@@ -49,7 +49,6 @@ admissionPolicyEngine:
       key: YjY0ZW5jX3N0cmluZwo=
     trackedConstraintResources: []
     trackedMutateResources: []
-  denyVulnerableImages: {}
   podSecurityStandards:
     policies:
       hostPorts:
@@ -91,5 +90,5 @@ func gatorAvailable() (string, bool) {
 	}
 
 	info, err := os.Lstat(gatorPath)
-	return gatorPath, err == nil && (info.Mode().Perm()&0111 != 0)
+	return gatorPath, err == nil && (info.Mode().Perm()&0o111 != 0)
 }

@@ -7,6 +7,8 @@ force_searchable: true
 
 {% include module-alerts.liquid %}
 
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 Если control plane кластера размещен на виртуальных машинах или bare-metal-серверах, cloud-провайдер использует настройки модуля `cloud-provider-vsphere` в конфигурации Deckhouse (см. ниже). Иначе, если control plane кластера размещен в облаке, cloud-провайдер использует структуру [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) для настройки.

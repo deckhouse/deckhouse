@@ -32,7 +32,7 @@ spec:
                 ingressClass:
                   type: string
                   description: |
-                    The name of the Ingress class to use with the NGINX Ingress controller.
+                    The name of the Ingress class to use with the Ingress NGINX Controller.
 
                     Using this option, you can create several controllers to use with a single ingress
 
@@ -67,7 +67,7 @@ spec:
                 controllerVersion:
                   type: string
                   description: |
-                    One of the supported NGINX Ingress controller versions.
+                    One of the supported Ingress NGINX Controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ["1.9", "1.10", "1.12"]
@@ -472,7 +472,7 @@ spec:
                   description: |
                     The section with parameters of custom HTTP errors.
 
-                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all NGINX Ingress controllers**.
+                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all Ingress NGINX Controllers**.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
@@ -576,7 +576,7 @@ spec:
           type: string
         - jsonPath: .spec.controllerVersion
           name: Controller Version
-          description: 'Current NGINX Ingress Controller version.'
+          description: 'Current Ingress NGINX Controller version.'
           type: string
     - name: v1
       served: true
@@ -609,7 +609,7 @@ spec:
                 ingressClass:
                   type: string
                   description: |
-                    Name of the Ingress class to use with the NGINX Ingress Controller.
+                    Name of the Ingress class to use with the Ingress NGINX Controller.
 
                     Using this option, you can create several controllers to use with a single Ingress class.
 
@@ -670,7 +670,7 @@ spec:
                 controllerVersion:
                   type: string
                   description: |
-                    NGINX Ingress Controller version.
+                    Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ["1.9", "1.10", "1.12"]
@@ -1190,7 +1190,7 @@ spec:
 
                     > If this section is defined in the configuration, all its parameters are required.
                     >
-                    > Changing any parameter causes the restart of all NGINX Ingress Controllers.
+                    > Changing any parameter causes the restart of all Ingress NGINX Controllers.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
@@ -1358,13 +1358,13 @@ spec:
           type: string
         - jsonPath: .spec.controllerVersion
           name: Controller Version
-          description: 'Current NGINX Ingress Controller version.'
+          description: 'Current Ingress NGINX Controller version.'
           type: string
         - jsonPath: .status.loadBalancer.ip
           name: IP
-          description: 'Current NGINX Ingress Controller LoadBalancer IP'
+          description: 'Current Ingress NGINX Controller LoadBalancer IP'
           type: string
         - jsonPath: .status.loadBalancer.hostname
           name: Hostname
-          description: 'Current NGINX Ingress Controller LoadBalancer hostname'
+          description: 'Current Ingress NGINX Controller LoadBalancer hostname'
           type: string

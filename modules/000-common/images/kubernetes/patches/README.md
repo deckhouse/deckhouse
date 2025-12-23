@@ -26,3 +26,7 @@ localAPIEndpoint:
 
 Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 > https://github.com/kubernetes/kubernetes/pull/126460
+
+### resource-quota-ignore-mechanism.patch
+
+Add resource quota ignore mechanism for k8s pvc and pod based on labels

@@ -55,10 +55,17 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 not allowed_by_any(input.review.object)
-                msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+                object.get(input.review.object.spec, "hostNetwork", false) == false
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
               }
-
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                not allowed_by_any(input.review.object)
+                object.get(input.review.object.spec, "hostNetwork", false) == true
+                msg := sprintf("The hostNetwork or hostPort/containerPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
+              }
               allowed_by_any(obj) if {
                 allowed_by_securitypolicyexeption(obj)
               }
@@ -74,24 +81,36 @@ spec:
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
 
                 allowed_hostnetwork_by_exception(obj, exception)
-                allowed_hostports_by_exception(exception)
+                allowed_hostports_by_exception(obj, exception)
               }
 
               allowed_hostnetwork_by_exception(obj, exception) if {
-                exception.spec.network.hostNetwork.allowedValue == obj.spec.hostNetwork
+                obj_hostNetwork := object.get(obj.spec, "hostNetwork", false)
+                exception.spec.network.hostNetwork.allowedValue == obj_hostNetwork
               }
 
-              allowed_hostports_by_exception(exception) if {
-                object_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+              allowed_hostports_by_exception(obj, exception) if {
+                obj.spec.hostNetwork == true
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                object_container_ports := [{"port": entry.containerPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
                 allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
-                every port in object_ports {
+                every port in array.concat(object_host_ports, object_container_ports) {
+                  port in allowed_ports
+                }
+              }
+
+              allowed_hostports_by_exception(obj, exception) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in object_host_ports {
                   port in allowed_ports
                 }
               }
 
               allowed_by_securitypolicy(obj) if {
                 allowed_hostnetwork_by_securitypolicy(obj)
-                allowed_hostports_by_securitypolicy
+                allowed_hostports_by_securitypolicy(obj)
               }
 
               allowed_hostnetwork_by_securitypolicy(_) if {
@@ -99,29 +118,30 @@ spec:
               }
 
               allowed_hostnetwork_by_securitypolicy(obj) if {
-                obj.spec.hostNetwork == false
+                object.get(obj.spec, "hostNetwork", false) == false
               }
-              allowed_hostnetwork_by_securitypolicy(obj) if {
-                not obj.spec.hostNetwork # not exist
-              }
-              allowed_hostports_by_securitypolicy if {
-                hostPort := input_containers[_].ports[_].hostPort
-                in_range(input.parameters.ranges, hostPort)
+ 
+
+              allowed_hostports_by_securitypolicy(obj) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                in_range(input.parameters.ranges, hostPorts)
               }
 
-              allowed_hostports_by_securitypolicy if {
-                port := input_containers[_].ports[_]
-                not port.hostPort
-              }
 
-              allowed_hostports_by_securitypolicy if {
-                container := input_containers[_]
-                not container.ports
+              allowed_hostports_by_securitypolicy(obj) if {
+                obj.spec.hostNetwork == true
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                containerPorts := [cp | cp := input_containers[_].ports[_].containerPort]
+                ports = array.concat(hostPorts, containerPorts)
+                in_range(input.parameters.ranges, ports)
               }
-
-              in_range(ranges, port) if {
-                matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
-                count(matching) > 0
+            
+              in_range(ranges, ports) if {
+                every port in ports{
+                  matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
+                  count(matching) > 0
+                }
               }
 
               input_containers contains c if {

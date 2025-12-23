@@ -1,9 +1,11 @@
 name: node-local-dns
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - networking
 namespace: kube-system
-
 requirements:
   modules:
-    kube-dns: '>= 0.0.0'
+    kube-dns: ">= 0.0.0"
+descriptions:
+  en: Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.
+  ru: Разворачивает кэширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа.
