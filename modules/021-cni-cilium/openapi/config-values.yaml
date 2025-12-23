@@ -129,7 +129,7 @@ properties:
     x-examples:
     - mode: VPA
       vpa:
-        mode: Auto
+        mode: "InPlaceOrRecreate"
         cpu:
           min: "50m"
           max: 2
@@ -146,6 +146,17 @@ properties:
         limits:
           cpu: 2
           memory: "2Gi"
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+          limitRatio: 1.5
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+          limitRatio: 1.5
     properties:
       mode:
         type: string
@@ -165,7 +176,7 @@ properties:
             type: string
             description: |
               VPA operating mode.
-            enum: ['Initial', 'Auto']
+            enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
             default: 'Initial'
           cpu:
             type: object
