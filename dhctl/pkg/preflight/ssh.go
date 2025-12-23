@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -40,6 +41,12 @@ const (
 )
 
 var ErrAuthSSHFailed = errors.New("authentication failed")
+
+// sshClientProvider is an interface for types that can provide an SSH client.
+// This allows both *ssh.NodeInterfaceWrapper and test mocks to work.
+type sshClientProvider interface {
+	Client() node.SSHClient
+}
 
 func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 	if app.PreflightSkipSSHForward {
@@ -125,7 +132,7 @@ func (pc *Checker) CheckSSHCredential(ctx context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(sshClientProvider)
 	if !ok {
 		log.InfoLn("SSH credentials preflight check was skipped (local run)")
 		return nil
@@ -148,7 +155,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic(_ context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(sshClientProvider)
 	if !ok {
 		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (local run)")
 		return nil
