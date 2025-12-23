@@ -1162,7 +1162,7 @@ alerts:
 
         3. Consider temporarily increasing the ResourceQuota limit if needed
       summary: |
-        Dex AuthRequest objects quota usage is higher than 80% in namespace "d8-user-authn".
+        Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "5"
       markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
