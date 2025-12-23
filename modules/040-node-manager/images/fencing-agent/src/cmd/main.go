@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	agentconfig "fencing-controller/internal/config"
 	"fencing-controller/internal/gossip"
 	"os"
 	"os/signal"
@@ -53,7 +54,7 @@ func main() {
 		cancel()
 	}()
 
-	var config agent.Config
+	var config agentconfig.Config
 	err := config.Load()
 	if err != nil {
 		logger.Fatal("Unable to read env vars", zap.Error(err))
@@ -77,7 +78,7 @@ func main() {
 		}
 	}
 	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	sw, err := gossip.NewMemberList(logger, config.MemberListPort, config.NodeName, internalIp)
+	sw, err := gossip.NewMemberList(logger, config, internalIp)
 	if err != nil {
 		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
 	}

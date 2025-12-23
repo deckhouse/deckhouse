@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package agent
+package agentconfig
 
 import (
 	"time"
@@ -31,7 +31,15 @@ type Config struct {
 	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName                   string        `env:"NODE_NAME"`
 	NodeGroup                  string        `env:"NODE_GROUP"`
-	MemberListPort             string        `env:"MEMBERLIST_PORT"`
+	MemberListPort             int           `env:"MEMBERLIST_PORT"`
+	ProbeInterval              time.Duration `env:"PROBE_INTERVAL"`
+	ProbeTimeout               time.Duration `env:"PROBE_TIMEOUT"`
+	SuspicionMult              int           `env:"SUSPICION_MULT"`
+	IndirectChecks             int           `env:"INDIRECT_CHECKS"`
+	GossipInterval             time.Duration `env:"GOSSIP_INTERVAL"`
+	RetransmitMult             int           `env:"RETRANSMIT_MULT"`
+	GossipToTheDeadTime        time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME"`
+	MinEventInterval           time.Duration `env:"MIN_EVENT_INTERVAL"`
 }
 
 func (c *Config) Load() error {

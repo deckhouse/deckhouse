@@ -18,6 +18,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fencing-controller/internal/config"
 	"fencing-controller/internal/gossip"
 	"fmt"
 	"net"
@@ -43,13 +44,13 @@ var maintenanceAnnotations = [...]string{
 
 type FencingAgent struct {
 	logger     *zap.Logger
-	config     Config
+	config     agentconfig.Config
 	kubeClient kubernetes.Interface
 	watchDog   watchdog.WatchDog
 	gs         gossip.Gossip
 }
 
-func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, gossip gossip.Gossip, wd watchdog.WatchDog) *FencingAgent {
+func NewFencingAgent(logger *zap.Logger, config agentconfig.Config, kubeClient kubernetes.Interface, gossip gossip.Gossip, wd watchdog.WatchDog) *FencingAgent {
 	l := logger.With(zap.String("node", config.NodeName))
 	return &FencingAgent{
 		logger:     l,

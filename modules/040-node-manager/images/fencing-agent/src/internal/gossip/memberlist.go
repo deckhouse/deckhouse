@@ -1,10 +1,9 @@
 package gossip
 
 import (
+	agentconfig "fencing-controller/internal/config"
 	"log"
-	"strconv"
 	"time"
-
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -17,37 +16,21 @@ type Memberlist struct {
 	isConnected bool
 }
 
-func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, nodeIP string) (Gossip, error) {
-	config := memberlist.DefaultLANConfig()
-	config.Logger = log.New(NewZapAdapter(logger), "[memberlist] ", 0)
-
-	//config.ProbeInterval = 50 * time.Millisecond
-	//config.ProbeTimeout = 25 * time.Millisecond
-	//config.SuspicionMult = 1
-	//config.IndirectChecks = 2 // TODO discuss with team, experiment
-	//config.GossipInterval = 50 * time.Millisecond
-	//config.RetransmitMult = 2
-
-	config.ProbeInterval = 200 * time.Millisecond
-	config.ProbeTimeout = 100 * time.Millisecond
-	config.SuspicionMult = 2
-	config.IndirectChecks = 3
-	config.GossipInterval = 100 * time.Millisecond
-	config.RetransmitMult = 3
-	config.GossipToTheDeadTime = 2 * time.Second
-	if memberListPort != "" {
-		memberListPortInt, err := strconv.Atoi(memberListPort)
-		if err != nil {
-			return nil, err
-		}
-		config.BindPort = memberListPortInt
-		config.AdvertisePort = memberListPortInt
-	}
-	if nodeName != "" {
-		config.Name = nodeName
-	}
-	config.AdvertiseAddr = nodeIP
-	list, err := memberlist.Create(config)
+func NewMemberList(logger *zap.Logger, config agentconfig.Config, nodeAddr string) (Gossip, error) {
+	configML := memberlist.DefaultLANConfig()
+	configML.Logger = log.New(NewZapAdapter(logger), "[memberlist] ", 0)
+	configML.ProbeInterval = config.ProbeInterval * time.Millisecond
+	configML.ProbeTimeout = config.ProbeTimeout * time.Millisecond
+	configML.SuspicionMult = config.SuspicionMult
+	configML.IndirectChecks = 3
+	configML.GossipInterval = 100 * time.Millisecond
+	configML.RetransmitMult = 4
+	configML.GossipToTheDeadTime = 2 * time.Second
+	configML.BindPort = config.MemberListPort
+	configML.AdvertisePort = config.MemberListPort
+	configML.Name = config.NodeName
+	configML.AdvertiseAddr = nodeAddr
+	list, err := memberlist.Create(configML)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +39,8 @@ func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, n
 		list:    list,
 		isAlone: true,
 	}
-	eventHandler := NewEventHandler(logger, nil, memList.SetAlone)
-	config.Events = eventHandler
+	eventHandler := NewEventHandler(logger, config.MinEventInterval, nil, memList.SetAlone)
+	configML.Events = eventHandler
 	return &memList, nil
 }
 

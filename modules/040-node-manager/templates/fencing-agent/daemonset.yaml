@@ -73,6 +73,22 @@ spec:
                 - ALL
           imagePullPolicy: IfNotPresent
           env:
+            - name: PROBE_INTERVAL
+              value: "200"
+            - name: PROBE_TIMEOUT
+              value: "100"
+            - name: SUSPICION_MULT
+              value: "2"
+            - name: INDIRECT_CHECKS
+              value: "3"
+            - name: GOSSIP_INTERVAL
+              value: "100"
+            - name: RETRANSMIT_MULT
+              value: "4"
+            - name: GOSSIP_TO_THE_DEAD_TIME
+              value: "2"
+            - name: MIN_EVENT_INTERVAL
+              value: "10"
             - name: MEMBERLIST_PORT
               value: "8500"
             - name: NODE_GROUP
