@@ -64,6 +64,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "privileged")
+                has_field(exception.spec.securityContext.privileged, "allowedValue")
                 out := sprintf("SecurityPolicyException allowed: privileged: %v", [exception.spec.securityContext.privileged.allowedValue])
               }
 
@@ -107,6 +110,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "privileged")
+                has_field(exception.spec.securityContext.privileged, "allowedValue")
                 exception.spec.securityContext.privileged.allowedValue == c.securityContext.privileged
               }
 
